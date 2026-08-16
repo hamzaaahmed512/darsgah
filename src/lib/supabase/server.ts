@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { requirePublicSupabaseEnv } from "@/lib/supabase/env";
 
 type CookieToSet = {
   name: string;
@@ -10,7 +9,14 @@ type CookieToSet = {
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const { url, anonKey } = requirePublicSupabaseEnv();
+
+  // Explicit inline references ensure Next.js bundler bakes values into Vercel Server Actions
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  if (!url || !anonKey) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
 
   return createServerClient(url, anonKey, {
     cookies: {
@@ -19,11 +25,13 @@ export async function createClient() {
       },
       setAll(cookiesToSet: CookieToSet[]) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
         } catch {
-          // Server Components cannot write cookies; middleware refreshes the session.
+          // Server Components cannot write cookies; middleware handles session refresh.
         }
-      }
-    }
+      },
+    },
   });
 }

@@ -3,13 +3,15 @@ type PublicSupabaseEnv = {
   anonKey: string;
 };
 
-function readTrimmed(value: string | undefined) {
-  return value ? value : null;
-}
-
 export function readPublicSupabaseEnv(): PublicSupabaseEnv | null {
-  const url = readTrimmed(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());
-  const anonKey = readTrimmed(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  // Access process.env directly without optional chaining so Next.js inlines the values
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL.trim()
+    : null;
+    
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim()
+    : null;
 
   if (!url || !anonKey) {
     return null;
@@ -23,7 +25,7 @@ export function requirePublicSupabaseEnv(): PublicSupabaseEnv {
 
   if (!env) {
     throw new Error(
-      "Missing Supabase environment variables. Create .env.local from .env.example or run `npm.cmd run setup:local`."
+      "Missing Supabase environment variables. Please check your Vercel Environment Variables or .env.local file."
     );
   }
 
@@ -32,16 +34,18 @@ export function requirePublicSupabaseEnv(): PublicSupabaseEnv {
 
 export function requireSupabaseAdminEnv() {
   const publicEnv = requirePublicSupabaseEnv();
-  const serviceRoleKey = readTrimmed(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY.trim()
+    : null;
 
   if (!serviceRoleKey) {
     throw new Error(
-      "Missing Supabase admin environment variables. Add SUPABASE_SERVICE_ROLE_KEY to .env.local."
+      "Missing Supabase admin environment variables. Add SUPABASE_SERVICE_ROLE_KEY."
     );
   }
 
   return {
     url: publicEnv.url,
-    serviceRoleKey
+    serviceRoleKey,
   };
 }
