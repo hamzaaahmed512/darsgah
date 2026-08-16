@@ -3,16 +3,13 @@ type PublicSupabaseEnv = {
   anonKey: string;
 };
 
-export function readPublicSupabaseEnv(): PublicSupabaseEnv | null {
-  const url = [
-    process.env.SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-  ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
+function readTrimmed(value: string | undefined) {
+  return value ? value : null;
+}
 
-  const anonKey = [
-    process.env.SUPABASE_ANON_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
+export function readPublicSupabaseEnv(): PublicSupabaseEnv | null {
+  const url = readTrimmed(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());
+  const anonKey = readTrimmed(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
 
   if (!url || !anonKey) {
     return null;
@@ -26,7 +23,7 @@ export function requirePublicSupabaseEnv(): PublicSupabaseEnv {
 
   if (!env) {
     throw new Error(
-      "Missing Supabase environment variables. Add NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY in Vercel or .env.local."
+      "Missing Supabase environment variables. Create .env.local from .env.example or run `npm.cmd run setup:local`."
     );
   }
 
@@ -35,18 +32,16 @@ export function requirePublicSupabaseEnv(): PublicSupabaseEnv {
 
 export function requireSupabaseAdminEnv() {
   const publicEnv = requirePublicSupabaseEnv();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? process.env.SUPABASE_SERVICE_ROLE_KEY.trim()
-    : null;
+  const serviceRoleKey = readTrimmed(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 
   if (!serviceRoleKey) {
     throw new Error(
-      "Missing Supabase admin environment variables. Add SUPABASE_SERVICE_ROLE_KEY."
+      "Missing Supabase admin environment variables. Add SUPABASE_SERVICE_ROLE_KEY to .env.local."
     );
   }
 
   return {
     url: publicEnv.url,
-    serviceRoleKey,
+    serviceRoleKey
   };
 }

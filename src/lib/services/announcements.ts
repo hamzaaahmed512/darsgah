@@ -28,6 +28,29 @@ export async function getAnnouncements(user: AppUser): Promise<AnnouncementWithR
   }));
 }
 
+export async function getAnnouncementHistory(user: AppUser): Promise<AnnouncementWithRead[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("announcements")
+    .select(`
+      *,
+      profiles!announcements_created_by_fkey(full_name),
+      announcement_reads(id)
+    `)
+    .eq("school_id", user.schoolId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    created_by_name: row.profiles?.full_name ?? null,
+    is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0
+  }));
+}
+
 export async function getUnreadAnnouncementCount(user: AppUser): Promise<number> {
   const supabase = await createClient();
 

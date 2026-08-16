@@ -1,8 +1,8 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/session";
-import { updateProfileDetails } from "@/lib/services/profile";
 import {
+  getSchoolSettings,
   updateSchoolSettings,
   createAcademicYear,
   updateAcademicYear,
@@ -13,37 +13,16 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
-export async function updateProfileAction(values: any) {
+export async function updateThemeAction(theme: string) {
   try {
     const user = await requireUser("settings:manage");
-    await updateProfileDetails(user, values);
-    revalidatePath("/settings");
-    return { ok: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-export async function updatePasswordAction(password: string) {
-  try {
-    const user = await requireUser("settings:manage");
-    const adminClient = createAdminClient();
-
-    const { error } = await adminClient.auth.admin.updateUserById(user.id, {
-      password
-    });
-
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-export async function updateSchoolProfileAction(name: string, timezone: string, settings: any) {
-  try {
-    const user = await requireUser("settings:manage");
-    await updateSchoolSettings(user, name, timezone, settings);
+    const schoolSettings = await getSchoolSettings(user);
+    await updateSchoolSettings(
+      user,
+      schoolSettings.school?.name ?? user.schoolName,
+      schoolSettings.school?.timezone ?? "Asia/Karachi",
+      { theme }
+    );
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {

@@ -1,5 +1,4 @@
 import { requireUser } from "@/lib/auth/session";
-import { getProfileDetails } from "@/lib/services/profile";
 import { 
   getSchoolSettings,
   getAcademicYears,
@@ -19,8 +18,7 @@ export default async function SettingsPage({
 
   const supabase = await createClient();
 
-  const [profile, schoolSettings, academicYears, members, customRolesRes, rolePermsRes, overridesRes] = await Promise.all([
-    getProfileDetails(user),
+  const [schoolSettings, academicYears, members, customRolesRes, rolePermsRes, overridesRes] = await Promise.all([
     getSchoolSettings(user),
     getAcademicYears(user),
     user.role === "administrator" ? getSchoolMembers(user) : Promise.resolve([]),
@@ -37,13 +35,12 @@ export default async function SettingsPage({
     <>
       <PageHeader
         eyebrow="Configuration"
-        title="Account & School Settings"
-        description="Configure your personal profile details, security settings, notification preferences, school settings, and user roles."
+        title="Settings"
+        description="Configure notification preferences, academic sessions, theme settings, and user roles."
       />
 
       <SettingsTabs
         user={user}
-        profile={profile}
         schoolSettings={schoolSettings}
         academicYears={academicYears}
         members={members}

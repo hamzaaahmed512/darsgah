@@ -17,6 +17,7 @@ export function ChangePasswordForm() {
     startTransition(async () => {
       try {
         await changePasswordAction({
+          currentPassword: String(formData.get("currentPassword") ?? ""),
           password: String(formData.get("password") ?? ""),
           confirmPassword: String(formData.get("confirmPassword") ?? "")
         });
@@ -33,12 +34,15 @@ export function ChangePasswordForm() {
       <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-primary-soft text-primary">
         <ShieldCheck className="h-6 w-6" aria-hidden="true" />
       </div>
-      <h1 className="font-display text-3xl font-semibold text-ink">Set a new password</h1>
+      <h1 className="font-display text-3xl font-semibold text-ink">Change password</h1>
       <p className="mt-2 text-sm leading-6 text-muted">
-        Choose a private password before continuing.
+        Enter your current password before choosing a new one.
       </p>
       {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
       <form action={onSubmit} className="mt-6 grid gap-4">
+        <Field label="Current password">
+          <Input name="currentPassword" type="password" autoComplete="current-password" required />
+        </Field>
         <Field label="New password">
           <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
         </Field>

@@ -16,7 +16,7 @@ export async function createAnnouncementAction(
   try {
     const user = await requireUser("announcements:manage");
     await createAnnouncement(user, data);
-    revalidatePath("/announcements");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -30,7 +30,7 @@ export async function updateAnnouncementAction(
   try {
     const user = await requireUser("announcements:manage");
     await updateAnnouncement(user, id, data);
-    revalidatePath("/announcements");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -41,7 +41,7 @@ export async function archiveAnnouncementAction(id: string) {
   try {
     const user = await requireUser("announcements:manage");
     await archiveAnnouncement(user, id);
-    revalidatePath("/announcements");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -52,7 +52,7 @@ export async function deleteAnnouncementAction(id: string) {
   try {
     const user = await requireUser("announcements:manage");
     await deleteAnnouncement(user, id);
-    revalidatePath("/announcements");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };

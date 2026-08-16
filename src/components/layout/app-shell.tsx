@@ -243,15 +243,6 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
           );
         })}
       </nav>
-      <Link
-        href="/profile"
-        onClick={() => setOpen(false)}
-        className="mt-5 rounded-2xl bg-surface-low p-4 text-sm ring-1 ring-outline/70 transition duration-200 hover:bg-primary-soft"
-      >
-        <p className="font-label text-xs font-bold uppercase tracking-wide text-primary">Signed in as</p>
-        <p className="mt-1 truncate font-semibold text-ink">{user.fullName}</p>
-        <p className="mt-0.5 truncate text-xs text-muted">{user.jobTitle ?? user.role.replace("_", " ")}</p>
-      </Link>
     </aside>
   );
 
@@ -288,16 +279,12 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
             <button
               type="button"
               onClick={() => setProfileOpen((value) => !value)}
-              className="flex min-w-0 items-center gap-3 rounded-xl bg-white py-1.5 pl-1.5 pr-3 ring-1 ring-outline transition duration-200 hover:bg-surface-low"
+              className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 hover:bg-surface-low"
               aria-haspopup="menu"
               aria-expanded={profileOpen}
+              aria-label="Open profile menu"
             >
               {renderProfileAvatar()}
-              <div className="hidden min-w-0 text-left sm:block">
-                <p className="truncate text-sm font-bold text-ink">{user.fullName}</p>
-                <p className="font-label text-xs uppercase tracking-wide text-muted">{user.role.replace("_", " ")}</p>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-muted transition", profileOpen ? "rotate-180" : "")} aria-hidden="true" />
             </button>
 
             <div
@@ -321,11 +308,14 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
               <div className="mt-2 grid gap-1">
                 <Link
                   href="/profile"
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-low hover:text-primary"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted transition hover:bg-surface-low hover:text-primary"
                   role="menuitem"
                 >
                   <UserRound className="h-4 w-4" aria-hidden="true" />
-                  Profile
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold">View Profile</span>
+                    <span className="block truncate text-xs font-medium text-muted">{user.fullName}</span>
+                  </span>
                 </Link>
                 <Link
                   href="/school-profile"

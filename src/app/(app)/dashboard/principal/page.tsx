@@ -79,9 +79,7 @@ export default async function PrincipalDashboardPage() {
           <Bell className="h-5 w-5 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold">{announcements.length} active public announcements.</p>
-            <Link href="/announcements" className="text-xs font-bold underline hover:brightness-110">
-              Manage Announcements &rarr;
-            </Link>
+            <p className="text-xs font-bold">Use the bell menu for history and updates.</p>
           </div>
         </div>
       </div>
@@ -112,9 +110,7 @@ export default async function PrincipalDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Active Announcements</CardTitle>
-            <Link href="/announcements" className="text-xs font-bold text-primary hover:underline">
-              View All
-            </Link>
+            <span className="text-xs font-bold text-muted">Bell menu</span>
           </CardHeader>
           <CardContent>
             {!announcements.length ? (

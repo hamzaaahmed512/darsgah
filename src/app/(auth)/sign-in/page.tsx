@@ -1,81 +1,55 @@
 "use client";
 
-import { useState } from "react";
-import { signInAction, type SignInValues } from "./actions";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/form-field";
+import { signInAction } from "@/app/(auth)/sign-in/actions";
 
-// Private component (NO "export" keyword)
-function SignInForm() {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+export default function SignInPage() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsPending(true);
-    setErrorMessage(null);
-
-    const formData = new FormData(e.currentTarget);
-    const values: SignInValues = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    };
-
-    const result = await signInAction(values);
-
-    if (!result.success) {
-      setErrorMessage(result.error ?? "Failed to sign in.");
-      setIsPending(false);
-      return;
-    }
-
-    // Force hard refresh to pass updated session cookies to Server Components
-    window.location.href = "/dashboard";
+  function onSubmit(formData: FormData) {
+    setError("");
+    startTransition(async () => {
+      try {
+        await signInAction({
+          email: String(formData.get("email") ?? ""),
+          password: String(formData.get("password") ?? "")
+        });
+        router.replace("/");
+        router.refresh();
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Unable to sign in right now. Please try again.");
+      }
+    });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {errorMessage && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-          {errorMessage}
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium">Email</label>
-        <input
-          name="email"
-          type="email"
-          required
-          className="w-full p-2 border rounded-md"
-        />
+    <>
+      <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
+      <p className="mt-2 text-sm leading-6 text-muted">Use your school invitation or Supabase Auth account to enter GoCampusFlow.</p>
+      {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
+      <form className="mt-6 grid gap-4" action={onSubmit}>
+        <Field label="Email address">
+          <Input name="email" type="email" autoComplete="email" required placeholder="you@school.edu" />
+        </Field>
+        <Field label="Password">
+          <Input name="password" type="password" autoComplete="current-password" required />
+        </Field>
+        <Button disabled={pending} className="mt-2 w-full">
+          {pending ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+      <div className="mt-5 flex items-center justify-between text-sm">
+        <Link className="font-semibold text-primary hover:underline" href="/forgot-password">
+          Forgot password?
+        </Link>
+        <span className="text-muted">Invitation required</span>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium">Password</label>
-        <input
-          name="password"
-          type="password"
-          required
-          className="w-full p-2 border rounded-md"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full p-2 text-white bg-blue-600 rounded-md disabled:opacity-50"
-      >
-        {isPending ? "Signing in..." : "Sign In"}
-      </button>
-    </form>
-  );
-}
-
-// Only default export allowed in page.tsx
-export default function SignInPage() {
-  return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-sm">
-      <h1 className="text-2xl font-bold mb-6">Sign in to GoCampusFlow</h1>
-      <SignInForm />
-    </div>
+    </>
   );
 }

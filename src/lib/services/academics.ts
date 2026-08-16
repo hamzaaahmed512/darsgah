@@ -198,6 +198,13 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     .eq("school_id", user.schoolId)
     .eq("status", "active");
 
+  const { data: students } = await supabase
+    .from("student_directory")
+    .select("id,class_id,first_name,last_name,admission_number,status")
+    .eq("school_id", user.schoolId)
+    .eq("status", "active")
+    .order("last_name");
+
   // Group assignments by class_id
   const teachersByClass: Record<string, Array<{ id: string; teacher_id: string; teacher_name: string; subject_name: string | null }>> = {};
   for (const row of assignments ?? []) {
@@ -236,5 +243,18 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     studentsByClass[classId] = (studentsByClass[classId] || 0) + 1;
   }
 
-  return { teachersByClass, attendanceByClass, studentsByClass };
+  const studentListByClass: Record<string, Array<{ id: string; name: string; admission_number: string | null; status: string | null }>> = {};
+  for (const student of students ?? []) {
+    const row = student as any;
+    if (!row.class_id) continue;
+    if (!studentListByClass[row.class_id]) studentListByClass[row.class_id] = [];
+    studentListByClass[row.class_id].push({
+      id: row.id,
+      name: `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim() || "Unnamed student",
+      admission_number: row.admission_number ?? null,
+      status: row.status ?? null
+    });
+  }
+
+  return { teachersByClass, attendanceByClass, studentsByClass, studentListByClass };
 }

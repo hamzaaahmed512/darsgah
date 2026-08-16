@@ -2,23 +2,15 @@
 
 import { useState, useTransition } from "react";
 import {
-  updateProfileAction,
-  updatePasswordAction,
-  updateSchoolProfileAction,
   createAcademicYearAction,
-  updateAcademicYearAction,
   deleteAcademicYearAction,
-  updateMemberRoleAction,
-  updateMemberStatusAction
+  updateThemeAction
 } from "@/app/(app)/settings/actions";
 import { Badge } from "@/components/ui/badge";
-import { formatMonth } from "@/lib/services/payroll";
 import { RolesTab } from "@/components/settings/roles-tab";
-import { Lock } from "lucide-react";
 
 interface Props {
   user: any;
-  profile: any;
   schoolSettings: any;
   academicYears: any[];
   members: any[];
@@ -28,97 +20,38 @@ interface Props {
   initialTab?: string;
 }
 
-export function SettingsTabs({ user, profile, schoolSettings, academicYears, members, customRoles, rolePermissions, userOverrides, initialTab = "profile" }: Props) {
-  const allowedTabs = new Set(["profile", "password", "notifications", "school", "academics", "theme", "roles"]);
-  const startingTab = allowedTabs.has(initialTab) ? initialTab : "profile";
+export function SettingsTabs({
+  user,
+  schoolSettings,
+  academicYears,
+  members,
+  customRoles,
+  rolePermissions,
+  userOverrides,
+  initialTab = "notifications"
+}: Props) {
+  const isAdmin = user.role === "administrator";
+  const allowedTabs = new Set(["notifications", ...(isAdmin ? ["academics", "theme", "roles"] : [])]);
+  const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const isAdmin = user.role === "administrator";
-  const canManageSchoolProfile = user.role === "administrator" || user.role === "principal";
-
-  // Tab 1 Form State (Profile)
-  const [profileForm, setProfileForm] = useState({
-    fullName: profile.fullName || "",
-    personalEmail: profile.personalEmail || "",
-    phone: profile.phone || "",
-    department: profile.department || "",
-    jobTitle: profile.jobTitle || "",
-    address: profile.address || "",
-    emergencyContactName: profile.emergencyContactName || "",
-    emergencyContactPhone: profile.emergencyContactPhone || ""
-  });
-
-  // Tab 2 Form State (Password)
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  // Tab 3 Form State (Notifications)
   const [notifications, setNotifications] = useState({
     emailAnnouncements: true,
     emailPayroll: true
   });
-
-  // Tab 4 Form State (School Profile)
-  const [schoolProfile, setSchoolProfile] = useState({
-    name: schoolSettings.school?.name || "",
-    timezone: schoolSettings.school?.timezone || "Asia/Karachi",
-    currency: schoolSettings.settings?.currency || "PKR",
-    feeGraceDays: schoolSettings.settings?.feeGraceDays || "5"
-  });
-
-  // Tab 5 Form State (Academic Years)
   const [newYear, setNewYear] = useState({
     name: "",
     starts_on: "",
     ends_on: "",
     is_active: false
   });
-
-  // Tab 6 Form State (Theme Settings)
   const [theme, setTheme] = useState(schoolSettings.settings?.theme || "light");
 
-  function handleProfileSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function selectTab(tab: string) {
+    setActiveTab(tab);
     setMessage(null);
-    startTransition(async () => {
-      const res = await updateProfileAction(profileForm);
-      if (res.error) setMessage({ type: "error", text: res.error });
-      else setMessage({ type: "success", text: "Profile updated successfully!" });
-    });
-  }
-
-  function handlePasswordSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage(null);
-    if (password !== confirmPassword) {
-      setMessage({ type: "error", text: "Passwords do not match." });
-      return;
-    }
-    startTransition(async () => {
-      const res = await updatePasswordAction(password);
-      if (res.error) setMessage({ type: "error", text: res.error });
-      else {
-        setMessage({ type: "success", text: "Password changed successfully!" });
-        setPassword("");
-        setConfirmPassword("");
-      }
-    });
-  }
-
-  function handleSchoolSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage(null);
-    startTransition(async () => {
-      const res = await updateSchoolProfileAction(schoolProfile.name, schoolProfile.timezone, {
-        currency: schoolProfile.currency,
-        feeGraceDays: schoolProfile.feeGraceDays,
-        theme
-      });
-      if (res.error) setMessage({ type: "error", text: res.error });
-      else setMessage({ type: "success", text: "School profile updated successfully!" });
-    });
   }
 
   function handleCreateYear(e: React.FormEvent) {
@@ -132,7 +65,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
       const res = await createAcademicYearAction(newYear);
       if (res.error) setMessage({ type: "error", text: res.error });
       else {
-        setMessage({ type: "success", text: "Academic Year created successfully!" });
+        setMessage({ type: "success", text: "Academic session created successfully." });
         setNewYear({ name: "", starts_on: "", ends_on: "", is_active: false });
         setTimeout(() => window.location.reload(), 1000);
       }
@@ -146,350 +79,110 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
       const res = await deleteAcademicYearAction(id);
       if (res.error) setMessage({ type: "error", text: res.error });
       else {
-        setMessage({ type: "success", text: "Academic Year deleted!" });
+        setMessage({ type: "success", text: "Academic session deleted." });
         setTimeout(() => window.location.reload(), 1000);
       }
     });
   }
 
-  function handleRoleChange(memberId: string, role: string) {
+  function handleThemeSubmit() {
     setMessage(null);
     startTransition(async () => {
-      const res = await updateMemberRoleAction(memberId, role);
+      const res = await updateThemeAction(theme);
       if (res.error) setMessage({ type: "error", text: res.error });
-      else setMessage({ type: "success", text: "Role updated successfully!" });
-    });
-  }
-
-  function handleStatusChange(memberId: string, status: string) {
-    setMessage(null);
-    startTransition(async () => {
-      const res = await updateMemberStatusAction(memberId, status);
-      if (res.error) setMessage({ type: "error", text: res.error });
-      else setMessage({ type: "success", text: "Status updated successfully!" });
+      else setMessage({ type: "success", text: "Theme preference saved successfully." });
     });
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-      {/* Navigation tabs */}
       <div className="flex flex-col gap-1.5">
         <button
-          onClick={() => { setActiveTab("profile"); setMessage(null); }}
-          className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "profile" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
-        >
-          Profile & Account
-        </button>
-        <button
-          onClick={() => { setActiveTab("password"); setMessage(null); }}
-          className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "password" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
-        >
-          Password Settings
-        </button>
-        <button
-          onClick={() => { setActiveTab("notifications"); setMessage(null); }}
-          className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "notifications" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
+          onClick={() => selectTab("notifications")}
+          className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "notifications" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
         >
           Notifications
         </button>
 
+        {isAdmin ? (
           <>
-            <div className="h-px bg-outline/40 my-2" />
-            <span className="px-4 text-[10px] font-bold uppercase tracking-wider text-muted mb-1">
-              {isAdmin ? "Admin Only" : "School Details"}
+            <div className="my-2 h-px bg-outline/40" />
+            <span className="mb-1 px-4 text-[10px] font-bold uppercase tracking-wider text-muted">
+              Admin Only
             </span>
             <button
-              onClick={() => { setActiveTab("school"); setMessage(null); }}
-              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-between ${activeTab === "school" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
+              onClick={() => selectTab("academics")}
+              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
             >
-              <span>School Profile</span>
-              {!canManageSchoolProfile && <Lock className="h-4 w-4" aria-hidden="true" />}
+              Academic Sessions
             </button>
-            {canManageSchoolProfile && isAdmin && (
-              <>
-                <button
-                  onClick={() => { setActiveTab("academics"); setMessage(null); }}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
-                >
-                  Academic Sessions
-                </button>
-                <button
-                  onClick={() => { setActiveTab("theme"); setMessage(null); }}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "theme" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
-                >
-                  Theme Settings
-                </button>
-                <button
-                  onClick={() => { setActiveTab("roles"); setMessage(null); }}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === "roles" ? "bg-primary text-white" : "hover:bg-surface-low text-muted"}`}
-                >
-                  Role Management
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => selectTab("theme")}
+              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "theme" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+            >
+              Theme Settings
+            </button>
+            <button
+              onClick={() => selectTab("roles")}
+              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "roles" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+            >
+              Role Management
+            </button>
           </>
+        ) : null}
       </div>
 
-      {/* Forms Area */}
-      <div className="bg-white rounded-xl shadow-soft ring-1 ring-outline/25 p-6">
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg text-sm font-semibold ${message.type === "success" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
+      <div className="rounded-xl bg-white p-6 shadow-soft ring-1 ring-outline/25">
+        {message ? (
+          <div className={`mb-6 rounded-lg p-4 text-sm font-semibold ${message.type === "success" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
             {message.text}
           </div>
-        )}
+        ) : null}
 
-        {/* Tab 1: Profile & Account */}
-        {activeTab === "profile" && (
-          <form onSubmit={handleProfileSubmit} className="space-y-4">
-            <h3 className="font-display text-xl font-bold text-ink">Profile & Account</h3>
-            <p className="text-sm text-muted">Update your public profile fields, contact info, and emergency details.</p>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Full Name</label>
-                <input
-                  value={profileForm.fullName}
-                  onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Personal Email</label>
-                <input
-                  type="email"
-                  value={profileForm.personalEmail}
-                  onChange={(e) => setProfileForm({ ...profileForm, personalEmail: e.target.value })}
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="personal@gmail.com"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Phone Number (Pakistani)</label>
-                <div className="flex">
-                  <span className="inline-flex items-center rounded-l-lg border border-r-0 border-outline/60 bg-surface-low px-3 text-sm font-semibold text-muted">
-                    +92
-                  </span>
-                  <input
-                    value={profileForm.phone}
-                    onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                    className="w-full rounded-r-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    placeholder="3001234567"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Department</label>
-                <input
-                  value={profileForm.department}
-                  onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Job Title</label>
-                <input
-                  value={profileForm.jobTitle}
-                  onChange={(e) => setProfileForm({ ...profileForm, jobTitle: e.target.value })}
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-
-            <div className="h-px bg-outline/40 my-4" />
-            <h4 className="font-semibold text-ink text-sm">Pakistan Localization & Emergency Details</h4>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Home Address</label>
-                <textarea
-                  value={profileForm.address}
-                  onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
-                  rows={2}
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Emergency Contact Person</label>
-                <input
-                  value={profileForm.emergencyContactName}
-                  onChange={(e) => setProfileForm({ ...profileForm, emergencyContactName: e.target.value })}
-                  placeholder="e.g. Spouse, Parent Name"
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Emergency Contact Number</label>
-                <input
-                  value={profileForm.emergencyContactPhone}
-                  onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: e.target.value })}
-                  placeholder="e.g. +92 300 1234567"
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
-            >
-              {isPending ? "Saving..." : "Save Profile Details"}
-            </button>
-          </form>
-        )}
-
-        {/* Tab 2: Password Settings */}
-        {activeTab === "password" && (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
-            <h3 className="font-display text-xl font-bold text-ink">Change Password</h3>
-            <p className="text-sm text-muted">Ensure your account uses a secure, long password.</p>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">New Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Confirm Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
-            >
-              {isPending ? "Updating..." : "Update Password"}
-            </button>
-          </form>
-        )}
-
-        {/* Tab 3: Notification Preferences */}
-        {activeTab === "notifications" && (
+        {activeTab === "notifications" ? (
           <div className="space-y-4">
             <h3 className="font-display text-xl font-bold text-ink">Notification Preferences</h3>
-            <p className="text-sm text-muted">Toggle your notification methods below.</p>
 
             <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
                   checked={notifications.emailAnnouncements}
                   onChange={(e) => setNotifications({ ...notifications, emailAnnouncements: e.target.checked })}
-                  className="rounded border-outline/60 text-primary focus:ring-primary/30 h-4 w-4"
+                  className="h-4 w-4 rounded border-outline/60 text-primary focus:ring-primary/30"
                 />
-                <span className="text-sm text-ink font-semibold">Email notifications for new announcements</span>
+                <span className="text-sm font-semibold text-ink">Email notifications for new announcements</span>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
                   checked={notifications.emailPayroll}
                   onChange={(e) => setNotifications({ ...notifications, emailPayroll: e.target.checked })}
-                  className="rounded border-outline/60 text-primary focus:ring-primary/30 h-4 w-4"
+                  className="h-4 w-4 rounded border-outline/60 text-primary focus:ring-primary/30"
                 />
-                <span className="text-sm text-ink font-semibold">Email notifications when payroll is generated</span>
+                <span className="text-sm font-semibold text-ink">Email notifications when payroll is generated</span>
               </label>
             </div>
             <button
               type="button"
-              onClick={() => setMessage({ type: "success", text: "Preferences saved successfully!" })}
+              onClick={() => setMessage({ type: "success", text: "Preferences saved successfully." })}
               className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105"
             >
               Save Preferences
             </button>
           </div>
-        )}
+        ) : null}
 
-        {/* Tab 4: School Profile */}
-        {activeTab === "school" && (
-          <form onSubmit={handleSchoolSubmit} className="space-y-4 max-w-lg">
-            <h3 className="font-display text-xl font-bold text-ink flex items-center gap-2">
-              School Profile Settings
-              {!canManageSchoolProfile && <Lock className="h-5 w-5 text-muted" aria-hidden="true" />}
-            </h3>
-            <p className="text-sm text-muted">Change settings isolated by school ID.</p>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">School Name</label>
-              <input
-                value={schoolProfile.name}
-                onChange={(e) => setSchoolProfile({ ...schoolProfile, name: e.target.value })}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed"
-                required
-                disabled={!canManageSchoolProfile}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Timezone</label>
-              <select
-                value={schoolProfile.timezone}
-                onChange={(e) => setSchoolProfile({ ...schoolProfile, timezone: e.target.value })}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={!canManageSchoolProfile}
-              >
-                <option value="Asia/Karachi">Asia/Karachi (Pakistan Standard Time)</option>
-                <option value="UTC">Coordinated Universal Time (UTC)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Currency Code</label>
-              <input
-                value={schoolProfile.currency}
-                onChange={(e) => setSchoolProfile({ ...schoolProfile, currency: e.target.value })}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed"
-                required
-                disabled={!canManageSchoolProfile}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Fee Grace Days (numeric)</label>
-              <input
-                type="number"
-                value={schoolProfile.feeGraceDays}
-                onChange={(e) => setSchoolProfile({ ...schoolProfile, feeGraceDays: e.target.value })}
-                className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed"
-                required
-                disabled={!canManageSchoolProfile}
-              />
-            </div>
-
-            {canManageSchoolProfile && (
-              <button
-                type="submit"
-                disabled={isPending}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
-              >
-                {isPending ? "Saving..." : "Save School Profile"}
-              </button>
-            )}
-          </form>
-        )}
-
-        {/* Tab 5: Academic Sessions */}
-        {activeTab === "academics" && (
+        {activeTab === "academics" && isAdmin ? (
           <div className="space-y-6">
             <h3 className="font-display text-xl font-bold text-ink">Academic Sessions</h3>
-            <p className="text-sm text-muted">Create and manage academic sessions. Marking a session active disables all other sessions.</p>
 
-            <form onSubmit={handleCreateYear} className="space-y-4 border border-outline/40 rounded-xl p-4 bg-surface-low/50">
-              <h4 className="font-bold text-sm text-ink">Add New Session</h4>
+            <form onSubmit={handleCreateYear} className="space-y-4 rounded-xl border border-outline/40 bg-surface-low/50 p-4">
+              <h4 className="text-sm font-bold text-ink">Add New Session</h4>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Session Name</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted">Session Name</label>
                   <input
                     placeholder="e.g. 2026-2027"
                     value={newYear.name}
@@ -498,7 +191,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Starts On</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted">Starts On</label>
                   <input
                     type="date"
                     value={newYear.starts_on}
@@ -507,7 +200,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Ends On</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted">Ends On</label>
                   <input
                     type="date"
                     value={newYear.ends_on}
@@ -516,12 +209,12 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
                   checked={newYear.is_active}
                   onChange={(e) => setNewYear({ ...newYear, is_active: e.target.checked })}
-                  className="rounded border-outline/60 text-primary h-4 w-4"
+                  className="h-4 w-4 rounded border-outline/60 text-primary"
                 />
                 <span className="text-sm font-semibold text-ink">Set as active academic session</span>
               </label>
@@ -534,7 +227,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
               </button>
             </form>
 
-            <div className="overflow-x-auto border border-outline/40 rounded-xl">
+            <div className="overflow-x-auto rounded-xl border border-outline/40">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
                   <tr>
@@ -557,7 +250,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
                         </Badge>
                       </td>
                       <td className="px-4 py-4">
-                        {!year.is_active && (
+                        {!year.is_active ? (
                           <button
                             type="button"
                             onClick={() => handleDeleteYear(year.id)}
@@ -565,7 +258,7 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
                           >
                             Delete
                           </button>
-                        )}
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -573,63 +266,45 @@ export function SettingsTabs({ user, profile, schoolSettings, academicYears, mem
               </table>
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* Tab 6: Theme Settings */}
-        {activeTab === "theme" && (
+        {activeTab === "theme" && isAdmin ? (
           <div className="space-y-4">
             <h3 className="font-display text-xl font-bold text-ink">Theme Preferences</h3>
-            <p className="text-sm text-muted">Choose your preferred visual design mode for Scholarly.</p>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={() => setTheme("light")}
-                className={`border rounded-xl p-4 text-left transition flex flex-col justify-between h-24 ${theme === "light" ? "border-primary ring-2 ring-primary/20 bg-primary-soft/10" : "border-outline hover:bg-surface-low"}`}
-              >
-                <span className="font-bold text-ink">Light Mode</span>
-                <span className="text-xs text-muted">Default light theme</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTheme("dark")}
-                className={`border rounded-xl p-4 text-left transition flex flex-col justify-between h-24 ${theme === "dark" ? "border-primary ring-2 ring-primary/20 bg-primary-soft/10" : "border-outline hover:bg-surface-low"}`}
-              >
-                <span className="font-bold text-ink">Dark Mode</span>
-                <span className="text-xs text-muted">High contrast dark theme</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTheme("glass")}
-                className={`border rounded-xl p-4 text-left transition flex flex-col justify-between h-24 ${theme === "glass" ? "border-primary ring-2 ring-primary/20 bg-primary-soft/10" : "border-outline hover:bg-surface-low"}`}
-              >
-                <span className="font-bold text-ink">Glassmorphism</span>
-                <span className="text-xs text-muted">Semi-transparent elements</span>
-              </button>
+              {["light", "dark", "glass"].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTheme(option)}
+                  className={`flex h-24 flex-col justify-between rounded-xl border p-4 text-left transition ${theme === option ? "border-primary bg-primary-soft/10 ring-2 ring-primary/20" : "border-outline hover:bg-surface-low"}`}
+                >
+                  <span className="font-bold capitalize text-ink">{option === "glass" ? "Glassmorphism" : `${option} Mode`}</span>
+                  <span className="text-xs text-muted">{option === "glass" ? "Semi-transparent elements" : `${option} theme`}</span>
+                </button>
+              ))}
             </div>
 
             <button
               type="button"
-              onClick={handleSchoolSubmit}
+              onClick={handleThemeSubmit}
               disabled={isPending}
               className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
             >
               {isPending ? "Applying..." : "Save Theme Preference"}
             </button>
           </div>
-        )}
+        ) : null}
 
-        {/* Tab 7: Role Management */}
-        {activeTab === "roles" && (
-          <RolesTab 
-            members={members} 
-            customRoles={customRoles} 
-            rolePermissions={rolePermissions} 
-            userOverrides={userOverrides} 
+        {activeTab === "roles" && isAdmin ? (
+          <RolesTab
+            members={members}
+            customRoles={customRoles}
+            rolePermissions={rolePermissions}
+            userOverrides={userOverrides}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );

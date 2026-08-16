@@ -1,6 +1,6 @@
 # GoCampusFlow
 
-GoCampusFlow is a complete multi-tenant school management SaaS application for principals, teachers, student-management staff, and administrators. The app is now configured to connect directly to a Supabase project, so the normal development flow is to run the Next.js app against your remote Supabase instance.
+GoCampusFlow is a complete multi-tenant school management SaaS application for principals, teachers, student-management staff, and administrators. It uses Next.js, TypeScript, Supabase Auth, Supabase PostgreSQL, Supabase RLS, Tailwind CSS, Zod, React Hook Form, and Recharts.
 
 ## Main Features
 
@@ -49,27 +49,25 @@ ARCHITECTURE.md
 
 - Node.js 20 or newer
 - npm
-- A Supabase project with a live database and Auth enabled
-- Access to your project URL, anon key, and service role key
+- A Supabase project
+- Supabase CLI is recommended for local migrations, but Docker is optional and not required by this repository
+- For local Docker-based Supabase on Windows, Docker Desktop needs both `Microsoft-Windows-Subsystem-Linux` and `VirtualMachinePlatform` enabled, followed by a Windows restart.
 
-## Quick Start (direct Supabase connection)
+## Environment Variables
 
-This is the current default setup for the app.
-
-1. Create a Supabase project if you have not already done so.
-2. Copy the example environment file:
+Create `.env.local` from `.env.example`.
 
 ```powershell
 Copy-Item .env.example .env.local
 ```
 
-macOS / Linux:
+macOS Terminal:
 
 ```bash
 cp .env.example .env.local
 ```
 
-3. Fill in your project values in `.env.local`:
+Fill in:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -80,31 +78,48 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only. Do not expose it in browser code.
 
-4. Install dependencies:
+## Install Dependencies
+
+Windows PowerShell:
 
 ```powershell
+npm.cmd install
+```
+
+macOS Terminal:
+
+```bash
 npm install
-```
-
-5. Start the app:
-
-```powershell
-npm run dev
-```
-
-6. Open the app in the browser at:
-
-```text
-http://localhost:3000
 ```
 
 ## Supabase Setup
 
-Before the app works correctly, your Supabase project needs the schema and demo data.
+1. Create a Supabase project.
+2. Copy the project URL and anon key into `.env.local`.
+3. Apply **all** migrations in `supabase/migrations/` in filename order. In the Supabase Dashboard SQL Editor, run each file one at a time:
+   - `202607110001_initial_schema.sql`
+   - `202607110002_add_grants.sql`
+   - `202607110003_approval_workflow.sql`
+   - `202607110004_fix_principal_student_update.sql`
+   - `202607110005_profile_details.sql`
+   - `202607110006_user_password_security.sql`
+   - `202607110007_head_teacher_attendance_rules.sql`
+   - `202607110008_exam_marks_results.sql`
+   - `202607120001_principal_class_management.sql`
+   - `202607120002_exam_results_workflow.sql`
+   - `202607130001_finance_module.sql`
+   - `202607140001_pakistan_erp_enhancements.sql`
+   - `202607150002_custom_roles_and_profile_improvements.sql`
+   - `202607160001_school_os_workflows.sql`
 
-1. Apply the migrations in `supabase/migrations/` in order.
-2. Run `supabase/seed.sql` to load demo schools, classes, staff, students, and activity data.
-3. Create the demo Auth users in the Supabase Auth dashboard, then re-run the seed file if needed so the final script can bind Auth users to school memberships.
+   If you use the Supabase CLI with a linked project you can run all migrations at once:
+
+   ```bash
+   supabase db push
+   ```
+
+4. Run `supabase/seed.sql` for demo school, academic structure, students, guardians, enrollments, and activity logs.
+5. Create demo Auth users in Supabase Auth, then re-run `supabase/seed.sql` so the final block can bind their Auth IDs to school memberships.
 
 Suggested demo users:
 
@@ -115,28 +130,7 @@ teacher@scholarly.test
 staff@scholarly.test
 ```
 
-If you use the Supabase CLI linked to your project, you can push the migrations with:
-
-```bash
-npx supabase db push
-```
-
-You can also run the SQL files manually in the Supabase SQL editor in filename order. The migration files are:
-
-- `202607110001_initial_schema.sql`
-- `202607110002_add_grants.sql`
-- `202607110003_approval_workflow.sql`
-- `202607110004_fix_principal_student_update.sql`
-- `202607110005_profile_details.sql`
-- `202607110006_user_password_security.sql`
-- `202607110007_head_teacher_attendance_rules.sql`
-- `202607110008_exam_marks_results.sql`
-- `202607120001_principal_class_management.sql`
-- `202607120002_exam_results_workflow.sql`
-- `202607130001_finance_module.sql`
-- `202607140001_pakistan_erp_enhancements.sql`
-- `202607150002_custom_roles_and_profile_improvements.sql`
-- `202607160001_school_os_workflows.sql`
+Use secure temporary passwords in Supabase Auth. Do not commit credentials.
 
 ## Row Level Security
 
@@ -148,55 +142,58 @@ The migration enables RLS on every tenant-owned table. The core policies use:
 
 Teachers can only read assigned-class students and submit attendance for assigned classes. Student-management staff can create, update, and archive students. Administrators can manage users, academic structure, and settings.
 
-## Production Build
+## Local Development
+
+Windows PowerShell:
 
 ```powershell
+npm.cmd run dev
+```
+
+macOS Terminal:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Windows Local Docker Setup
+
+The local Supabase and DBeaver workflow lives under [local-dev/README.md](/D:/saadf/local-dev/README.md). Use that folder for Windows prerequisites, local-stack scripts, and the DBeaver connection details.
+
+## Production Build
+
+Windows PowerShell:
+
+```powershell
+npm.cmd run build
+npm.cmd run start
+```
+
+macOS Terminal:
+
+```bash
 npm run build
 npm run start
 ```
 
 ## Testing, Linting, and Type Checking
 
+Windows PowerShell:
+
 ```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test
+```
+
+macOS Terminal:
+
+```bash
 npm run typecheck
 npm run lint
 npm run test
-```
-
-## Optional Local Docker Setup
-
-The Docker-based local Supabase stack is optional and no longer the default workflow. Only use this if you want a full local database stack for development experiments.
-
-1. Ensure Docker Desktop is running.
-2. Initialize the local database stack:
-
-```powershell
-npm.cmd run setup:local
-```
-
-3. Start the app with the local workflow:
-
-```powershell
-npm.cmd run dev:local
-```
-
-4. If Docker on Windows reports missing WSL support, run the prerequisites script as an administrator:
-
-```powershell
-npm.cmd run setup:docker-prereqs
-```
-
-### DBeaver Connection
-
-Use these values to connect DBeaver to the local Supabase PostgreSQL instance:
-
-```text
-Host: 127.0.0.1
-Port: 54322
-Database: postgres
-Username: postgres
-Password: postgres
-SSL: Disable
 ```
 
 ## Deployment
@@ -219,11 +216,10 @@ Deploy to any Node-compatible host that supports Next.js, such as Vercel, Netlif
 - If sign-in succeeds but redirects back to sign in, verify the Auth user has a matching `profiles` and active `school_members` row.
 - If a teacher sees no classes, confirm `teacher_assignments` has rows for that teacher's Auth user ID.
 - If student creation fails, check the current user role and the `students_insert_staff` RLS policy.
-- If the app cannot connect to the database, confirm `.env.local` contains the correct Supabase URL and keys and that the project is active.
-- If you are using the local Docker flow, make sure Docker is running before starting the app.
 - If charts are empty, submit attendance records or add enrollments first.
 - If PowerShell blocks `npm`, use `npm.cmd` as shown above.
 - **"Could not find the table 'public.fee_structures'" or "public.student_fee_directory" errors**: The finance module migration has not been applied. Run `supabase/migrations/202607130001_finance_module.sql` in the Supabase Dashboard SQL Editor (or run `supabase db push` with the CLI) and restart the dev server.
+- **`column school_members.custom_role_id does not exist`**: The local database is missing later migrations. Run `npx.cmd supabase db push --local --include-all` and restart the dev server.
 
 ## Remaining Operational Notes
 

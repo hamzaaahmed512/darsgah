@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:local": "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\dev-local.ps1",
+    "dev:local": "powershell.exe -ExecutionPolicy Bypass -File .\\local-dev\\scripts\\dev-local.ps1",
     "dev:sh": "./scripts/dev-local.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "setup:docker-prereqs": "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\enable-docker-prereqs.ps1",
-    "setup:local": "powershell.exe -ExecutionPolicy Bypass -File .\\scripts\\setup-local.ps1",
+    "setup:docker-prereqs": "powershell.exe -ExecutionPolicy Bypass -File .\\local-dev\\scripts\\enable-docker-prereqs.ps1",
+    "setup:local": "powershell.exe -ExecutionPolicy Bypass -File .\\local-dev\\scripts\\setup-local.ps1",
     "setup:sh": "./scripts/setup-local.sh",
     "supabase:reset": "npx supabase db reset --local --yes",
     "supabase:start": "npx supabase start",
@@ -39,7 +39,6 @@
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
-    "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.3",
     "jsdom": "^25.0.1",
@@ -47,7 +46,6 @@
     "supabase": "^2.109.1",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^2.1.8"
   },
   "allowScripts": {

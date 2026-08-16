@@ -3,13 +3,14 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useRef, useTransition } from "react";
 import { Search } from "lucide-react";
-import { Input, Select } from "@/components/ui/form-field";
+import { Select } from "@/components/ui/form-field";
 
 type Props = {
   grades: { id: string; name: string }[];
+  classes: { id: string; name: string; grade_name: string; section_name: string | null }[];
 };
 
-export function ClassFilterForm({ grades }: Props) {
+export function ClassFilterForm({ grades, classes }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -18,10 +19,11 @@ export function ClassFilterForm({ grades }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pushFilters = useCallback(
-    (gradeId: string, q: string) => {
+    (gradeId: string, q: string, classId: string) => {
       const params = new URLSearchParams();
       if (gradeId && gradeId !== "all") params.set("grade", gradeId);
       if (q) params.set("q", q);
+      if (classId && classId !== "all") params.set("classId", classId);
       startTransition(() => router.replace(`${pathname}?${params.toString()}`));
     },
     [pathname, router]
@@ -29,21 +31,26 @@ export function ClassFilterForm({ grades }: Props) {
 
   const currentGrade = searchParams.get("grade") ?? "all";
   const currentQ = searchParams.get("q") ?? "";
+  const currentClass = searchParams.get("classId") ?? "all";
 
   function handleGradeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    pushFilters(e.target.value, searchRef.current?.value ?? currentQ);
+    pushFilters(e.target.value, searchRef.current?.value ?? currentQ, currentClass);
+  }
+
+  function handleClassChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    pushFilters(currentGrade, searchRef.current?.value ?? currentQ, e.target.value);
   }
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = e.target.value;
     debounceRef.current = setTimeout(() => {
-      pushFilters(currentGrade, q);
+      pushFilters(currentGrade, q, currentClass);
     }, 350);
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_260px]">
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
@@ -63,6 +70,14 @@ export function ClassFilterForm({ grades }: Props) {
         {grades.map((grade) => (
           <option key={grade.id} value={grade.id}>
             {grade.name}
+          </option>
+        ))}
+      </Select>
+      <Select name="classId" defaultValue={currentClass} onChange={handleClassChange}>
+        <option value="all">All Classes</option>
+        {classes.map((cls) => (
+          <option key={cls.id} value={cls.id}>
+            {cls.name} / {cls.grade_name}{cls.section_name ? ` ${cls.section_name}` : ""}
           </option>
         ))}
       </Select>
