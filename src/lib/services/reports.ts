@@ -10,9 +10,14 @@ export async function getReports(user: AppUser) {
       .eq("school_id", user.schoolId)
       .order("attendance_date", { ascending: false })
       .limit(200),
-    supabase.from("students").select("*").eq("school_id", user.schoolId).eq("status", "archived").order("archived_at", { ascending: false }),
+    supabase
+      .from("students")
+      .select("admission_number,first_name,last_name,archived_at")
+      .eq("school_id", user.schoolId)
+      .eq("status", "archived")
+      .order("archived_at", { ascending: false }),
     supabase.from("class_enrollment_counts").select("*").eq("school_id", user.schoolId),
-    supabase.from("activity_logs").select("*,profiles(full_name)").eq("school_id", user.schoolId).order("created_at", { ascending: false }).limit(50)
+    supabase.from("activity_logs").select("id,action,entity_type,created_at,profiles(full_name)").eq("school_id", user.schoolId).order("created_at", { ascending: false }).limit(50)
   ]);
 
   return {
@@ -21,4 +26,17 @@ export async function getReports(user: AppUser) {
     enrollment: enrollment.data ?? [],
     activity: activity.data ?? []
   };
+}
+
+export async function getActivityLogs(user: AppUser, limit = 50) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("activity_logs")
+    .select("id,action,entity_type,created_at,profiles(full_name)")
+    .eq("school_id", user.schoolId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

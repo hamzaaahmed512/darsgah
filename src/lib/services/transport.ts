@@ -59,13 +59,20 @@ export async function getTransportDashboard(user: AppUser) {
     if (result.error) throw new Error(result.error.message);
   }
 
+  const driverById = new Map((drivers.data ?? []).map((driver: any) => [driver.id, driver]));
+  const routeById = new Map((routes.data ?? []).map((route: any) => [route.id, route]));
+  const passengersByVehicle = new Map<string, number>();
+  for (const assignment of assignments.data ?? []) {
+    passengersByVehicle.set(assignment.vehicle_id, (passengersByVehicle.get(assignment.vehicle_id) ?? 0) + 1);
+  }
+
   return {
     routes: routes.data ?? [],
     drivers: drivers.data ?? [],
     vehicles: (vehicles.data ?? []).map((vehicle: any) => {
-      const driver = (drivers.data ?? []).find((item: any) => item.id === vehicle.driver_id);
-      const route = (routes.data ?? []).find((item: any) => item.id === vehicle.route_id);
-      const passengerCount = (assignments.data ?? []).filter((item: any) => item.vehicle_id === vehicle.id).length;
+      const driver = driverById.get(vehicle.driver_id);
+      const route = routeById.get(vehicle.route_id);
+      const passengerCount = passengersByVehicle.get(vehicle.id) ?? 0;
 
       return {
         ...vehicle,

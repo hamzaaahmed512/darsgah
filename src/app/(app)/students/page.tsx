@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
@@ -46,6 +47,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <p className="mt-4 text-sm text-muted">
         Showing {students.rows.length} of {students.count} students.
       </p>
+      {students.count > students.pageSize ? (
+        <nav className="mt-3 flex items-center gap-3 text-sm" aria-label="Student pages">
+          {students.page > 1 ? <Link href={`/students?${new URLSearchParams({ ...params, page: String(students.page - 1) })}`} className="font-semibold text-primary hover:underline">Previous</Link> : <span className="text-muted">Previous</span>}
+          <span className="text-muted">Page {students.page} of {Math.ceil(students.count / students.pageSize)}</span>
+          {students.page * students.pageSize < students.count ? <Link href={`/students?${new URLSearchParams({ ...params, page: String(students.page + 1) })}`} className="font-semibold text-primary hover:underline">Next</Link> : <span className="text-muted">Next</span>}
+        </nav>
+      ) : null}
     </>
   );
 }

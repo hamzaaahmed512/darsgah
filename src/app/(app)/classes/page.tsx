@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { BookOpenCheck, CalendarCheck, CalendarDays, ChevronDown, GraduationCap, Layers3, MapPin, ShieldCheck, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,12 +22,11 @@ export default async function ClassesPage({
   const params = await searchParams;
   const user = await requireUser("classes:manage");
 
-  const [academicData, classDetails] = await Promise.all([
+  const [academicData, classDetails, allStaff] = await Promise.all([
     getAcademicOptions(user),
-    getClassTeachersAndAttendance(user)
+    getClassTeachersAndAttendance(user),
+    getStaff(user)
   ]);
-
-  const allStaff = await getStaff(user);
   const teachers = allStaff.filter((staffMember: any) => staffMember.role === "teacher");
 
   const filterGrade = params.grade ?? "all";
@@ -82,7 +82,6 @@ export default async function ClassesPage({
             const assignedTeachers = classDetails.teachersByClass[cls.id] ?? [];
             const attendance = classDetails.attendanceByClass[cls.id];
             const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
-            const students = classDetails.studentListByClass[cls.id] ?? [];
             const totalRecords = attendance ? attendance.present + attendance.absent + attendance.late + attendance.excused : 0;
             const attendanceRate = totalRecords > 0
               ? Math.round(((attendance.present + attendance.late) / totalRecords) * 100)
@@ -148,21 +147,11 @@ export default async function ClassesPage({
                     <div className="rounded-lg border border-outline/40 p-3">
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 font-semibold text-muted">
-                          <GraduationCap className="h-4 w-4" /> Students ({students.length})
+                          <GraduationCap className="h-4 w-4" /> Students ({studentCount})
                         </span>
                       </div>
-                      {students.length > 0 ? (
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                          {students.map((student) => (
-                            <div key={student.id} className="rounded-md bg-surface-low px-3 py-2 text-sm">
-                              <p className="truncate font-semibold text-ink">{student.name}</p>
-                              <p className="text-xs text-muted">{student.admission_number ?? "No admission number"}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs italic text-muted">No active students assigned.</p>
-                      )}
+                      <p className="text-xs text-muted">Student records are paginated in Student Management.</p>
+                      <Link href={`/students?classId=${cls.id}`} className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">Open student list</Link>
                     </div>
                   </div>
 

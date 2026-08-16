@@ -172,38 +172,32 @@ export async function deleteClass(user: AppUser, classId: string) {
 
 export async function getClassTeachersAndAttendance(user: AppUser) {
   const supabase = await createClient();
+  const attendanceSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  // Fetch teacher assignments with teacher name + subject
-  const { data: assignments } = await supabase
-    .from("teacher_assignments")
-    .select("id,class_id,teacher_id,profiles!teacher_assignments_teacher_id_fkey(full_name),subjects(name)")
-    .eq("school_id", user.schoolId);
+  const [assignmentsResult, recordsResult, enrollmentsResult] = await Promise.all([
+    supabase
+      .from("teacher_assignments")
+      .select("id,class_id,teacher_id,profiles!teacher_assignments_teacher_id_fkey(full_name),subjects(name)")
+      .eq("school_id", user.schoolId),
+    supabase
+      .from("attendance_records")
+      .select("class_id,status")
+      .eq("school_id", user.schoolId)
+      .gte("attendance_date", attendanceSince),
+    supabase
+      .from("enrollments")
+      .select("class_id")
+      .eq("school_id", user.schoolId)
+      .eq("status", "active")
+  ]);
 
-  // Fetch attendance stats per class (total sessions, present/absent counts)
-  const { data: sessions } = await supabase
-    .from("attendance_sessions")
-    .select("class_id,attendance_date")
-    .eq("school_id", user.schoolId)
-    .order("attendance_date", { ascending: false });
+  if (assignmentsResult.error) throw new Error(assignmentsResult.error.message);
+  if (recordsResult.error) throw new Error(recordsResult.error.message);
+  if (enrollmentsResult.error) throw new Error(enrollmentsResult.error.message);
 
-  const { data: records } = await supabase
-    .from("attendance_records")
-    .select("class_id,status")
-    .eq("school_id", user.schoolId);
-
-  // Fetch active student counts
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("class_id")
-    .eq("school_id", user.schoolId)
-    .eq("status", "active");
-
-  const { data: students } = await supabase
-    .from("student_directory")
-    .select("id,class_id,first_name,last_name,admission_number,status")
-    .eq("school_id", user.schoolId)
-    .eq("status", "active")
-    .order("last_name");
+  const assignments = assignmentsResult.data ?? [];
+  const records = recordsResult.data ?? [];
+  const enrollments = enrollmentsResult.data ?? [];
 
   // Group assignments by class_id
   const teachersByClass: Record<string, Array<{ id: string; teacher_id: string; teacher_name: string; subject_name: string | null }>> = {};
@@ -219,14 +213,10 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     });
   }
 
-  // Group attendance stats by class_id
+  // Attendance summaries intentionally use the recent 30-day window so this
+  // management screen does not read the school's full attendance history.
   const attendanceByClass: Record<string, { total_sessions: number; present: number; absent: number; late: number; excused: number }> = {};
-  for (const s of sessions ?? []) {
-    const classId = (s as any).class_id;
-    if (!attendanceByClass[classId]) attendanceByClass[classId] = { total_sessions: 0, present: 0, absent: 0, late: 0, excused: 0 };
-    attendanceByClass[classId].total_sessions++;
-  }
-  for (const r of records ?? []) {
+  for (const r of records) {
     const rec = r as any;
     const classId = rec.class_id;
     if (!attendanceByClass[classId]) attendanceByClass[classId] = { total_sessions: 0, present: 0, absent: 0, late: 0, excused: 0 };
@@ -238,23 +228,10 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
 
   // Group student counts by class_id
   const studentsByClass: Record<string, number> = {};
-  for (const e of enrollments ?? []) {
+  for (const e of enrollments) {
     const classId = (e as any).class_id;
     studentsByClass[classId] = (studentsByClass[classId] || 0) + 1;
   }
 
-  const studentListByClass: Record<string, Array<{ id: string; name: string; admission_number: string | null; status: string | null }>> = {};
-  for (const student of students ?? []) {
-    const row = student as any;
-    if (!row.class_id) continue;
-    if (!studentListByClass[row.class_id]) studentListByClass[row.class_id] = [];
-    studentListByClass[row.class_id].push({
-      id: row.id,
-      name: `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim() || "Unnamed student",
-      admission_number: row.admission_number ?? null,
-      status: row.status ?? null
-    });
-  }
-
-  return { teachersByClass, attendanceByClass, studentsByClass, studentListByClass };
+  return { teachersByClass, attendanceByClass, studentsByClass };
 }

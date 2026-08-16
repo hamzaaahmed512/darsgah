@@ -10,6 +10,7 @@ export async function reviewExamApprovalAction(approvalId: string, formData: For
   if (decision !== "approved" && decision !== "rejected") throw new Error("Choose approve or reject.");
 
   await reviewExamApproval(user, approvalId, decision, String(formData.get("principal_comment") ?? ""));
+  revalidatePath("/admin/academic-control");
   revalidatePath("/results");
   revalidatePath("/exam-approvals");
 }
