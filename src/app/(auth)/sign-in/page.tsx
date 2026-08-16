@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signInAction, SignInValues } from "./actions";
+import { signInAction, type SignInValues } from "./actions";
 
-export function SignInForm() {
+// Private component (NO "export" keyword)
+function SignInForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
@@ -37,7 +38,7 @@ export function SignInForm() {
           {errorMessage}
         </div>
       )}
-      
+
       <div>
         <label className="block text-sm font-medium">Email</label>
         <input
@@ -66,5 +67,15 @@ export function SignInForm() {
         {isPending ? "Signing in..." : "Sign In"}
       </button>
     </form>
+  );
+}
+
+// Only default export allowed in page.tsx
+export default function SignInPage() {
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-sm">
+      <h1 className="text-2xl font-bold mb-6">Sign in to GoCampusFlow</h1>
+      <SignInForm />
+    </div>
   );
 }
