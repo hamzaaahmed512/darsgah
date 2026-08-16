@@ -1,3 +1,4 @@
+// src/app/(auth)/sign-in/actions.ts
 "use server";
 
 import { z } from "zod";
@@ -11,19 +12,11 @@ const signInSchema = z.object({
 
 export type SignInValues = z.infer<typeof signInSchema>;
 
-export type SignInResult = {
-  success: boolean;
-  error?: string;
-};
-
-export async function signInAction(values: SignInValues): Promise<SignInResult> {
+export async function signInAction(values: SignInValues) {
   const parsed = signInSchema.safeParse(values);
 
   if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input.",
-    };
+    return { success: false, error: "Invalid input values." };
   }
 
   try {
@@ -31,11 +24,12 @@ export async function signInAction(values: SignInValues): Promise<SignInResult> 
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error) {
+      // RETURN the error string; DO NOT throw it
       return {
         success: false,
         error: getSupabaseBrowserErrorMessage(
           error,
-          "Unable to sign in right now. Please try again."
+          "Invalid email or password."
         ),
       };
     }
@@ -44,10 +38,7 @@ export async function signInAction(values: SignInValues): Promise<SignInResult> 
   } catch (error) {
     return {
       success: false,
-      error: getSupabaseBrowserErrorMessage(
-        error,
-        "Unable to sign in right now. Please try again."
-      ),
+      error: "Unable to sign in right now. Please try again.",
     };
   }
 }
