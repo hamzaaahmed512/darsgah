@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { requirePublicSupabaseEnv } from "@/lib/supabase/env";
 
 type CookieToSet = {
   name: string;
@@ -9,14 +10,7 @@ type CookieToSet = {
 
 export async function createClient() {
   const cookieStore = await cookies();
-
-  // Explicit inline references ensure Next.js bundler bakes values into Vercel Server Actions
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  if (!url || !anonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
+  const { url, anonKey } = requirePublicSupabaseEnv();
 
   return createServerClient(url, anonKey, {
     cookies: {

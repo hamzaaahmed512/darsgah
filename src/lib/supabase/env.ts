@@ -4,14 +4,15 @@ type PublicSupabaseEnv = {
 };
 
 export function readPublicSupabaseEnv(): PublicSupabaseEnv | null {
-  // Access process.env directly without optional chaining so Next.js inlines the values
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    ? process.env.NEXT_PUBLIC_SUPABASE_URL.trim()
-    : null;
-    
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim()
-    : null;
+  const url = [
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
+  ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
+
+  const anonKey = [
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.SUPABASE_ANON_KEY,
+  ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
 
   if (!url || !anonKey) {
     return null;
@@ -25,7 +26,7 @@ export function requirePublicSupabaseEnv(): PublicSupabaseEnv {
 
   if (!env) {
     throw new Error(
-      "Missing Supabase environment variables. Please check your Vercel Environment Variables or .env.local file."
+      "Missing Supabase environment variables. Add NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY in Vercel or .env.local."
     );
   }
 
