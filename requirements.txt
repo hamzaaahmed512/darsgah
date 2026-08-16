@@ -1,0 +1,16 @@
+# GoCampusFlow setup requirements
+# Install with: pip install -r requirements.txt (only if you also need Python tooling for local scripts)
+# This project is primarily a Node/Next.js app. For a fresh computer, install Node.js and then run:
+# npm install
+
+# System/runtime requirements
+# - Node.js 20 or newer
+# - npm 10+
+# - Git
+# - Optional: Docker Desktop if you want the local Supabase stack
+# - Optional: VS Code with Node.js extension
+
+# If you want a Python environment for local script compatibility or tooling, use:
+# python>=3.10
+
+# No Python package dependencies are required for the app itself.
