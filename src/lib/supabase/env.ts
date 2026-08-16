@@ -5,13 +5,13 @@ type PublicSupabaseEnv = {
 
 export function readPublicSupabaseEnv(): PublicSupabaseEnv | null {
   const url = [
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
   ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
 
   const anonKey = [
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     process.env.SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? null;
 
   if (!url || !anonKey) {
