@@ -22,7 +22,7 @@ export function StatCard({
           </p>
           {hint ? <p className="mt-3 text-sm font-medium leading-5 text-muted">{hint}</p> : null}
         </div>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-2xl bg-primary-soft text-primary transition-all duration-300 ease-out group-hover:bg-primary group-hover:text-white">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-2xl bg-primary-soft text-primary transition-all duration-500 ease-out group-hover:bg-primary group-hover:text-white">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>
