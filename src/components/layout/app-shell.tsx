@@ -266,7 +266,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
       </div>
 
       <div className="lg:pl-[280px]">
-        <header className="flex min-h-20 items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.9)] sm:px-6 lg:px-10">
+        <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.9)] sm:px-6 lg:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button className="rounded-xl p-2 hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />
