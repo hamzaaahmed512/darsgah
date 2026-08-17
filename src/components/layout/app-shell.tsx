@@ -118,7 +118,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
   }
 
   const renderProfileAvatar = () => (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-low text-sm font-bold text-primary ring-1 ring-outline/70">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-low text-sm font-bold text-ink ring-1 ring-outline/70">
       {user.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -279,7 +279,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
             <button
               type="button"
               onClick={() => setProfileOpen((value) => !value)}
-              className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 hover:bg-surface-low"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-ink transition duration-200 hover:bg-surface-low"
               aria-haspopup="menu"
               aria-expanded={profileOpen}
               aria-label="Open profile menu"

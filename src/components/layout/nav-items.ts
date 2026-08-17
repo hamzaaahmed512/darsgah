@@ -52,6 +52,14 @@ const coreNavItems: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" }
 ];
 
+function getOverviewHref(role: UserRole) {
+  if (role === "administrator") return "/dashboard/admin";
+  if (role === "principal") return "/dashboard/principal";
+  if (role === "student_staff") return "/dashboard/registrar";
+  if (role === "teacher") return "/dashboard/teacher";
+  return "/dashboard";
+}
+
 function academicEvaluationModule(): NavItem {
   return {
     href: "/academics",
@@ -95,9 +103,9 @@ function structureAcademicsItem(): NavItem {
 }
 
 export function getNavItems(role: UserRole): NavItem[] {
-  const items: NavItem[] = [];
+  const items: NavItem[] = [{ ...coreNavItems[0], href: getOverviewHref(role) }];
 
-  for (const item of coreNavItems) {
+  for (const item of coreNavItems.slice(1)) {
     if (item.href === "/classes") {
       if (usesPrincipalAcademicControl(role)) {
         items.push(principalAcademicControlItem());
