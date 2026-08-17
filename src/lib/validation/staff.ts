@@ -7,6 +7,10 @@ export const staffFormSchema = z.object({
   role: z.enum(["teacher", "head_teacher", "staff", "student_staff", "cashier", "principal", "administrator"]),
   department: z.string().trim().max(100).optional().nullable(),
   job_title: z.string().trim().max(100).optional().nullable(),
+  salary: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.coerce.number().positive("Salary must be greater than 0").optional()
+  ),
 });
 
 export type StaffFormValues = z.infer<typeof staffFormSchema>;

@@ -226,11 +226,11 @@ export async function getPayrollEligibleStaff(user: AppUser) {
   if (!hasPermission(user.role, "payroll:manage", user.permissions)) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("teacher_employment_details")
-    .select("teacher_id, profiles!teacher_employment_details_teacher_id_fkey(full_name, email)")
-    .eq("school_id", user.schoolId).eq("employment_status", "active");
+    .from("staff_directory")
+    .select("user_id, full_name, email")
+    .eq("school_id", user.schoolId).eq("status", "active");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => ({ id: row.teacher_id, name: row.profiles?.full_name ?? "Unknown", email: row.profiles?.email ?? "" }));
+  return (data ?? []).map((row: any) => ({ id: row.user_id, name: row.full_name ?? "Unknown", email: row.email ?? "" }));
 }
 
 export async function generateMonthlyPayroll(user: AppUser, month: string, teacherId?: string) {

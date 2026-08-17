@@ -11,6 +11,7 @@ import { hasPermission } from "@/lib/permissions";
 import { StaffFormModal } from "@/components/teachers/staff-form";
 import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
+import { StaffSalaryForm } from "@/components/staff/staff-salary-form";
 
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
@@ -39,6 +40,9 @@ export default async function StaffPage({
     .order("name");
 
   const staff = await getStaff(user, params.role ?? "all", params.q ?? "");
+  const canManageSalary = user.role === "administrator" || user.role === "principal";
+  const { data: salaryRows } = canManageSalary ? await supabase.from("teacher_employment_details").select("teacher_id,monthly_salary").eq("school_id", user.schoolId) : { data: [] };
+  const salaryByStaff = new Map((salaryRows ?? []).map((row: any) => [row.teacher_id, Number(row.monthly_salary)]));
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
@@ -119,6 +123,7 @@ export default async function StaffPage({
                       <span>{member.must_change_password ? "Must change password on next login" : "Password is active"}</span>
                     </p>
                   </div>
+                  {canManageSalary ? <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} /> : null}
                 </div>
               </div>
             </details>

@@ -17,7 +17,7 @@ export async function generatePayrollAction(month: string, teacherId?: string) {
     const user = await requireUser("payroll:manage");
     const result = await generateMonthlyPayroll(user, month, teacherId);
     revalidatePath("/payroll");
-    return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
+    return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0), skippedNoSalary: Number(result?.skipped_no_salary_count ?? 0) };
   } catch (err: any) {
     return { error: err.message };
   }

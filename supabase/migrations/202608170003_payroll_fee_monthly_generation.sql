@@ -42,7 +42,7 @@ create or replace function public.generate_fee_challans(
 language plpgsql security definer set search_path = public as $$
 declare v_month date := to_date(p_month || '-01', 'YYYY-MM-DD');
 begin
-  if p_month !~ '^\\d{4}-(0[1-9]|1[0-2])$' then raise exception 'Month must use YYYY-MM'; end if;
+  if p_month !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' then raise exception 'Month must use YYYY-MM'; end if;
   if not app.has_school_role(p_school_id, array['administrator','principal','cashier']::public.app_role[]) then
     raise exception 'Unauthorized to generate fee challans';
   end if;
@@ -78,7 +78,7 @@ create function public.generate_monthly_payroll(
 ) returns table(created_count integer, skipped_count integer)
 language plpgsql security definer set search_path = public as $$
 begin
-  if p_month !~ '^\\d{4}-(0[1-9]|1[0-2])$' then raise exception 'Month must use YYYY-MM'; end if;
+  if p_month !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' then raise exception 'Month must use YYYY-MM'; end if;
   if not app.has_school_role(p_school_id, array['administrator','principal','cashier']::public.app_role[]) then
     raise exception 'Unauthorized to generate payroll';
   end if;

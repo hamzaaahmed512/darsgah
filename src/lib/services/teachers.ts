@@ -62,7 +62,30 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
 
   if (memberError) throw new Error(memberError.message);
 
+  if (parsed.salary != null) {
+    const { error: salaryError } = await adminClient.from("teacher_employment_details").upsert({
+      teacher_id: authData.user.id,
+      school_id: user.schoolId,
+      monthly_salary: parsed.salary,
+      payment_method: "bank_transfer",
+      employment_status: "active"
+    });
+    if (salaryError) throw new Error(salaryError.message);
+  }
+
   await logActivity(user, "staff_created", "school_member", authData.user.id, { role: parsed.role });
+}
+
+export async function setStaffSalary(user: AppUser, staffId: string, salary: number) {
+  if (user.role !== "administrator" && user.role !== "principal") throw new Error("Only administrators and principals can set salaries.");
+  const parsedSalary = staffFormSchema.pick({ salary: true }).parse({ salary }).salary;
+  const supabase = await createClient();
+  const { error } = await supabase.from("teacher_employment_details").upsert({
+    teacher_id: staffId, school_id: user.schoolId, monthly_salary: parsedSalary,
+    payment_method: "bank_transfer", employment_status: "active"
+  });
+  if (error) throw new Error(error.message);
+  await logActivity(user, "staff_salary_updated", "school_member", staffId, { salary: parsedSalary });
 }
 
 export async function updateStaffStatus(user: AppUser, memberId: string, status: "active" | "disabled") {

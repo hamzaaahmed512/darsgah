@@ -116,6 +116,12 @@ export function StaffFormModal({
                   <Input {...register("job_title")} placeholder="e.g. Math Teacher" />
                   {errors.job_title?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.job_title.message}</p> : null}
                 </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Monthly Salary</label>
+                  <Input {...register("salary")} type="number" min="0" step="0.01" placeholder="Optional" />
+                  {errors.salary?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.salary.message}</p> : null}
+                </div>
               </div>
 
               <div className="mt-8 flex justify-end gap-3">

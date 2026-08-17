@@ -15,7 +15,7 @@ export function GeneratePayrollButton({ month, staff }: { month: string; staff: 
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else {
-        setMessage({ type: "success", text: `Created ${result.created ?? 0}; skipped ${result.skipped ?? 0} already generated.` });
+        setMessage({ type: "success", text: `Created ${result.created ?? 0}; skipped ${result.skipped ?? 0} already generated${result.skippedNoSalary ? `; ${result.skippedNoSalary} without salary.` : "."}` });
         // Refresh page after success
         setTimeout(() => window.location.reload(), 1200);
       }
