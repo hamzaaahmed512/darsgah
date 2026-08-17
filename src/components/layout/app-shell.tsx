@@ -118,7 +118,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
   }
 
   const renderProfileAvatar = () => (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-soft text-sm font-bold text-primary ring-1 ring-outline/70">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-low text-sm font-bold text-primary ring-1 ring-outline/70">
       {user.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -139,9 +139,9 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
             <BookOpen aria-hidden="true" />
           )}
         </div>
-        <div>
-          <p className="font-display text-2xl font-bold leading-tight tracking-tight text-ink">GoCampusFlow</p>
-          <p className="font-label text-xs font-semibold uppercase tracking-wider text-muted">{user.schoolName}</p>
+        <div className="min-w-0">
+          <p className="truncate font-display text-2xl font-bold leading-tight tracking-tight text-ink" title={user.schoolName}>{user.schoolName}</p>
+          <p className="font-label text-[10px] font-semibold uppercase tracking-wider text-muted">Powered by Darsgah</p>
         </div>
       </div>
       <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
@@ -266,7 +266,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
       </div>
 
       <div className="lg:pl-[280px]">
-        <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-3 bg-white/92 px-4 shadow-[0_1px_0_rgba(226,232,240,0.9)] backdrop-blur-xl sm:px-6 lg:px-10">
+        <header className="flex min-h-20 items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.9)] sm:px-6 lg:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button className="rounded-xl p-2 hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />

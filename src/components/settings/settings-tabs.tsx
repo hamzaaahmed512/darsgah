@@ -31,7 +31,7 @@ export function SettingsTabs({
   initialTab = "notifications"
 }: Props) {
   const isAdmin = user.role === "administrator";
-  const allowedTabs = new Set(["notifications", ...(isAdmin ? ["academics", "theme", "roles"] : [])]);
+  const allowedTabs = new Set(["notifications", ...(isAdmin ? ["academics", "roles"] : [])]);
   const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
   const [isPending, startTransition] = useTransition();
@@ -115,12 +115,6 @@ export function SettingsTabs({
               className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
             >
               Academic Sessions
-            </button>
-            <button
-              onClick={() => selectTab("theme")}
-              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "theme" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
-            >
-              Theme Settings
             </button>
             <button
               onClick={() => selectTab("roles")}
@@ -268,34 +262,6 @@ export function SettingsTabs({
           </div>
         ) : null}
 
-        {activeTab === "theme" && isAdmin ? (
-          <div className="space-y-4">
-            <h3 className="font-display text-xl font-bold text-ink">Theme Preferences</h3>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {["light", "dark", "glass"].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setTheme(option)}
-                  className={`flex h-24 flex-col justify-between rounded-xl border p-4 text-left transition ${theme === option ? "border-primary bg-primary-soft/10 ring-2 ring-primary/20" : "border-outline hover:bg-surface-low"}`}
-                >
-                  <span className="font-bold capitalize text-ink">{option === "glass" ? "Glassmorphism" : `${option} Mode`}</span>
-                  <span className="text-xs text-muted">{option === "glass" ? "Semi-transparent elements" : `${option} theme`}</span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleThemeSubmit}
-              disabled={isPending}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
-            >
-              {isPending ? "Applying..." : "Save Theme Preference"}
-            </button>
-          </div>
-        ) : null}
 
         {activeTab === "roles" && isAdmin ? (
           <RolesTab

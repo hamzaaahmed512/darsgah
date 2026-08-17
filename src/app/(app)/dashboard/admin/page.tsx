@@ -77,7 +77,7 @@ export default async function AdminDashboardPage() {
               <Settings className="h-5 w-5" />
             </div>
             <h3 className="font-display text-lg font-bold text-ink">System Settings</h3>
-            <p className="mt-1 text-sm text-muted">Modify school settings, display names, and theme configuration.</p>
+            <p className="mt-1 text-sm text-muted">Modify school settings and display names.</p>
           </div>
           <ButtonLink href="/settings" variant="secondary" className="w-full">
             System Config

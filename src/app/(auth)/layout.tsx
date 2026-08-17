@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <BookOpen aria-hidden="true" />
           </div>
           <div>
-            <p className="font-display text-3xl font-bold leading-tight tracking-tight text-ink">GoCampusFlow</p>
+            <p className="font-display text-3xl font-bold leading-tight tracking-tight text-ink">Darsgah</p>
             <p className="font-label text-xs font-semibold uppercase tracking-wider text-muted">Secure school management</p>
           </div>
         </div>
