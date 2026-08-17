@@ -38,8 +38,32 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
 }
 
 export async function getStudent(user: AppUser, id: string) {
+  const record = await getStudentRecord(user, id);
+  return { student: record.student, guardians: record.guardians, attendance: record.attendance };
+}
+
+/**
+ * Loads the complete, tenant-scoped record used by the student profile.  RLS is
+ * deliberately left in place for teacher/class access; this service never uses
+ * an admin client to broaden the viewer's access.
+ */
+export async function getStudentRecord(
+  user: AppUser,
+  id: string,
+  filters: { attendanceFrom?: string; attendanceTo?: string; includeFinance?: boolean } = {}
+) {
   const supabase = await createClient();
-  const [student, guardians, attendance] = await Promise.all([
+  let attendanceQuery = supabase
+    .from("attendance_records")
+    .select("id,attendance_date,status,note,classes(name)")
+    .eq("school_id", user.schoolId)
+    .eq("student_id", id)
+    .order("attendance_date", { ascending: false });
+
+  if (filters.attendanceFrom) attendanceQuery = attendanceQuery.gte("attendance_date", filters.attendanceFrom);
+  if (filters.attendanceTo) attendanceQuery = attendanceQuery.lte("attendance_date", filters.attendanceTo);
+
+  const [student, guardians, attendance, marks, challans] = await Promise.all([
     supabase
       .from("student_directory")
       .select(
@@ -50,24 +74,56 @@ export async function getStudent(user: AppUser, id: string) {
       .maybeSingle(),
     supabase
       .from("student_guardian_details")
-      .select("id, student_id, guardian_id, is_primary, full_name, relationship, email, phone, emergency_contact_name, emergency_contact_phone")
+      .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, emergency_contact_name, emergency_contact_phone")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
       .order("is_primary", { ascending: false }),
+    attendanceQuery,
     supabase
-      .from("attendance_records")
-      .select("attendance_date,status,note,classes(name)")
+      .from("marks")
+      .select("id,marks_obtained,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
-      .order("attendance_date", { ascending: false })
-      .limit(20)
+      .order("created_at", { ascending: false }),
+    filters.includeFinance
+      ? supabase
+          .from("fee_challans")
+          .select("id,fee_month,amount,due_date,created_at,student_fee_accounts(total_payable,amount_paid)")
+          .eq("school_id", user.schoolId)
+          .eq("student_id", id)
+          .order("fee_month", { ascending: false })
+      : Promise.resolve({ data: [], error: null })
   ]);
 
   if (student.error) throw new Error(student.error.message);
+  if (guardians.error) throw new Error(guardians.error.message);
+  if (attendance.error) throw new Error(attendance.error.message);
+  if (marks.error) throw new Error(marks.error.message);
+  if (challans.error) throw new Error(challans.error.message);
+
+  const attendanceRows = attendance.data ?? [];
+  const presentCount = attendanceRows.filter((row: any) => ["present", "late"].includes(row.status)).length;
+  const marksRows = marks.data ?? [];
+  const markPercentages = marksRows
+    .map((row: any) => Number(row.exams?.max_marks) ? (Number(row.marks_obtained) / Number(row.exams.max_marks)) * 100 : null)
+    .filter((value): value is number => value !== null);
+  const challanRows = (challans.data ?? []).map((row: any) => {
+    const account: any = row.student_fee_accounts;
+    const outstanding = Math.max(0, Number(account?.total_payable ?? row.amount) - Number(account?.amount_paid ?? 0));
+    return { ...row, outstanding, payment_status: outstanding <= 0 ? "paid" : Number(account?.amount_paid ?? 0) > 0 ? "partially paid" : "unpaid" };
+  });
+
   return {
     student: student.data,
     guardians: guardians.data ?? [],
-    attendance: attendance.data ?? []
+    attendance: attendanceRows,
+    marks: marksRows,
+    challans: challanRows,
+    summaries: {
+      attendance: { total: attendanceRows.length, present: presentCount, rate: attendanceRows.length ? (presentCount / attendanceRows.length) * 100 : null },
+      exams: { total: marksRows.length, average: markPercentages.length ? markPercentages.reduce((sum, value) => sum + value, 0) / markPercentages.length : null },
+      fees: { total: challanRows.length, outstanding: challanRows.reduce((sum, row) => sum + row.outstanding, 0) }
+    }
   };
 }
 

@@ -194,6 +194,8 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
               <CardContent>
                 {!selectedExam ? (
                   <EmptyState title="No assessment selected" description="Choose or create an assessment before entering marks." />
+                ) : !workspace.roster.length ? (
+                  <EmptyState title="No students enrolled in this subject yet" description="Enroll students from the Subjects page before entering marks." />
                 ) : (
                   <form action={saveMarksAction} className="grid gap-4">
                     <input type="hidden" name="exam_id" value={selectedExam.id} />

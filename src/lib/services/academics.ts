@@ -235,3 +235,57 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
 
   return { teachersByClass, attendanceByClass, studentsByClass };
 }
+
+export async function getSubjectManagement(user: AppUser, classId?: string, subjectId?: string) {
+  const supabase = await createClient();
+  const [options, teachers] = await Promise.all([
+    getAcademicOptions(user),
+    supabase.from("school_members").select("user_id,profiles(full_name)").eq("school_id", user.schoolId).in("role", ["teacher", "head_teacher"]).eq("status", "active")
+  ]);
+  const selectedClassId = classId ?? options.classes[0]?.id;
+  const selectedSubjectId = subjectId ?? options.subjects[0]?.id;
+  const [assignments, roster, subjectEnrollments] = selectedClassId ? await Promise.all([
+    supabase.from("teacher_assignments").select("id,subject_id,teacher_id,subjects(name),profiles!teacher_assignments_teacher_id_fkey(full_name)").eq("school_id", user.schoolId).eq("class_id", selectedClassId).not("subject_id", "is", null),
+    supabase.from("enrollments").select("student_id,students(first_name,last_name,admission_number)").eq("school_id", user.schoolId).eq("class_id", selectedClassId).eq("status", "active").order("created_at"),
+    selectedSubjectId ? supabase.from("student_subject_enrollments").select("student_id").eq("school_id", user.schoolId).eq("class_id", selectedClassId).eq("subject_id", selectedSubjectId) : Promise.resolve({ data: [], error: null })
+  ]) : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+  if (assignments.error) throw new Error(assignments.error.message);
+  if (roster.error) throw new Error(roster.error.message);
+  if (subjectEnrollments.error) throw new Error(subjectEnrollments.error.message);
+  return {
+    ...options,
+    teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: row.profiles?.full_name ?? "Unknown" })),
+    selectedClassId, selectedSubjectId,
+    assignments: assignments.data ?? [],
+    roster: (roster.data ?? []).map((row: any) => ({ id: row.student_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admission_number: row.students?.admission_number })),
+    enrolledStudentIds: new Set((subjectEnrollments.data ?? []).map((row: any) => row.student_id))
+  };
+}
+
+export async function createSubject(user: AppUser, values: { name: string; code?: string }) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("subjects").insert({ school_id: user.schoolId, name: values.name.trim(), code: values.code?.trim() || null });
+  if (error) throw new Error(error.message);
+}
+
+export async function assignSubjectTeacher(user: AppUser, values: { classId: string; subjectId: string; teacherId: string }) {
+  const supabase = await createClient();
+  const { data: existing, error: lookupError } = await supabase.from("teacher_assignments").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", values.subjectId).maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  const { error } = existing
+    ? await supabase.from("teacher_assignments").update({ teacher_id: values.teacherId }).eq("school_id", user.schoolId).eq("id", existing.id)
+    : await supabase.from("teacher_assignments").insert({ school_id: user.schoolId, class_id: values.classId, subject_id: values.subjectId, teacher_id: values.teacherId });
+  if (error) throw new Error(error.message);
+}
+
+export async function setStudentSubjectEnrollments(user: AppUser, values: { classId: string; subjectId: string; studentIds: string[] }) {
+  const supabase = await createClient();
+  const { data: assignment, error: assignmentError } = await supabase.from("teacher_assignments").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", values.subjectId).maybeSingle();
+  if (assignmentError) throw new Error(assignmentError.message);
+  if (!assignment) throw new Error("Assign a teacher to this subject before enrolling students.");
+  const { error: removeError } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", values.subjectId);
+  if (removeError) throw new Error(removeError.message);
+  if (!values.studentIds.length) return;
+  const { error } = await supabase.from("student_subject_enrollments").insert(values.studentIds.map((student_id) => ({ school_id: user.schoolId, class_id: values.classId, subject_id: values.subjectId, student_id, enrolled_by: user.id })));
+  if (error) throw new Error(error.message);
+}

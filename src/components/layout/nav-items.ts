@@ -45,6 +45,7 @@ const coreNavItems: NavItem[] = [
   },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:view" },
   { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage" },
+  { href: "/subjects", label: "Subjects", icon: BookOpen, permission: "classes:manage" },
   { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view" },
   { href: "/admin", label: "Admin", icon: Shield, permission: "users:manage" },

@@ -65,7 +65,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
                   <tr key={`${row.subject_name}-${row.exam_type}-${index}`} className="border-b border-outline/25">
                     <td className="py-3 pr-3 font-semibold">{row.subject_name}</td>
                     <td className="py-3 pr-3">{row.exam_title} ({formatExamType(row.exam_type)})</td>
-                    <td className="py-3 pr-3">{row.marks_obtained} / {row.max_marks}</td>
+                    <td className="py-3 pr-3">{row.marks_obtained === null ? "Pending" : `${row.marks_obtained} / ${row.max_marks}`}</td>
                     <td className="py-3 pr-3 font-bold">{row.grade}</td>
                   </tr>
                 ))}

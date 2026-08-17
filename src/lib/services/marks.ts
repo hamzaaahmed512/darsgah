@@ -160,12 +160,12 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
   const [roster, marks] = selected
     ? await Promise.all([
         supabase
-          .from("enrollments")
-          .select("students(id,first_name,last_name,admission_number)")
+          .from("student_subject_enrollments")
+          .select("student_id,students(id,first_name,last_name,admission_number)")
           .eq("school_id", user.schoolId)
           .eq("class_id", selected.class_id)
-          .eq("status", "active")
-          .order("created_at"),
+          .eq("subject_id", selected.subject_id)
+          .order("enrolled_at"),
         selectedExam
           ? supabase.from("marks").select("*").eq("school_id", user.schoolId).eq("exam_id", selectedExam.id)
           : Promise.resolve({ data: [], error: null })
@@ -187,7 +187,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     selectedExam: selectedExam ? { ...selectedExam, workflow_status: getWorkflowStatusFromExam(selectedExam) } : null,
     roster: (roster.data ?? [])
       .map((row: any) => ({
-        student_id: row.students?.id,
+        student_id: row.student_id,
         student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
         admission_number: row.students?.admission_number,
         mark: markMap.get(row.students?.id) ?? null
@@ -243,6 +243,16 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
   const exam = await getEditableExam(user, parsed.exam_id);
   const scale = await getGradeScale(user);
   const supabase = await createClient();
+
+  const { data: enrolled, error: enrolledError } = await supabase
+    .from("student_subject_enrollments")
+    .select("student_id")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", exam.class_id)
+    .eq("subject_id", exam.subject_id)
+    .in("student_id", parsed.records.map((record) => record.student_id));
+  if (enrolledError) throw new Error(enrolledError.message);
+  if ((enrolled ?? []).length !== parsed.records.length) throw new Error("Marks can be saved only for students enrolled in this subject.");
 
   for (const record of parsed.records) {
     if (record.marks_obtained > Number(exam.max_marks)) {
@@ -309,11 +319,11 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
 
   const [roster, marks] = await Promise.all([
     supabase
-      .from("enrollments")
+      .from("student_subject_enrollments")
       .select("student_id")
       .eq("school_id", user.schoolId)
       .eq("class_id", exam.class_id)
-      .eq("status", "active"),
+      .eq("subject_id", exam.subject_id),
     supabase.from("marks").select("student_id").eq("school_id", user.schoolId).eq("exam_id", exam.id)
   ]);
 
@@ -585,11 +595,10 @@ async function getResultReadiness(user: AppUser, classId: string, term: string) 
   const supabase = await createClient();
   const [subjects, exams, students] = await Promise.all([
     supabase
-      .from("teacher_assignments")
+      .from("student_subject_enrollments")
       .select("subject_id,subjects(id,name)")
       .eq("school_id", user.schoolId)
-      .eq("class_id", classId)
-      .not("subject_id", "is", null),
+      .eq("class_id", classId),
     supabase
       .from("exams")
       .select("id,subject_id,exam_type,status,approval_status")
@@ -664,7 +673,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
 
   if (filters.studentId) studentsQuery = studentsQuery.eq("student_id", filters.studentId);
 
-  const [students, marks] = await Promise.all([
+  const [students, marks, subjectEnrollments, approvedExams] = await Promise.all([
     studentsQuery,
     supabase
       .from("marks")
@@ -676,11 +685,28 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
       .eq("exams.requires_approval", true)
       .eq("exams.approval_status", "approved")
       .in("exams.exam_type", requiredResultExamTypes)
-      .order("student_id")
+      .order("student_id"),
+    supabase
+      .from("student_subject_enrollments")
+      .select("student_id,subject_id,subjects(name)")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", filters.classId),
+    supabase
+      .from("exams")
+      .select("id,subject_id,title,exam_type,max_marks")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", filters.classId)
+      .eq("term", filters.term)
+      .eq("status", "approved")
+      .eq("requires_approval", true)
+      .eq("approval_status", "approved")
+      .in("exam_type", requiredResultExamTypes)
   ]);
 
   if (students.error) throw new Error(students.error.message);
   if (marks.error) throw new Error(marks.error.message);
+  if (subjectEnrollments.error) throw new Error(subjectEnrollments.error.message);
+  if (approvedExams.error) throw new Error(approvedExams.error.message);
 
   const marksByStudent = new Map<string, any[]>();
   for (const mark of marks.data ?? []) {
@@ -692,23 +718,22 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
 
   const cards = (students.data ?? []).map((row: any) => {
     const student = row.students;
-    const rows = marksByStudent.get(student?.id) ?? [];
-    const totalObtained = rows.reduce((sum, item) => sum + Number(item.marks_obtained), 0);
-    const totalMax = rows.reduce((sum, item) => sum + Number(item.exams?.max_marks ?? 0), 0);
+    const marksForStudent = marksByStudent.get(student?.id) ?? [];
+    const enrolledSubjects = (subjectEnrollments.data ?? []).filter((item: any) => item.student_id === student?.id);
+    const rows = enrolledSubjects.flatMap((enrollment: any) => (approvedExams.data ?? []).filter((exam: any) => exam.subject_id === enrollment.subject_id).map((exam: any) => {
+      const mark = marksForStudent.find((item: any) => item.exams?.id === exam.id);
+      return { subject_name: enrollment.subjects?.name, exam_title: exam.title, exam_type: exam.exam_type as ExamType, marks_obtained: mark ? Number(mark.marks_obtained) : null, max_marks: Number(exam.max_marks), grade: mark?.grade ?? "Pending" };
+    }));
+    const completedRows = rows.filter((item) => item.marks_obtained !== null);
+    const totalObtained = completedRows.reduce((sum, item) => sum + Number(item.marks_obtained), 0);
+    const totalMax = completedRows.reduce((sum, item) => sum + Number(item.max_marks ?? 0), 0);
     return {
       student: {
         id: student?.id,
         name: `${student?.first_name ?? ""} ${student?.last_name ?? ""}`.trim(),
         admission_number: student?.admission_number
       },
-      rows: rows.map((item) => ({
-        subject_name: item.exams?.subjects?.name,
-        exam_title: item.exams?.title,
-        exam_type: item.exams?.exam_type as ExamType,
-        marks_obtained: Number(item.marks_obtained),
-        max_marks: Number(item.exams?.max_marks ?? 0),
-        grade: item.grade
-      })),
+      rows,
       totalObtained,
       totalMax,
       percentage: percentage(totalObtained, totalMax),
