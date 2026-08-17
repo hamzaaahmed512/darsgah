@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
-import { feeStructureSchema, discountSchema, paymentSchema } from "@/lib/validation/finance";
+import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema } from "@/lib/validation/finance";
 import { startOfMonth, format } from "date-fns";
 
 export async function logFinanceAction(
@@ -218,6 +218,36 @@ export async function getStudentFees(user: AppUser, filters: {
   const { data, error } = await query.order("student_name");
   if (error) throw new Error(error.message);
   return data || [];
+}
+
+export async function getFeeChallans(user: AppUser, month: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fee_challans")
+    .select("*, students(first_name, last_name, admission_number), classes(name), student_fee_accounts(total_payable, amount_paid)")
+    .eq("school_id", user.schoolId)
+    .eq("fee_month", `${month}-01`)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+    admission_number: row.students?.admission_number ?? "—",
+    class_name: row.classes?.name ?? "—",
+    payment_status: Number(row.student_fee_accounts?.amount_paid ?? 0) >= Number(row.student_fee_accounts?.total_payable ?? 1) ? "paid" : "unpaid"
+  }));
+}
+
+export async function generateFeeChallans(user: AppUser, values: { month: string; student_id?: string; class_id?: string }) {
+  if (!hasPermission(user.role, "finance:manage", user.permissions)) throw new Error("Unauthorized to generate fee challans");
+  const parsed = monthlyGenerationSchema.parse(values);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("generate_fee_challans", {
+    p_school_id: user.schoolId, p_month: parsed.month, p_actor_id: user.id,
+    p_student_id: parsed.student_id ?? null, p_class_id: parsed.class_id ?? null
+  });
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data[0] : data;
 }
 
 export async function getStudentFeeAccount(user: AppUser, id: string) {

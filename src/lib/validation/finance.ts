@@ -40,3 +40,14 @@ export const voidPaymentSchema = z.object({
 });
 
 export type VoidPaymentValues = z.infer<typeof voidPaymentSchema>;
+
+export const monthlyGenerationSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Choose a valid month"),
+  student_id: z.string().uuid().optional(),
+  class_id: z.string().uuid().optional()
+}).refine((value) => !(value.student_id && value.class_id), "Choose a student or a class, not both");
+
+export const payrollGenerationSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Choose a valid month"),
+  teacher_id: z.string().uuid().optional()
+});

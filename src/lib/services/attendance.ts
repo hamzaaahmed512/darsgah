@@ -3,6 +3,19 @@ import type { AppUser } from "@/types/database";
 import { attendanceSubmissionSchema, type AttendanceSubmission } from "@/lib/validation/attendance";
 import { logActivity } from "@/lib/services/activity";
 
+export async function getClassAttendanceSummary(user: AppUser, classId: string, startDate: string, endDate: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_class_attendance_summary", {
+    p_school_id: user.schoolId,
+    p_class_id: classId,
+    p_start_date: startDate,
+    p_end_date: endDate
+  });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getAttendanceContext(user: AppUser, classId?: string, date?: string) {
   const supabase = await createClient();
   const attendanceDate = date ?? new Date().toISOString().slice(0, 10);
@@ -37,7 +50,7 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
     ? await Promise.all([
         supabase
           .from("enrollments")
-          .select("id, students(id, first_name, last_name, admission_number)")
+          .select("id, student_id, students(id, first_name, last_name, admission_number)")
           .eq("school_id", user.schoolId)
           .eq("class_id", selectedClassId)
           .eq("status", "active")

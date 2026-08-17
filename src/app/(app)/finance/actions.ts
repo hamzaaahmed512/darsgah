@@ -9,7 +9,8 @@ import {
   deleteFeeStructure,
   applyDiscount,
   recordPayment,
-  voidPayment
+  voidPayment,
+  generateFeeChallans
 } from "@/lib/services/finance";
 
 export async function createFeeStructureAction(formData: FormData) {
@@ -137,4 +138,15 @@ export async function voidPaymentAction(paymentId: string, reason: string) {
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${payment.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
+}
+
+export async function generateFeeChallansAction(values: { month: string; student_id?: string; class_id?: string }) {
+  try {
+    const user = await requireUser("finance:manage");
+    const result = await generateFeeChallans(user, values);
+    revalidatePath("/finance/fees");
+    return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
+  } catch (err: any) {
+    return { error: err.message };
+  }
 }

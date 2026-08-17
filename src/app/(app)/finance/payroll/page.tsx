@@ -5,6 +5,7 @@ import {
   getPayrollList, 
   getSalaryAdjustments,
   getSalaryHistory,
+  getPayrollEligibleStaff,
   currentMonthKey, 
   formatMonth 
 } from "@/lib/services/payroll";
@@ -25,12 +26,12 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
   const month = sp.month ?? currentMonthKey();
   const canManage = hasPermission(user.role, "payroll:manage", user.permissions);
 
-  const [stats, payrollList, unpaidLeaves, adjustments, history] = await Promise.all([
+  const [stats, payrollList, unpaidLeaves, adjustments, history, eligibleStaff] = await Promise.all([
     getPayrollDashboardStats(user, month),
     getPayrollList(user, month),
     getApprovedUnpaidLeaveFlags(user, month),
     getSalaryAdjustments(user, undefined, month),
-    getSalaryHistory(user)
+    getSalaryHistory(user), getPayrollEligibleStaff(user)
   ]);
 
   const statCards = [
@@ -88,7 +89,7 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
           canManage ? (
             <div className="flex items-center gap-3">
               <AddAdjustmentDialog month={month} />
-              <GeneratePayrollButton month={month} />
+              <GeneratePayrollButton month={month} staff={eligibleStaff} />
             </div>
           ) : null
         }

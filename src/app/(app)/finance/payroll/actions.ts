@@ -12,12 +12,12 @@ import {
 import { revalidatePath } from "next/cache";
 import type { AdjustmentType } from "@/types/database";
 
-export async function generatePayrollAction(month: string) {
+export async function generatePayrollAction(month: string, teacherId?: string) {
   try {
     const user = await requireUser("payroll:manage");
-    await generateMonthlyPayroll(user, month);
+    const result = await generateMonthlyPayroll(user, month, teacherId);
     revalidatePath("/payroll");
-    return { ok: true };
+    return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
   } catch (err: any) {
     return { error: err.message };
   }

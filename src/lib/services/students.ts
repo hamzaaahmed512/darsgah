@@ -19,7 +19,10 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
 
   let query = supabase
     .from("student_directory")
-    .select("*", { count: "exact" })
+    .select(
+      "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate",
+      { count: "exact" }
+    )
     .eq("school_id", user.schoolId)
     .range(from, to)
     .order("last_name");
@@ -37,10 +40,17 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
 export async function getStudent(user: AppUser, id: string) {
   const supabase = await createClient();
   const [student, guardians, attendance] = await Promise.all([
-    supabase.from("student_directory").select("*").eq("school_id", user.schoolId).eq("id", id).maybeSingle(),
+    supabase
+      .from("student_directory")
+      .select(
+        "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date"
+      )
+      .eq("school_id", user.schoolId)
+      .eq("id", id)
+      .maybeSingle(),
     supabase
       .from("student_guardian_details")
-      .select("*")
+      .select("id, student_id, guardian_id, is_primary, full_name, relationship, email, phone, emergency_contact_name, emergency_contact_phone")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
       .order("is_primary", { ascending: false }),

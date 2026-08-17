@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, SalaryAdjustment, TeacherEmploymentDetails } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
+import { payrollGenerationSchema } from "@/lib/validation/finance";
 
 function isMissingPayrollLeaveFlagsView(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.payroll_unpaid_leave_flags");
@@ -221,15 +222,29 @@ export async function getApprovedUnpaidLeaveFlags(user: AppUser, month: string) 
   return data ?? [];
 }
 
-export async function generateMonthlyPayroll(user: AppUser, month: string) {
-  if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
+export async function getPayrollEligibleStaff(user: AppUser) {
+  if (!hasPermission(user.role, "payroll:manage", user.permissions)) return [];
   const supabase = await createClient();
-  const { error } = await supabase.rpc("generate_monthly_payroll", {
+  const { data, error } = await supabase
+    .from("teacher_employment_details")
+    .select("teacher_id, profiles!teacher_employment_details_teacher_id_fkey(full_name, email)")
+    .eq("school_id", user.schoolId).eq("employment_status", "active");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: any) => ({ id: row.teacher_id, name: row.profiles?.full_name ?? "Unknown", email: row.profiles?.email ?? "" }));
+}
+
+export async function generateMonthlyPayroll(user: AppUser, month: string, teacherId?: string) {
+  if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
+  const parsed = payrollGenerationSchema.parse({ month, teacher_id: teacherId });
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("generate_monthly_payroll", {
     p_school_id: user.schoolId,
-    p_month: month,
-    p_actor_id: user.id
+    p_month: parsed.month,
+    p_actor_id: user.id,
+    p_teacher_id: parsed.teacher_id ?? null
   });
   if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data[0] : data;
 }
 
 export async function markPayrollPaid(user: AppUser, payrollId: string) {
