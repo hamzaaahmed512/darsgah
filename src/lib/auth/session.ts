@@ -35,11 +35,12 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   const member = memberResult.data;
 
   if (!member) {
-    console.error(`getCurrentUser failed for user ${user.id}:`, JSON.stringify({
-      profileError: profileResult.error,
-      memberError: memberResult.error,
-      memberData: memberResult.data
-    }, null, 2));
+    if (profileResult.error || memberResult.error) {
+      console.error(`getCurrentUser lookup failed for user ${user.id}:`, JSON.stringify({
+        profileError: profileResult.error,
+        memberError: memberResult.error
+      }, null, 2));
+    }
     return null;
   }
 

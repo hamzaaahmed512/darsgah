@@ -18,11 +18,11 @@ export default function SignInPage() {
     setError("");
     startTransition(async () => {
       try {
-        await signInAction({
+        const destination = await signInAction({
           email: String(formData.get("email") ?? ""),
           password: String(formData.get("password") ?? "")
         });
-        router.replace("/");
+        router.replace(destination);
         router.refresh();
       } catch (error) {
         setError(error instanceof Error ? error.message : "Unable to sign in right now. Please try again.");
@@ -33,7 +33,7 @@ export default function SignInPage() {
   return (
     <>
       <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
-      <p className="mt-2 text-sm leading-6 text-muted">Use your school invitation or Supabase Auth account to enter Darsgah.</p>
+      <p className="mt-2 text-sm leading-6 text-muted">Use your authorized account to enter Darsgah or the GetDarsgah platform portal.</p>
       {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
       <form className="mt-6 grid gap-4" action={onSubmit}>
         <Field label="Email address">

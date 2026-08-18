@@ -114,7 +114,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
 
   async function signOut() {
     await supabase.auth.signOut();
-    window.location.href = "/sign-in";
+    window.location.href = "/";
   }
 
   const renderProfileAvatar = () => (

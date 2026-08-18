@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:hosted": "npm run doctor:local && next dev",
+    "doctor:local": "node scripts/doctor-local.mjs",
+    "platform:grant": "node scripts/grant-platform-admin.mjs",
     "dev:local": "powershell.exe -ExecutionPolicy Bypass -File .\\local-dev\\scripts\\dev-local.ps1",
     "dev:sh": "./scripts/dev-local.sh",
     "build": "next build",

@@ -158,6 +158,27 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+### Local connectivity check
+
+To use the hosted Supabase project while running Next.js locally:
+
+```bash
+npm run doctor:local
+npm run dev:hosted
+```
+
+The doctor command verifies the configured Auth endpoint and key before starting Next.js. Restart the dev server whenever `.env.local` changes. To run the fully local Supabase stack on macOS/Linux instead, start Docker Desktop and use `npm run setup:sh`, followed by `npm run dev:sh`.
+
+## GetDarsgah Platform Administration
+
+Apply `supabase/migrations/202608180001_platform_administration.sql`, then grant an existing Supabase Auth user platform access:
+
+```bash
+npm run platform:grant -- owner@getdarsgah.com
+```
+
+The platform portal is available at `/platform`. Platform administrators are separate from school administrators. Suspending a school blocks tenant access through RLS; archiving preserves its records instead of permanently deleting tenant data.
+
 ## Windows Local Docker Setup
 
 The local Supabase and DBeaver workflow lives under [local-dev/README.md](/D:/saadf/local-dev/README.md). Use that folder for Windows prerequisites, local-stack scripts, and the DBeaver connection details.

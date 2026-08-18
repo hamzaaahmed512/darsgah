@@ -1,0 +1,11 @@
+import type { Metadata } from "next";
+import { Clock3, Mail, MessageSquareText } from "lucide-react";
+import { ContactForm } from "@/components/marketing/contact-form";
+import { Eyebrow } from "@/components/marketing/shared";
+
+export const metadata: Metadata = { title: "Contact us | GetDarsgah", description: "Talk to the GetDarsgah team, ask a question, or request a personal Darsgah demonstration." };
+
+export default function ContactPage() {
+  return <section className="marketing-grid relative overflow-hidden py-20 sm:py-24"><div className="marketing-orb left-[5%] top-0" /><div className="marketing-container relative grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"><div className="lg:sticky lg:top-28"><Eyebrow>Contact us</Eyebrow><h1 className="mt-6 font-display text-4xl font-bold leading-tight tracking-[-0.045em] text-ink sm:text-6xl">Let&apos;s make school management <span className="text-primary">clearer.</span></h1><p className="mt-6 max-w-lg text-base leading-8 text-muted">Request a walkthrough, ask about pricing, or tell us where your current process creates friction.</p><div className="mt-10 grid gap-5"><ContactLine icon={Mail} title="Email us" text="hello@getdarsgah.com" /><ContactLine icon={MessageSquareText} title="Personal walkthrough" text="A focused demo shaped around your needs" /><ContactLine icon={Clock3} title="Response" text="We aim to reply within two business days" /></div></div><div className="marketing-card rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.09)] sm:p-9"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Tell us about your school</p><h2 className="mt-3 text-2xl font-bold tracking-tight text-ink">Start a conversation</h2><div className="mt-8"><ContactForm /></div></div></div></section>;
+}
+function ContactLine({ icon: Icon, title, text }: { icon: typeof Mail; title: string; text: string }) { return <div className="flex gap-4"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-primary-soft text-primary"><Icon className="h-4 w-4" /></span><div><p className="text-sm font-bold text-ink">{title}</p><p className="mt-1 text-sm text-muted">{text}</p></div></div>; }
