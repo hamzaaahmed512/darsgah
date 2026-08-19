@@ -11,7 +11,7 @@ import {
 } from "@/lib/services/payroll";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPKR, formatDatePK } from "@/lib/utils";

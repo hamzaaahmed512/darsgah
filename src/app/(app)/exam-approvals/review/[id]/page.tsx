@@ -17,7 +17,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
   let reviewData;
   try {
     reviewData = await getExamResultsForReviewByApprovalId(user, id);
-  } catch (err) {
+  } catch {
     notFound();
   }
 

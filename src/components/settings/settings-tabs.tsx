@@ -3,8 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   createAcademicYearAction,
-  deleteAcademicYearAction,
-  updateThemeAction
+  deleteAcademicYearAction
 } from "@/app/(app)/settings/actions";
 import { Badge } from "@/components/ui/badge";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -47,7 +46,6 @@ export function SettingsTabs({
     ends_on: "",
     is_active: false
   });
-  const [theme, setTheme] = useState(schoolSettings.settings?.theme || "light");
 
   function selectTab(tab: string) {
     setActiveTab(tab);
@@ -85,14 +83,6 @@ export function SettingsTabs({
     });
   }
 
-  function handleThemeSubmit() {
-    setMessage(null);
-    startTransition(async () => {
-      const res = await updateThemeAction(theme);
-      if (res.error) setMessage({ type: "error", text: res.error });
-      else setMessage({ type: "success", text: "Theme preference saved successfully." });
-    });
-  }
 
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">

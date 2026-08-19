@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatPercent } from "@/lib/utils";
 
 const statusTone = {
   active: "green",
@@ -35,7 +34,7 @@ export function StudentTable({ rows }: { rows: any[] }) {
           <thead className="font-label text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Father's Name</th>
+              <th className="px-4 py-3">Father&apos;s Name</th>
               <th className="px-4 py-3">Class</th>
               <th className="px-4 py-3">Admission No.</th>
               <th className="px-4 py-3">Gender</th>

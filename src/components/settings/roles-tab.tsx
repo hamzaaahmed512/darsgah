@@ -8,10 +8,9 @@ import {
   createCustomRoleAction,
   deleteCustomRoleAction,
   assignCustomRoleToUserAction,
-  updateRolePermissionsAction,
-  updateUserPermissionOverridesAction
+  updateRolePermissionsAction
 } from "@/app/(app)/settings/actions";
-import { Check, Edit, ShieldAlert, Trash2, X } from "lucide-react";
+import { Edit, ShieldAlert, Trash2 } from "lucide-react";
 import { AVAILABLE_PERMISSIONS } from "@/lib/permissions";
 
 interface Props {
@@ -21,7 +20,7 @@ interface Props {
   userOverrides: any[];
 }
 
-export function RolesTab({ members, customRoles, rolePermissions, userOverrides }: Props) {
+export function RolesTab({ members, customRoles, rolePermissions }: Props) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   

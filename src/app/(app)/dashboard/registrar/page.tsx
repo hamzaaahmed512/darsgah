@@ -3,12 +3,12 @@ import { getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { formatPKR, formatDatePK } from "@/lib/utils";
-import { GraduationCap, Wallet, AlertCircle, FileText, ArrowRight } from "lucide-react";
+import { GraduationCap, Wallet, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default async function RegistrarDashboardPage() {
