@@ -30,7 +30,7 @@ export function StudentFormModal({
   initialOpen = false
 }: {
   classes: ClassOption[];
-  onSubmit: (values: StudentFormValues) => Promise<void>;
+  onSubmit: (values: StudentFormValues) => Promise<void | { error?: string }>;
   submitLabel: string;
   triggerLabel?: string;
   initialOpen?: boolean;

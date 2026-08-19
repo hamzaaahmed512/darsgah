@@ -63,6 +63,9 @@ export function StudentForm({
           setServerError(result.error);
         }
       } catch (err: any) {
+        if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         setServerError(err.message || "An unexpected error occurred. Please try again.");
       }
     });
