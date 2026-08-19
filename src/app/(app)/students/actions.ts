@@ -39,55 +39,10 @@ export async function exportStudentsAction(filters: StudentFilters) {
   }
 }
 
-export async function importStudentsAction(formData: FormData) {
+export async function importStudentsAction(records: any[]) {
   try {
     const user = await requireUser("students:create");
-    const file = formData.get("file") as File;
-    if (!file) return { error: "No file provided" };
-    
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-    if (lines.length < 2) return { error: "Empty or invalid CSV file" };
-    
-    const parseCSVRow = (text: string) => {
-      let inQuotes = false;
-      let val = "";
-      const row = [];
-      for(let i=0; i<text.length; i++){
-        const char = text[i];
-        if(char === '"' && text[i+1] === '"') { val += '"'; i++; } // Escaped quote
-        else if(char === '"') inQuotes = !inQuotes;
-        else if(char === ',' && !inQuotes) { row.push(val); val = ""; }
-        else val += char;
-      }
-      row.push(val);
-      return row.map(v => v.trim());
-    };
-
-    const headers = parseCSVRow(lines[0]).map(h => h.toLowerCase());
-    const records = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const row = parseCSVRow(lines[i]);
-      const record: any = {};
-      
-      headers.forEach((h, idx) => {
-        const val = row[idx] || "";
-        if (h.includes("admission no")) record.admission_number = val;
-        else if (h.includes("name (en)")) record.name_en = val;
-        else if (h.includes("name (ur)")) record.name_ur = val;
-        else if (h.includes("father name")) record.father_name_en = val;
-        else if (h.includes("father phone")) record.father_phone = val;
-        else if (h.includes("gender")) record.gender = val;
-        else if (h.includes("class")) record.class_name = val;
-        else if (h.includes("status")) record.status = val;
-        else if (h.includes("dob")) record.date_of_birth = val;
-      });
-      
-      if (record.name_en) {
-        records.push(record);
-      }
-    }
+    if (!records || records.length === 0) return { error: "No records provided" };
     
     const count = await importStudentsBulk(user, records);
     revalidatePath("/students");
