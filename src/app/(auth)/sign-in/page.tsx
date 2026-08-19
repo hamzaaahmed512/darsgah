@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/form-field";
 import { signInAction } from "@/app/(auth)/sign-in/actions";
 
 export default function SignInPage() {
@@ -22,12 +22,12 @@ export default function SignInPage() {
           email: String(formData.get("email") ?? ""),
           password: String(formData.get("password") ?? "")
         });
-        
+
         if (result?.error) {
           setError(result.error);
           return;
         }
-        
+
         if (result?.destination) {
           router.replace(result.destination);
           router.refresh();
@@ -40,41 +40,54 @@ export default function SignInPage() {
 
   return (
     <>
-      <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
-      <p className="mt-2 text-sm leading-6 text-muted">Use your authorized account to enter Darsgah or the GetDarsgah platform portal.</p>
+      <div className="text-center">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-[#153476] sm:text-4xl">Welcome back</h1>
+        <p className="mt-2 text-sm leading-6 text-muted sm:text-base">Enter your details to sign in to Darsgah.</p>
+      </div>
       {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
-      <form className="mt-6 grid gap-4" action={onSubmit}>
-        <Field label="Email address">
-          <Input name="email" type="email" autoComplete="email" required placeholder="you@school.edu" />
-        </Field>
-        <Field label="Password">
-          <div className="relative">
-            <Input 
-              name="password" 
-              type={showPassword ? "text" : "password"} 
-              autoComplete="current-password" 
-              required 
-              className="pr-10" 
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </Field>
-        <Button disabled={pending} className="mt-2 w-full">
-          {pending ? "Signing in..." : "Sign in"}
+      <form className="mt-8 grid gap-4" action={onSubmit}>
+        <label className="relative block">
+          <span className="sr-only">Email address</span>
+          <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input name="email" type="email" autoComplete="email" required placeholder="Email address" className="h-14 rounded-2xl bg-slate-50/80 pl-12 text-base shadow-none" />
+        </label>
+        <label className="relative block">
+          <span className="sr-only">Password</span>
+          <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            placeholder="Password"
+            className="h-14 rounded-2xl bg-slate-50/80 pl-12 pr-12 text-base shadow-none"
+          />
+          <button
+            type="button"
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:bg-white hover:text-ink"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
+        </label>
+        <div className="flex justify-end">
+          <Link className="text-sm font-semibold text-primary hover:text-primary-ink hover:underline" href="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
+        <Button disabled={pending} className="mt-1 h-14 w-full rounded-2xl text-base">
+          {pending ? (
+            "Signing in..."
+          ) : (
+            <>
+              <span>Sign in</span>
+              <ArrowRight className="h-5 w-5" aria-hidden="true" />
+            </>
+          )}
         </Button>
       </form>
-      <div className="mt-5 flex items-center justify-between text-sm">
-        <Link className="font-semibold text-primary hover:underline" href="/forgot-password">
-          Forgot password?
-        </Link>
-        <span className="text-muted">Invitation required</span>
-      </div>
+      <p className="mt-7 text-center text-sm text-muted">Access is provided by your school administrator.</p>
     </>
   );
 }

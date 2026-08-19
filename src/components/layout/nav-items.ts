@@ -66,13 +66,12 @@ function academicEvaluationModule(): NavItem {
     label: "Academics",
     icon: BarChart3,
     permission: "academics:view",
-    anyPermissions: ["results:view", "marks:manage", "special-exams:manage"],
+    anyPermissions: ["results:view", "marks:manage"],
     subItems: [
       {
         href: "/academics/exams-setup",
         label: "Exams & Marks Setup",
-        permission: "marks:manage",
-        anyPermissions: ["special-exams:manage"]
+        permission: "marks:manage"
       },
       {
         href: "/academics/results",
@@ -89,7 +88,7 @@ function principalAcademicControlItem(): NavItem {
     label: "Academic Control",
     icon: BarChart3,
     permission: "marks:approve",
-    anyPermissions: ["results:view", "special-exams:manage"]
+    anyPermissions: ["results:view"]
   };
 }
 

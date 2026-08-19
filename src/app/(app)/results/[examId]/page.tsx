@@ -99,7 +99,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
 
       {detail.canPrint ? (
         <div className="mb-6 flex justify-end">
-          <ButtonLink href={`/results/print?classId=${exam.class_id}&term=${encodeURIComponent(exam.term)}`} target="_blank">
+          <ButtonLink href={`/results/print?classId=${exam.class_id}&examType=${exam.exam_type}${exam.month ? `&month=${exam.month}` : ""}`} target="_blank">
             <Printer className="h-4 w-4" /> Print Result Cards
           </ButtonLink>
         </div>

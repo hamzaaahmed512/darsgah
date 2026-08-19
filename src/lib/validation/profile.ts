@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizedPakistaniPhone } from "@/lib/pakistan-format";
 
 const optionalText = (max: number) =>
   z
@@ -24,7 +25,7 @@ const pakistaniPhone = z
   .trim()
   .optional()
   .nullable()
-  .transform((v) => (v ? v : null))
+  .transform((v) => (v ? normalizedPakistaniPhone(v) : null))
   .pipe(
     z
       .string()

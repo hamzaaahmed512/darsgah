@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recordPlatformAudit } from "@/lib/services/platform";
 
 const createSchoolSchema = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: z.string().trim().min(2).max(120).transform((value) => value.toUpperCase()),
   slug: z.preprocess(
     (value) => String(value ?? "")
       .trim()

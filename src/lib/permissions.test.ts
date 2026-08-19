@@ -22,6 +22,16 @@ describe("role permissions", () => {
     expect(hasPermission("student_staff", "attendance:submit")).toBe(false);
   });
 
+  it("limits exam approval and result-card capabilities by role", () => {
+    expect(hasPermission("principal", "marks:approve")).toBe(true);
+    expect(hasPermission("principal", "marks:manage")).toBe(false);
+    expect(hasPermission("principal", "results:generate")).toBe(false);
+    expect(hasPermission("teacher", "marks:manage")).toBe(true);
+    expect(hasPermission("teacher", "marks:approve")).toBe(false);
+    expect(hasPermission("student_staff", "results:generate")).toBe(true);
+    expect(hasPermission("student_staff", "marks:manage")).toBe(false);
+  });
+
   it("routes users to role-aware homes", () => {
     expect(roleHome("teacher")).toBe("/dashboard");
     expect(roleHome("administrator")).toBe("/admin");

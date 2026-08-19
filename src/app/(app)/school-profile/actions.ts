@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { updateSchoolSettings } from "@/lib/services/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formatPakistaniPhone } from "@/lib/pakistan-format";
 
 const SCHOOL_BRANDING_BUCKET = "school-branding";
 const MAX_ASSET_SIZE_BYTES = 5 * 1024 * 1024;
@@ -86,10 +87,10 @@ async function uploadBrandAsset(schoolId: string, kind: "logo" | "favicon", file
 export async function saveSchoolProfileAction(formData: FormData) {
   try {
     const user = await requireUser("settings:manage");
-    const name = readString(formData, "name");
+    const name = readString(formData, "name").toUpperCase();
     const timezone = readString(formData, "timezone");
     const email = readString(formData, "email");
-    const phone = readString(formData, "phone");
+    const phone = formatPakistaniPhone(readString(formData, "phone"));
     const website = readString(formData, "website");
     const currentLogoUrl = readString(formData, "currentLogoUrl");
     const currentFaviconUrl = readString(formData, "currentFaviconUrl");
@@ -101,10 +102,20 @@ export async function saveSchoolProfileAction(formData: FormData) {
       throw new Error("School name is required.");
     }
 
-    const settings: Record<string, string> = {
+    const accentColor = readString(formData, "resultCardAccentColor");
+    const settings: Record<string, any> = {
       schoolEmail: email,
       schoolPhone: phone,
-      schoolWebsite: website
+      schoolWebsite: website,
+      resultCardTemplate: {
+        title: readString(formData, "resultCardTitle").slice(0, 80) || "Result Card",
+        accentColor: /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#2563eb",
+        layout: readString(formData, "resultCardLayout") === "compact" ? "compact" : "standard",
+        showAcademicYear: readString(formData, "resultCardShowAcademicYear") === "true",
+        showAdmissionNumber: readString(formData, "resultCardShowAdmissionNumber") === "true",
+        showTeacherComments: readString(formData, "resultCardShowTeacherComments") === "true",
+        signatureLabels: readString(formData, "resultCardSignatureLabels").split(",").map((item) => item.trim()).filter(Boolean).slice(0, 3)
+      }
     };
 
     let uploadedAnyAsset = false;

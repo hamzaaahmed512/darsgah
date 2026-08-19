@@ -153,7 +153,8 @@ npm.cmd run dev
 macOS Terminal:
 
 ```bash
-npm run dev
+npm run doctor:local
+npm run dev:hosted
 ```
 
 Open `http://localhost:3000`.

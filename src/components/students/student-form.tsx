@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
+import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 
 export function StudentForm({
   initialValues,
@@ -24,6 +25,8 @@ export function StudentForm({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors }
   } = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
@@ -118,7 +121,7 @@ export function StudentForm({
             <Input type="email" {...register("email")} />
           </Field>
           <Field label="Phone" error={errors.phone?.message}>
-            <Input {...register("phone")} />
+            <Input {...register("phone")} value={formatPakistaniPhone(watch("phone"))} onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
           </Field>
           <Field label="Class assignment" error={errors.class_id?.message}>
             <Select {...register("class_id")}>
@@ -149,10 +152,10 @@ export function StudentForm({
             <Input {...register("father_name_ur")} dir="rtl" />
           </Field>
           <Field label="Father's Phone" error={errors.father_phone?.message}>
-            <Input {...register("father_phone")} />
+            <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
           </Field>
           <Field label="Father's CNIC" error={errors.father_cnic?.message}>
-            <Input {...register("father_cnic")} placeholder="XXXXX-XXXXXXX-X" />
+            <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="0000012345678" inputMode="numeric" maxLength={15} />
           </Field>
           
           <div className="col-span-full border-t border-outline/50 my-2 pt-4">
@@ -166,13 +169,13 @@ export function StudentForm({
             <Input {...register("guardian_relationship")} />
           </Field>
           <Field label="Guardian phone" error={errors.guardian_phone?.message}>
-            <Input {...register("guardian_phone")} />
+            <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
           </Field>
           <Field label="Emergency contact" error={errors.emergency_contact_name?.message}>
             <Input {...register("emergency_contact_name")} />
           </Field>
           <Field label="Emergency phone" error={errors.emergency_contact_phone?.message}>
-            <Input {...register("emergency_contact_phone")} />
+            <Input {...register("emergency_contact_phone")} value={formatPakistaniPhone(watch("emergency_contact_phone"))} onChange={(event) => setValue("emergency_contact_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
           </Field>
         </CardContent>
       </Card>

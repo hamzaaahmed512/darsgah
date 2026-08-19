@@ -29,14 +29,19 @@ export async function getMyLeaveRequests(user: AppUser) {
   })) as StaffLeave[];
 }
 
-export async function getMyLeaveCenter(user: AppUser) {
+type LeaveDateRange = { from?: string; to?: string };
+
+export async function getMyLeaveCenter(user: AppUser, range: LeaveDateRange = {}) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("staff_leaves")
     .select("*, reviewer:profiles!staff_leaves_reviewed_by_fkey(full_name)")
     .eq("school_id", user.schoolId)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  if (range.from) query = query.gte("end_date", range.from);
+  if (range.to) query = query.lte("start_date", range.to);
+  const { data, error } = await query;
 
   if (isMissingStaffLeavesTable(error)) {
     return {
@@ -56,7 +61,7 @@ export async function getMyLeaveCenter(user: AppUser) {
   };
 }
 
-export async function getLeaveRequestsForReview(user: AppUser, status: StaffLeaveStatus | "all" = "pending") {
+export async function getLeaveRequestsForReview(user: AppUser, status: StaffLeaveStatus | "all" = "pending", range: LeaveDateRange = {}) {
   if (!hasPermission(user.role, "leave:manage", user.permissions)) throw new Error("Unauthorized to review leave requests.");
   const supabase = await createClient();
   let query = supabase
@@ -66,6 +71,8 @@ export async function getLeaveRequestsForReview(user: AppUser, status: StaffLeav
     .order("created_at", { ascending: false });
 
   if (status !== "all") query = query.eq("status", status);
+  if (range.from) query = query.gte("end_date", range.from);
+  if (range.to) query = query.lte("start_date", range.to);
 
   const { data, error } = await query;
   if (isMissingStaffLeavesTable(error)) return [];

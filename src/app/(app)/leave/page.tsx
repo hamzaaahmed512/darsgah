@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { LeaveApplicationDialog } from "@/components/leave/leave-application-dialog";
+import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
 import { requireUser } from "@/lib/auth/session";
 import { getLeaveRequestsForReview, getMyLeaveCenter } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
@@ -17,11 +18,38 @@ const statusTone = {
   rejected: "red"
 } as const;
 
-export default async function LeavePage() {
+type LeaveRangeMode = "month" | "year" | "lifetime" | "custom";
+
+function getLeaveRange(params: Record<string, string | undefined>) {
+  const dateParts = new Intl.DateTimeFormat("en", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((parts, item) => ({ ...parts, [item.type]: item.value }), {});
+  const today = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+  const currentMonth = today.slice(0, 7);
+  const currentYear = today.slice(0, 4);
+  const mode: LeaveRangeMode = params.range === "year" || params.range === "custom" || params.range === "lifetime" ? params.range : "month";
+  const month = currentMonth;
+  const year = currentYear;
+
+  if (mode === "year") return { mode, month, year, from: `${year}-01-01`, to: `${year}-12-31` };
+  if (mode === "lifetime") return { mode, month, year, from: "", to: "" };
+  if (mode === "custom") {
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : `${currentMonth}-01`;
+    const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : today;
+    return { mode, month, year, from: from <= to ? from : to, to: from <= to ? to : from };
+  }
+  const [monthYear, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(monthYear, monthNumber, 0)).getUTCDate();
+  return { mode, month, year, from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, "0")}` };
+}
+
+export default async function LeavePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
+  const range = getLeaveRange(params);
   const user = await requireUser("leave:view");
   const canReviewLeaves = hasPermission(user.role, "leave:manage", user.permissions);
-  const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all") : [];
-  const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user);
+  const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all", range) : [];
+  const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user, range);
   const { leaves, migrationRequired } = leaveCenter;
 
   return (
@@ -43,9 +71,9 @@ export default async function LeavePage() {
         <Card>
           <CardHeader>
             <CardTitle>Staff Leave Requests</CardTitle>
-            <CalendarDays className="h-5 w-5 text-primary" aria-hidden="true" />
           </CardHeader>
           <CardContent>
+            <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
             {!reviewLeaves.length ? (
               <EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." />
             ) : (
@@ -114,6 +142,7 @@ export default async function LeavePage() {
             <CardTitle>My Leave History</CardTitle>
           </CardHeader>
           <CardContent>
+            <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
             {migrationRequired ? (
               <EmptyState title="Leave history unavailable" description="The hosted database does not have the staff leave table yet." />
             ) : !leaves.length ? (

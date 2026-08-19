@@ -10,6 +10,7 @@ import { updateProfileAction } from "@/app/(app)/profile/actions";
 import { profileFormSchema, type ProfileFormValues } from "@/lib/validation/profile";
 import type { ProfileDetails } from "@/lib/services/profile";
 import { initials } from "@/lib/utils";
+import { formatPakistaniPhone } from "@/lib/pakistan-format";
 
 function displayValue(value: string | null | undefined, fallback = "Not set") {
   return value && value.trim().length ? value : fallback;
@@ -28,6 +29,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors }
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -44,7 +46,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
   });
 
   const displayName = watch("fullName") || profile.fullName;
-  const currentPhone = watch("phone") || profile.phone || "";
+  const currentPhone = formatPakistaniPhone(watch("phone") || profile.phone || "");
 
   function handleCancel() {
     reset({
@@ -139,12 +141,20 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
               <Input {...register("fullName")} placeholder="Jane Doe" />
             </Field>
 
-            <Field label="Phone" error={errors.phone?.message} hint="Enter 10-digit number starting with 3 (e.g. 3001234567)">
+            <Field label="Phone" error={errors.phone?.message} hint="Enter 10 digits; spacing is added automatically (e.g. 321 6666666)">
               <div className="flex">
                 <span className="inline-flex items-center rounded-l-lg border border-r-0 border-outline/60 bg-surface-low px-3 text-sm font-semibold text-muted">
                   +92
                 </span>
-                <Input {...register("phone")} className="rounded-l-none" placeholder="3001234567" maxLength={10} />
+                <Input
+                  {...register("phone")}
+                  value={formatPakistaniPhone(watch("phone"))}
+                  onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })}
+                  className="rounded-l-none"
+                  placeholder="321 6666666"
+                  inputMode="numeric"
+                  maxLength={11}
+                />
               </div>
             </Field>
 
@@ -192,7 +202,14 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
               <Input {...register("emergencyContactName")} placeholder="Full name" />
             </Field>
             <Field label="Emergency Contact Phone" error={errors.emergencyContactPhone?.message}>
-              <Input {...register("emergencyContactPhone")} placeholder="+92 3001234567" />
+              <Input
+                {...register("emergencyContactPhone")}
+                value={formatPakistaniPhone(watch("emergencyContactPhone"))}
+                onChange={(event) => setValue("emergencyContactPhone", formatPakistaniPhone(event.target.value), { shouldDirty: true })}
+                placeholder="321 6666666"
+                inputMode="numeric"
+                maxLength={11}
+              />
             </Field>
           </div>
         ) : (
@@ -203,7 +220,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
             </div>
             <div className="rounded-[16px] border border-outline/60 bg-surface-low p-4">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Phone</p>
-              <p className="mt-2 font-semibold text-ink">{profile.phone ? `+92 ${profile.phone}` : "Not set"}</p>
+              <p className="mt-2 font-semibold text-ink">{profile.phone ? `+92 ${formatPakistaniPhone(profile.phone)}` : "Not set"}</p>
             </div>
             <div className="rounded-[16px] border border-outline/60 bg-surface-low p-4">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Personal Email</p>

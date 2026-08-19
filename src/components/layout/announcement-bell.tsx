@@ -116,7 +116,7 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
 
       <div
         className={cn(
-          "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[360px] rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200",
+          "fixed inset-x-3 top-20 z-50 w-auto max-w-[calc(100vw-1.5rem)] rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:w-[360px]",
           open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
         )}
         role="dialog"
@@ -144,7 +144,7 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
         </div>
 
         {/* Body */}
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto sm:max-h-[400px]">
           {loading ? (
             <div className="py-10 text-center text-sm text-muted">Loading…</div>
           ) : !announcements.length ? (
@@ -173,16 +173,16 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
                       <span className={cn("inline-flex h-2 w-2 rounded-full", PRIORITY_DOT[a.priority])} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className={cn("truncate text-sm font-semibold", a.is_read ? "text-ink" : "text-primary")}>
+                      <div className="flex min-w-0 items-start gap-2">
+                        <p className={cn("min-w-0 break-words text-sm font-semibold", a.is_read ? "text-ink" : "text-primary")}>
                           {a.title}
                         </p>
                         {!a.is_read && (
                           <span className="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
                         )}
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-muted">{a.description}</p>
-                      <div className="mt-1.5 flex items-center gap-2">
+                      <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted sm:line-clamp-3">{a.description}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
                         <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide", PRIORITY_STYLES[a.priority])}>
                           {a.priority}
                         </span>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateGrade, defaultGradeScale, percentage, type GradeScale } from "@/lib/grades";
 import { logActivity } from "@/lib/services/activity";
 import type {
@@ -11,9 +12,9 @@ import type {
 } from "@/types/database";
 import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type MarkEntryValues } from "@/lib/validation/marks";
 
-export const requiredResultExamTypes: ExamType[] = ["mid_term", "final_term"];
+export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
-export const majorAssessmentTypes: ExamType[] = ["monthly", "mid_term", "final_term", "pre_board", "annual_exam"];
+export const majorAssessmentTypes: ExamType[] = requiredResultExamTypes;
 
 const examTypeLabels: Record<ExamType, string> = {
   quiz: "Quiz",
@@ -24,11 +25,29 @@ const examTypeLabels: Record<ExamType, string> = {
   viva: "Viva",
   attendance: "Attendance",
   monthly: "Monthly Test",
+  first_term: "1st Term",
+  second_term: "2nd Term",
+  third_term: "3rd Term",
   mid_term: "Mid Term",
   final_term: "Final Term",
   pre_board: "Pre-Board",
   annual_exam: "Annual Exam"
 };
+
+function isMissingCurrentExamWorkflow(error: { code?: string; message?: string } | null | undefined) {
+  return Boolean(
+    error &&
+      (error.code === "42703" ||
+        error.code === "22P02" ||
+        error.message?.includes("exams.month") ||
+        error.message?.includes("first_term") ||
+        error.message?.includes("pending_approval"))
+  );
+}
+
+function examWorkflowMigrationMessage() {
+  return "Apply the latest Exams & Results database migrations to enable Monthly and Term workflows.";
+}
 
 export function formatWorkflowStatus(status: ResultWorkflowStatus) {
   const labels: Record<ResultWorkflowStatus, string> = {
@@ -75,6 +94,7 @@ async function getGradeScale(user: AppUser): Promise<GradeScale[]> {
     .eq("school_id", user.schoolId)
     .order("sort_order");
 
+  if (isMissingCurrentExamWorkflow(error)) throw new Error(examWorkflowMigrationMessage());
   if (error) throw new Error(error.message);
   return data?.length ? data.map((row: any) => ({ ...row, min_percentage: Number(row.min_percentage), max_percentage: Number(row.max_percentage) })) : defaultGradeScale;
 }
@@ -107,8 +127,10 @@ async function getEditableExam(user: AppUser, examId: string) {
   if (error) throw new Error(error.message);
   if (!exam) throw new Error("Exam not found.");
   await assertTeacherCanUseSubject(user, exam.class_id, exam.subject_id);
-  const canEditApprovedRegular = exam.status === "approved" && !exam.requires_approval;
-  if (!["draft", "rejected"].includes(exam.status) && !canEditApprovedRegular) {
+  const canEdit = exam.requires_approval
+    ? ["pending_approval", "rejected"].includes(exam.status)
+    : ["draft", "approved"].includes(exam.status);
+  if (!canEdit) {
     throw new Error("This exam is locked and cannot be edited.");
   }
   return exam as any;
@@ -217,8 +239,10 @@ export async function createExam(user: AppUser, values: ExamFormValues) {
   const parsed = examSchema.parse(values);
   await assertTeacherCanUseSubject(user, parsed.class_id, parsed.subject_id);
   const supabase = await createClient();
-  const requiresApproval = parsed.requires_approval ?? requiresApprovalForExamType(parsed.exam_type);
+  const requiresApproval = requiresApprovalForExamType(parsed.exam_type);
   const assessmentCategory = getAssessmentCategory(parsed.exam_type, requiresApproval);
+  const initialStatus: ExamStatus = requiresApproval ? "pending_approval" : "draft";
+  const queuedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from("exams")
     .insert({
@@ -227,13 +251,30 @@ export async function createExam(user: AppUser, values: ExamFormValues) {
       assessment_category: assessmentCategory,
       school_id: user.schoolId,
       created_by: user.id,
-      status: "draft",
-      approval_status: "draft"
+      is_special: requiresApproval,
+      assigned_teacher_id: null,
+      status: initialStatus,
+      approval_status: requiresApproval ? "pending_approval" : "draft",
+      submitted_at: requiresApproval ? queuedAt : null,
+      uploaded_by_teacher_id: requiresApproval ? user.id : null,
+      uploaded_by_teacher_name: requiresApproval ? user.fullName : null,
+      uploaded_at: requiresApproval ? queuedAt : null
     })
     .select("id")
     .single();
 
+  if (isMissingCurrentExamWorkflow(error)) throw new Error(examWorkflowMigrationMessage());
   if (error) throw new Error(error.message);
+  if (requiresApproval) {
+    const { error: approvalError } = await supabase.from("result_approvals").insert({
+      school_id: user.schoolId,
+      exam_id: data.id,
+      submitted_by: user.id,
+      status: "pending",
+      submitted_at: queuedAt
+    });
+    if (approvalError) throw new Error(approvalError.message);
+  }
   await logActivity(user, "exam_created", "exam", data.id, { exam_type: parsed.exam_type, title: parsed.title, requires_approval: requiresApproval });
   return data.id as string;
 }
@@ -300,13 +341,6 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
       .eq("school_id", user.schoolId)
       .eq("id", exam.id);
     if (examError) throw new Error(examError.message);
-  } else if (exam.status === "rejected") {
-    const { error: resetError } = await supabase
-      .from("exams")
-      .update({ status: "draft", approval_status: "draft", rejection_reason: null })
-      .eq("school_id", user.schoolId)
-      .eq("id", exam.id);
-    if (resetError) throw new Error(resetError.message);
   }
 
   await logActivity(user, "marks_saved", "exam", exam.id, { records: parsed.records.length });
@@ -315,6 +349,7 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
 export async function submitExamForApproval(user: AppUser, examId: string) {
   const exam = await getEditableExam(user, examId);
   if (!exam.requires_approval) throw new Error("This assessment does not require principal approval.");
+  if (exam.status !== "rejected") throw new Error("This exam is already queued for Principal review.");
   const supabase = await createClient();
 
   const [roster, marks] = await Promise.all([
@@ -334,7 +369,7 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   if (missing.length) throw new Error("All enrolled students must be marked before submitting for approval.");
 
   const now = new Date().toISOString();
-  const { error: marksError } = await supabase.from("marks").update({ status: "submitted" }).eq("school_id", user.schoolId).eq("exam_id", exam.id);
+  const { error: marksError } = await supabase.from("marks").update({ status: "draft" }).eq("school_id", user.schoolId).eq("exam_id", exam.id);
   if (marksError) throw new Error(marksError.message);
 
   const approvalPayload = {
@@ -359,7 +394,7 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   const { error: examError } = await supabase
     .from("exams")
     .update({
-      status: "submitted",
+      status: "pending_approval",
       submitted_at: now,
       uploaded_by_teacher_id: user.id,
       uploaded_by_teacher_name: user.fullName,
@@ -415,7 +450,7 @@ export async function getExamResultsForReviewByApprovalId(user: AppUser, approva
   // 2. Fetch all marks and student details for this exam
   const { data: marks, error: marksError } = await supabase
     .from("marks")
-    .select("id,student_id,marks_obtained,grade,teacher_remarks,status,students(first_name,last_name,admission_number)")
+    .select("id,student_id,marks_obtained,grade,teacher_comment,status,students(first_name,last_name,admission_number)")
     .eq("school_id", user.schoolId)
     .eq("exam_id", approval.exam_id)
     .order("students(last_name)", { ascending: true });
@@ -432,55 +467,20 @@ export async function getExamResultsForReviewByApprovalId(user: AppUser, approva
 export async function reviewExamApproval(user: AppUser, approvalId: string, decision: "approved" | "rejected", principalComment?: string | null) {
   if (user.role !== "principal") throw new Error("Only the principal can approve or reject results.");
   const supabase = await createClient();
-  const { data: approval, error } = await supabase
-    .from("result_approvals")
-    .select("*,exams!inner(id,status,exam_type,requires_approval)")
-    .eq("school_id", user.schoolId)
-    .eq("id", approvalId)
-    .maybeSingle();
-
+  const { error } = await supabase.rpc("review_special_exam", {
+    p_approval_id: approvalId,
+    p_decision: decision,
+    p_comment: principalComment || null
+  });
   if (error) throw new Error(error.message);
-  if (!approval) throw new Error("Approval request not found.");
-  if (!approval.exams?.requires_approval) throw new Error("This result does not require approval.");
-  if (approval.status !== "pending") throw new Error("This result set has already been reviewed.");
-
-  const now = new Date().toISOString();
-  const examStatus: ExamStatus = decision === "approved" ? "approved" : "rejected";
-  const { error: approvalError } = await supabase
-    .from("result_approvals")
-    .update({
-      status: decision,
-      principal_comment: principalComment || null,
-      reviewed_by: user.id,
-      reviewed_at: now
-    })
-    .eq("id", approvalId);
-  if (approvalError) throw new Error(approvalError.message);
-
-  const { error: examError } = await supabase
-    .from("exams")
-    .update({
-      status: examStatus,
-      approval_status: decision === "approved" ? "approved" : "rejected",
-      approved_by_principal_id: decision === "approved" ? user.id : null,
-      approved_by_principal_name: decision === "approved" ? user.fullName : null,
-      approved_at: decision === "approved" ? now : null,
-      rejection_reason: decision === "rejected" ? principalComment || null : null,
-      finalized_at: decision === "approved" ? now : null
-    })
-    .eq("school_id", user.schoolId)
-    .eq("id", approval.exam_id);
-  if (examError) throw new Error(examError.message);
-
-  const { error: marksError } = await supabase.from("marks").update({ status: examStatus }).eq("school_id", user.schoolId).eq("exam_id", approval.exam_id);
-  if (marksError) throw new Error(marksError.message);
-
-  await logActivity(user, `exam_${decision}`, "exam", approval.exam_id, { principal_comment: principalComment || null });
+  await logActivity(user, `exam_${decision}`, "result_approval", approvalId, { principal_comment: principalComment || null });
 }
 
-export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; term?: string } = {}) {
+export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; examType?: ExamType; month?: number } = {}) {
+  if (user.role !== "student_staff") throw new Error("Only the Registrar can generate result cards.");
   const supabase = await createClient();
-  const term = filters.term ?? "Term 1";
+  const examType = requiredResultExamTypes.includes(filters.examType as ExamType) ? filters.examType as ExamType : "monthly";
+  const month = examType === "monthly" ? filters.month ?? new Date().getMonth() + 1 : undefined;
   const { data: classes, error: classError } = await supabase
     .from("classes")
     .select("id,name,grades(name),sections(name)")
@@ -489,11 +489,11 @@ export async function getResultCardsWorkspace(user: AppUser, filters: { classId?
   if (classError) throw new Error(classError.message);
 
   const selectedClassId = filters.classId ?? classes?.[0]?.id;
-  const readiness = selectedClassId ? await getResultReadiness(user, selectedClassId, term) : null;
-  return { classes: classes ?? [], selectedClassId, term, readiness };
+  const readiness = selectedClassId ? await getResultReadiness(user, selectedClassId, examType, month) : null;
+  return { classes: classes ?? [], selectedClassId, examType, month, readiness };
 }
 
-export async function getResultsManagementWorkspace(user: AppUser, filters: { classId?: string; term?: string; status?: ResultWorkflowStatus | "all" } = {}) {
+export async function getResultsManagementWorkspace(user: AppUser, filters: { classId?: string; term?: string; status?: ResultWorkflowStatus | "all"; from?: string; to?: string } = {}) {
   const supabase = await createClient();
   let query = supabase
     .from("exams")
@@ -506,6 +506,8 @@ export async function getResultsManagementWorkspace(user: AppUser, filters: { cl
   if (filters.classId) query = query.eq("class_id", filters.classId);
   if (filters.term) query = query.eq("term", filters.term);
   if (filters.status && filters.status !== "all") query = query.eq("approval_status", filters.status);
+  if (filters.from) query = query.gte("exam_date", filters.from);
+  if (filters.to) query = query.lte("exam_date", filters.to);
 
   if (user.role === "teacher") {
     query = query.eq("created_by", user.id);
@@ -533,7 +535,7 @@ export async function getResultsManagementWorkspace(user: AppUser, filters: { cl
         user.role === "student_staff" &&
         row.requires_approval &&
         workflowStatus === "approved" &&
-        ["mid_term", "final_term", "pre_board", "annual_exam"].includes(row.exam_type)
+        requiredResultExamTypes.includes(row.exam_type)
     };
   });
 }
@@ -587,26 +589,29 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
       user.role === "student_staff" &&
       exam.requires_approval &&
       workflowStatus === "approved" &&
-      ["mid_term", "final_term", "pre_board", "annual_exam"].includes(exam.exam_type)
+      requiredResultExamTypes.includes(exam.exam_type)
   };
 }
 
-async function getResultReadiness(user: AppUser, classId: string, term: string) {
+async function getResultReadiness(user: AppUser, classId: string, examType: ExamType, month?: number) {
   const supabase = await createClient();
+  let examsQuery = supabase
+    .from("exams")
+    .select("id,subject_id,exam_type,status,approval_status,month")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", classId)
+    .eq("exam_type", examType)
+    .eq("status", "approved")
+    .eq("approval_status", "approved");
+  if (examType === "monthly") examsQuery = examsQuery.eq("month", month ?? 0);
+
   const [subjects, exams, students] = await Promise.all([
     supabase
       .from("student_subject_enrollments")
       .select("subject_id,subjects(id,name)")
       .eq("school_id", user.schoolId)
       .eq("class_id", classId),
-    supabase
-      .from("exams")
-      .select("id,subject_id,exam_type,status,approval_status")
-      .eq("school_id", user.schoolId)
-      .eq("class_id", classId)
-      .eq("term", term)
-      .in("exam_type", requiredResultExamTypes)
-      .eq("status", "approved"),
+    examsQuery,
     supabase
       .from("enrollments")
       .select("students(id,first_name,last_name,admission_number)")
@@ -617,6 +622,22 @@ async function getResultReadiness(user: AppUser, classId: string, term: string) 
   ]);
 
   if (subjects.error) throw new Error(subjects.error.message);
+  if (isMissingCurrentExamWorkflow(exams.error)) {
+    return {
+      complete: false,
+      missing: [examWorkflowMigrationMessage()],
+      examType,
+      month,
+      students: (students.data ?? [])
+        .map((row: any) => ({
+          id: row.students?.id,
+          name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+          admission_number: row.students?.admission_number
+        }))
+        .filter((row) => row.id),
+      migrationRequired: true
+    };
+  }
   if (exams.error) throw new Error(exams.error.message);
   if (students.error) throw new Error(students.error.message);
 
@@ -626,18 +647,17 @@ async function getResultReadiness(user: AppUser, classId: string, term: string) 
     if (item.subjects?.id) subjectMap.set(item.subjects.id, item.subjects.name);
   }
 
-  const approvedKeys = new Set((exams.data ?? []).map((exam: any) => `${exam.subject_id}:${exam.exam_type}`));
+  const approvedSubjects = new Set((exams.data ?? []).map((exam: any) => exam.subject_id));
   const missing: string[] = [];
   for (const [subjectId, subjectName] of subjectMap.entries()) {
-    for (const type of requiredResultExamTypes) {
-      if (!approvedKeys.has(`${subjectId}:${type}`)) missing.push(`${subjectName} ${formatExamType(type)}`);
-    }
+    if (!approvedSubjects.has(subjectId)) missing.push(`${subjectName} ${formatExamType(examType)}`);
   }
 
   return {
     complete: subjectMap.size > 0 && missing.length === 0,
     missing,
-    requiredExamTypes: requiredResultExamTypes,
+    examType,
+    month,
     students: (students.data ?? [])
       .map((row: any) => ({
         id: row.students?.id,
@@ -648,20 +668,38 @@ async function getResultReadiness(user: AppUser, classId: string, term: string) 
   };
 }
 
-export async function getPrintableResultCards(user: AppUser, filters: { classId: string; term: string; studentId?: string }) {
+export async function getPrintableResultCards(user: AppUser, filters: { classId: string; examType: ExamType; month?: number; studentId?: string }) {
   if (user.role !== "student_staff") throw new Error("Only the registrar can print official result cards.");
+  if (!requiredResultExamTypes.includes(filters.examType)) throw new Error("Result cards are limited to the four approved exam types.");
+  if (filters.examType === "monthly" && (!filters.month || filters.month < 1 || filters.month > 12)) throw new Error("Choose a valid month.");
   const supabase = await createClient();
-  const readiness = await getResultReadiness(user, filters.classId, filters.term);
-  const { data: classRow, error: classError } = await supabase
-    .from("classes")
-    .select("id,name,grades(name),sections(name),academic_years(name)")
-    .eq("school_id", user.schoolId)
-    .eq("id", filters.classId)
-    .maybeSingle();
+  const adminClient = createAdminClient();
+  const readiness = await getResultReadiness(user, filters.classId, filters.examType, filters.month);
+  const [classResult, settingsResult] = await Promise.all([
+    supabase.from("classes").select("id,name,grades(name),sections(name),academic_years(name)").eq("school_id", user.schoolId).eq("id", filters.classId).maybeSingle(),
+    adminClient.from("school_settings").select("settings").eq("school_id", user.schoolId).maybeSingle()
+  ]);
+  const { data: classRow, error: classError } = classResult;
   if (classError) throw new Error(classError.message);
   if (!classRow) throw new Error("Class not found.");
 
-  if (!readiness.complete) return { complete: false, missing: readiness.missing, classRow, cards: [] };
+  if (settingsResult.error) throw new Error(settingsResult.error.message);
+  const schoolSettings = (settingsResult.data?.settings ?? {}) as Record<string, any>;
+  const rawTemplate = schoolSettings.resultCardTemplate ?? {};
+  const template = {
+    title: typeof rawTemplate.title === "string" && rawTemplate.title.trim() ? rawTemplate.title.trim().slice(0, 80) : "Result Card",
+    accentColor: typeof rawTemplate.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(rawTemplate.accentColor) ? rawTemplate.accentColor : "#2563eb",
+    layout: rawTemplate.layout === "compact" ? "compact" as const : "standard" as const,
+    showAcademicYear: rawTemplate.showAcademicYear !== false,
+    showAdmissionNumber: rawTemplate.showAdmissionNumber !== false,
+    showTeacherComments: rawTemplate.showTeacherComments === true,
+    signatureLabels: Array.isArray(rawTemplate.signatureLabels)
+      ? rawTemplate.signatureLabels.filter((item: unknown) => typeof item === "string" && item.trim()).slice(0, 3)
+      : ["Class Teacher", "Principal"]
+  };
+  const branding = { logoUrl: typeof schoolSettings.schoolLogoUrl === "string" ? schoolSettings.schoolLogoUrl : "" };
+
+  if (!readiness.complete) return { complete: false, missing: readiness.missing, classRow, cards: [], template, branding };
 
   let studentsQuery = supabase
     .from("enrollments")
@@ -673,34 +711,38 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
 
   if (filters.studentId) studentsQuery = studentsQuery.eq("student_id", filters.studentId);
 
+  let marksQuery = supabase
+    .from("marks")
+    .select("student_id,marks_obtained,grade,teacher_comment,exams!inner(id,title,exam_type,month,max_marks,status,subjects(name),requires_approval,approval_status)")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", filters.classId)
+    .eq("exams.exam_type", filters.examType)
+    .eq("exams.status", "approved")
+    .eq("exams.requires_approval", true)
+    .eq("exams.approval_status", "approved")
+    .order("student_id");
+  let examsQuery = supabase.from("exams")
+    .select("id,subject_id,title,exam_type,month,max_marks")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", filters.classId)
+    .eq("exam_type", filters.examType)
+    .eq("status", "approved")
+    .eq("requires_approval", true)
+    .eq("approval_status", "approved");
+  if (filters.examType === "monthly") {
+    marksQuery = marksQuery.eq("exams.month", filters.month ?? 0);
+    examsQuery = examsQuery.eq("month", filters.month ?? 0);
+  }
+
   const [students, marks, subjectEnrollments, approvedExams] = await Promise.all([
     studentsQuery,
-    supabase
-      .from("marks")
-      .select("student_id,marks_obtained,grade,exams!inner(id,title,exam_type,term,max_marks,status,subjects(name),requires_approval,approval_status)")
-      .eq("school_id", user.schoolId)
-      .eq("class_id", filters.classId)
-      .eq("exams.term", filters.term)
-      .eq("exams.status", "approved")
-      .eq("exams.requires_approval", true)
-      .eq("exams.approval_status", "approved")
-      .in("exams.exam_type", requiredResultExamTypes)
-      .order("student_id"),
+    marksQuery,
     supabase
       .from("student_subject_enrollments")
       .select("student_id,subject_id,subjects(name)")
       .eq("school_id", user.schoolId)
       .eq("class_id", filters.classId),
-    supabase
-      .from("exams")
-      .select("id,subject_id,title,exam_type,max_marks")
-      .eq("school_id", user.schoolId)
-      .eq("class_id", filters.classId)
-      .eq("term", filters.term)
-      .eq("status", "approved")
-      .eq("requires_approval", true)
-      .eq("approval_status", "approved")
-      .in("exam_type", requiredResultExamTypes)
+    examsQuery
   ]);
 
   if (students.error) throw new Error(students.error.message);
@@ -722,7 +764,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     const enrolledSubjects = (subjectEnrollments.data ?? []).filter((item: any) => item.student_id === student?.id);
     const rows = enrolledSubjects.flatMap((enrollment: any) => (approvedExams.data ?? []).filter((exam: any) => exam.subject_id === enrollment.subject_id).map((exam: any) => {
       const mark = marksForStudent.find((item: any) => item.exams?.id === exam.id);
-      return { subject_name: enrollment.subjects?.name, exam_title: exam.title, exam_type: exam.exam_type as ExamType, marks_obtained: mark ? Number(mark.marks_obtained) : null, max_marks: Number(exam.max_marks), grade: mark?.grade ?? "Pending" };
+      return { subject_name: enrollment.subjects?.name, exam_title: exam.title, exam_type: exam.exam_type as ExamType, marks_obtained: mark ? Number(mark.marks_obtained) : null, max_marks: Number(exam.max_marks), grade: mark?.grade ?? "Pending", teacher_comment: mark?.teacher_comment ?? null };
     }));
     const completedRows = rows.filter((item) => item.marks_obtained !== null);
     const totalObtained = completedRows.reduce((sum, item) => sum + Number(item.marks_obtained), 0);
@@ -741,5 +783,5 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     };
   });
 
-  return { complete: true, missing: [], classRow, cards };
+  return { complete: true, missing: [], classRow, cards, template, branding };
 }

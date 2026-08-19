@@ -19,11 +19,14 @@ export type ExamType =
   | "viva"
   | "attendance"
   | "monthly"
+  | "first_term"
+  | "second_term"
+  | "third_term"
   | "mid_term"
   | "final_term"
   | "pre_board"
   | "annual_exam";
-export type ExamStatus = "draft" | "submitted" | "approved" | "rejected";
+export type ExamStatus = "draft" | "pending_approval" | "approved" | "rejected";
 export type MarkStatus = "draft" | "submitted" | "approved" | "rejected";
 export type ResultApprovalStatus = "pending" | "approved" | "rejected";
 export type AssessmentCategory = "regular" | "major";
@@ -193,6 +196,8 @@ export type Exam = {
   approved_by_principal_id: string | null;
   approved_by_principal_name: string | null;
   approved_at: string | null;
+  approved_by: string | null;
+  month: number | null;
   rejection_reason: string | null;
   is_special: boolean;
   assigned_teacher_id: string | null;
@@ -395,4 +400,3 @@ export type AnnouncementWithRead = Announcement & {
   is_read?: boolean;
   created_by_name?: string | null;
 };
-

@@ -1,4 +1,5 @@
-import { Bell, BookOpen, CalendarCheck, CheckCircle2, GraduationCap, LayoutDashboard, Users } from "lucide-react";
+import { Bell, CalendarCheck, CheckCircle2, GraduationCap, LayoutDashboard, Users } from "lucide-react";
+import { GetDarsgahLogo } from "@/components/brand/getdarsgah-logo";
 
 export function ProductPreview() {
   return (
@@ -12,7 +13,7 @@ export function ProductPreview() {
         <div className="grid min-h-[430px] grid-cols-[72px_1fr] sm:grid-cols-[190px_1fr]">
           <aside className="border-r border-slate-200 bg-white p-3 sm:p-4">
             <div className="mb-8 flex items-center gap-2 px-1">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white"><BookOpen className="h-4 w-4" /></span>
+              <GetDarsgahLogo className="h-9 w-9" />
               <span className="hidden text-sm font-bold text-ink sm:block">Darsgah</span>
             </div>
             <PreviewNav icon={LayoutDashboard} label="Overview" active />

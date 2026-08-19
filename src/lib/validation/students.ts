@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatCnic } from "@/lib/pakistan-format";
 
 const phone = z
   .string()
@@ -30,8 +31,8 @@ export const studentSchema = z.object({
   father_phone: phone,
   father_cnic: z.string()
     .trim()
-    .regex(/^\d{5}-\d{7}-\d{1}$/, "CNIC must be in format XXXXX-XXXXXXX-X")
-    .or(z.literal(""))
+    .transform(formatCnic)
+    .pipe(z.string().regex(/^\d{5}-\d{7}-\d{1}$/, "Enter a valid 13-digit CNIC").or(z.literal("")))
     .optional()
     .nullable(),
     

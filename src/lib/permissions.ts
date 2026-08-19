@@ -32,7 +32,6 @@ export type Permission =
   | "leave:manage"
   | "transport:view"
   | "transport:manage"
-  | "special-exams:manage"
   | "announcements:view"
   | "announcements:manage";
 
@@ -43,7 +42,7 @@ export const AVAILABLE_PERMISSIONS: Permission[] = [
   "reports:view", "activity:view", "settings:manage", "users:manage", "approvals:view",
   "approvals:review", "teachers:manage", "classes:manage", "finance:view", "finance:manage",
   "payroll:view", "payroll:manage", "leave:view", "leave:manage", "transport:view",
-  "transport:manage", "special-exams:manage", "announcements:view", "announcements:manage"
+  "transport:manage", "announcements:view", "announcements:manage"
 ];
 
 const rolePermissions: Record<UserRole, Permission[]> = {
@@ -58,7 +57,6 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "academics:view",
     "marks:approve",
     "results:view",
-    "results:generate",
     "reports:view",
     "activity:view",
     "approvals:view",
@@ -73,7 +71,6 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "leave:manage",
     "transport:view",
     "transport:manage",
-    "special-exams:manage",
     "announcements:view",
     "announcements:manage"
   ],
@@ -134,7 +131,6 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "leave:manage",
     "transport:view",
     "transport:manage",
-    "special-exams:manage",
     "announcements:view",
     "announcements:manage"
   ],

@@ -33,8 +33,12 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
 
   const [results, cardsWorkspace] = await Promise.all([
     getResultsManagementWorkspace(user, { classId: params.classId, term: params.term, status }),
-    hasPermission(user.role, "results:generate")
-      ? getResultCardsWorkspace(user, { classId: params.classId, term: params.term })
+    user.role === "student_staff" && hasPermission(user.role, "results:generate", user.permissions)
+      ? getResultCardsWorkspace(user, {
+          classId: params.classId,
+          examType: params.examType as any,
+          month: params.month ? Number(params.month) : undefined
+        })
       : Promise.resolve(null)
   ]);
 

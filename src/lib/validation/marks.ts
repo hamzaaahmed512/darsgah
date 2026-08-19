@@ -9,22 +9,32 @@ export const examTypeSchema = z.enum([
   "viva",
   "attendance",
   "monthly",
+  "first_term",
+  "second_term",
+  "third_term",
   "mid_term",
   "final_term",
   "pre_board",
   "annual_exam"
 ]);
-export const specialExamTypes = ["monthly", "mid_term", "final_term", "pre_board", "annual_exam"] as const;
+export const specialExamTypes = ["monthly", "first_term", "second_term", "third_term"] as const;
 
 export const examSchema = z.object({
   class_id: z.string().uuid(),
   subject_id: z.string().uuid(),
   exam_type: examTypeSchema,
-  requires_approval: z.coerce.boolean().optional(),
+  month: z.coerce.number().int().min(1).max(12).optional().nullable(),
   title: z.string().trim().min(2, "Title is required").max(120),
   term: z.string().trim().min(2, "Term is required").max(80),
   exam_date: z.string().date(),
   max_marks: z.coerce.number().positive("Max marks must be greater than zero").max(1000)
+}).superRefine((value, context) => {
+  if (value.exam_type === "monthly" && !value.month) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["month"], message: "Select a month for a Monthly exam" });
+  }
+  if (value.exam_type !== "monthly" && value.month) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["month"], message: "Month is only valid for Monthly exams" });
+  }
 });
 
 export const markEntrySchema = z.object({

@@ -38,7 +38,7 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
   const selectedExam = workspace.selectedExam;
   const locked = selectedExam
     ? selectedExam.requires_approval
-      ? ["submitted", "approved"].includes(selectedExam.status)
+      ? selectedExam.status === "approved"
       : false
     : true;
   const requiresApproval = selectedExam?.requires_approval ?? false;
@@ -48,7 +48,7 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
       <PageHeader
         eyebrow="Assessment workflow"
         title="Marks Entry"
-        description="Enter regular assessment marks that are approved immediately, or upload major examination results for Principal approval."
+        description="Create exams only for your assigned classes and subjects. The four official exam types are queued for Principal approval."
         actions={
           <ButtonLink href="/results" variant="secondary">
             Exams & Results
@@ -116,8 +116,18 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
                       </optgroup>
                     </Select>
                   </Field>
+                  <Field label="Month (required for Monthly only)">
+                    <Select name="month" defaultValue="">
+                      <option value="">Not applicable</option>
+                      {Array.from({ length: 12 }, (_, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          {new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, index, 1))}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
                   <Field label="Title">
-                    <Input name="title" placeholder="Quiz 1, Mid Term, Final Term..." required />
+                    <Input name="title" placeholder="Quiz 1, August Monthly, 1st Term..." required />
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Term">
@@ -163,7 +173,7 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
                           <div>
                             <p className="font-bold text-ink">{exam.title}</p>
                             <p className="text-muted">
-                              {formatExamType(exam.exam_type)} / {exam.term}
+                              {formatExamType(exam.exam_type)}{exam.month ? ` / ${new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, exam.month - 1, 1))}` : ""} / {exam.term}
                             </p>
                           </div>
                           <WorkflowStatusBadge status={exam.workflow_status} />
@@ -202,9 +212,7 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
                     {locked ? (
                       <div className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm font-semibold text-warning">
                         <Lock className="h-4 w-4" />
-                        {selectedExam.status === "rejected"
-                          ? "This result was rejected. Edit marks below and resubmit for approval."
-                          : "This result set is locked while pending approval or after approval."}
+                        This result set is final and locked after Principal approval.
                       </div>
                     ) : null}
                     {selectedExam.status === "rejected" && selectedExam.rejection_reason ? (
@@ -270,11 +278,11 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
                   </form>
                 )}
 
-                {selectedExam && requiresApproval && (!locked || selectedExam.status === "rejected") ? (
+                {selectedExam && requiresApproval && selectedExam.status === "rejected" ? (
                   <form action={submitExamForApprovalAction} className="mt-3 flex justify-end">
                     <input type="hidden" name="exam_id" value={selectedExam.id} />
                     <Button type="submit">
-                      <Send className="h-4 w-4" /> Submit for Approval
+                      <Send className="h-4 w-4" /> Resubmit for Approval
                     </Button>
                   </form>
                 ) : null}

@@ -10,6 +10,7 @@ type ResultRow = {
   class_id: string;
   title: string;
   exam_type: string;
+  month?: number | null;
   term: string;
   workflowStatus: ResultWorkflowStatus;
   uploadedByTeacherId: string | null;
@@ -98,7 +99,7 @@ export function ResultsTable({
                     </ButtonLink>
                     {showPrint && row.canPrint ? (
                       <ButtonLink
-                        href={`/results/print?classId=${row.class_id}&term=${encodeURIComponent(row.term)}`}
+                        href={`/results/print?classId=${row.class_id}&examType=${row.exam_type}${row.month ? `&month=${row.month}` : ""}`}
                         target="_blank"
                         size="sm"
                       >

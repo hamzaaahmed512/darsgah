@@ -1,31 +1,51 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { SpecialExamCreateModal } from "@/components/special-exams/special-exam-create-modal";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
 import { ResultsTable } from "@/app/(app)/results/_components/results-table";
 import { requireUser } from "@/lib/auth/session";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
-import { getSpecialExamSetup } from "@/lib/services/special-exams";
 
-export default async function AcademicControlPage() {
+type AcademicRangeMode = "month" | "year" | "lifetime" | "custom";
+
+function getAcademicRange(params: Record<string, string | undefined>) {
+  const dateParts = new Intl.DateTimeFormat("en", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((parts, item) => ({ ...parts, [item.type]: item.value }), {});
+  const today = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+  const currentMonth = today.slice(0, 7);
+  const currentYear = today.slice(0, 4);
+  const mode: AcademicRangeMode = params.range === "year" || params.range === "custom" || params.range === "lifetime" ? params.range : "month";
+
+  if (mode === "year") return { mode, from: `${currentYear}-01-01`, to: `${currentYear}-12-31` };
+  if (mode === "lifetime") return { mode, from: "", to: "" };
+  if (mode === "custom") {
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : `${currentMonth}-01`;
+    const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : today;
+    return { mode, from: from <= to ? from : to, to: from <= to ? to : from };
+  }
+
+  const [year, month] = currentMonth.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return { mode, from: `${currentMonth}-01`, to: `${currentMonth}-${String(lastDay).padStart(2, "0")}` };
+}
+
+export default async function AcademicControlPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
+  const range = getAcademicRange(params);
   const user = await requireUser("academics:view");
 
   if (user.role !== "principal") redirect("/academics");
 
-  const [setup, results] = await Promise.all([
-    getSpecialExamSetup(user),
-    getResultsManagementWorkspace(user, { status: "all" })
-  ]);
+  const results = await getResultsManagementWorkspace(user, { status: "all", from: range.from, to: range.to });
 
   return (
     <>
       <PageHeader
         eyebrow="Principal portal"
         title="Academic Control"
-        description="Review student results first, then inspect special-exam configurations below."
-        actions={<SpecialExamCreateModal assignments={setup.assignments} migrationRequired={setup.migrationRequired} />}
+        description="Review teacher-created Monthly and Term exams. Principals cannot create or edit exams."
       />
 
       <Card>
@@ -33,48 +53,16 @@ export default async function AcademicControlPage() {
           <CardTitle>Student Results</CardTitle>
         </CardHeader>
         <CardContent>
+          <LeavePeriodFilters
+            action="/admin/academic-control"
+            mode={range.mode}
+            from={params.from ?? range.from}
+            to={params.to ?? range.to}
+          />
           {!results.length ? (
             <EmptyState title="No results found" description="Uploaded major-examination results appear here for approval." />
           ) : (
             <ResultsTable rows={results} showApprovalColumns inlineApproval />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Live Exam Configurations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {setup.migrationRequired ? (
-            <EmptyState title="Special exams unavailable" description="The hosted database does not have the special-exam columns yet." />
-          ) : !setup.exams.length ? (
-            <EmptyState title="No special exams yet" description="Created exams will appear here for their assigned teacher." />
-          ) : (
-            <div className="grid gap-3">
-              {setup.exams.map((exam: any) => (
-                <div
-                  key={exam.id}
-                  className="flex flex-col gap-3 rounded-[16px] border border-outline/60 bg-surface-low p-4 transition hover:border-outline hover:bg-white md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-semibold text-ink">{exam.title}</p>
-                      <Badge tone={exam.approval_status === "approved" ? "green" : exam.approval_status === "pending_approval" ? "yellow" : "gray"}>
-                        {exam.approval_status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted">
-                      {exam.classes?.grades?.name} {exam.classes?.name} / {exam.subjects?.name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {exam.exam_date} • Max marks {exam.max_marks}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-muted">{exam.teacher?.full_name ?? "Assigned teacher unavailable"}</p>
-                </div>
-              ))}
-            </div>
           )}
         </CardContent>
       </Card>

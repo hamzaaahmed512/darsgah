@@ -49,7 +49,7 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
       </div>
 
       {!approvals.length ? (
-        <EmptyState title="No exam approvals" description="Submitted Monthly, Mid-Term, and Final-Term results will appear here." />
+        <EmptyState title="No exam approvals" description="Monthly, 1st Term, 2nd Term, and 3rd Term exams will appear here." />
       ) : (
         <div className="grid gap-4">
           {approvals.map((approval: any) => {

@@ -3,17 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Select } from "@/components/ui/form-field";
-import { formatExamType } from "@/lib/services/marks";
+import { Field, Select } from "@/components/ui/form-field";
+import { formatExamType, requiredResultExamTypes } from "@/lib/services/marks";
 
 type ResultCardsWorkspace = {
   classes: any[];
   selectedClassId?: string;
-  term: string;
+  examType: string;
+  month?: number;
   readiness: {
     complete: boolean;
     missing: string[];
-    requiredExamTypes: string[];
+    examType: string;
+    month?: number;
     students: Array<{ id: string; name: string; admission_number: string }>;
   } | null;
 };
@@ -33,12 +35,15 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
           <div>
             <CardTitle>{selectedClass?.name ?? "Selected class"}</CardTitle>
             <p className="mt-1 text-sm text-muted">
-              Required exams: {workspace.readiness.requiredExamTypes.map((type) => formatExamType(type as any)).join(", ")}
+              {formatExamType(workspace.examType as any)}
+              {workspace.examType === "monthly" && workspace.month
+                ? ` / ${new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, workspace.month - 1, 1))}`
+                : ""}
             </p>
           </div>
           {ready ? (
-            <ButtonLink href={`/results/print?classId=${workspace.selectedClassId}&term=${encodeURIComponent(workspace.term)}`} target="_blank">
-              <Printer className="h-4 w-4" /> Download / Print All
+            <ButtonLink href={`/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}`} target="_blank">
+              <Printer className="h-4 w-4" /> Print / PDF All
             </ButtonLink>
           ) : null}
         </CardHeader>
@@ -52,12 +57,12 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
                     <p className="text-xs text-muted">{student.admission_number}</p>
                   </div>
                   <ButtonLink
-                    href={`/results/print?classId=${workspace.selectedClassId}&term=${encodeURIComponent(workspace.term)}&studentId=${student.id}`}
+                    href={`/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}&studentId=${student.id}`}
                     target="_blank"
                     variant="secondary"
                     size="sm"
                   >
-                    Print Individual
+                    Print / PDF Individual
                   </ButtonLink>
                 </div>
               ))}
@@ -100,7 +105,7 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
 
 export function ResultCardsFilters({ workspace }: { workspace: ResultCardsWorkspace }) {
   return (
-    <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
+    <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_180px_auto]" action="/results">
       <input type="hidden" name="view" value="cards" />
       <Field label="Class">
         <Select name="classId" defaultValue={workspace.selectedClassId ?? ""}>
@@ -111,8 +116,18 @@ export function ResultCardsFilters({ workspace }: { workspace: ResultCardsWorksp
           ))}
         </Select>
       </Field>
-      <Field label="Term">
-        <Input name="term" defaultValue={workspace.term} />
+      <Field label="Exam type">
+        <Select name="examType" defaultValue={workspace.examType}>
+          {requiredResultExamTypes.map((type) => <option key={type} value={type}>{formatExamType(type)}</option>)}
+        </Select>
+      </Field>
+      <Field label="Month (Monthly only)">
+        <Select name="month" defaultValue={workspace.month ?? ""}>
+          <option value="">Not applicable</option>
+          {Array.from({ length: 12 }, (_, index) => (
+            <option key={index + 1} value={index + 1}>{new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, index, 1))}</option>
+          ))}
+        </Select>
       </Field>
       <div className="flex items-end">
         <button className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white" type="submit">

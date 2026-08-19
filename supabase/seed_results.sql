@@ -68,15 +68,15 @@ begin
     uploaded_at = excluded.uploaded_at,
     approved_at = excluded.approved_at;
 
-  -- Grade 10A: Mid Term (major, pending approval)
+  -- Grade 10A: 1st Term (pending Principal approval)
   insert into public.exams (
     id, school_id, class_id, subject_id, exam_type, title, term, exam_date, max_marks,
     created_by, status, submitted_at,
     requires_approval, assessment_category, approval_status,
     uploaded_by_teacher_id, uploaded_by_teacher_name, uploaded_at
   ) values (
-    '60000000-0000-0000-0000-000000000003', v_school_id, v_class_10a, v_math, 'mid_term', 'Mid Term Examination', v_term, current_date - 5, 100,
-    v_teacher_id, 'submitted', v_now - interval '6 hours',
+    '60000000-0000-0000-0000-000000000003', v_school_id, v_class_10a, v_math, 'first_term', '1st Term Examination', v_term, current_date - 5, 100,
+    v_teacher_id, 'pending_approval', v_now - interval '6 hours',
     true, 'major', 'pending_approval',
     v_teacher_id, v_teacher_name, v_now - interval '6 hours'
   )
@@ -90,7 +90,7 @@ begin
     uploaded_at = excluded.uploaded_at,
     submitted_at = excluded.submitted_at;
 
-  -- Grade 10A: Final Term (major, rejected)
+  -- Grade 10A: 3rd Term (rejected)
   insert into public.exams (
     id, school_id, class_id, subject_id, exam_type, title, term, exam_date, max_marks,
     created_by, status, submitted_at,
@@ -98,7 +98,7 @@ begin
     uploaded_by_teacher_id, uploaded_by_teacher_name, uploaded_at,
     rejection_reason
   ) values (
-    '60000000-0000-0000-0000-000000000004', v_school_id, v_class_10a, v_math, 'final_term', 'Final Term Examination', v_term, current_date - 3, 100,
+    '60000000-0000-0000-0000-000000000004', v_school_id, v_class_10a, v_math, 'third_term', '3rd Term Examination', v_term, current_date - 3, 100,
     v_teacher_id, 'rejected', v_rejected,
     true, 'major', 'rejected',
     v_teacher_id, v_teacher_name, v_rejected,
@@ -115,7 +115,7 @@ begin
     submitted_at = excluded.submitted_at,
     rejection_reason = excluded.rejection_reason;
 
-  -- Grade 11A: Mid Term (major, approved by principal)
+  -- Grade 11A: 1st Term (approved by Principal)
   insert into public.exams (
     id, school_id, class_id, subject_id, exam_type, title, term, exam_date, max_marks,
     created_by, status, submitted_at, finalized_at,
@@ -123,7 +123,7 @@ begin
     uploaded_by_teacher_id, uploaded_by_teacher_name, uploaded_at,
     approved_by_principal_id, approved_by_principal_name, approved_at
   ) values (
-    '60000000-0000-0000-0000-000000000005', v_school_id, v_class_11a, v_math, 'mid_term', 'Mid Term Examination', v_term, current_date - 7, 100,
+    '60000000-0000-0000-0000-000000000005', v_school_id, v_class_11a, v_math, 'first_term', '1st Term Examination', v_term, current_date - 7, 100,
     v_teacher_id, 'approved', v_uploaded, v_approved,
     true, 'major', 'approved',
     v_teacher_id, v_teacher_name, v_uploaded,
@@ -142,7 +142,7 @@ begin
     approved_at = excluded.approved_at,
     finalized_at = excluded.finalized_at;
 
-  -- Grade 11A: Final Term (major, approved by principal)
+  -- Grade 11A: 3rd Term (approved by Principal)
   insert into public.exams (
     id, school_id, class_id, subject_id, exam_type, title, term, exam_date, max_marks,
     created_by, status, submitted_at, finalized_at,
@@ -150,7 +150,7 @@ begin
     uploaded_by_teacher_id, uploaded_by_teacher_name, uploaded_at,
     approved_by_principal_id, approved_by_principal_name, approved_at
   ) values (
-    '60000000-0000-0000-0000-000000000006', v_school_id, v_class_11a, v_math, 'final_term', 'Final Term Examination', v_term, current_date - 4, 100,
+    '60000000-0000-0000-0000-000000000006', v_school_id, v_class_11a, v_math, 'third_term', '3rd Term Examination', v_term, current_date - 4, 100,
     v_teacher_id, 'approved', v_uploaded, v_approved,
     true, 'major', 'approved',
     v_teacher_id, v_teacher_name, v_uploaded - interval '1 day',
@@ -171,13 +171,13 @@ begin
 
   -- Grade 11A: Monthly Test (major, pending approval)
   insert into public.exams (
-    id, school_id, class_id, subject_id, exam_type, title, term, exam_date, max_marks,
+    id, school_id, class_id, subject_id, exam_type, title, term, exam_date, month, max_marks,
     created_by, status, submitted_at,
     requires_approval, assessment_category, approval_status,
     uploaded_by_teacher_id, uploaded_by_teacher_name, uploaded_at
   ) values (
-    '60000000-0000-0000-0000-000000000007', v_school_id, v_class_11a, v_math, 'monthly', 'Monthly Test - March', v_term, current_date - 2, 50,
-    v_teacher_id, 'submitted', v_now - interval '2 hours',
+    '60000000-0000-0000-0000-000000000007', v_school_id, v_class_11a, v_math, 'monthly', 'Monthly Test', v_term, current_date - 2, extract(month from current_date - 2)::int, 50,
+    v_teacher_id, 'pending_approval', v_now - interval '2 hours',
     true, 'major', 'pending_approval',
     v_teacher_id, v_teacher_name, v_now - interval '2 hours'
   )
@@ -189,7 +189,20 @@ begin
     uploaded_by_teacher_id = excluded.uploaded_by_teacher_id,
     uploaded_by_teacher_name = excluded.uploaded_by_teacher_name,
     uploaded_at = excluded.uploaded_at,
-    submitted_at = excluded.submitted_at;
+    submitted_at = excluded.submitted_at,
+    month = excluded.month;
+
+  update public.exams
+  set
+    is_special = true,
+    approved_by = case when status = 'approved' then v_principal_id else null end
+  where id in (
+    '60000000-0000-0000-0000-000000000003',
+    '60000000-0000-0000-0000-000000000004',
+    '60000000-0000-0000-0000-000000000005',
+    '60000000-0000-0000-0000-000000000006',
+    '60000000-0000-0000-0000-000000000007'
+  );
 
   -- Result approval queue entries
   insert into public.result_approvals (id, school_id, exam_id, submitted_by, status, submitted_at)
@@ -224,7 +237,7 @@ begin
     values
       (v_school_id, '60000000-0000-0000-0000-000000000001', v_student.student_id, v_class_10a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1], case when v_scores[((v_idx - 1) % 10) + 1] >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] >= 50 then 'D' else 'F' end, 'approved'),
       (v_school_id, '60000000-0000-0000-0000-000000000002', v_student.student_id, v_class_10a, v_math, v_teacher_id, round(v_scores[((v_idx - 1) % 10) + 1] * 0.5, 2), case when v_scores[((v_idx - 1) % 10) + 1] >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] >= 50 then 'D' else 'F' end, 'approved'),
-      (v_school_id, '60000000-0000-0000-0000-000000000003', v_student.student_id, v_class_10a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1] - 3, case when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 50 then 'D' else 'F' end, 'submitted'),
+      (v_school_id, '60000000-0000-0000-0000-000000000003', v_student.student_id, v_class_10a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1] - 3, case when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] - 3 >= 50 then 'D' else 'F' end, 'draft'),
       (v_school_id, '60000000-0000-0000-0000-000000000004', v_student.student_id, v_class_10a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1] - 8, case when v_scores[((v_idx - 1) % 10) + 1] - 8 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] - 8 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] - 8 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] - 8 >= 50 then 'D' else 'F' end, 'rejected')
     on conflict (school_id, exam_id, student_id) do update set
       marks_obtained = excluded.marks_obtained,
@@ -245,7 +258,7 @@ begin
     values
       (v_school_id, '60000000-0000-0000-0000-000000000005', v_student.student_id, v_class_11a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1] + 2, case when v_scores[((v_idx - 1) % 10) + 1] + 2 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] + 2 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] + 2 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] + 2 >= 50 then 'D' else 'F' end, 'approved'),
       (v_school_id, '60000000-0000-0000-0000-000000000006', v_student.student_id, v_class_11a, v_math, v_teacher_id, v_scores[((v_idx - 1) % 10) + 1], case when v_scores[((v_idx - 1) % 10) + 1] >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] >= 50 then 'D' else 'F' end, 'approved'),
-      (v_school_id, '60000000-0000-0000-0000-000000000007', v_student.student_id, v_class_11a, v_math, v_teacher_id, round((v_scores[((v_idx - 1) % 10) + 1] + 5) * 0.5, 2), case when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 50 then 'D' else 'F' end, 'submitted')
+      (v_school_id, '60000000-0000-0000-0000-000000000007', v_student.student_id, v_class_11a, v_math, v_teacher_id, round((v_scores[((v_idx - 1) % 10) + 1] + 5) * 0.5, 2), case when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 80 then 'A' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 70 then 'B' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 60 then 'C' when v_scores[((v_idx - 1) % 10) + 1] + 5 >= 50 then 'D' else 'F' end, 'draft')
     on conflict (school_id, exam_id, student_id) do update set
       marks_obtained = excluded.marks_obtained,
       grade = excluded.grade,
@@ -254,8 +267,8 @@ begin
 
   insert into public.activity_logs (school_id, actor_id, action, entity_type, entity_id, metadata) values
     (v_school_id, v_teacher_id, 'exam_created', 'exam', '60000000-0000-0000-0000-000000000001', '{"exam_type":"quiz","title":"Quiz 1 - Algebra Basics"}'),
-    (v_school_id, v_teacher_id, 'exam_submitted_for_approval', 'exam', '60000000-0000-0000-0000-000000000003', '{"exam_type":"mid_term"}'),
-    (v_school_id, v_principal_id, 'exam_approved', 'exam', '60000000-0000-0000-0000-000000000005', '{"exam_type":"mid_term"}'),
-    (v_school_id, v_principal_id, 'exam_rejected', 'exam', '60000000-0000-0000-0000-000000000004', '{"exam_type":"final_term"}')
+    (v_school_id, v_teacher_id, 'exam_queued_for_approval', 'exam', '60000000-0000-0000-0000-000000000003', '{"exam_type":"first_term"}'),
+    (v_school_id, v_principal_id, 'exam_approved', 'exam', '60000000-0000-0000-0000-000000000005', '{"exam_type":"first_term"}'),
+    (v_school_id, v_principal_id, 'exam_rejected', 'exam', '60000000-0000-0000-0000-000000000004', '{"exam_type":"third_term"}')
   on conflict do nothing;
 end $$;

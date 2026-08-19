@@ -11,7 +11,7 @@ export async function createExamAction(formData: FormData) {
     class_id: String(formData.get("class_id") ?? ""),
     subject_id: String(formData.get("subject_id") ?? ""),
     exam_type: formData.get("exam_type") as any,
-    requires_approval: formData.get("requires_approval") === "on",
+    month: formData.get("month") ? Number(formData.get("month")) : null,
     title: String(formData.get("title") ?? ""),
     term: String(formData.get("term") ?? ""),
     exam_date: String(formData.get("exam_date") ?? ""),

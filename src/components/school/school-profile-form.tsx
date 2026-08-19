@@ -4,9 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Download, Globe, Lock, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/form-field";
+import { Field, Input, Select } from "@/components/ui/form-field";
 import { saveSchoolProfileAction } from "@/app/(app)/school-profile/actions";
 import { initials } from "@/lib/utils";
+import { formatPakistaniPhone } from "@/lib/pakistan-format";
 
 type Props = {
   canManage: boolean;
@@ -18,6 +19,7 @@ type Props = {
   logoUrl: string;
   faviconUrl: string;
   brandVersion: string;
+  resultCardTemplate: Record<string, any>;
 };
 
 function displayValue(value: string, fallback = "Not set") {
@@ -33,7 +35,8 @@ export function SchoolProfileForm({
   website,
   logoUrl,
   faviconUrl,
-  brandVersion
+  brandVersion,
+  resultCardTemplate
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -44,13 +47,20 @@ export function SchoolProfileForm({
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [logoObjectUrl, setLogoObjectUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: schoolName,
+    name: schoolName.toUpperCase(),
     timezone: schoolTimezone,
     email,
-    phone,
+    phone: formatPakistaniPhone(phone),
     website,
     logoUrl,
-    faviconUrl
+    faviconUrl,
+    resultCardTitle: resultCardTemplate.title ?? "Result Card",
+    resultCardAccentColor: resultCardTemplate.accentColor ?? "#2563eb",
+    resultCardLayout: resultCardTemplate.layout === "compact" ? "compact" : "standard",
+    resultCardShowAcademicYear: resultCardTemplate.showAcademicYear !== false,
+    resultCardShowAdmissionNumber: resultCardTemplate.showAdmissionNumber !== false,
+    resultCardShowTeacherComments: resultCardTemplate.showTeacherComments === true,
+    resultCardSignatureLabels: Array.isArray(resultCardTemplate.signatureLabels) ? resultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
   });
 
   const displayName = form.name.trim() || schoolName;
@@ -105,6 +115,13 @@ export function SchoolProfileForm({
       payload.set("currentLogoUrl", form.logoUrl.trim());
       payload.set("currentFaviconUrl", form.faviconUrl.trim());
       payload.set("currentBrandVersion", brandVersion);
+      payload.set("resultCardTitle", form.resultCardTitle.trim());
+      payload.set("resultCardAccentColor", form.resultCardAccentColor);
+      payload.set("resultCardLayout", form.resultCardLayout);
+      payload.set("resultCardShowAcademicYear", String(form.resultCardShowAcademicYear));
+      payload.set("resultCardShowAdmissionNumber", String(form.resultCardShowAdmissionNumber));
+      payload.set("resultCardShowTeacherComments", String(form.resultCardShowTeacherComments));
+      payload.set("resultCardSignatureLabels", form.resultCardSignatureLabels);
       if (logoFile) payload.set("logoFile", logoFile);
       if (faviconFile) payload.set("faviconFile", faviconFile);
 
@@ -164,7 +181,7 @@ export function SchoolProfileForm({
             <Phone className="mt-0.5 h-4 w-4 text-primary" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Phone Number</p>
-              <p className="mt-1 font-semibold text-ink">{displayValue(form.phone)}</p>
+              <p className="mt-1 font-semibold text-ink">{form.phone ? `+92 ${form.phone}` : "Not set"}</p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -233,7 +250,7 @@ export function SchoolProfileForm({
             ) : (
               <Input
                 value={form.name}
-                onChange={(event) => updateField("name", event.target.value)}
+                onChange={(event) => updateField("name", event.target.value.toUpperCase())}
                 placeholder="Enter school name"
               />
             )}
@@ -254,13 +271,19 @@ export function SchoolProfileForm({
 
           <Field label="Phone Number">
             {readOnly ? (
-              lockedField(form.phone)
+              lockedField(form.phone ? `+92 ${form.phone}` : "")
             ) : (
-              <Input
-                value={form.phone}
-                onChange={(event) => updateField("phone", event.target.value)}
-                placeholder="+92 300 1234567"
-              />
+              <div className="flex">
+                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-outline/60 bg-surface-low px-3 text-sm font-semibold text-muted">+92</span>
+                <Input
+                  value={form.phone}
+                  onChange={(event) => updateField("phone", formatPakistaniPhone(event.target.value))}
+                  placeholder="321 6666666"
+                  inputMode="numeric"
+                  maxLength={11}
+                  className="rounded-l-none"
+                />
+              </div>
             )}
           </Field>
 
@@ -298,6 +321,34 @@ export function SchoolProfileForm({
               Upload a school logo to show it here and enable downloads for staff.
             </div>
           ) : null}
+
+          <div className="md:col-span-2 mt-3 border-t border-outline/60 pt-5">
+            <h3 className="font-display text-lg font-bold text-ink">Result Card Template</h3>
+            <p className="mt-1 text-sm text-muted">School-specific layout used by Registrar print and PDF export.</p>
+          </div>
+          <Field label="Card title">
+            {readOnly ? lockedField(form.resultCardTitle) : <Input value={form.resultCardTitle} onChange={(event) => updateField("resultCardTitle", event.target.value)} />}
+          </Field>
+          <Field label="Accent color">
+            {readOnly ? lockedField(form.resultCardAccentColor) : <Input type="color" value={form.resultCardAccentColor} onChange={(event) => updateField("resultCardAccentColor", event.target.value)} />}
+          </Field>
+          <Field label="Layout">
+            {readOnly ? lockedField(form.resultCardLayout) : (
+              <Select value={form.resultCardLayout} onChange={(event) => updateField("resultCardLayout", event.target.value)}>
+                <option value="standard">Standard</option><option value="compact">Compact</option>
+              </Select>
+            )}
+          </Field>
+          <Field label="Signature labels" hint="Comma-separated, up to three">
+            {readOnly ? lockedField(form.resultCardSignatureLabels) : <Input value={form.resultCardSignatureLabels} onChange={(event) => updateField("resultCardSignatureLabels", event.target.value)} />}
+          </Field>
+          {canManage && editing ? (
+            <div className="md:col-span-2 flex flex-wrap gap-5 text-sm font-semibold text-ink">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowAcademicYear} onChange={(event) => updateField("resultCardShowAcademicYear", event.target.checked)} /> Academic year</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowAdmissionNumber} onChange={(event) => updateField("resultCardShowAdmissionNumber", event.target.checked)} /> Admission number</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowTeacherComments} onChange={(event) => updateField("resultCardShowTeacherComments", event.target.checked)} /> Teacher comments</label>
+            </div>
+          ) : null}
         </div>
 
         {canManage ? (
@@ -315,13 +366,20 @@ export function SchoolProfileForm({
                     setLogoFile(null);
                     setFaviconFile(null);
                     setForm({
-                      name: schoolName,
+                      name: schoolName.toUpperCase(),
                       timezone: schoolTimezone,
                       email,
-                      phone,
+                      phone: formatPakistaniPhone(phone),
                       website,
                       logoUrl,
-                      faviconUrl
+                      faviconUrl,
+                      resultCardTitle: resultCardTemplate.title ?? "Result Card",
+                      resultCardAccentColor: resultCardTemplate.accentColor ?? "#2563eb",
+                      resultCardLayout: resultCardTemplate.layout === "compact" ? "compact" : "standard",
+                      resultCardShowAcademicYear: resultCardTemplate.showAcademicYear !== false,
+                      resultCardShowAdmissionNumber: resultCardTemplate.showAdmissionNumber !== false,
+                      resultCardShowTeacherComments: resultCardTemplate.showTeacherComments === true,
+                      resultCardSignatureLabels: Array.isArray(resultCardTemplate.signatureLabels) ? resultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
                     });
                   }}
                 >

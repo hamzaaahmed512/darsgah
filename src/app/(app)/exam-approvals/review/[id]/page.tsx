@@ -84,8 +84,8 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                       <td className="px-4 py-3">
                         {m.grade ? <Badge tone="blue">{m.grade}</Badge> : "—"}
                       </td>
-                      <td className="px-4 py-3 text-muted max-w-[200px] truncate" title={m.teacher_remarks}>
-                        {m.teacher_remarks || "—"}
+                      <td className="px-4 py-3 text-muted max-w-[200px] truncate" title={m.teacher_comment}>
+                        {m.teacher_comment || "—"}
                       </td>
                     </tr>
                   ))}
@@ -155,7 +155,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
             <CardContent className="pt-4">
               {isPending ? (
                 <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid gap-4">
-                  <Textarea name="principal_comment" placeholder="Leave a comment (required if rejecting)" className="min-h-[100px]" />
+                  <Textarea name="principal_comment" placeholder="Optional Principal comment" className="min-h-[100px]" />
                   <div className="grid grid-cols-2 gap-3">
                     <Button type="submit" name="decision" value="rejected" variant="secondary" className="text-danger hover:bg-danger-soft border border-danger/20 w-full">
                       <XCircle className="h-4 w-4 mr-2" /> Reject
