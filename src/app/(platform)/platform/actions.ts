@@ -29,40 +29,50 @@ const createSchoolSchema = z.object({
   subscriptionEndsAt: z.string().optional()
 });
 
-export async function createSchoolAction(formData: FormData) {
-  try {
+export async function createSchoolAction(prevState: any, formData: FormData) {
   const actor = await requirePlatformAdmin();
-  const values = createSchoolSchema.parse(Object.fromEntries(formData));
+  const values = createSchoolSchema.safeParse(Object.fromEntries(formData));
+  
+  if (!values.success) {
+    return { ok: false, error: "Please correct the errors in the form.", errors: values.error.flatten().fieldErrors };
+  }
+  
   const admin = createAdminClient();
   const { data, error } = await admin.from("schools").insert({
-    name: values.name,
-    slug: values.slug,
-    timezone: values.timezone,
-    contact_name: values.contactName || null,
-    contact_email: values.contactEmail || null,
-    platform_status: values.platformStatus,
-    subscription_plan: values.subscriptionPlan,
-    billing_status: values.billingStatus,
+    name: values.data.name,
+    slug: values.data.slug,
+    timezone: values.data.timezone,
+    contact_name: values.data.contactName || null,
+    contact_email: values.data.contactEmail || null,
+    platform_status: values.data.platformStatus,
+    subscription_plan: values.data.subscriptionPlan,
+    billing_status: values.data.billingStatus,
     subscription_started_at: new Date().toISOString(),
-    subscription_ends_at: values.subscriptionEndsAt ? new Date(`${values.subscriptionEndsAt}T23:59:59Z`).toISOString() : null
+    subscription_ends_at: values.data.subscriptionEndsAt ? new Date(`${values.data.subscriptionEndsAt}T23:59:59Z`).toISOString() : null
   }).select("id").single();
-  if (error) throw new Error(error.code === "23505" ? "That school slug is already in use." : error.message);
+  
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: "That school slug is already in use.", errors: { slug: ["Slug already in use"] } };
+    }
+    return { ok: false, error: error.message, errors: {} };
+  }
 
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email: values.principalEmail,
-    password: values.temporaryPassword,
+    email: values.data.principalEmail,
+    password: values.data.temporaryPassword,
     email_confirm: true,
-    user_metadata: { full_name: values.principalName }
+    user_metadata: { full_name: values.data.principalName }
   });
   if (authError || !authData.user) {
     await admin.from("schools").delete().eq("id", data.id);
-    throw new Error(authError?.message ?? "Unable to create the principal account.");
+    return { ok: false, error: authError?.message ?? "Unable to create the principal account.", errors: {} };
   }
 
   const { error: profileError } = await admin.from("profiles").upsert({
     id: authData.user.id,
-    full_name: values.principalName,
-    email: values.principalEmail,
+    full_name: values.data.principalName,
+    email: values.data.principalEmail,
     must_change_password: true
   });
   const { error: memberError } = profileError ? { error: null } : await admin.from("school_members").insert({
@@ -75,25 +85,22 @@ export async function createSchoolAction(formData: FormData) {
   if (profileError || memberError) {
     await admin.auth.admin.deleteUser(authData.user.id);
     await admin.from("schools").delete().eq("id", data.id);
-    throw new Error(profileError?.message ?? memberError?.message ?? "Unable to provision the principal account.");
+    return { ok: false, error: profileError?.message ?? memberError?.message ?? "Unable to provision the principal account.", errors: {} };
   }
-  await recordPlatformAudit(actor.id, data.id, "school.created", { name: values.name, plan: values.subscriptionPlan });
+  await recordPlatformAudit(actor.id, data.id, "school.created", { name: values.data.name, plan: values.data.subscriptionPlan });
   revalidatePath("/platform", "layout");
   redirect(`/platform/schools/${data.id}`);
-  } catch (err: any) {
-    const fs = require("fs");
-    fs.appendFileSync("error_log.txt", "CREATE SCHOOL ERROR: " + err.message + "\n");
-    throw err;
-  }
 }
 
-export async function changeSchoolStatusAction(formData: FormData) {
-  try {
+export async function changeSchoolStatusAction(prevState: any, formData: FormData) {
   const actor = await requirePlatformAdmin();
   const schoolId = z.string().uuid().parse(formData.get("schoolId"));
   const status = z.enum(["active", "suspended", "archived"]).parse(formData.get("status"));
   const reason = z.string().trim().max(500).parse(formData.get("reason") ?? "");
-  if (status === "suspended" && !reason) throw new Error("A suspension reason is required.");
+  
+  if (status === "suspended" && !reason) {
+    return { ok: false, error: "A suspension reason is required.", errors: { reason: ["Reason is required"] } };
+  }
   const update = {
     platform_status: status,
     suspended_at: status === "suspended" ? new Date().toISOString() : null,
@@ -101,15 +108,15 @@ export async function changeSchoolStatusAction(formData: FormData) {
     archived_at: status === "archived" ? new Date().toISOString() : null
   };
   const { error } = await createAdminClient().from("schools").update(update).eq("id", schoolId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    return { ok: false, error: error.message, errors: {} };
+  }
   await recordPlatformAudit(actor.id, schoolId, `school.${status}`, reason ? { reason } : {});
   revalidatePath("/platform");
   revalidatePath(`/platform/schools/${schoolId}`);
-  } catch (err: any) {
-    const fs = require("fs");
-    fs.appendFileSync("error_log.txt", "SUSPEND SCHOOL ERROR: " + err.message + "\n");
-    throw err;
-  }
+  
+  // Return success payload so the form knows it finished
+  return { ok: true, error: "", errors: {} };
 }
 
 export async function updateSubscriptionAction(formData: FormData) {
