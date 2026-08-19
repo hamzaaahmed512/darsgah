@@ -14,15 +14,15 @@ export const studentSchema = z.object({
   name_ur: z.string().trim().max(80).optional().nullable(),
   first_name: z.string().trim().max(80).optional(), // for backwards compat
   last_name: z.string().trim().max(80).optional(), // for backwards compat
-  date_of_birth: z.string().date("Enter a valid birth date").optional().nullable(),
+  date_of_birth: z.string().date("Enter a valid birth date").or(z.literal("")).optional().nullable(),
   gender: z.enum(["male", "female"]).optional().nullable(),
-  photo_url: z.string().url().optional().nullable(),
+  photo_url: z.string().url().or(z.literal("")).optional().nullable(),
   email: z.string().trim().email("Enter a valid email").or(z.literal("")).nullable().optional(),
   phone,
   address: z.string().trim().max(240).optional().nullable(),
-  admission_date: z.string().date("Enter a valid admission date").optional(),
+  admission_date: z.string().date("Enter a valid admission date").or(z.literal("")).optional().nullable(),
   status: z.enum(["active", "graduated", "transferred", "archived", "cancelled"]).default("active"),
-  class_id: z.string().uuid("Please select a class").min(1, "Class is required"),
+  class_id: z.string().uuid("Please select a class").or(z.literal("")).optional().nullable(),
   
   // Father details
   father_name_en: z.string().trim().max(120).optional().nullable(),

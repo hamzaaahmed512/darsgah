@@ -8,15 +8,24 @@ import type { StudentFilters } from "@/lib/services/students";
 import type { StudentFormValues } from "@/lib/validation/students";
 
 export async function createStudentAction(values: StudentFormValues) {
-  const user = await requireUser("students:create");
-  const id = await createStudent(user, values);
+  let id: string;
+  try {
+    const user = await requireUser("students:create");
+    id = await createStudent(user, values);
+  } catch (error: any) {
+    return { error: error.message || "Failed to create student." };
+  }
   revalidatePath("/students");
   redirect(`/students/${id}`);
 }
 
 export async function updateStudentAction(id: string, values: StudentFormValues) {
-  const user = await requireUser("students:update");
-  await updateStudent(user, id, values);
+  try {
+    const user = await requireUser("students:update");
+    await updateStudent(user, id, values);
+  } catch (error: any) {
+    return { error: error.message || "Failed to update student." };
+  }
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
   redirect(`/students/${id}`);

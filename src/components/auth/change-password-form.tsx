@@ -16,15 +16,20 @@ export function ChangePasswordForm() {
     setError("");
     startTransition(async () => {
       try {
-        await changePasswordAction({
+        const result = await changePasswordAction({
           currentPassword: String(formData.get("currentPassword") ?? ""),
           password: String(formData.get("password") ?? ""),
           confirmPassword: String(formData.get("confirmPassword") ?? "")
         });
-        router.replace("/");
-        router.refresh();
+        
+        if (result && result.error) {
+          setError(result.error);
+        } else {
+          router.replace("/");
+          router.refresh();
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Password could not be changed.");
+        setError("Password could not be changed. Please try again.");
       }
     });
   }

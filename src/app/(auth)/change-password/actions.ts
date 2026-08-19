@@ -17,7 +17,15 @@ const changePasswordSchema = z
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
 
 export async function changePasswordAction(values: ChangePasswordValues) {
-  const parsed = changePasswordSchema.parse(values);
+  const parsed = changePasswordSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message };
+  }
+
+  if (parsed.data.currentPassword === parsed.data.password) {
+    return { error: "New password should be different from the old password." };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -25,23 +33,25 @@ export async function changePasswordAction(values: ChangePasswordValues) {
     error: userError
   } = await supabase.auth.getUser();
 
-  if (userError || !user) throw new Error("Please sign in again before changing your password.");
-  if (!user.email) throw new Error("Your account email could not be verified. Please sign in again.");
+  if (userError || !user) return { error: "Please sign in again before changing your password." };
+  if (!user.email) return { error: "Your account email could not be verified. Please sign in again." };
 
   const { error: verifyError } = await supabase.auth.signInWithPassword({
     email: user.email,
-    password: parsed.currentPassword
+    password: parsed.data.currentPassword
   });
 
-  if (verifyError) throw new Error("Current password is incorrect.");
+  if (verifyError) return { error: "Current password is incorrect." };
 
-  const { error: passwordError } = await supabase.auth.updateUser({ password: parsed.password });
-  if (passwordError) throw new Error(passwordError.message);
+  const { error: passwordError } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (passwordError) return { error: passwordError.message };
 
   const { error: profileError } = await supabase
     .from("profiles")
     .update({ must_change_password: false })
     .eq("id", user.id);
 
-  if (profileError) throw new Error(profileError.message);
+  if (profileError) return { error: profileError.message };
+  
+  return { success: true };
 }

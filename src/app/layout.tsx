@@ -16,10 +16,15 @@ export const metadata: Metadata = {
   }
 };
 
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased">
+        {children}
+        <ScrollToTop />
+      </body>
     </html>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
@@ -16,10 +16,11 @@ export function StudentForm({
 }: {
   initialValues?: Partial<StudentFormValues>;
   classes: Array<{ id: string; name: string; grade_name: string; section_name: string | null }>;
-  onSubmit: (values: StudentFormValues) => Promise<void>;
+  onSubmit: (values: StudentFormValues) => Promise<void | { error?: string }>;
   submitLabel: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -54,13 +55,26 @@ export function StudentForm({
   });
 
   function submit(values: StudentFormValues) {
+    setServerError(null);
     startTransition(async () => {
-      await onSubmit(values);
+      try {
+        const result = await onSubmit(values);
+        if (result && result.error) {
+          setServerError(result.error);
+        }
+      } catch (err: any) {
+        setServerError(err.message || "An unexpected error occurred. Please try again.");
+      }
     });
   }
 
   return (
     <form className="grid gap-6" onSubmit={handleSubmit(submit)}>
+      {serverError && (
+        <div className="rounded-lg bg-danger/10 p-4 border border-danger/20">
+          <p className="text-sm font-medium text-danger">{serverError}</p>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Student Details</CardTitle>
