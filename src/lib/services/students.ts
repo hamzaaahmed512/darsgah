@@ -20,7 +20,7 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   let query = supabase
     .from("student_directory")
     .select(
-      "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate",
+      "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url",
       { count: "exact" }
     )
     .eq("school_id", user.schoolId)
@@ -29,7 +29,7 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
-  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
 
   const { data, count, error } = await query;
   if (error) throw new Error(error.message);
@@ -406,4 +406,93 @@ export async function archiveStudent(user: AppUser, id: string) {
 
   if (enrollError) throw new Error(enrollError.message);
   await logActivity(user, "student_archived", "student", id);
+}
+
+export async function exportStudents(user: AppUser, filters: StudentFilters = {}) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("student_directory")
+    .select("admission_number, name_en, name_ur, father_name_en, father_phone, gender, class_name, grade_name, section_name, status, date_of_birth, email, phone, address")
+    .eq("school_id", user.schoolId)
+    .order("last_name");
+
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
+  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  if (!data || data.length === 0) return "";
+  
+  const headers = [
+    "Admission No", "Name (EN)", "Name (UR)", "Father Name", "Father Phone", "Gender",
+    "Grade", "Class", "Section", "Status", "DOB", "Email", "Phone", "Address"
+  ];
+  
+  const rows = data.map(s => [
+    s.admission_number, s.name_en || "", s.name_ur || "", s.father_name_en || "", s.father_phone || "",
+    s.gender || "", s.grade_name || "", s.class_name || "", s.section_name || "", s.status || "",
+    s.date_of_birth || "", s.email || "", s.phone || "", s.address || ""
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+
+  return [headers.map(h => `"${h}"`).join(","), ...rows].join("\n");
+}
+
+export async function importStudentsBulk(user: AppUser, records: any[]) {
+  const supabase = await createClient();
+  
+  const { data: classes } = await supabase.from("classes").select("id, name").eq("school_id", user.schoolId);
+  const classMap = new Map(classes?.map(c => [c.name.toLowerCase(), c.id]) || []);
+
+  const { data: activeYear } = await supabase
+    .from("academic_years")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  const studentsToInsert = records.map(r => {
+    const classId = r.class_name ? classMap.get(r.class_name.toLowerCase()) : null;
+    return {
+      school_id: user.schoolId,
+      admission_number: r.admission_number || `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      first_name: r.name_en?.split(" ")[0] || "Unknown",
+      last_name: r.name_en?.split(" ").slice(1).join(" ") || r.name_en,
+      name_en: r.name_en || null,
+      name_ur: r.name_ur || null,
+      father_name_en: r.father_name_en || null,
+      father_phone: r.father_phone || null,
+      class_id: classId,
+      gender: r.gender || null,
+      date_of_birth: r.date_of_birth || null,
+      status: r.status || "active",
+      admission_date: new Date().toISOString().split("T")[0]
+    };
+  });
+  
+  const { data: insertedStudents, error: studentError } = await supabase
+    .from("students")
+    .insert(studentsToInsert)
+    .select("id, class_id, status");
+
+  if (studentError) throw new Error("Bulk insert failed: " + studentError.message);
+
+  if (insertedStudents && activeYear) {
+    const enrollments = insertedStudents
+      .filter(s => s.class_id && s.status === "active")
+      .map(s => ({
+        school_id: user.schoolId,
+        student_id: s.id,
+        class_id: s.class_id,
+        academic_year_id: activeYear.id,
+        status: "active"
+      }));
+
+    if (enrollments.length > 0) {
+      await supabase.from("enrollments").insert(enrollments);
+    }
+  }
+  
+  return insertedStudents?.length || 0;
 }

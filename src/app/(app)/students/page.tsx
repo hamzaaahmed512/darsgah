@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
 import { StudentFilterForm } from "@/components/students/student-filter-form";
 import { StudentFormModal } from "@/components/students/student-form-modal";
+import { StudentActions } from "@/components/students/student-actions";
+import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { getStudents } from "@/lib/services/students";
 import { getAcademicOptions } from "@/lib/services/academics";
@@ -23,17 +25,27 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader
         eyebrow="People"
-        title="Student Management"
+        title={
+          <div className="flex items-center gap-3">
+            Student Management
+            <Badge tone="blue">{students.count} students enrolled</Badge>
+          </div>
+        }
         description="Search, filter, profile, archive, and manage students within the current school tenant."
         actions={
-          hasPermission(user.role, "students:create") ? (
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center">
+            {hasPermission(user.role, "students:create") ? (
+              <StudentActions filters={{ q: params.q, status: params.status ?? "active", classId: params.classId }} />
+            ) : null}
+            {hasPermission(user.role, "students:create") ? (
             <StudentFormModal
               classes={academics.classes}
               onSubmit={createStudentAction}
               submitLabel={user.role === "student_staff" ? "Submit request" : "Create student"}
               initialOpen={params.action === "new"}
             />
-          ) : null
+          ) : null}
+        </div>
         }
       />
 

@@ -61,14 +61,27 @@ export function StudentTable({ rows }: { rows: any[] }) {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-muted">{student.father_name_en || student.guardian_name || "-"}</td>
-                <td className="px-4 py-4 text-muted">
-                  {student.grade_name ?? "Unassigned"} {student.section_name ? `• ${student.section_name}` : ""}
+                <td className="px-4 py-4">
+                  <div className="text-muted">{student.father_name_en || student.guardian_name || "-"}</div>
+                  {student.father_phone && <div className="text-xs text-muted/70">{student.father_phone}</div>}
+                </td>
+                <td className="px-4 py-4">
+                  <Badge tone="gray">
+                    {student.grade_name ?? "Unassigned"} {student.section_name ? `• ${student.section_name}` : ""}
+                  </Badge>
                 </td>
                 <td className="px-4 py-4 font-semibold">{student.admission_number}</td>
                 <td className="px-4 py-4 text-muted capitalize">{student.gender || "-"}</td>
                 <td className="px-4 py-4">
-                  <Link href={`/students/${student.id}`} className="text-primary hover:underline text-xs font-semibold">View</Link>
+                  <details className="group relative">
+                    <summary className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-low list-none [&::-webkit-details-marker]:hidden">
+                      Actions
+                    </summary>
+                    <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-outline/40 bg-white p-1 shadow-soft">
+                      <Link href={`/students/${student.id}`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
+                      <Link href={`/students/${student.id}?edit=true`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))}
