@@ -423,20 +423,24 @@ export async function exportStudents(user: AppUser, filters: StudentFilters = {}
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  if (!data || data.length === 0) return "";
+  if (!data || data.length === 0) return [];
   
-  const headers = [
-    "Admission No", "Name (EN)", "Name (UR)", "Father Name", "Father Phone", "Gender",
-    "Grade", "Class", "Section", "Status", "DOB", "Email", "Phone", "Address"
-  ];
-  
-  const rows = data.map(s => [
-    s.admission_number, s.name_en || "", s.name_ur || "", s.father_name_en || "", s.father_phone || "",
-    s.gender || "", s.grade_name || "", s.class_name || "", s.section_name || "", s.status || "",
-    s.date_of_birth || "", s.email || "", s.phone || "", s.address || ""
-  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
-
-  return [headers.map(h => `"${h}"`).join(","), ...rows].join("\n");
+  return data.map(s => ({
+    "Admission No": s.admission_number || "",
+    "Name (EN)": s.name_en || "",
+    "Name (UR)": s.name_ur || "",
+    "Father Name": s.father_name_en || "",
+    "Father Phone": s.father_phone || "",
+    "Gender": s.gender || "",
+    "Grade": s.grade_name || "",
+    "Class": s.class_name || "",
+    "Section": s.section_name || "",
+    "Status": s.status || "",
+    "DOB": s.date_of_birth || "",
+    "Email": s.email || "",
+    "Phone": s.phone || "",
+    "Address": s.address || ""
+  }));
 }
 
 export async function importStudentsBulk(user: AppUser, records: any[]) {

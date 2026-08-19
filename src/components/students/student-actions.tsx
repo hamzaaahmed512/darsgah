@@ -20,8 +20,10 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
       }
       if (res.data) {
         if (format === "csv") {
-          // Use the raw CSV string provided by the backend
-          const blob = new Blob([res.data], { type: "text/csv" });
+          // Generate CSV directly from JSON using SheetJS
+          const worksheet = XLSX.utils.json_to_sheet(res.data);
+          const csvText = XLSX.utils.sheet_to_csv(worksheet);
+          const blob = new Blob([csvText], { type: "text/csv" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -29,14 +31,14 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
           a.click();
           URL.revokeObjectURL(url);
         } else {
-          // Parse the CSV data back to an array of arrays to build a proper XLSX
-          const rows = res.data.split("\n").map(line => line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, "")) || []);
-          const worksheet = XLSX.utils.aoa_to_sheet(rows);
+          // Generate Excel from JSON
+          const worksheet = XLSX.utils.json_to_sheet(res.data);
           
           // Auto-fit column widths
-          const colWidths = rows[0].map((_, colIndex) => {
+          const keys = Object.keys(res.data[0] || {});
+          const colWidths = keys.map((key) => {
             return {
-              wch: Math.max(...rows.map(row => (row[colIndex] ? String(row[colIndex]).length : 0)))
+              wch: Math.max(key.length, ...res.data.map((row: any) => (row[key] ? String(row[key]).length : 0)))
             };
           });
           worksheet["!cols"] = colWidths;

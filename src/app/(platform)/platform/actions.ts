@@ -30,6 +30,7 @@ const createSchoolSchema = z.object({
 });
 
 export async function createSchoolAction(formData: FormData) {
+  try {
   const actor = await requirePlatformAdmin();
   const values = createSchoolSchema.parse(Object.fromEntries(formData));
   const admin = createAdminClient();
@@ -79,9 +80,15 @@ export async function createSchoolAction(formData: FormData) {
   await recordPlatformAudit(actor.id, data.id, "school.created", { name: values.name, plan: values.subscriptionPlan });
   revalidatePath("/platform", "layout");
   redirect(`/platform/schools/${data.id}`);
+  } catch (err: any) {
+    const fs = require("fs");
+    fs.appendFileSync("error_log.txt", "CREATE SCHOOL ERROR: " + err.message + "\n");
+    throw err;
+  }
 }
 
 export async function changeSchoolStatusAction(formData: FormData) {
+  try {
   const actor = await requirePlatformAdmin();
   const schoolId = z.string().uuid().parse(formData.get("schoolId"));
   const status = z.enum(["active", "suspended", "archived"]).parse(formData.get("status"));
@@ -98,6 +105,11 @@ export async function changeSchoolStatusAction(formData: FormData) {
   await recordPlatformAudit(actor.id, schoolId, `school.${status}`, reason ? { reason } : {});
   revalidatePath("/platform");
   revalidatePath(`/platform/schools/${schoolId}`);
+  } catch (err: any) {
+    const fs = require("fs");
+    fs.appendFileSync("error_log.txt", "SUSPEND SCHOOL ERROR: " + err.message + "\n");
+    throw err;
+  }
 }
 
 export async function updateSubscriptionAction(formData: FormData) {
