@@ -29,6 +29,7 @@ export async function signInAction(values: SignInValues) {
     const destination = (await isPlatformAdminUser(data.user.id)) ? "/platform" : "/dashboard";
     return { destination };
   } catch (error) {
+    console.error("Sign in error:", error);
     return { 
       error: getSupabaseBrowserErrorMessage(error, "Unable to sign in right now. Please try again.") 
     };

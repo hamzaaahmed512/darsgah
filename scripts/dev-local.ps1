@@ -22,5 +22,4 @@ if (-not (Test-Path -LiteralPath $envFilePath)) {
   & powershell.exe -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "setup-local.ps1")
 }
 
-Invoke-Native -FilePath "npx.cmd" -ArgumentList @("supabase", "start")
 Invoke-Native -FilePath "npm.cmd" -ArgumentList @("run", "dev")
