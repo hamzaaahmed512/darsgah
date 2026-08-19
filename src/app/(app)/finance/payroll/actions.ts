@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import type { AdjustmentType } from "@/types/database";
 
 export async function generatePayrollAction(month: string, teacherId?: string) {
+  try {
     const user = await requireUser("payroll:manage");
     const result = await generateMonthlyPayroll(user, month, teacherId);
     revalidatePath("/payroll");
