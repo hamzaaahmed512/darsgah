@@ -9,8 +9,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { getStaff } from "@/lib/services/staff";
 import { ClassFormModal } from "@/components/classes/class-form";
-import { TeacherAssignmentModal } from "@/components/classes/teacher-assignment-form";
-import { DeleteClassButton, RemoveAssignmentButton } from "@/components/classes/class-actions";
+import { DeleteClassButton } from "@/components/classes/class-actions";
 import { ClassFilterForm } from "@/components/classes/class-filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -106,8 +105,7 @@ export default async function ClassesPage({
                 </summary>
 
                 <div className="grid gap-5 border-t border-outline/60 p-5">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <InfoTile icon={<ShieldCheck className="h-4 w-4" />} label="Head Teacher" value={cls.head_teacher_name ?? "Not assigned"} hint={cls.head_teacher_email ?? undefined} />
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <InfoTile icon={<MapPin className="h-4 w-4" />} label="Room" value={cls.room ?? "Not set"} />
                     <InfoTile icon={<CalendarCheck className="h-4 w-4" />} label="Attendance Rate" value={attendanceRate !== null ? `${attendanceRate}%` : "No records yet"} />
                   </div>
@@ -116,32 +114,31 @@ export default async function ClassesPage({
                     <div className="rounded-lg border border-outline/40 p-3">
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 font-semibold text-muted">
-                          <Users className="h-4 w-4" /> Other Teachers ({assignedTeachers.length})
+                          <Users className="h-4 w-4" /> Assigned Faculty ({assignedTeachers.length + (cls.head_teacher_id ? 1 : 0)})
                         </span>
                       </div>
-                      {assignedTeachers.length > 0 ? (
-                        <ul className="space-y-1.5 pr-1">
-                          {assignedTeachers.map((teacher) => (
-                            <li key={teacher.id} className="flex items-center justify-between gap-2 rounded-md bg-surface-low px-3 py-2 text-sm">
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-semibold text-ink">{teacher.teacher_name}</p>
-                                {teacher.subject_name ? <p className="truncate text-xs text-muted">{teacher.subject_name}</p> : null}
-                              </div>
-                              <RemoveAssignmentButton assignmentId={teacher.id} />
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-xs italic text-muted">No teachers assigned yet.</p>
+                      <ul className="space-y-1.5 pr-1">
+                        {cls.head_teacher_id ? (
+                          <li className="flex items-center justify-between gap-2 rounded-md bg-primary-soft px-3 py-2 text-sm">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-ink">{cls.head_teacher_name}</p>
+                              <p className="truncate text-xs font-semibold text-primary">Head Teacher</p>
+                            </div>
+                          </li>
+                        ) : null}
+                        
+                        {assignedTeachers.map((teacher) => (
+                          <li key={teacher.id} className="flex items-center justify-between gap-2 rounded-md bg-surface-low px-3 py-2 text-sm">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-ink">{teacher.teacher_name}</p>
+                              {teacher.subject_name ? <p className="truncate text-xs text-muted">{teacher.subject_name}</p> : null}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      {!cls.head_teacher_id && assignedTeachers.length === 0 && (
+                        <p className="mt-2 text-xs italic text-muted">No faculty assigned.</p>
                       )}
-                      <div className="mt-3">
-                        <TeacherAssignmentModal
-                          classId={cls.id}
-                          className={cls.name}
-                          teachers={teachers}
-                          subjects={academicData.subjects}
-                        />
-                      </div>
                     </div>
 
                     <div className="rounded-lg border border-outline/40 p-3">
@@ -161,6 +158,8 @@ export default async function ClassesPage({
                       sections={academicData.sections}
                       academicYears={academicData.years}
                       teachers={teachers}
+                      subjects={academicData.subjects}
+                      assignedTeachers={assignedTeachers}
                       initialClass={{
                         id: cls.id,
                         name: cls.name,
