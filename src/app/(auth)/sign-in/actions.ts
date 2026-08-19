@@ -13,20 +13,24 @@ const signInSchema = z.object({
 export type SignInValues = z.infer<typeof signInSchema>;
 
 export async function signInAction(values: SignInValues) {
-  const parsed = signInSchema.parse(values);
+  const parsed = signInSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: "Please enter a valid email and password." };
+  }
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.signInWithPassword(parsed);
+    const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error) {
-      throw new Error(error.message);
+      return { error: error.message };
     }
 
-    return (await isPlatformAdminUser(data.user.id)) ? "/platform" : "/dashboard";
+    const destination = (await isPlatformAdminUser(data.user.id)) ? "/platform" : "/dashboard";
+    return { destination };
   } catch (error) {
-    throw new Error(
-      getSupabaseBrowserErrorMessage(error, "Unable to sign in right now. Please try again.")
-    );
+    return { 
+      error: getSupabaseBrowserErrorMessage(error, "Unable to sign in right now. Please try again.") 
+    };
   }
 }

@@ -18,12 +18,20 @@ export default function SignInPage() {
     setError("");
     startTransition(async () => {
       try {
-        const destination = await signInAction({
+        const result = await signInAction({
           email: String(formData.get("email") ?? ""),
           password: String(formData.get("password") ?? "")
         });
-        router.replace(destination);
-        router.refresh();
+        
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+        
+        if (result?.destination) {
+          router.replace(result.destination);
+          router.refresh();
+        }
       } catch (error) {
         setError(error instanceof Error ? error.message : "Unable to sign in right now. Please try again.");
       }
