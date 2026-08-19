@@ -71,3 +71,40 @@ export async function deleteClassAction(classId: string) {
   revalidatePath("/classes");
   revalidatePath("/academics");
 }
+
+import { createGrade, createSection } from "@/lib/services/academics";
+import { createAcademicYear } from "@/lib/services/settings";
+
+export async function createGradeAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const name = z.string().min(1, "Name is required").parse(formData.get("name"));
+  const sort_order = parseInt(formData.get("sort_order") as string || "10", 10);
+  
+  const data = await createGrade(user, { name, sort_order });
+  revalidatePath("/classes");
+  revalidatePath("/academics");
+  return data;
+}
+
+export async function createSectionAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const name = z.string().min(1, "Name is required").parse(formData.get("name"));
+  
+  const data = await createSection(user, { name });
+  revalidatePath("/classes");
+  revalidatePath("/academics");
+  return data;
+}
+
+export async function createAcademicYearAction(formData: FormData) {
+  const user = await requireUser("settings:manage");
+  const name = z.string().min(1, "Name is required").parse(formData.get("name"));
+  const starts_on = z.string().parse(formData.get("starts_on"));
+  const ends_on = z.string().parse(formData.get("ends_on"));
+  const is_active = formData.get("is_active") === "true";
+  
+  const data = await createAcademicYear(user, { name, starts_on, ends_on, is_active });
+  revalidatePath("/classes");
+  revalidatePath("/academics");
+  return data;
+}

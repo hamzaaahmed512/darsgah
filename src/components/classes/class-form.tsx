@@ -4,7 +4,14 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-field";
-import { createClassAction, updateClassAction, assignTeacherClassAction } from "@/app/(app)/classes/actions";
+import { 
+  createClassAction, 
+  updateClassAction, 
+  assignTeacherClassAction,
+  createGradeAction,
+  createSectionAction,
+  createAcademicYearAction
+} from "@/app/(app)/classes/actions";
 import { RemoveAssignmentButton } from "@/components/classes/class-actions";
 import { Pencil, Plus, X } from "lucide-react";
 
@@ -40,9 +47,15 @@ export function ClassFormModal({
   const [assignPending, startAssignTransition] = useTransition();
   const [assignError, setAssignError] = useState<string | null>(null);
 
+  // Inline creation states
+  const [creatingGrade, setCreatingGrade] = useState(false);
+  const [creatingSection, setCreatingSection] = useState(false);
+  const [creatingYear, setCreatingYear] = useState(false);
+  const [inlinePending, startInlineTransition] = useTransition();
+
   const editing = Boolean(initialClass);
 
-  const { register, handleSubmit, reset } = useForm({
+  const { register, handleSubmit, reset, setValue } = useForm({
     defaultValues: initialClass
       ? {
           name: initialClass.name,
@@ -93,6 +106,56 @@ export function ClassFormModal({
     });
   };
 
+  const handleInlineGrade = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startInlineTransition(async () => {
+      try {
+        const res = await createGradeAction(formData);
+        if (res?.id) setValue("grade_id", res.id);
+        setCreatingGrade(false);
+      } catch (err: any) {
+        alert(err.message || "Failed to create grade");
+      }
+    });
+  };
+
+  const handleInlineSection = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startInlineTransition(async () => {
+      try {
+        const res = await createSectionAction(formData);
+        if (res?.id) setValue("section_id", res.id);
+        setCreatingSection(false);
+      } catch (err: any) {
+        alert(err.message || "Failed to create section");
+      }
+    });
+  };
+
+  const handleInlineYear = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    // Automatically generate dates for the newly created academic year based on current year
+    const year = new Date().getFullYear();
+    formData.append("starts_on", `${year}-09-01`);
+    formData.append("ends_on", `${year + 1}-06-30`);
+    formData.append("is_active", "true");
+
+    startInlineTransition(async () => {
+      try {
+        // Assume createAcademicYearAction might not return ID instantly since settings.ts uses upsert without select for some things,
+        // Wait, we didn't update createAcademicYear to return ID in settings.ts! 
+        // We'll just wait for it and then let the user select it from the refreshed list.
+        await createAcademicYearAction(formData);
+        setCreatingYear(false);
+      } catch (err: any) {
+        alert(err.message || "Failed to create academic year");
+      }
+    });
+  };
+
   return (
     <>
       <Button onClick={() => setOpen(true)} variant={editing ? "secondary" : "primary"} size={editing ? "sm" : "md"} className="flex items-center gap-2">
@@ -127,39 +190,96 @@ export function ClassFormModal({
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-ink">Grade *</label>
-                      <Select {...register("grade_id", { required: true })}>
-                        <option value="">Select Grade</option>
-                        {grades.map((g) => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-                      </Select>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-sm font-semibold text-ink">Grade *</label>
+                        {!creatingGrade && (
+                          <button type="button" onClick={() => setCreatingGrade(true)} className="text-xs font-semibold text-primary hover:underline">
+                            + Add
+                          </button>
+                        )}
+                      </div>
+                      {creatingGrade ? (
+                        <div className="rounded-md border border-outline/40 bg-surface-low p-2">
+                          <Input form="inline-grade-form" name="name" placeholder="e.g. Grade 1" required className="mb-2 h-8 text-sm" />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="secondary" size="sm" className="h-7 w-full text-xs" onClick={() => setCreatingGrade(false)}>Cancel</Button>
+                            <Button type="submit" form="inline-grade-form" size="sm" className="h-7 w-full text-xs" disabled={inlinePending}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Select {...register("grade_id", { required: true })}>
+                          <option value="" disabled={grades.length === 0}>
+                            {grades.length === 0 ? "No grades found. Create one first." : "Select Grade"}
+                          </option>
+                          {grades.map((g) => (
+                            <option key={g.id} value={g.id}>{g.name}</option>
+                          ))}
+                        </Select>
+                      )}
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-ink">Section</label>
-                      <Select {...register("section_id")}>
-                        <option value="">None / Unassigned</option>
-                        {sections.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </Select>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-sm font-semibold text-ink">Section</label>
+                        {!creatingSection && (
+                          <button type="button" onClick={() => setCreatingSection(true)} className="text-xs font-semibold text-primary hover:underline">
+                            + Add
+                          </button>
+                        )}
+                      </div>
+                      {creatingSection ? (
+                        <div className="rounded-md border border-outline/40 bg-surface-low p-2">
+                          <Input form="inline-section-form" name="name" placeholder="e.g. A" required className="mb-2 h-8 text-sm" />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="secondary" size="sm" className="h-7 w-full text-xs" onClick={() => setCreatingSection(false)}>Cancel</Button>
+                            <Button type="submit" form="inline-section-form" size="sm" className="h-7 w-full text-xs" disabled={inlinePending}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Select {...register("section_id")}>
+                          <option value="">None / Unassigned</option>
+                          {sections.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </Select>
+                      )}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1.5 block text-sm font-semibold text-ink">Academic Year *</label>
-                      <Select {...register("academic_year_id", { required: true })}>
-                        <option value="">Select Year</option>
-                        {academicYears.map((y) => (
-                          <option key={y.id} value={y.id}>{y.name}</option>
-                        ))}
-                      </Select>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-sm font-semibold text-ink">Academic Year *</label>
+                        {!creatingYear && (
+                          <button type="button" onClick={() => setCreatingYear(true)} className="text-xs font-semibold text-primary hover:underline">
+                            + Add
+                          </button>
+                        )}
+                      </div>
+                      {creatingYear ? (
+                        <div className="rounded-md border border-outline/40 bg-surface-low p-2">
+                          <Input form="inline-year-form" name="name" placeholder={`e.g. ${new Date().getFullYear()}-${new Date().getFullYear() + 1}`} required className="mb-2 h-8 text-sm" />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="secondary" size="sm" className="h-7 w-full text-xs" onClick={() => setCreatingYear(false)}>Cancel</Button>
+                            <Button type="submit" form="inline-year-form" size="sm" className="h-7 w-full text-xs" disabled={inlinePending}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Select {...register("academic_year_id", { required: true })}>
+                          <option value="" disabled={academicYears.length === 0}>
+                            {academicYears.length === 0 ? "No active years found. Create one first." : "Select Year"}
+                          </option>
+                          {academicYears.map((y) => (
+                            <option key={y.id} value={y.id}>{y.name}</option>
+                          ))}
+                        </Select>
+                      )}
                     </div>
 
                     <div className="sm:col-span-2">
                       <label className="mb-1.5 block text-sm font-semibold text-ink">Head Teacher *</label>
                       <Select {...register("head_teacher_id", { required: true })}>
-                        <option value="">Select Head Teacher</option>
+                        <option value="" disabled={teachers.length === 0}>
+                          {teachers.length === 0 ? "No teachers found. Invite one first." : "Select Head Teacher"}
+                        </option>
                         {teachers.map((teacher) => (
                           <option key={teacher.user_id} value={teacher.user_id}>{teacher.full_name}</option>
                         ))}
@@ -231,13 +351,18 @@ export function ClassFormModal({
             </div>
 
             <div className="flex shrink-0 justify-end gap-3 border-t border-outline/40 px-6 py-4">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending || inlinePending}>
                 Cancel
               </Button>
-              <Button type="submit" form="class-details-form" disabled={pending}>
+              <Button type="submit" form="class-details-form" disabled={pending || inlinePending}>
                 {pending ? "Saving..." : editing ? "Save Class" : "Create Class"}
               </Button>
             </div>
+
+            {/* Hidden forms for inline actions */}
+            <form id="inline-grade-form" onSubmit={handleInlineGrade} className="hidden"></form>
+            <form id="inline-section-form" onSubmit={handleInlineSection} className="hidden"></form>
+            <form id="inline-year-form" onSubmit={handleInlineYear} className="hidden"></form>
           </div>
         </div>
       )}

@@ -289,3 +289,25 @@ export async function setStudentSubjectEnrollments(user: AppUser, values: { clas
   const { error } = await supabase.from("student_subject_enrollments").insert(values.studentIds.map((student_id) => ({ school_id: user.schoolId, class_id: values.classId, subject_id: values.subjectId, student_id, enrolled_by: user.id })));
   if (error) throw new Error(error.message);
 }
+
+export async function createGrade(user: AppUser, values: { name: string; sort_order: number }) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("grades")
+    .insert({ school_id: user.schoolId, name: values.name.trim(), sort_order: values.sort_order })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createSection(user: AppUser, values: { name: string }) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("sections")
+    .insert({ school_id: user.schoolId, name: values.name.trim() })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
