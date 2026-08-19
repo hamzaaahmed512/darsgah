@@ -134,20 +134,29 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   const isStaff = user.role === "student_staff";
   const initialStatus = isStaff ? "pending_approval" : parsed.status;
 
+  const admissionNumber = parsed.admission_number || `ADM-${Date.now()}`;
+
   const { data: student, error } = await supabase
     .from("students")
     .insert({
       school_id: user.schoolId,
-      admission_number: parsed.admission_number,
-      first_name: parsed.first_name,
-      last_name: parsed.last_name,
-      preferred_name: parsed.preferred_name || null,
-      date_of_birth: parsed.date_of_birth,
+      admission_number: admissionNumber,
+      first_name: parsed.name_en.split(" ")[0],
+      last_name: parsed.name_en.split(" ").slice(1).join(" ") || parsed.name_en,
+      name_en: parsed.name_en,
+      name_ur: parsed.name_ur || null,
+      father_name_en: parsed.father_name_en || null,
+      father_name_ur: parsed.father_name_ur || null,
+      father_phone: parsed.father_phone || null,
+      father_cnic: parsed.father_cnic || null,
+      photo_url: parsed.photo_url || null,
+      class_id: parsed.class_id || null,
+      date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
       email: parsed.email || null,
       phone: parsed.phone || null,
       address: parsed.address || null,
-      admission_date: parsed.admission_date,
+      admission_date: parsed.admission_date || new Date().toISOString().split("T")[0],
       status: initialStatus
     })
     .select("id")
@@ -155,28 +164,33 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
 
   if (error) throw new Error(error.message);
 
-  const { data: guardian, error: guardianError } = await supabase
-    .from("guardians")
-    .insert({
+  let guardianId = null;
+
+  if (parsed.guardian_name || parsed.father_name_en) {
+    const { data: guardian, error: guardianError } = await supabase
+      .from("guardians")
+      .insert({
+        school_id: user.schoolId,
+        full_name: parsed.guardian_name || parsed.father_name_en,
+        relationship: parsed.guardian_relationship || "Father",
+        email: parsed.guardian_email || null,
+        phone: parsed.guardian_phone || parsed.father_phone || null,
+        emergency_contact_name: parsed.emergency_contact_name || null,
+        emergency_contact_phone: parsed.emergency_contact_phone || null
+      })
+      .select("id")
+      .single();
+
+    if (guardianError) throw new Error(guardianError.message);
+    guardianId = guardian.id;
+
+    await supabase.from("student_guardians").insert({
       school_id: user.schoolId,
-      full_name: parsed.guardian_name,
-      relationship: parsed.guardian_relationship,
-      email: parsed.guardian_email || null,
-      phone: parsed.guardian_phone,
-      emergency_contact_name: parsed.emergency_contact_name,
-      emergency_contact_phone: parsed.emergency_contact_phone
-    })
-    .select("id")
-    .single();
-
-  if (guardianError) throw new Error(guardianError.message);
-
-  await supabase.from("student_guardians").insert({
-    school_id: user.schoolId,
-    student_id: student.id,
-    guardian_id: guardian.id,
-    is_primary: true
-  });
+      student_id: student.id,
+      guardian_id: guardianId,
+      is_primary: true
+    });
+  }
 
   if (parsed.class_id && initialStatus !== "pending_approval") {
     const { data: activeYear } = await supabase
@@ -229,10 +243,17 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
     .from("students")
     .update({
       admission_number: parsed.admission_number,
-      first_name: parsed.first_name,
-      last_name: parsed.last_name,
-      preferred_name: parsed.preferred_name || null,
-      date_of_birth: parsed.date_of_birth,
+      first_name: parsed.name_en.split(" ")[0],
+      last_name: parsed.name_en.split(" ").slice(1).join(" ") || parsed.name_en,
+      name_en: parsed.name_en,
+      name_ur: parsed.name_ur || null,
+      father_name_en: parsed.father_name_en || null,
+      father_name_ur: parsed.father_name_ur || null,
+      father_phone: parsed.father_phone || null,
+      father_cnic: parsed.father_cnic || null,
+      photo_url: parsed.photo_url || null,
+      class_id: parsed.class_id || null,
+      date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
       email: parsed.email || null,
       phone: parsed.phone || null,
@@ -260,12 +281,12 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
     const { error: guardianUpdateError } = await supabase
       .from("guardians")
       .update({
-        full_name: parsed.guardian_name,
-        relationship: parsed.guardian_relationship,
+        full_name: parsed.guardian_name || parsed.father_name_en,
+        relationship: parsed.guardian_relationship || "Father",
         email: parsed.guardian_email || null,
-        phone: parsed.guardian_phone,
-        emergency_contact_name: parsed.emergency_contact_name,
-        emergency_contact_phone: parsed.emergency_contact_phone
+        phone: parsed.guardian_phone || parsed.father_phone || null,
+        emergency_contact_name: parsed.emergency_contact_name || null,
+        emergency_contact_phone: parsed.emergency_contact_phone || null
       })
       .eq("school_id", user.schoolId)
       .eq("id", guardianLink.guardian_id);
@@ -276,12 +297,12 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       .from("guardians")
       .insert({
         school_id: user.schoolId,
-        full_name: parsed.guardian_name,
-        relationship: parsed.guardian_relationship,
+        full_name: parsed.guardian_name || parsed.father_name_en,
+        relationship: parsed.guardian_relationship || "Father",
         email: parsed.guardian_email || null,
-        phone: parsed.guardian_phone,
-        emergency_contact_name: parsed.emergency_contact_name,
-        emergency_contact_phone: parsed.emergency_contact_phone
+        phone: parsed.guardian_phone || parsed.father_phone || null,
+        emergency_contact_name: parsed.emergency_contact_name || null,
+        emergency_contact_phone: parsed.emergency_contact_phone || null
       })
       .select("id")
       .single();

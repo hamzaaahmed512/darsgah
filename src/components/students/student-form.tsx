@@ -28,11 +28,15 @@ export function StudentForm({
     resolver: zodResolver(studentSchema),
     defaultValues: {
       admission_number: "",
-      first_name: "",
-      last_name: "",
-      preferred_name: "",
+      name_en: "",
+      name_ur: "",
+      father_name_en: "",
+      father_name_ur: "",
+      father_phone: "",
+      father_cnic: "",
+      photo_url: "",
       date_of_birth: "",
-      gender: "",
+      gender: undefined,
       email: "",
       phone: "",
       address: "",
@@ -74,18 +78,19 @@ export function StudentForm({
               <option value="cancelled">Cancelled</option>
             </Select>
           </Field>
-          <Field label="First name" error={errors.first_name?.message}>
-            <Input {...register("first_name")} />
+          <Field label="Name (English)" error={errors.name_en?.message}>
+            <Input {...register("name_en")} placeholder="e.g. John Doe" />
           </Field>
-          <Field label="Last name" error={errors.last_name?.message}>
-            <Input {...register("last_name")} />
-          </Field>
-          <Field label="Preferred name" error={errors.preferred_name?.message}>
-            <Input {...register("preferred_name")} />
+          <Field label="Name (Urdu)" error={errors.name_ur?.message}>
+            <Input {...register("name_ur")} dir="rtl" placeholder="e.g. جان ڈو" />
           </Field>
           <Field label="Gender" error={errors.gender?.message}>
-            <Input {...register("gender")} />
+            <div className="flex gap-4 items-center h-10">
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} /> Male</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} /> Female</label>
+            </div>
           </Field>
+
           <Field label="Date of birth" error={errors.date_of_birth?.message}>
             <Input type="date" {...register("date_of_birth")} />
           </Field>
@@ -117,17 +122,31 @@ export function StudentForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Guardian and Emergency Contact</CardTitle>
+          <CardTitle>Father & Guardian Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field label="Father's Name (English)" error={errors.father_name_en?.message}>
+            <Input {...register("father_name_en")} />
+          </Field>
+          <Field label="Father's Name (Urdu)" error={errors.father_name_ur?.message}>
+            <Input {...register("father_name_ur")} dir="rtl" />
+          </Field>
+          <Field label="Father's Phone" error={errors.father_phone?.message}>
+            <Input {...register("father_phone")} />
+          </Field>
+          <Field label="Father's CNIC" error={errors.father_cnic?.message}>
+            <Input {...register("father_cnic")} placeholder="XXXXX-XXXXXXX-X" />
+          </Field>
+          
+          <div className="col-span-full border-t border-outline/50 my-2 pt-4">
+            <p className="text-sm font-semibold mb-3">Legacy Guardian Info (Optional)</p>
+          </div>
+          
           <Field label="Guardian name" error={errors.guardian_name?.message}>
             <Input {...register("guardian_name")} />
           </Field>
           <Field label="Relationship" error={errors.guardian_relationship?.message}>
             <Input {...register("guardian_relationship")} />
-          </Field>
-          <Field label="Guardian email" error={errors.guardian_email?.message}>
-            <Input type="email" {...register("guardian_email")} />
           </Field>
           <Field label="Guardian phone" error={errors.guardian_phone?.message}>
             <Input {...register("guardian_phone")} />
