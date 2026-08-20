@@ -10,7 +10,9 @@ import {
   Shield,
   Users,
   BookOpen,
-  Coins
+  Coins,
+  Receipt,
+  Wallet
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import { hasPermission } from "@/lib/permissions";
@@ -33,18 +35,9 @@ const coreNavItems: NavItem[] = [
   { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view", section: "MANAGE" },
   { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view", section: "PEOPLE" },
   { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },
-  {
-    href: "/finance",
-    label: "Finance",
-    icon: Coins,
-    permission: "finance:view",
-    section: "OPERATIONS",
-    subItems: [
-      { href: "/finance/dashboard", label: "Dashboard", permission: "finance:view" },
-      { href: "/finance/fees", label: "Fee Management", permission: "finance:view" },
-      { href: "/finance/payroll", label: "Payroll", permission: "payroll:view" }
-    ]
-  },
+  { href: "/finance/dashboard", label: "Finance", icon: Coins, permission: "finance:view", section: "OPERATIONS" },
+  { href: "/finance/fees", label: "Fee Management", icon: Receipt, permission: "finance:view", section: "OPERATIONS" },
+  { href: "/finance/payroll", label: "Payroll", icon: Wallet, permission: "payroll:view", section: "OPERATIONS" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:view", section: "PEOPLE" },
   { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
   { href: "/subjects", label: "Subjects", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
