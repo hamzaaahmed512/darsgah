@@ -57,7 +57,7 @@ export async function updateSchoolSettings(
 
   const { error: schoolError } = await adminClient
     .from("schools")
-    .update({ name: name.trim().toUpperCase(), timezone })
+    .update({ name: name.trim(), timezone })
     .eq("id", user.schoolId);
 
   if (schoolError) throw new Error(schoolError.message);

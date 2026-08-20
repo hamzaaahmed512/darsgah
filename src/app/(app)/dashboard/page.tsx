@@ -10,7 +10,7 @@ export default async function DashboardPage() {
     redirect("/dashboard/admin");
   } else if (user.role === "student_staff") {
     redirect("/dashboard/registrar");
-  } else if (user.role === "teacher") {
+  } else if (user.role === "teacher" || user.role === "head_teacher") {
     redirect("/dashboard/teacher");
   }
 

@@ -5,15 +5,22 @@ import { getSchoolProfile } from "@/lib/services/settings";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
-  const schoolProfile = await getSchoolProfile(user);
-  const settings = schoolProfile.settings ?? {};
+
+  // The optimized session RPC includes branding. During a rolling deployment,
+  // fall back to the legacy settings query until the migration is installed.
+  const legacyProfile = user.schoolLogoUrl === undefined || user.schoolFaviconUrl === undefined || user.schoolShortName === undefined
+    ? await getSchoolProfile(user)
+    : null;
+  const settings = legacyProfile?.settings ?? {};
 
   return (
     <AppShell
       user={user}
       branding={{
-        logoUrl: settings.schoolLogoUrl ?? null,
-        faviconUrl: settings.schoolFaviconUrl ?? null
+        logoUrl: user.schoolLogoUrl ?? settings.schoolLogoUrl ?? null,
+        faviconUrl: user.schoolFaviconUrl ?? settings.schoolFaviconUrl ?? null,
+        shortName: user.schoolShortName ?? settings.schoolShortName ?? null,
+        fullName: user.schoolFullName ?? legacyProfile?.school?.name ?? user.schoolName
       }}
     >
       {children}

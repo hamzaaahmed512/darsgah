@@ -12,6 +12,7 @@ import { formatPakistaniPhone } from "@/lib/pakistan-format";
 type Props = {
   canManage: boolean;
   schoolName: string;
+  shortName: string;
   schoolTimezone: string;
   email: string;
   phone: string;
@@ -29,6 +30,7 @@ function displayValue(value: string, fallback = "Not set") {
 export function SchoolProfileForm({
   canManage,
   schoolName,
+  shortName,
   schoolTimezone,
   email,
   phone,
@@ -47,7 +49,8 @@ export function SchoolProfileForm({
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [logoObjectUrl, setLogoObjectUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: schoolName.toUpperCase(),
+    name: schoolName,
+    shortName: shortName.toUpperCase(),
     timezone: schoolTimezone,
     email,
     phone: formatPakistaniPhone(phone),
@@ -63,7 +66,7 @@ export function SchoolProfileForm({
     resultCardSignatureLabels: Array.isArray(resultCardTemplate.signatureLabels) ? resultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
   });
 
-  const displayName = form.name.trim() || schoolName;
+  const displayName = form.shortName.trim() || form.name.trim() || schoolName;
   useEffect(() => {
     if (!logoFile) {
       setLogoObjectUrl(null);
@@ -108,6 +111,7 @@ export function SchoolProfileForm({
     startTransition(async () => {
       const payload = new FormData();
       payload.set("name", form.name.trim());
+      payload.set("shortName", form.shortName.trim());
       payload.set("timezone", form.timezone);
       payload.set("email", form.email.trim());
       payload.set("phone", form.phone.trim());
@@ -166,7 +170,8 @@ export function SchoolProfileForm({
             )}
           </div>
           <h2 className="mt-5 font-display text-2xl font-bold leading-tight tracking-tight text-ink">{displayName}</h2>
-          <p className="mt-1 text-sm font-semibold uppercase tracking-[0.14em] text-muted">School Profile</p>
+          {form.shortName.trim() ? <p className="mt-1 text-sm font-medium leading-snug text-muted">{form.name}</p> : null}
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">School Profile</p>
         </div>
 
         <div className="grid gap-4 p-5 text-sm">
@@ -244,16 +249,20 @@ export function SchoolProfileForm({
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="School Name">
+          <Field label="Full School Name">
             {readOnly ? (
               lockedField(form.name)
             ) : (
               <Input
                 value={form.name}
-                onChange={(event) => updateField("name", event.target.value.toUpperCase())}
-                placeholder="Enter school name"
+                onChange={(event) => updateField("name", event.target.value)}
+                placeholder="National Garrison Secondary School"
               />
             )}
+          </Field>
+
+          <Field label="Short Name" hint="Optional; shown prominently in the sidebar">
+            {readOnly ? lockedField(form.shortName, "Not set") : <Input value={form.shortName} onChange={(event) => updateField("shortName", event.target.value.toUpperCase().slice(0, 20))} placeholder="NGSS" maxLength={20} />}
           </Field>
 
           <Field label="School Email">
@@ -366,7 +375,8 @@ export function SchoolProfileForm({
                     setLogoFile(null);
                     setFaviconFile(null);
                     setForm({
-                      name: schoolName.toUpperCase(),
+                      name: schoolName,
+                      shortName: shortName.toUpperCase(),
                       timezone: schoolTimezone,
                       email,
                       phone: formatPakistaniPhone(phone),

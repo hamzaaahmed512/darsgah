@@ -21,8 +21,17 @@ export async function isPlatformAdminUser(userId: string) {
 
 export async function requirePlatformAdmin() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in?next=/platform");
-  if (!(await isPlatformAdminUser(user.id))) redirect("/unauthorized");
-  return { id: user.id, email: user.email ?? "Platform admin" };
+  const { data, error } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (error || !userId) redirect("/sign-in?next=/platform");
+
+  const [isPlatformAdmin, profileResult] = await Promise.all([
+    isPlatformAdminUser(userId),
+    supabase.from("profiles").select("must_change_password").eq("id", userId).maybeSingle<{ must_change_password: boolean }>()
+  ]);
+  if (!isPlatformAdmin) redirect("/unauthorized");
+  if (profileResult.data?.must_change_password) redirect("/change-password?next=/platform");
+
+  const email = typeof data.claims.email === "string" ? data.claims.email : "Platform admin";
+  return { id: userId, email };
 }

@@ -12,7 +12,7 @@ type ClassOption = {
   section_name: string | null;
 };
 
-export function StudentFilterForm({ classes }: { classes: ClassOption[] }) {
+export function StudentFilterForm({ classes, limitedView = false }: { classes: ClassOption[]; limitedView?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -61,12 +61,12 @@ export function StudentFilterForm({ classes }: { classes: ClassOption[] }) {
   }, [pushFilters]);
 
   return (
-    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_220px]">
+    <div className={`grid gap-3 ${limitedView ? "md:grid-cols-[minmax(0,1fr)_220px]" : "md:grid-cols-[minmax(0,1fr)_180px_220px]"}`}>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input ref={searchRef} defaultValue={currentQ} className="pl-9" placeholder="Search name or admission number" />
       </div>
-      <Select value={currentStatus} onChange={(event) => pushFilters({ status: event.target.value })} aria-label="Student status">
+      {!limitedView ? <Select value={currentStatus} onChange={(event) => pushFilters({ status: event.target.value })} aria-label="Student status">
         <option value="all">All statuses</option>
         <option value="active">Active</option>
         <option value="pending_approval">Pending approval</option>
@@ -75,7 +75,7 @@ export function StudentFilterForm({ classes }: { classes: ClassOption[] }) {
         <option value="transferred">Transferred</option>
         <option value="cancelled">Cancelled</option>
         <option value="archived">Archived</option>
-      </Select>
+      </Select> : null}
       <Select value={currentClassId} onChange={(event) => pushFilters({ classId: event.target.value })} aria-label="Student class">
         <option value="all">All classes</option>
         {classes.map((item) => (

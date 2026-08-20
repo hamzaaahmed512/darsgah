@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import * as XLSX from "xlsx";
-import { Upload, X, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
 import { importStudentsAction } from "@/app/(app)/students/actions";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,6 +37,7 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
     
     setError("");
     try {
+      const XLSX = await import("xlsx");
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "buffer" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];

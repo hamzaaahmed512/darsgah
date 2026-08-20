@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import * as XLSX from "xlsx";
 import { Download, Upload, FileSpreadsheet, FileText } from "lucide-react";
 import { exportStudentsAction } from "@/app/(app)/students/actions";
 import type { StudentFilters } from "@/lib/services/students";
@@ -19,6 +18,7 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
         return;
       }
       if (res.data) {
+        const XLSX = await import("xlsx");
         if (format === "csv") {
           // Generate CSV directly from JSON using SheetJS
           const worksheet = XLSX.utils.json_to_sheet(res.data);
@@ -51,7 +51,8 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
     });
   };
 
-  const handleTemplate = () => {
+  const handleTemplate = async () => {
+    const XLSX = await import("xlsx");
     // Generate an XLSX template with standard headers and sample data
     const headers = ["Admission Number", "First Name", "Last Name", "Grade", "Section", "Gender", "Date of Birth", "Guardian Name", "Contact Number"];
     const dummyData = [

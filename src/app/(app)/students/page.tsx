@@ -9,16 +9,17 @@ import { StudentActions } from "@/components/students/student-actions";
 import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { getStudents } from "@/lib/services/students";
-import { getAcademicOptions } from "@/lib/services/academics";
+import { getAcademicOptions, getTeacherHeadClasses } from "@/lib/services/academics";
 import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("students:view");
+  const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   const [students, academics] = await Promise.all([
     getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1) }),
-    getAcademicOptions(user)
+    isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user)
   ]);
 
   return (
@@ -27,17 +28,17 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         eyebrow="People"
         title={
           <div className="flex items-center gap-3">
-            Student Management
+            {isTeacher ? "My Students" : "Student Management"}
             <Badge tone="blue">{students.count} students enrolled</Badge>
           </div>
         }
-        description="Search, filter, profile, archive, and manage students within the current school tenant."
+        description={isTeacher ? "View the students enrolled in your assigned head class." : "Search, filter, profile, archive, and manage students within the current school tenant."}
         actions={
           <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center">
-            {hasPermission(user.role, "students:create") ? (
+            {hasPermission(user.role, "students:create", user.permissions) ? (
               <StudentActions filters={{ q: params.q, status: params.status ?? "active", classId: params.classId }} />
             ) : null}
-            {hasPermission(user.role, "students:create") ? (
+            {hasPermission(user.role, "students:create", user.permissions) ? (
             <StudentFormModal
               classes={academics.classes}
               onSubmit={createStudentAction}
@@ -51,11 +52,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
       <Card className="mb-5 p-4">
         <Suspense>
-          <StudentFilterForm classes={academics.classes} />
+          <StudentFilterForm classes={academics.classes} limitedView={isTeacher} />
         </Suspense>
       </Card>
 
-      <StudentTable rows={students.rows} />
+      <StudentTable rows={students.rows} limitedView={isTeacher} />
       <p className="mt-4 text-sm text-muted">
         Showing {students.rows.length} of {students.count} students.
       </p>

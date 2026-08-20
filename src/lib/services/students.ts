@@ -12,29 +12,51 @@ export type StudentFilters = {
 
 export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   const supabase = await createClient();
+  const isTeacher = user.role === "teacher" || user.role === "head_teacher";
+  let headClassIds: string[] | null = null;
+
+  if (isTeacher) {
+    const { data, error } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("head_teacher_id", user.id);
+    if (error) throw new Error(error.message);
+    headClassIds = (data ?? []).map((row) => row.id);
+  }
   const page = Math.max(filters.page ?? 1, 1);
   const pageSize = 12;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
+  const directoryFields: string = isTeacher
+    ? "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, photo_url"
+    : "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url";
 
   let query = supabase
     .from("student_directory")
-    .select(
-      "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url",
-      { count: "exact" }
-    )
+    .select(directoryFields, { count: "exact" })
     .eq("school_id", user.schoolId)
     .range(from, to)
     .order("last_name");
 
+  if (headClassIds) {
+    query = headClassIds.length
+      ? query.in("class_id", headClassIds)
+      : query.eq("class_id", "00000000-0000-0000-0000-000000000000");
+  }
+
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
-  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  if (filters.q) {
+    query = query.or(isTeacher
+      ? `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`
+      : `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  }
 
   const { data, count, error } = await query;
   if (error) throw new Error(error.message);
 
-  return { rows: data ?? [], count: count ?? 0, page, pageSize };
+  return { rows: (data ?? []) as any[], count: count ?? 0, page, pageSize };
 }
 
 export async function getStudent(user: AppUser, id: string) {
@@ -53,6 +75,20 @@ export async function getStudentRecord(
   filters: { attendanceFrom?: string; attendanceTo?: string; includeFinance?: boolean } = {}
 ) {
   const supabase = await createClient();
+  const isTeacher = user.role === "teacher" || user.role === "head_teacher";
+  let headClassIds: string[] | null = null;
+
+  if (isTeacher) {
+    const { data, error } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("head_teacher_id", user.id);
+    if (error) throw new Error(error.message);
+    headClassIds = (data ?? []).map((row) => row.id);
+    if (!headClassIds.length) return emptyStudentRecord();
+  }
+
   let attendanceQuery = supabase
     .from("attendance_records")
     .select("id,attendance_date,status,note,classes(name)")
@@ -63,16 +99,21 @@ export async function getStudentRecord(
   if (filters.attendanceFrom) attendanceQuery = attendanceQuery.gte("attendance_date", filters.attendanceFrom);
   if (filters.attendanceTo) attendanceQuery = attendanceQuery.lte("attendance_date", filters.attendanceTo);
 
-  const [student, guardians, attendance, marks, challans] = await Promise.all([
-    supabase
+  const studentFields: string = isTeacher
+    ? "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date"
+    : "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date";
+  let studentQuery = supabase
       .from("student_directory")
-      .select(
-        "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date"
-      )
+      .select(studentFields)
       .eq("school_id", user.schoolId)
-      .eq("id", id)
-      .maybeSingle(),
-    supabase
+      .eq("id", id);
+  if (headClassIds) studentQuery = studentQuery.in("class_id", headClassIds);
+
+  const [student, guardians, attendance, marks, challans] = await Promise.all([
+    studentQuery.maybeSingle(),
+    isTeacher
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
       .from("student_guardian_details")
       .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, emergency_contact_name, emergency_contact_phone")
       .eq("school_id", user.schoolId)
@@ -114,7 +155,7 @@ export async function getStudentRecord(
   });
 
   return {
-    student: student.data,
+    student: student.data as any,
     guardians: guardians.data ?? [],
     attendance: attendanceRows,
     marks: marksRows,
@@ -123,6 +164,21 @@ export async function getStudentRecord(
       attendance: { total: attendanceRows.length, present: presentCount, rate: attendanceRows.length ? (presentCount / attendanceRows.length) * 100 : null },
       exams: { total: marksRows.length, average: markPercentages.length ? markPercentages.reduce((sum, value) => sum + value, 0) / markPercentages.length : null },
       fees: { total: challanRows.length, outstanding: challanRows.reduce((sum, row) => sum + row.outstanding, 0) }
+    }
+  };
+}
+
+function emptyStudentRecord() {
+  return {
+    student: null,
+    guardians: [],
+    attendance: [],
+    marks: [],
+    challans: [],
+    summaries: {
+      attendance: { total: 0, present: 0, rate: null },
+      exams: { total: 0, average: null },
+      fees: { total: 0, outstanding: 0 }
     }
   };
 }

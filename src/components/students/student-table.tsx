@@ -12,17 +12,17 @@ const statusTone = {
   pending_cancellation: "yellow"
 } as const;
 
-export function StudentTable({ rows }: { rows: any[] }) {
+export function StudentTable({ rows, limitedView = false }: { rows: any[]; limitedView?: boolean }) {
   if (!rows.length) {
     return (
       <EmptyState 
         title="No students found" 
         description="Try a different search, status, class filter, or add a new student." 
-        action={
+        action={!limitedView ? (
           <Link href="/students?action=new" className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-ink">
             Add Student
           </Link>
-        }
+        ) : undefined}
       />
     );
   }
@@ -34,11 +34,11 @@ export function StudentTable({ rows }: { rows: any[] }) {
           <thead className="font-label text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Father&apos;s Name</th>
+              {!limitedView ? <th className="px-4 py-3">Father&apos;s Name</th> : null}
               <th className="px-4 py-3">Class</th>
               <th className="px-4 py-3">Admission No.</th>
               <th className="px-4 py-3">Gender</th>
-              <th className="px-4 py-3">Actions</th>
+              {!limitedView ? <th className="px-4 py-3">Actions</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -61,10 +61,10 @@ export function StudentTable({ rows }: { rows: any[] }) {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4">
+                {!limitedView ? <td className="px-4 py-4">
                   <div className="text-muted">{student.father_name_en || student.guardian_name || "-"}</div>
                   {student.father_phone && <div className="text-xs text-muted/70">{student.father_phone}</div>}
-                </td>
+                </td> : null}
                 <td className="px-4 py-4">
                   <Badge tone="gray">
                     {student.grade_name ?? "Unassigned"} {student.section_name ? `• ${student.section_name}` : ""}
@@ -72,17 +72,17 @@ export function StudentTable({ rows }: { rows: any[] }) {
                 </td>
                 <td className="px-4 py-4 font-semibold">{student.admission_number}</td>
                 <td className="px-4 py-4 text-muted capitalize">{student.gender || "-"}</td>
-                <td className="px-4 py-4">
+                {!limitedView ? <td className="px-4 py-4">
                   <details className="group relative">
                     <summary className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-low list-none [&::-webkit-details-marker]:hidden">
                       Actions
                     </summary>
                     <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-outline/40 bg-white p-1 shadow-soft">
-                      <Link href={`/students/${student.id}`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
-                      <Link href={`/students/${student.id}?edit=true`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
+                      <Link data-navigation-progress="immediate" href={`/students/${student.id}`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
+                      <Link data-navigation-progress="immediate" href={`/students/${student.id}?edit=true`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
                     </div>
                   </details>
-                </td>
+                </td> : null}
               </tr>
             ))}
           </tbody>

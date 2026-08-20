@@ -4,10 +4,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseBrowserErrorMessage } from "@/lib/supabase/browser-error";
 import { isPlatformAdminUser } from "@/lib/platform/auth";
+import { resolveAuthDestination } from "@/lib/auth/destination";
 
 const signInSchema = z.object({
   email: z.string().email("Enter a valid email address."),
-  password: z.string().min(1, "Enter your password.")
+  password: z.string().min(1, "Enter your password."),
+  next: z.string().optional()
 });
 
 export type SignInValues = z.infer<typeof signInSchema>;
@@ -26,7 +28,16 @@ export async function signInAction(values: SignInValues) {
       return { error: error.message };
     }
 
-    const destination = (await isPlatformAdminUser(data.user.id)) ? "/platform" : "/dashboard";
+    const [isPlatformAdmin, profileResult] = await Promise.all([
+      isPlatformAdminUser(data.user.id),
+      supabase.from("profiles").select("must_change_password").eq("id", data.user.id).maybeSingle<{ must_change_password: boolean }>()
+    ]);
+    const destination = resolveAuthDestination(parsed.data.next, isPlatformAdmin);
+
+    if (profileResult.data?.must_change_password) {
+      return { destination: `/change-password?next=${encodeURIComponent(destination)}` };
+    }
+
     return { destination };
   } catch (error) {
     console.error("Sign in error:", error);

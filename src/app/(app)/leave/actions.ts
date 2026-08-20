@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { ZodError } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { reviewLeaveRequest, submitLeaveRequest } from "@/lib/services/leaves";
 
@@ -36,8 +37,13 @@ export async function reviewLeaveAction(formData: FormData) {
     });
   } catch (error) {
     if (isMigrationRequiredError(error)) redirect("/approvals?tab=leaves");
-    throw error;
+    if (error instanceof ZodError) {
+      return { error: error.issues[0]?.message ?? "Check the review details and try again." };
+    }
+    console.error("Leave review failed:", error);
+    return { error: error instanceof Error ? error.message : "Leave could not be reviewed. Please try again." };
   }
   revalidatePath("/leave");
   revalidatePath("/approvals");
+  return { success: true };
 }

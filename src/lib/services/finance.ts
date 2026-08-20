@@ -458,6 +458,31 @@ export async function getFinanceDashboard(user: AppUser) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const startOfThisMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
 
+  const optimized = await supabase.rpc("get_finance_dashboard", {
+    p_school_id: user.schoolId,
+    p_month_start: startOfThisMonth,
+    p_today: todayStr
+  });
+
+  if (!optimized.error && optimized.data && typeof optimized.data === "object") {
+    const data = optimized.data as any;
+    return {
+      totalExpected: Number(data.totalExpected ?? 0),
+      totalCollected: Number(data.totalCollected ?? 0),
+      totalOutstanding: Number(data.totalOutstanding ?? 0),
+      todayCollection: Number(data.todayCollection ?? 0),
+      monthlyCollection: Number(data.monthlyCollection ?? 0),
+      totalDiscounts: Number(data.totalDiscounts ?? 0),
+      pendingPayments: Number(data.pendingPayments ?? 0),
+      overduePayments: Number(data.overduePayments ?? 0),
+      recentPayments: data.recentPayments ?? [],
+      outstandingByClass: data.outstandingByClass ?? [],
+      collectionMethodData: data.collectionMethodData ?? []
+    };
+  }
+
+  // Rolling-deploy fallback for environments where the aggregation migration
+  // has not reached PostgREST yet.
   const [accountsRes, todayPaymentsRes, monthPaymentsRes] = await Promise.all([
     supabase
       .from("student_fee_directory")

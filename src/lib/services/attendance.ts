@@ -21,17 +21,10 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
   const attendanceDate = date ?? new Date().toISOString().slice(0, 10);
   let teacherClassIds: string[] | null = null;
 
-  if (user.role === "teacher") {
-    const [assignedClasses, headClasses] = await Promise.all([
-      supabase.from("teacher_assignments").select("class_id").eq("school_id", user.schoolId).eq("teacher_id", user.id),
-      supabase.from("classes").select("id").eq("school_id", user.schoolId).eq("head_teacher_id", user.id)
-    ]);
-
-    if (assignedClasses.error) throw new Error(assignedClasses.error.message);
+  if (user.role === "teacher" || user.role === "head_teacher") {
+    const headClasses = await supabase.from("classes").select("id").eq("school_id", user.schoolId).eq("head_teacher_id", user.id);
     if (headClasses.error) throw new Error(headClasses.error.message);
-    teacherClassIds = [
-      ...new Set([...(assignedClasses.data ?? []).map((row: any) => row.class_id), ...(headClasses.data ?? []).map((row: any) => row.id)])
-    ];
+    teacherClassIds = (headClasses.data ?? []).map((row: any) => row.id);
   }
 
   let classQuery = supabase
@@ -98,7 +91,7 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
       grade_name: row.grades?.name,
       section_name: row.sections?.name,
       academic_year_name: row.academic_years?.name,
-      can_mark_attendance: user.role === "teacher" && row.head_teacher_id === user.id
+      can_mark_attendance: (user.role === "teacher" || user.role === "head_teacher") && row.head_teacher_id === user.id
     })),
     selectedClassId,
     attendanceDate,

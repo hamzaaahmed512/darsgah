@@ -2,12 +2,15 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdminUser } from "@/lib/platform/auth";
+import { resolveAuthDestination } from "@/lib/auth/destination";
 
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Enter your current password"),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(8, "Confirm your password")
+    confirmPassword: z.string().min(8, "Confirm your password"),
+    next: z.string().optional()
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Passwords do not match",
@@ -53,5 +56,6 @@ export async function changePasswordAction(values: ChangePasswordValues) {
 
   if (profileError) return { error: profileError.message };
   
-  return { success: true };
+  const destination = resolveAuthDestination(parsed.data.next, await isPlatformAdminUser(user.id));
+  return { success: true, destination };
 }

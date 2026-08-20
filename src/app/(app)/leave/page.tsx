@@ -1,4 +1,3 @@
-import { CheckCircle2, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,10 +6,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { LeaveApplicationDialog } from "@/components/leave/leave-application-dialog";
 import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
+import { LeaveReviewActions } from "@/components/leave/leave-review-actions";
 import { requireUser } from "@/lib/auth/session";
 import { getLeaveRequestsForReview, getMyLeaveCenter } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
-import { reviewLeaveAction, submitLeaveAction } from "@/app/(app)/leave/actions";
+import { submitLeaveAction } from "@/app/(app)/leave/actions";
 
 const statusTone = {
   pending: "yellow",
@@ -104,26 +104,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                         </td>
                         <td className="py-3 pr-4">
                           {leave.status === "pending" ? (
-                            <div className="flex justify-end gap-2">
-                              <form action={reviewLeaveAction}>
-                                <input type="hidden" name="leave_id" value={leave.id} />
-                                <input type="hidden" name="decision" value="approved" />
-                                <input type="hidden" name="principal_remarks" value="" />
-                                <Button type="submit" size="sm">
-                                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                                  Approve
-                                </Button>
-                              </form>
-                              <form action={reviewLeaveAction}>
-                                <input type="hidden" name="leave_id" value={leave.id} />
-                                <input type="hidden" name="decision" value="rejected" />
-                                <input type="hidden" name="principal_remarks" value="" />
-                                <Button type="submit" variant="danger" size="sm">
-                                  <XCircle className="h-4 w-4" aria-hidden="true" />
-                                  Reject
-                                </Button>
-                              </form>
-                            </div>
+                            <LeaveReviewActions leaveId={leave.id} />
                           ) : (
                             <p className="text-right text-xs font-semibold text-muted">Reviewed by {(leave as any).reviewed_by_name ?? "reviewer"}</p>
                           )}

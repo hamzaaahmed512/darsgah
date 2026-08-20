@@ -23,10 +23,10 @@ const PRIORITY_DOT: Record<AnnouncementPriority, string> = {
   critical: "bg-danger"
 };
 
-export function AnnouncementBell({ user }: { user: AppUser }) {
-  const [open, setOpen] = useState(false);
+export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; open: boolean; onOpenChange: (open: boolean) => void }) {
   const [announcements, setAnnouncements] = useState<AnnouncementWithRead[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const supabase = useCallback(() => createClient(), []);
   const canManage = hasPermission(user.role, "announcements:manage", user.permissions);
@@ -36,12 +36,14 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch("/api/announcements");
-      if (res.ok) {
-        const data = await res.json();
-        setAnnouncements(data);
-      }
+      if (!res.ok) throw new Error("Announcements could not be loaded.");
+      const data = await res.json();
+      setAnnouncements(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Announcements could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -69,11 +71,11 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (!panelRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!panelRef.current?.contains(e.target as Node)) onOpenChange(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [onOpenChange]);
 
   async function handleMarkRead(id: string) {
     // Optimistically update
@@ -101,7 +103,11 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
     <div className="relative" ref={panelRef}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          const nextOpen = !open;
+          onOpenChange(nextOpen);
+          if (nextOpen) void fetchAnnouncements();
+        }}
         className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted transition duration-200 hover:bg-primary-soft hover:text-primary"
         aria-label={`Announcements${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
         aria-expanded={open}
@@ -147,6 +153,11 @@ export function AnnouncementBell({ user }: { user: AppUser }) {
         <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto sm:max-h-[400px]">
           {loading ? (
             <div className="py-10 text-center text-sm text-muted">Loading…</div>
+          ) : loadError ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm font-semibold text-danger">{loadError}</p>
+              <button type="button" onClick={() => void fetchAnnouncements()} className="mt-3 text-sm font-semibold text-primary hover:underline">Try again</button>
+            </div>
           ) : !announcements.length ? (
             <div className="py-10 text-center">
               <Bell className="mx-auto mb-2 h-8 w-8 text-outline" />

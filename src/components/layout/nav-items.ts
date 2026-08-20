@@ -56,7 +56,7 @@ function getOverviewHref(role: UserRole) {
   if (role === "administrator") return "/dashboard/admin";
   if (role === "principal") return "/dashboard/principal";
   if (role === "student_staff") return "/dashboard/registrar";
-  if (role === "teacher") return "/dashboard/teacher";
+  if (role === "teacher" || role === "head_teacher") return "/dashboard/teacher";
   return "/dashboard";
 }
 

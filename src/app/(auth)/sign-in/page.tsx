@@ -20,7 +20,8 @@ export default function SignInPage() {
       try {
         const result = await signInAction({
           email: String(formData.get("email") ?? ""),
-          password: String(formData.get("password") ?? "")
+          password: String(formData.get("password") ?? ""),
+          next: new URLSearchParams(window.location.search).get("next") ?? undefined
         });
 
         if (result?.error) {

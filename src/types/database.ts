@@ -93,6 +93,8 @@ export type AppUser = {
   avatarUrl: string | null;
   schoolId: string;
   schoolName: string;
+  schoolShortName?: string | null;
+  schoolFullName?: string | null;
   role: UserRole;
   department: string | null;
   jobTitle: string | null;
@@ -100,6 +102,9 @@ export type AppUser = {
   /** Resolved permission list (base role + custom role + overrides). Null means "use static defaults". */
   permissions: string[] | null;
   customRoleId: string | null;
+  /** Branding is loaded with the session when the optimized database RPC is installed. */
+  schoolLogoUrl?: string | null;
+  schoolFaviconUrl?: string | null;
 };
 
 export type Student = {

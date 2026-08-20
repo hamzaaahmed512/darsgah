@@ -98,6 +98,37 @@ a {
   color: #1e40af;
 }
 
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  box-shadow: 0 1px 8px rgba(37, 99, 235, 0.35);
+}
+
+.navigation-progress--loading {
+  opacity: 1;
+  animation: navigation-progress-loading 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.navigation-progress--finishing {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 160ms ease-out, opacity 220ms ease-out 80ms;
+}
+
+@keyframes navigation-progress-loading {
+  0% { transform: scaleX(0.06); }
+  45% { transform: scaleX(0.55); }
+  75% { transform: scaleX(0.76); }
+  100% { transform: scaleX(0.88); }
+}
+
 .marketing-container {
   width: min(100% - 2rem, 1180px);
   margin-inline: auto;

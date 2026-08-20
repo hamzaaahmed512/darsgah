@@ -1,32 +1,29 @@
 import { requireUser } from "@/lib/auth/session";
-import { getDashboardData } from "@/lib/services/dashboard";
-import { getTeacherHeadClasses } from "@/lib/services/academics";
+import { getTeacherDashboardData } from "@/lib/services/dashboard";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { GraduationCap, UserRoundCheck, Users, CalendarX2, CalendarCheck, BookOpen } from "lucide-react";
+import { GraduationCap, School, CalendarX2, CalendarCheck, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 export default async function TeacherDashboardPage() {
   const user = await requireUser("dashboard:view");
-  if (user.role !== "teacher") {
+  if (user.role !== "teacher" && user.role !== "head_teacher") {
     throw new Error("Unauthorized access to Teacher Dashboard");
   }
 
-  const [dashboard, headClasses] = await Promise.all([
-    getDashboardData(user),
-    getTeacherHeadClasses(user)
-  ]);
+  const dashboard = await getTeacherDashboardData(user);
+  const headClasses = dashboard.headClasses;
 
   return (
     <>
       <PageHeader
         eyebrow={user.schoolName}
         title="Teacher Dashboard"
-        description="View your assigned classes, register student attendance, and update quiz/test marks."
+        description="View your head class, its students, and attendance."
       />
 
       {/* Quick Actions */}
@@ -54,7 +51,7 @@ export default async function TeacherDashboardPage() {
             </div>
             <div>
               <p className="font-semibold text-ink text-sm">My Classes</p>
-              <p className="text-xs text-muted">View subject assignments</p>
+              <p className="text-xs text-muted">View your teaching assignments</p>
             </div>
           </Link>
         </div>
@@ -65,10 +62,10 @@ export default async function TeacherDashboardPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} hint="School enrollment" icon={GraduationCap} />
-        <StatCard label="Teachers" value={dashboard.totalTeachers.toLocaleString()} hint="School staff count" icon={UserRoundCheck} />
-        <StatCard label="Staff" value={dashboard.totalStaff.toLocaleString()} hint="Active accounts" icon={Users} />
-        <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="Daily absences" icon={CalendarX2} />
+        <StatCard label="My students" value={dashboard.totalStudents.toLocaleString()} hint="Students in your head class" icon={GraduationCap} />
+        <StatCard label="Head classes" value={headClasses.length.toLocaleString()} hint="Classes assigned to you" icon={School} />
+        <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="In your head class" icon={CalendarX2} />
+        <StatCard label="Attendance completed" value={`${dashboard.attendanceCompleted}/${headClasses.length}`} hint="Head classes marked today" icon={CalendarCheck} />
       </section>
 
       {/* Head Teacher Classes */}

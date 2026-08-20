@@ -87,7 +87,8 @@ async function uploadBrandAsset(schoolId: string, kind: "logo" | "favicon", file
 export async function saveSchoolProfileAction(formData: FormData) {
   try {
     const user = await requireUser("settings:manage");
-    const name = readString(formData, "name").toUpperCase();
+    const name = readString(formData, "name").slice(0, 120);
+    const shortName = readString(formData, "shortName").toUpperCase().slice(0, 20);
     const timezone = readString(formData, "timezone");
     const email = readString(formData, "email");
     const phone = formatPakistaniPhone(readString(formData, "phone"));
@@ -104,6 +105,7 @@ export async function saveSchoolProfileAction(formData: FormData) {
 
     const accentColor = readString(formData, "resultCardAccentColor");
     const settings: Record<string, any> = {
+      schoolShortName: shortName,
       schoolEmail: email,
       schoolPhone: phone,
       schoolWebsite: website,

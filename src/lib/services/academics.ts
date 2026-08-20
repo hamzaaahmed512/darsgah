@@ -46,7 +46,7 @@ export async function getTeacherSubjectAssignments(user: AppUser) {
     .select("classes(id,name,room,grades(name),sections(name),academic_years(name)), subjects(name)")
     .eq("school_id", user.schoolId);
 
-  if (user.role === "teacher") {
+  if (user.role === "teacher" || user.role === "head_teacher") {
     query = query.eq("teacher_id", user.id);
   }
 

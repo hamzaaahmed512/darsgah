@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { changePasswordAction } from "@/app/(auth)/change-password/actions";
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ next }: { next?: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -19,16 +19,17 @@ export function ChangePasswordForm() {
         const result = await changePasswordAction({
           currentPassword: String(formData.get("currentPassword") ?? ""),
           password: String(formData.get("password") ?? ""),
-          confirmPassword: String(formData.get("confirmPassword") ?? "")
+          confirmPassword: String(formData.get("confirmPassword") ?? ""),
+          next
         });
         
-        if (result && result.error) {
-          setError(result.error);
-        } else {
-          router.replace("/");
+        if ("destination" in result && result.destination) {
+          router.replace(result.destination);
           router.refresh();
+        } else {
+          setError(result.error ?? "Password could not be changed. Please try again.");
         }
-      } catch (err) {
+      } catch {
         setError("Password could not be changed. Please try again.");
       }
     });

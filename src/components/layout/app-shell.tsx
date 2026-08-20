@@ -12,16 +12,20 @@ import { getNavItems, navItemVisible } from "@/components/layout/nav-items";
 import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 
 type SchoolBranding = {
   logoUrl: string | null;
   faviconUrl: string | null;
+  shortName: string | null;
+  fullName: string;
 };
 
 export function AppShell({ user, branding, children }: { user: AppUser; branding: SchoolBranding; children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
 
   useEffect(() => {
     setProfileOpen(false);
+    setAnnouncementsOpen(false);
   }, [pathname]);
 
   const prevPathnameRef = useRef(pathname);
@@ -134,13 +139,14 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
         <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-primary text-white shadow-button">
           {branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logoUrl} alt={`${user.schoolName} logo`} className="h-full w-full object-cover" />
+            <img src={branding.logoUrl} alt={`${branding.fullName} logo`} className="h-full w-full object-cover" />
           ) : (
             <BookOpen aria-hidden="true" />
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-2xl font-bold leading-tight tracking-tight text-ink" title={user.schoolName}>{user.schoolName}</p>
+          <p className="truncate font-display text-2xl font-bold leading-tight tracking-tight text-ink" title={branding.shortName ?? branding.fullName}>{branding.shortName ?? branding.fullName}</p>
+          {branding.shortName ? <p className="max-w-[180px] truncate text-xs font-medium leading-tight text-muted" title={branding.fullName}>{branding.fullName}</p> : null}
           <p className="font-label text-[10px] font-semibold uppercase tracking-wider text-muted">Powered by Darsgah</p>
         </div>
       </div>
@@ -248,6 +254,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
 
   return (
     <div className="min-h-screen bg-background text-ink">
+      <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
       <div className="fixed inset-y-0 left-0 z-40 hidden w-[280px] bg-white shadow-[1px_0_0_rgba(226,232,240,0.9)] lg:block">{sidebar}</div>
       <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
@@ -274,11 +281,17 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
           </div>
           <div className="relative flex items-center gap-3" ref={menuRef}>
             {hasPermission(user.role, "announcements:view", user.permissions) && (
-              <AnnouncementBell user={user} />
+              <AnnouncementBell user={user} open={announcementsOpen} onOpenChange={(nextOpen) => {
+                setAnnouncementsOpen(nextOpen);
+                if (nextOpen) setProfileOpen(false);
+              }} />
             )}
             <button
               type="button"
-              onClick={() => setProfileOpen((value) => !value)}
+              onClick={() => {
+                setAnnouncementsOpen(false);
+                setProfileOpen((value) => !value);
+              }}
               className="flex h-11 w-11 items-center justify-center rounded-full text-primary transition duration-200 hover:bg-surface-low"
               aria-haspopup="menu"
               aria-expanded={profileOpen}
@@ -289,7 +302,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
 
             <div
               className={cn(
-                "absolute right-0 top-[calc(100%+0.75rem)] w-72 rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
+                "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-72 rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
                 profileOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1"
               )}
               role="menu"
@@ -308,6 +321,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
               <div className="mt-2 grid gap-1">
                 <Link
                   href="/profile"
+                  onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted transition hover:bg-surface-low hover:text-primary"
                   role="menuitem"
                 >
@@ -319,6 +333,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
                 </Link>
                 <Link
                   href="/school-profile"
+                  onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-low hover:text-primary"
                   role="menuitem"
                 >
