@@ -133,121 +133,148 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
     </div>
   );
 
+  // Group visible items by their section label, preserving order
+  const groupedItems = items.reduce<{ section: string; items: typeof items }[]>((acc, item) => {
+    const sectionLabel = item.section ?? "";
+    const last = acc[acc.length - 1];
+    if (last && last.section === sectionLabel) {
+      last.items.push(item);
+    } else {
+      acc.push({ section: sectionLabel, items: [item] });
+    }
+    return acc;
+  }, []);
+
   const sidebar = (
-    <aside className="flex h-full w-[280px] flex-col bg-white p-5">
-      <div className="mb-10 flex items-center gap-3 px-1">
-        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-primary text-white shadow-button">
+    <aside className="flex h-full w-[280px] flex-col bg-white">
+      {/* Brand header */}
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary text-white shadow-sm">
           {branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={branding.logoUrl} alt={`${branding.fullName} logo`} className="h-full w-full object-cover" />
           ) : (
-            <BookOpen aria-hidden="true" />
+            <BookOpen className="h-4 w-4" aria-hidden="true" />
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-2xl font-bold leading-tight tracking-tight text-ink" title={branding.shortName ?? branding.fullName}>{branding.shortName ?? branding.fullName}</p>
-          {branding.shortName ? <p className="max-w-[180px] truncate text-xs font-medium leading-tight text-muted" title={branding.fullName}>{branding.fullName}</p> : null}
-          <p className="font-label text-[10px] font-semibold uppercase tracking-wider text-muted">Powered by Darsgah</p>
+          <p className="truncate text-sm font-bold leading-tight text-slate-800" title={branding.shortName ?? branding.fullName}>{branding.shortName ?? branding.fullName}</p>
+          {branding.shortName ? <p className="max-w-[180px] truncate text-xs font-medium leading-tight text-slate-400" title={branding.fullName}>{branding.fullName}</p> : null}
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Powered by Darsgah</p>
         </div>
       </div>
-      <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const isApprovals = item.href === "/approvals";
-          const showBadge = isApprovals && pendingCount > 0 && hasPermission(user.role, "approvals:review", user.permissions);
 
-          if (item.subItems) {
-            const allowedSubItems = item.subItems.filter((sub) =>
-              navItemVisible(user.role, sub.permission, user.permissions, sub.anyPermissions)
-            );
-            if (allowedSubItems.length === 0) return null;
-            const expanded = expandedModules[item.href] ?? active;
-            return (
-              <div key={item.href} className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedModules((current) => {
-                      const isExpanded = current[item.href] ?? active;
-                      return { ...current, [item.href]: !isExpanded };
-                    })
-                  }
-                  className={cn(
-                    "group flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-all duration-200",
-                    active ? "bg-primary text-white shadow-button" : "text-muted hover:bg-surface-low hover:text-ink"
-                  )}
-                  aria-expanded={expanded}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-xl transition duration-200",
-                        active ? "bg-white/20 text-white" : "bg-surface-low text-muted group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
+        {groupedItems.map(({ section, items: sectionItems }, groupIndex) => (
+          <div key={`${section}-${groupIndex}`} className={groupIndex > 0 ? "mt-5" : ""}>
+            {/* Section label */}
+            {section && (
+              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                {section}
+              </p>
+            )}
+
+            <div className="space-y-0.5">
+              {sectionItems.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isApprovals = item.href === "/approvals";
+                const showBadge = isApprovals && pendingCount > 0 && hasPermission(user.role, "approvals:review", user.permissions);
+
+                if (item.subItems) {
+                  const allowedSubItems = item.subItems.filter((sub) =>
+                    navItemVisible(user.role, sub.permission, user.permissions, sub.anyPermissions)
+                  );
+                  if (allowedSubItems.length === 0) return null;
+                  const expanded = expandedModules[item.href] ?? active;
+                  return (
+                    <div key={item.href}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedModules((current) => {
+                            const isExpanded = current[item.href] ?? active;
+                            return { ...current, [item.href]: !isExpanded };
+                          })
+                        }
+                        className={cn(
+                          "group flex w-full items-center justify-between gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150",
+                          active
+                            ? "bg-primary text-white"
+                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        )}
+                        aria-expanded={expanded}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon
+                            className={cn("h-[15px] w-[15px] shrink-0 transition-colors duration-150", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+                            aria-hidden="true"
+                          />
+                          <span className="font-semibold">{item.label}</span>
+                        </div>
+                        <ChevronDown
+                          className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200", expanded ? "rotate-180" : "", active ? "text-white/70" : "text-slate-400")}
+                          aria-hidden="true"
+                        />
+                      </button>
+
+                      {expanded && (
+                        <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
+                          {allowedSubItems.map((sub) => {
+                            const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+                            return (
+                              <Link
+                                href={sub.href}
+                                key={sub.href}
+                                onClick={() => setOpen(false)}
+                                className={cn(
+                                  "flex items-center rounded-md px-3 py-2 text-xs font-semibold transition-all duration-150",
+                                  isSubActive
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                )}
+                              >
+                                {sub.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       )}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    {item.label}
-                  </div>
-                  <ChevronDown className={cn("h-4 w-4 transition", expanded ? "rotate-180" : "")} aria-hidden="true" />
-                </button>
+                    </div>
+                  );
+                }
 
-                {expanded && (
-                  <div className="ml-5 space-y-1 border-l border-outline/70 pl-3">
-                    {allowedSubItems.map((sub) => {
-                      const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`);
-                      return (
-                        <Link
-                          href={sub.href}
-                          key={sub.href}
-                          onClick={() => setOpen(false)}
-                          className={cn(
-                            "flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition duration-200",
-                            isSubActive
-                              ? "bg-primary-soft text-primary font-bold"
-                              : "text-muted hover:bg-surface-low hover:text-ink"
-                          )}
-                        >
-                          {sub.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          return (
-            <Link
-              href={item.href}
-              key={item.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "group flex items-center justify-between gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200",
-                active ? "bg-primary text-white shadow-button" : "text-muted hover:bg-surface-low hover:text-ink"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-xl transition duration-200",
-                    active ? "bg-white/20 text-white" : "bg-surface-low text-muted group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </span>
-                {item.label}
-              </div>
-              {showBadge && (
-                <span className="flex h-5 items-center justify-center rounded-full bg-danger px-2 text-xs font-bold text-white shadow-sm">
-                  {pendingCount > 99 ? "99+" : pendingCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    href={item.href}
+                    key={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "group flex items-center justify-between gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-150",
+                      active
+                        ? "bg-primary text-white shadow-sm"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon
+                        className={cn("h-[15px] w-[15px] shrink-0 transition-colors duration-150", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+                        aria-hidden="true"
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                    {showBadge && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
+                        {pendingCount > 99 ? "99+" : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </aside>
   );

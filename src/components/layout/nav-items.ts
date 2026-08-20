@@ -23,33 +23,35 @@ export interface NavItem {
   icon: typeof LayoutDashboard;
   permission: Permission;
   anyPermissions?: Permission[];
+  section?: string;
   subItems?: Array<{ href: string; label: string; permission: Permission; anyPermissions?: Permission[] }>;
 }
 
 const coreNavItems: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, permission: "dashboard:view" },
-  { href: "/approvals", label: "Action Center", icon: ClipboardCheck, permission: "approvals:view" },
-  { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view" },
-  { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view" },
-  { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view" },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, permission: "dashboard:view", section: "MAIN" },
+  { href: "/approvals", label: "Action Center", icon: ClipboardCheck, permission: "approvals:view", section: "MANAGE" },
+  { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view", section: "MANAGE" },
+  { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view", section: "PEOPLE" },
+  { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },
   {
     href: "/finance",
     label: "Finance",
     icon: Coins,
     permission: "finance:view",
+    section: "OPERATIONS",
     subItems: [
       { href: "/finance/dashboard", label: "Dashboard", permission: "finance:view" },
       { href: "/finance/fees", label: "Fee Management", permission: "finance:view" },
       { href: "/finance/payroll", label: "Payroll", permission: "payroll:view" }
     ]
   },
-  { href: "/staff", label: "Staff", icon: Users, permission: "staff:view" },
-  { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage" },
-  { href: "/subjects", label: "Subjects", icon: BookOpen, permission: "classes:manage" },
-  { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view" },
-  { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view" },
-  { href: "/admin", label: "Admin", icon: Shield, permission: "users:manage" },
-  { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" }
+  { href: "/staff", label: "Staff", icon: Users, permission: "staff:view", section: "PEOPLE" },
+  { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
+  { href: "/subjects", label: "Subjects", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
+  { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view", section: "OPERATIONS" },
+  { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
+  { href: "/admin", label: "Admin", icon: Shield, permission: "users:manage", section: "SYSTEM" },
+  { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage", section: "SYSTEM" }
 ];
 
 function getOverviewHref(role: UserRole) {
@@ -66,6 +68,7 @@ function academicEvaluationModule(): NavItem {
     label: "Academics",
     icon: BarChart3,
     permission: "academics:view",
+    section: "ACADEMICS",
     anyPermissions: ["results:view", "marks:manage"],
     subItems: [
       {
@@ -88,6 +91,7 @@ function principalAcademicControlItem(): NavItem {
     label: "Academic Control",
     icon: BarChart3,
     permission: "marks:approve",
+    section: "ACADEMICS",
     anyPermissions: ["results:view"]
   };
 }
@@ -97,7 +101,8 @@ function structureAcademicsItem(): NavItem {
     href: "/academics",
     label: "Academics",
     icon: BarChart3,
-    permission: "academics:view"
+    permission: "academics:view",
+    section: "ACADEMICS"
   };
 }
 
