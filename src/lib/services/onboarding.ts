@@ -1,12 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import {
-  DEFAULT_CORE_SUBJECTS,
   DEFAULT_GRADE_NAMES,
-  DEFAULT_SECTION_NAME,
-  HIGH_SCHOOL_GRADE_NAMES
+  DEFAULT_SECTION_NAME
 } from "@/lib/constants/onboarding";
-import { createGrade, createSection } from "@/lib/services/academics";
+import { getAllUniqueDefaultSubjectNames, isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
+import { createGrade, createSection, seedDefaultSubjectsForClass } from "@/lib/services/academics";
 import { logActivity } from "@/lib/services/activity";
 
 export async function getOnboardingStatus(user: AppUser) {
@@ -122,6 +121,8 @@ export async function runOnboardingGradeSetup(
   }
 
   const createdClassIds: string[] = [];
+  const seededSubjectsByGrade: Record<string, number> = {};
+
   for (const gradeName of values.selectedGrades) {
     const gradeId = gradeMap.get(gradeName);
     if (!gradeId) continue;
@@ -137,52 +138,51 @@ export async function runOnboardingGradeSetup(
       .maybeSingle();
     if (existingClassError) throw new Error(existingClassError.message);
 
-    if (existingClass?.id) {
-      createdClassIds.push(existingClass.id);
-      continue;
+    let classId = existingClass?.id;
+    if (!classId) {
+      const { data: createdClass, error: createClassError } = await supabase
+        .from("classes")
+        .insert({
+          school_id: user.schoolId,
+          academic_year_id: academicYear.id,
+          grade_id: gradeId,
+          section_id: sectionId,
+          name: className,
+          ...(headTeacherId ? { head_teacher_id: headTeacherId } : {})
+        })
+        .select("id")
+        .single();
+      if (createClassError) throw new Error(createClassError.message);
+      classId = createdClass.id;
     }
 
-    const { data: createdClass, error: createClassError } = await supabase
-      .from("classes")
-      .insert({
-        school_id: user.schoolId,
-        academic_year_id: academicYear.id,
-        grade_id: gradeId,
-        section_id: sectionId,
-        name: className,
-        ...(headTeacherId ? { head_teacher_id: headTeacherId } : {})
-      })
-      .select("id")
-      .single();
-    if (createClassError) throw new Error(createClassError.message);
-    createdClassIds.push(createdClass.id);
+    createdClassIds.push(classId);
+
+    const seedResult = await seedDefaultSubjectsForClass(user, classId, gradeName);
+    seededSubjectsByGrade[gradeName] = seedResult.linkedCount;
   }
 
   await logActivity(user, "onboarding_grades_setup", "school", user.schoolId, {
     grades: values.selectedGrades,
-    classes_created: createdClassIds.length
+    classes_created: createdClassIds.length,
+    subjects_seeded: seededSubjectsByGrade
   });
 
-  return { classIds: createdClassIds, academicYearId: academicYear.id, sectionId };
+  return { classIds: createdClassIds, academicYearId: academicYear.id, sectionId, seededSubjectsByGrade };
 }
 
 export async function runOnboardingSubjectSetup(
   user: AppUser,
   values: {
-    selectedSubjects: string[];
     customSubjects?: string[];
-    applyToAllClasses: boolean;
     classIds?: string[];
-    electiveSubjectNames?: string[];
   }
 ) {
   const supabase = await createClient();
-  const subjectNames = [...new Set([...values.selectedSubjects, ...(values.customSubjects ?? [])].map((name) => name.trim()).filter(Boolean))];
+  const subjectNames = [...new Set((values.customSubjects ?? []).map((name) => name.trim()).filter(Boolean))];
   if (!subjectNames.length) {
-    throw new Error("Select at least one subject to continue.");
+    return { subjectIds: [], classCount: 0 };
   }
-
-  const electiveNames = new Set((values.electiveSubjectNames ?? []).map((name) => name.trim()).filter(Boolean));
 
   const { data: existingSubjects, error: subjectsError } = await supabase
     .from("subjects")
@@ -205,7 +205,7 @@ export async function runOnboardingSubjectSetup(
       .insert({
         school_id: user.schoolId,
         name: subjectName,
-        is_elective: electiveNames.has(subjectName)
+        is_elective: false
       })
       .select("id")
       .single();
@@ -215,7 +215,7 @@ export async function runOnboardingSubjectSetup(
   }
 
   let targetClassIds = values.classIds ?? [];
-  if (values.applyToAllClasses) {
+  if (!targetClassIds.length) {
     const { data: classes, error } = await supabase.from("classes").select("id").eq("school_id", user.schoolId);
     if (error) throw new Error(error.message);
     targetClassIds = (classes ?? []).map((row) => row.id);
@@ -230,7 +230,7 @@ export async function runOnboardingSubjectSetup(
       school_id: user.schoolId,
       class_id: classId,
       subject_id: subjectId,
-      is_class_specific: false
+      is_class_specific: true
     }))
   );
 
@@ -257,12 +257,10 @@ export async function completeOnboarding(user: AppUser) {
   await logActivity(user, "onboarding_completed", "school", user.schoolId);
 }
 
-export function isHighSchoolGrade(gradeName: string) {
-  return HIGH_SCHOOL_GRADE_NAMES.has(gradeName);
-}
+export { isHighSchoolGrade };
 
 export function getDefaultSubjectNames() {
-  return [...DEFAULT_CORE_SUBJECTS];
+  return getAllUniqueDefaultSubjectNames();
 }
 
 export function getDefaultGradeNames() {

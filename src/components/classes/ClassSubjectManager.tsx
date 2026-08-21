@@ -1,13 +1,14 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addClassSubjectAction } from "@/app/(app)/classes/actions";
+import { addClassSubjectAction, removeClassSubjectAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
 
 type ClassSubject = {
   id: string;
@@ -31,8 +32,9 @@ export function ClassSubjectManager({
   const [draft, setDraft] = useState("");
   const [isElective, setIsElective] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const isHighSchool = ["Grade 9", "Grade 10", "Grade 11", "Grade 12"].includes(gradeName);
+  const isHighSchool = isHighSchoolGrade(gradeName);
 
   function handleAddSubject() {
     const name = draft.trim();
@@ -49,9 +51,25 @@ export function ClassSubjectManager({
         await addClassSubjectAction(formData);
         pushToast(`Added ${name} to this class.`, "success");
         setDraft("");
+        setIsElective(false);
         router.refresh();
       } catch (err: any) {
         pushToast(err?.message ?? "Failed to add subject.", "error");
+      }
+    });
+  }
+
+  function handleRemoveSubject(classSubjectId: string, subjectName: string) {
+    setRemovingId(classSubjectId);
+    startTransition(async () => {
+      try {
+        await removeClassSubjectAction(classSubjectId);
+        pushToast(`Removed ${subjectName} from this class.`, "success");
+        router.refresh();
+      } catch (err: any) {
+        pushToast(err?.message ?? "Failed to remove subject.", "error");
+      } finally {
+        setRemovingId(null);
       }
     });
   }
@@ -66,10 +84,24 @@ export function ClassSubjectManager({
       <div className="mb-3 flex flex-wrap gap-2">
         {subjects.length ? (
           subjects.map((subject) => (
-            <Badge key={subject.id} tone={subject.is_class_specific ? "blue" : "gray"}>
-              {subject.name}
-              {subject.is_elective ? " · Elective" : ""}
-            </Badge>
+            <span
+              key={subject.id}
+              className="inline-flex items-center gap-1"
+            >
+              <Badge tone={subject.is_class_specific ? "blue" : "gray"}>
+                {subject.name}
+                {subject.is_elective ? " · Elective" : ""}
+              </Badge>
+              <button
+                type="button"
+                onClick={() => handleRemoveSubject(subject.id, subject.name)}
+                disabled={pending && removingId === subject.id}
+                className="rounded-md p-1 text-muted transition hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+                aria-label={`Remove ${subject.name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </span>
           ))
         ) : (
           <p className="text-xs italic text-muted">No subjects linked yet.</p>

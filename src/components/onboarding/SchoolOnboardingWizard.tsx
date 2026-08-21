@@ -6,7 +6,8 @@ import { Check, ChevronRight, GraduationCap, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
-import { DEFAULT_CORE_SUBJECTS, DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
+import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
+import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import {
   completeOnboardingAction,
   onboardingGradeSetupAction,
@@ -26,17 +27,26 @@ export function SchoolOnboardingWizard({
   const [error, setError] = useState<string | null>(null);
   const [createdClassIds, setCreatedClassIds] = useState<string[]>([]);
   const [selectedGrades, setSelectedGrades] = useState<string[]>([...DEFAULT_GRADE_NAMES]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([...DEFAULT_CORE_SUBJECTS]);
-  const [applyToAllClasses, setApplyToAllClasses] = useState(true);
+  const [seededSubjectsByGrade, setSeededSubjectsByGrade] = useState<Record<string, number>>({});
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customSubjectDraft, setCustomSubjectDraft] = useState("");
 
   const stepLabels = useMemo(
     () => [
       { id: 1, label: "Grades & Classes" },
-      { id: 2, label: "Global Subjects" }
+      { id: 2, label: "Review & Finish" }
     ],
     []
+  );
+
+  const seededSummary = useMemo(
+    () =>
+      selectedGrades.map((gradeName) => ({
+        gradeName,
+        subjectCount: seededSubjectsByGrade[gradeName] ?? getDefaultSubjectsForGrade(gradeName).length,
+        subjects: getDefaultSubjectsForGrade(gradeName).map((subject) => subject.name)
+      })),
+    [selectedGrades, seededSubjectsByGrade]
   );
 
   function toggleGrade(gradeName: string) {
@@ -45,15 +55,9 @@ export function SchoolOnboardingWizard({
     );
   }
 
-  function toggleSubject(subjectName: string) {
-    setSelectedSubjects((current) =>
-      current.includes(subjectName) ? current.filter((name) => name !== subjectName) : [...current, subjectName]
-    );
-  }
-
   function addCustomSubject() {
     const value = customSubjectDraft.trim();
-    if (!value || customSubjects.includes(value) || selectedSubjects.includes(value)) return;
+    if (!value || customSubjects.includes(value)) return;
     setCustomSubjects((current) => [...current, value]);
     setCustomSubjectDraft("");
   }
@@ -69,37 +73,36 @@ export function SchoolOnboardingWizard({
       try {
         const result = await onboardingGradeSetupAction(formData);
         setCreatedClassIds(result.classIds);
-        pushToast(`Created ${result.classIds.length} class(es) with Section A.`, "success");
+        setSeededSubjectsByGrade(result.seededSubjectsByGrade ?? {});
+        pushToast(`Generated ${result.classIds.length} class(es) with default subjects.`, "success");
         router.refresh();
         setStep(2);
       } catch (err: any) {
-        setError(err?.message ?? "Failed to set up grades and classes.");
+        setError(err?.message ?? "Failed to generate classes.");
       }
     });
   }
 
-  function handleSubjectSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleFinishSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
     const formData = new FormData();
-    selectedSubjects.forEach((subject) => formData.append("subject", subject));
     customSubjects.forEach((subject) => formData.append("custom_subject", subject));
-    if (applyToAllClasses) {
-      formData.append("apply_to_all_classes", "on");
-    } else {
-      createdClassIds.forEach((classId) => formData.append("class_id", classId));
-    }
+    createdClassIds.forEach((classId) => formData.append("class_id", classId));
 
     startTransition(async () => {
       try {
-        const result = await onboardingSubjectSetupAction(formData);
+        if (customSubjects.length) {
+          const result = await onboardingSubjectSetupAction(formData);
+          pushToast(`Added ${result.subjectIds.length} custom subject(s) across ${result.classCount} class(es).`, "success");
+        }
         await completeOnboardingAction();
-        pushToast(`Applied ${result.subjectIds.length} subject(s) across ${result.classCount} class(es).`, "success");
+        pushToast("School setup complete.", "success");
         router.refresh();
         setOpen(false);
       } catch (err: any) {
-        setError(err?.message ?? "Failed to set up subjects.");
+        setError(err?.message ?? "Failed to finish setup.");
       }
     });
   }
@@ -113,7 +116,7 @@ export function SchoolOnboardingWizard({
           <div>
             <p className="font-label text-xs font-bold uppercase tracking-wide text-primary">School setup</p>
             <h2 className="mt-1 font-display text-2xl font-bold text-ink">Welcome to Darsgah</h2>
-            <p className="mt-1 text-sm text-muted">Configure your academic structure in two quick steps.</p>
+            <p className="mt-1 text-sm text-muted">Generate classes with curriculum defaults, then review and finish.</p>
           </div>
           <button
             type="button"
@@ -151,12 +154,15 @@ export function SchoolOnboardingWizard({
                   <GraduationCap className="h-4 w-4 text-primary" />
                   Select the grades your school offers
                 </div>
-                <p className="mt-1 text-muted">All grades are pre-selected. Uncheck any grade you do not offer.</p>
+                <p className="mt-1 text-muted">
+                  Each selected grade gets a Section A class with grade-appropriate default subjects automatically linked.
+                </p>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {DEFAULT_GRADE_NAMES.map((gradeName) => {
                   const checked = selectedGrades.includes(gradeName);
+                  const defaultCount = getDefaultSubjectsForGrade(gradeName).length;
                   return (
                     <label
                       key={gradeName}
@@ -170,7 +176,10 @@ export function SchoolOnboardingWizard({
                         onChange={() => toggleGrade(gradeName)}
                         className="h-4 w-4 accent-primary"
                       />
-                      {gradeName}
+                      <span className="flex-1">{gradeName}</span>
+                      {checked && defaultCount ? (
+                        <span className="text-[10px] font-bold text-primary">{defaultCount} subjects</span>
+                      ) : null}
                     </label>
                   );
                 })}
@@ -178,51 +187,33 @@ export function SchoolOnboardingWizard({
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={pending || !selectedGrades.length}>
-                  {pending ? "Creating classes..." : "Continue to subjects"}
+                  {pending ? "Generating classes..." : "Generate Classes"}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </form>
           ) : (
-            <form onSubmit={handleSubjectSubmit} className="grid gap-5">
+            <form onSubmit={handleFinishSubmit} className="grid gap-5">
               <div className="rounded-[16px] border border-outline/50 bg-primary/5 px-4 py-3 text-sm text-ink">
                 <div className="flex items-center gap-2 font-semibold">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  Choose core subjects for your classes
+                  Default subjects applied per grade
                 </div>
-                <p className="mt-1 text-muted">Selected subjects will be attached to your generated classes.</p>
+                <p className="mt-1 text-muted">
+                  You can add custom subjects now or edit, add, and remove subjects later from the Classes page.
+                </p>
               </div>
 
-              <label className="flex items-center gap-3 rounded-[12px] border border-outline/60 bg-surface-low px-4 py-3 text-sm font-semibold text-ink">
-                <input
-                  type="checkbox"
-                  checked={applyToAllClasses}
-                  onChange={(event) => setApplyToAllClasses(event.target.checked)}
-                  className="h-4 w-4 accent-primary"
-                />
-                Apply to all selected classes
-              </label>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                {DEFAULT_CORE_SUBJECTS.map((subjectName) => {
-                  const checked = selectedSubjects.includes(subjectName);
-                  return (
-                    <label
-                      key={subjectName}
-                      className={`flex cursor-pointer items-center gap-3 rounded-[12px] border px-3 py-2.5 text-sm font-semibold transition ${
-                        checked ? "border-primary/40 bg-primary/5 text-ink" : "border-outline/60 bg-white text-muted"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleSubject(subjectName)}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      {subjectName}
-                    </label>
-                  );
-                })}
+              <div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
+                {seededSummary.map((item) => (
+                  <div key={item.gradeName} className="rounded-[12px] border border-outline/60 bg-surface-low px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-ink">{item.gradeName} A</p>
+                      <span className="text-xs font-semibold text-primary">{item.subjectCount} subjects linked</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">{item.subjects.join(", ")}</p>
+                  </div>
+                ))}
               </div>
 
               {customSubjects.length ? (
@@ -240,7 +231,7 @@ export function SchoolOnboardingWizard({
                 <Input
                   value={customSubjectDraft}
                   onChange={(event) => setCustomSubjectDraft(event.target.value)}
-                  placeholder="Custom subject name"
+                  placeholder="Optional custom subject for all classes"
                   className="max-w-xs"
                 />
                 <Button type="button" variant="secondary" onClick={addCustomSubject}>
@@ -252,7 +243,7 @@ export function SchoolOnboardingWizard({
                 <Button type="button" variant="secondary" onClick={() => setStep(1)} disabled={pending}>
                   Back
                 </Button>
-                <Button type="submit" disabled={pending || (!selectedSubjects.length && !customSubjects.length)}>
+                <Button type="submit" disabled={pending}>
                   {pending ? "Saving setup..." : "Finish setup"}
                 </Button>
               </div>

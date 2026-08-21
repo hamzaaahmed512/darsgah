@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
+import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 
 
 export async function getAcademicOptions(user: AppUser) {
@@ -107,17 +108,36 @@ async function assertHeadTeacher(user: AppUser, teacherId: string | null | undef
 export async function createClass(user: AppUser, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
   await assertHeadTeacher(user, data.head_teacher_id);
   const supabase = await createClient();
-  const { error } = await supabase.from("classes").insert({
-    school_id: user.schoolId,
-    name: data.name,
-    grade_id: data.grade_id,
-    section_id: data.section_id || null,
-    academic_year_id: data.academic_year_id,
-    room: data.room || null,
-    head_teacher_id: data.head_teacher_id || null
-  });
+
+  const { data: grade, error: gradeError } = await supabase
+    .from("grades")
+    .select("name")
+    .eq("school_id", user.schoolId)
+    .eq("id", data.grade_id)
+    .maybeSingle();
+  if (gradeError) throw new Error(gradeError.message);
+
+  const { data: createdClass, error } = await supabase
+    .from("classes")
+    .insert({
+      school_id: user.schoolId,
+      name: data.name,
+      grade_id: data.grade_id,
+      section_id: data.section_id || null,
+      academic_year_id: data.academic_year_id,
+      room: data.room || null,
+      head_teacher_id: data.head_teacher_id || null
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  if (grade?.name) {
+    await seedDefaultSubjectsForClass(user, createdClass.id, grade.name);
+  }
+
+  return createdClass.id;
 }
 
 export async function updateClass(user: AppUser, classId: string, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
@@ -461,6 +481,142 @@ export async function addClassSubject(
   if (error) throw new Error(error.message);
 
   return subjectId;
+}
+
+export async function removeClassSubject(user: AppUser, classSubjectId: string) {
+  const supabase = await createClient();
+  const { data: link, error: lookupError } = await supabase
+    .from("class_subjects")
+    .select("id,class_id,subject_id")
+    .eq("school_id", user.schoolId)
+    .eq("id", classSubjectId)
+    .maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (!link) throw new Error("Subject link not found.");
+
+  await supabase
+    .from("teacher_assignments")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("class_id", link.class_id)
+    .eq("subject_id", link.subject_id);
+
+  await supabase
+    .from("student_subject_enrollments")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("class_id", link.class_id)
+    .eq("subject_id", link.subject_id);
+
+  const { error } = await supabase
+    .from("class_subjects")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("id", classSubjectId);
+  if (error) throw new Error(error.message);
+}
+
+export async function seedDefaultSubjectsForClass(user: AppUser, classId: string, gradeName: string) {
+  const defaults = getDefaultSubjectsForGrade(gradeName);
+  if (!defaults.length) return { linkedCount: 0 };
+
+  const supabase = await createClient();
+  const { data: existingSubjects, error: subjectsError } = await supabase
+    .from("subjects")
+    .select("id,name,is_elective")
+    .eq("school_id", user.schoolId);
+  if (subjectsError) throw new Error(subjectsError.message);
+
+  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [subject.name.toLowerCase(), subject]));
+  const subjectIds: string[] = [];
+
+  for (const subjectDefault of defaults) {
+    const key = subjectDefault.name.toLowerCase();
+    const existing = subjectMap.get(key);
+    if (existing) {
+      if (subjectDefault.is_elective && !existing.is_elective) {
+        await supabase.from("subjects").update({ is_elective: true }).eq("school_id", user.schoolId).eq("id", existing.id);
+      }
+      subjectIds.push(existing.id);
+      continue;
+    }
+
+    const { data: createdSubject, error } = await supabase
+      .from("subjects")
+      .insert({
+        school_id: user.schoolId,
+        name: subjectDefault.name,
+        is_elective: Boolean(subjectDefault.is_elective)
+      })
+      .select("id,name,is_elective")
+      .single();
+    if (error) throw new Error(error.message);
+    subjectMap.set(key, createdSubject);
+    subjectIds.push(createdSubject.id);
+  }
+
+  const links = subjectIds.map((subjectId) => ({
+    school_id: user.schoolId,
+    class_id: classId,
+    subject_id: subjectId,
+    is_class_specific: false
+  }));
+
+  const { error: linkError } = await supabase.from("class_subjects").upsert(links, {
+    onConflict: "school_id,class_id,subject_id"
+  });
+  if (linkError && linkError.code !== "42P01") throw new Error(linkError.message);
+
+  return { linkedCount: subjectIds.length };
+}
+
+export async function getClassStudentRoster(user: AppUser, classId: string) {
+  const supabase = await createClient();
+
+  const [rosterResult, classSubjectsResult, enrollmentsResult] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select("student_id,students(first_name,last_name,admission_number)")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", classId)
+      .eq("status", "active")
+      .order("created_at"),
+    supabase
+      .from("class_subjects")
+      .select("subject_id,subjects(id,name,is_elective)")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", classId),
+    supabase
+      .from("student_subject_enrollments")
+      .select("student_id,subject_id,subjects(id,name,is_elective)")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", classId)
+  ]);
+
+  if (rosterResult.error) throw new Error(rosterResult.error.message);
+  if (classSubjectsResult.error) throw new Error(classSubjectsResult.error.message);
+  if (enrollmentsResult.error) throw new Error(enrollmentsResult.error.message);
+
+  const electiveOptions = (classSubjectsResult.data ?? [])
+    .filter((row: any) => Boolean(row.subjects?.is_elective))
+    .map((row: any) => ({ id: row.subjects.id as string, name: row.subjects.name as string }));
+
+  const electiveSubjectIds = new Set(electiveOptions.map((option) => option.id));
+  const studentElectiveByStudentId: Record<string, string | null> = {};
+
+  for (const row of enrollmentsResult.data ?? []) {
+    const enrollment = row as any;
+    if (!electiveSubjectIds.has(enrollment.subject_id)) continue;
+    studentElectiveByStudentId[enrollment.student_id] = enrollment.subject_id;
+  }
+
+  const roster = (rosterResult.data ?? []).map((row: any) => ({
+    id: row.student_id as string,
+    name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+    admission_number: row.students?.admission_number as string | null
+  }));
+
+  return { roster, electiveOptions, studentElectiveByStudentId };
 }
 
 export async function assignSubjectTeacher(user: AppUser, values: { classId: string; subjectId: string; teacherId: string }) {

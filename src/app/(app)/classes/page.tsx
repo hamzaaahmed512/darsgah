@@ -10,6 +10,7 @@ import { getAcademicOptions, getClassSubjectsMap, getClassTeachersAndAttendance 
 import { getStaff } from "@/lib/services/staff";
 import { ClassFormModal } from "@/components/classes/class-form";
 import { ClassSubjectManager } from "@/components/classes/ClassSubjectManager";
+import { ClassStudentRosterModal } from "@/components/classes/ClassStudentRosterModal";
 import { TeacherAssignmentModal } from "@/components/classes/TeacherAssignmentModal";
 import { DeleteClassButton } from "@/components/classes/class-actions";
 import { ClassFilterForm } from "@/components/classes/class-filter-form";
@@ -161,8 +162,16 @@ export default async function ClassesPage({
                           <GraduationCap className="h-4 w-4" /> Students ({studentCount})
                         </span>
                       </div>
-                      <p className="text-xs text-muted">Student records are paginated in Student Management.</p>
-                      <Link href={`/students?classId=${cls.id}`} className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">Open student list</Link>
+                      <p className="text-xs text-muted">Manage enrollments and elective tracks from the roster.</p>
+                      <ClassStudentRosterModal
+                        classId={cls.id}
+                        className={cls.name}
+                        gradeName={cls.grade_name}
+                        studentCount={studentCount}
+                      />
+                      <Link href={`/students?classId=${cls.id}`} className="mt-2 inline-flex text-xs font-semibold text-muted hover:text-primary hover:underline">
+                        Open full student management
+                      </Link>
                     </div>
                   </div>
 

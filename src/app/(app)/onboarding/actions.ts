@@ -27,18 +27,12 @@ export async function onboardingGradeSetupAction(formData: FormData) {
 
 export async function onboardingSubjectSetupAction(formData: FormData) {
   const user = await requireUser("classes:manage");
-  const selectedSubjects = formData.getAll("subject").map(String);
   const customSubjects = formData.getAll("custom_subject").map(String).filter(Boolean);
-  const applyToAllClasses = formData.get("apply_to_all_classes") !== "off";
   const classIds = formData.getAll("class_id").map(String).filter(Boolean);
-  const electiveSubjectNames = formData.getAll("elective_subject").map(String).filter(Boolean);
 
   const result = await runOnboardingSubjectSetup(user, {
-    selectedSubjects,
     customSubjects,
-    applyToAllClasses,
-    classIds,
-    electiveSubjectNames
+    classIds: classIds.length ? classIds : undefined
   });
 
   revalidatePath("/classes");

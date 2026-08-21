@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects } from "@/lib/services/academics";
+import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster } from "@/lib/services/academics";
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 
@@ -74,6 +74,18 @@ export async function addClassSubjectAction(formData: FormData) {
   await addClassSubject(user, { classId, name, isClassSpecific, isElective });
   revalidatePath("/classes");
   revalidatePath("/subjects");
+}
+
+export async function removeClassSubjectAction(classSubjectId: string) {
+  const user = await requireUser("classes:manage");
+  await removeClassSubject(user, classSubjectId);
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+}
+
+export async function getClassStudentRosterAction(classId: string) {
+  const user = await requireUser("classes:manage");
+  return getClassStudentRoster(user, classId);
 }
 
 export async function unassignTeacherClassAction(assignmentId: string) {
