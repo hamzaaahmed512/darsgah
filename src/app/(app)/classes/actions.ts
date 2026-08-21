@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createClass, updateClass, deleteClass } from "@/lib/services/academics";
+import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects } from "@/lib/services/academics";
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 
@@ -51,11 +51,29 @@ export async function assignTeacherClassAction(formData: FormData) {
   const user = await requireUser("classes:manage");
   const teacherId = formData.get("teacher_id") as string;
   const classId = formData.get("class_id") as string;
+  const subjectIds = formData.getAll("subject_id").map(String).filter(Boolean);
   const subjectId = formData.get("subject_id") as string | undefined;
 
-  await assignTeacherToClass(user, teacherId, classId, subjectId || undefined);
+  if (subjectIds.length) {
+    await assignTeacherWithSubjects(user, { classId, teacherId, subjectIds });
+  } else {
+    await assignTeacherToClass(user, teacherId, classId, subjectId || undefined);
+  }
+
   revalidatePath("/classes");
   revalidatePath("/teachers");
+}
+
+export async function addClassSubjectAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const classId = String(formData.get("class_id") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const isClassSpecific = formData.get("is_class_specific") === "true";
+  const isElective = formData.get("is_elective") === "true";
+
+  await addClassSubject(user, { classId, name, isClassSpecific, isElective });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
 }
 
 export async function unassignTeacherClassAction(assignmentId: string) {

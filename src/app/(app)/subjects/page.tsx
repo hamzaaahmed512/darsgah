@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { SubjectCreateModal } from "@/components/subjects/subject-create-modal";
+import { StudentElectiveToggle } from "@/components/subjects/StudentElectiveToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,7 +34,6 @@ export default async function SubjectsPage({
       />
 
       <section className="grid gap-8">
-        {/* Step 1: Workspace Selection */}
         <Card className="overflow-hidden border-outline/50 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between border-b border-outline/30 bg-surface-low/50 py-4">
             <div>
@@ -63,6 +63,7 @@ export default async function SubjectsPage({
                     {data.subjects.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
+                        {item.is_elective ? " (Elective)" : ""}
                       </option>
                     ))}
                   </Select>
@@ -76,7 +77,6 @@ export default async function SubjectsPage({
           <EmptyState title="Select a class and subject first" description="Once selected, you can configure the teacher assignment and student enrollments." />
         ) : (
           <div className="grid gap-8">
-            {/* Context Header for Steps 2 and 3 */}
             <div className="flex items-center gap-4 rounded-[16px] border border-outline/50 bg-primary/5 px-6 py-5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
@@ -85,12 +85,12 @@ export default async function SubjectsPage({
                 <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Active Subject Workspace</p>
                 <h2 className="mt-1 truncate text-lg font-bold text-ink">
                   {selectedClass.grade_name} {selectedClass.name} <span className="mx-2 font-normal text-muted-foreground/40">/</span> {selectedSubject.name}
+                  {selectedSubject.is_elective ? <span className="ml-2 text-sm font-semibold text-primary">Elective</span> : null}
                 </h2>
               </div>
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
-              {/* Step 2: Subject Teacher */}
               <Card className="h-fit">
                 <CardHeader className="flex flex-row items-center justify-between border-b border-outline/30 pb-4">
                   <div>
@@ -132,26 +132,53 @@ export default async function SubjectsPage({
                 </CardContent>
               </Card>
 
-              {/* Step 3: Student Enrollment */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between border-b border-outline/30 pb-4">
                   <div>
                     <CardTitle className="text-base font-bold text-ink">Step 3: Student Enrollment</CardTitle>
-                    <p className="mt-1 text-xs text-muted">Select students for this subject&apos;s register.</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {data.isElectiveSubject
+                        ? "Choose each student's elective assignment."
+                        : "Core subjects are enrolled for all active students by default."}
+                    </p>
                   </div>
-                  <Button type="submit" form="student-subject-form" variant="primary" className="font-bold shadow-button">
-                    Save enrollments
-                  </Button>
+                  {!data.isElectiveSubject ? (
+                    <Button type="submit" form="student-subject-form" variant="primary" className="font-bold shadow-button">
+                      Save enrollments
+                    </Button>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="pt-6">
-                  {!assignedTeacherName && (
+                  {!assignedTeacherName && !data.isElectiveSubject ? (
                     <div className="mb-6 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                       <strong>Note:</strong> No teacher is assigned to this subject yet. You can still enroll students, but a teacher must be assigned before grading can begin.
                     </div>
-                  )}
+                  ) : null}
 
                   {!data.roster.length ? (
                     <EmptyState title="No active students" description="Enroll students in the class before assigning subjects." className="min-h-40" />
+                  ) : data.isElectiveSubject && data.electiveOptions.length ? (
+                    <div className="grid max-h-[400px] gap-2 overflow-y-auto pr-2">
+                      {data.roster.map((student) => (
+                        <div
+                          key={student.id}
+                          className="flex items-center justify-between gap-4 rounded-[12px] border border-outline/60 bg-surface-low px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-ink">{student.name}</p>
+                            <p className="text-xs text-muted">Admission: {student.admission_number}</p>
+                          </div>
+                          <StudentElectiveToggle
+                            classId={data.selectedClassId!}
+                            studentId={student.id}
+                            electiveOptions={data.electiveOptions}
+                            currentSubjectId={data.studentElectiveByStudentId[student.id] ?? null}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : data.isElectiveSubject ? (
+                    <EmptyState title="No elective subjects linked" description="Add elective subjects to this class first." className="min-h-40" />
                   ) : (
                     <form id="student-subject-form" action={setStudentSubjectEnrollmentsAction} className="grid gap-2">
                       <input type="hidden" name="class_id" value={data.selectedClassId} />

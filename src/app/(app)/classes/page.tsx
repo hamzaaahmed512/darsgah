@@ -6,9 +6,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
-import { getAcademicOptions, getClassTeachersAndAttendance } from "@/lib/services/academics";
+import { getAcademicOptions, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { getStaff } from "@/lib/services/staff";
 import { ClassFormModal } from "@/components/classes/class-form";
+import { ClassSubjectManager } from "@/components/classes/ClassSubjectManager";
+import { TeacherAssignmentModal } from "@/components/classes/TeacherAssignmentModal";
 import { DeleteClassButton } from "@/components/classes/class-actions";
 import { ClassFilterForm } from "@/components/classes/class-filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,12 +23,13 @@ export default async function ClassesPage({
   const params = await searchParams;
   const user = await requireUser("classes:manage");
 
-  const [academicData, classDetails, allStaff] = await Promise.all([
+  const [academicData, classDetails, allStaff, subjectsByClass] = await Promise.all([
     getAcademicOptions(user),
     getClassTeachersAndAttendance(user),
-    getStaff(user)
+    getStaff(user),
+    getClassSubjectsMap(user)
   ]);
-  const teachers = allStaff.filter((staffMember: any) => staffMember.role === "teacher");
+  const teachers = allStaff.filter((staffMember: any) => staffMember.role === "teacher" || staffMember.role === "head_teacher");
 
   const filterGrade = params.grade ?? "all";
   const filterClass = params.classId ?? "all";
@@ -79,6 +82,7 @@ export default async function ClassesPage({
         <div className="grid gap-3">
           {filteredClasses.map((cls) => {
             const assignedTeachers = classDetails.teachersByClass[cls.id] ?? [];
+            const classSubjects = subjectsByClass[cls.id] ?? [];
             const attendance = classDetails.attendanceByClass[cls.id];
             const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
             const totalRecords = attendance ? attendance.present + attendance.absent + attendance.late + attendance.excused : 0;
@@ -111,6 +115,8 @@ export default async function ClassesPage({
                   </div>
 
                   <div className="grid gap-5 xl:grid-cols-[minmax(260px,0.7fr)_minmax(0,1.3fr)]">
+                    <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={classSubjects} />
+
                     <div className="rounded-lg border border-outline/40 p-3">
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 font-semibold text-muted">
@@ -128,10 +134,18 @@ export default async function ClassesPage({
                         ) : null}
                         
                         {assignedTeachers.map((teacher) => (
-                          <li key={teacher.id} className="flex items-center justify-between gap-2 rounded-md bg-surface-low px-3 py-2 text-sm">
+                          <li key={teacher.teacher_id} className="flex items-center justify-between gap-2 rounded-md bg-surface-low px-3 py-2 text-sm">
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-semibold text-ink">{teacher.teacher_name}</p>
-                              {teacher.subject_name ? <p className="truncate text-xs text-muted">{teacher.subject_name}</p> : null}
+                              {teacher.subject_names.length ? (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {teacher.subject_names.map((subjectName) => (
+                                    <Badge key={subjectName} tone="gray">{subjectName}</Badge>
+                                  ))}
+                                </div>
+                              ) : teacher.subject_name ? (
+                                <p className="truncate text-xs text-muted">{teacher.subject_name}</p>
+                              ) : null}
                             </div>
                           </li>
                         ))}
@@ -153,12 +167,19 @@ export default async function ClassesPage({
                   </div>
 
                   <div className="flex flex-wrap justify-end gap-2">
+                    <TeacherAssignmentModal
+                      classId={cls.id}
+                      className={cls.name}
+                      teachers={teachers}
+                      subjects={classSubjects.map((subject) => ({ id: subject.subject_id, name: subject.name }))}
+                      compact
+                    />
                     <ClassFormModal
                       grades={academicData.grades}
                       sections={academicData.sections}
                       academicYears={academicData.years}
                       teachers={teachers}
-                      subjects={academicData.subjects}
+                      subjects={classSubjects.map((subject) => ({ id: subject.subject_id, name: subject.name }))}
                       assignedTeachers={assignedTeachers}
                       initialClass={{
                         id: cls.id,

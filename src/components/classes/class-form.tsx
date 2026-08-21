@@ -13,6 +13,7 @@ import {
   createAcademicYearAction
 } from "@/app/(app)/classes/actions";
 import { RemoveAssignmentButton } from "@/components/classes/class-actions";
+import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, X } from "lucide-react";
 
 export function ClassFormModal({
@@ -46,6 +47,7 @@ export function ClassFormModal({
   
   const [assignPending, startAssignTransition] = useTransition();
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
 
   // Inline creation states
   const [creatingGrade, setCreatingGrade] = useState(false);
@@ -95,11 +97,13 @@ export function ClassFormModal({
     setAssignError(null);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    selectedSubjectIds.forEach((subjectId) => formData.append("subject_id", subjectId));
 
     startAssignTransition(async () => {
       try {
         await assignTeacherClassAction(formData);
         form.reset();
+        setSelectedSubjectIds([]);
       } catch (err: any) {
         setAssignError(err.message || "Failed to assign teacher.");
       }
@@ -301,12 +305,20 @@ export function ClassFormModal({
                   {assignedTeachers && assignedTeachers.length > 0 ? (
                     <ul className="mb-6 space-y-2">
                       {assignedTeachers.map((teacher) => (
-                        <li key={teacher.id} className="flex items-center justify-between rounded-[12px] bg-surface-low px-4 py-3 text-sm">
+                        <li key={teacher.teacher_id ?? teacher.id} className="flex items-center justify-between rounded-[12px] bg-surface-low px-4 py-3 text-sm">
                           <div>
                             <p className="font-semibold text-ink">{teacher.teacher_name}</p>
-                            {teacher.subject_name ? <p className="text-xs text-muted">{teacher.subject_name}</p> : null}
+                            {teacher.subject_names?.length ? (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {teacher.subject_names.map((subjectName: string) => (
+                                  <Badge key={subjectName} tone="gray">{subjectName}</Badge>
+                                ))}
+                              </div>
+                            ) : teacher.subject_name ? <p className="text-xs text-muted">{teacher.subject_name}</p> : null}
                           </div>
-                          <RemoveAssignmentButton assignmentId={teacher.id} />
+                          {(teacher.assignment_ids?.length ? teacher.assignment_ids : [teacher.id]).slice(0, 1).map((assignmentId: string) => (
+                            <RemoveAssignmentButton key={assignmentId} assignmentId={assignmentId} />
+                          ))}
                         </li>
                       ))}
                     </ul>
@@ -321,7 +333,7 @@ export function ClassFormModal({
                         {assignError}
                       </div>
                     )}
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3">
                       <input type="hidden" name="class_id" value={initialClass.id} />
                       <div>
                         <Select name="teacher_id" required>
@@ -331,15 +343,37 @@ export function ClassFormModal({
                           ))}
                         </Select>
                       </div>
-                      <div>
-                        <Select name="subject_id">
-                          <option value="">General / Homeroom</option>
-                          {subjects.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </Select>
+                      <div className="grid gap-2">
+                        <p className="text-xs font-semibold text-muted">Subjects (select one or more)</p>
+                        {subjects.length ? subjects.map((subject) => {
+                          const checked = selectedSubjectIds.includes(subject.id);
+                          return (
+                            <label
+                              key={subject.id}
+                              className={`flex cursor-pointer items-center justify-between rounded-[12px] border px-3 py-2 text-sm ${
+                                checked ? "border-primary/40 bg-primary/5" : "border-outline/60"
+                              }`}
+                            >
+                              <span>{subject.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setSelectedSubjectIds((current) =>
+                                    current.includes(subject.id)
+                                      ? current.filter((id) => id !== subject.id)
+                                      : [...current, subject.id]
+                                  );
+                                }}
+                                className="h-4 w-4 accent-primary"
+                              />
+                            </label>
+                          );
+                        }) : (
+                          <p className="text-xs italic text-muted">No subjects available yet.</p>
+                        )}
                       </div>
-                      <div className="flex justify-end sm:col-span-2">
+                      <div className="flex justify-end">
                         <Button type="submit" variant="secondary" size="sm" disabled={assignPending}>
                           {assignPending ? "Assigning..." : "Assign Teacher"}
                         </Button>
