@@ -87,14 +87,16 @@ export async function getTeacherHeadClasses(user: AppUser) {
   }));
 }
 
-async function assertHeadTeacher(user: AppUser, teacherId: string) {
+async function assertHeadTeacher(user: AppUser, teacherId: string | null | undefined) {
+  if (!teacherId) return;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("school_members")
     .select("id")
     .eq("school_id", user.schoolId)
     .eq("user_id", teacherId)
-    .eq("role", "teacher")
+    .in("role", ["teacher", "head_teacher"])
     .eq("status", "active")
     .maybeSingle();
 
@@ -102,7 +104,7 @@ async function assertHeadTeacher(user: AppUser, teacherId: string) {
   if (!data) throw new Error("Head teacher must be an active teacher in this school.");
 }
 
-export async function createClass(user: AppUser, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id: string }) {
+export async function createClass(user: AppUser, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
   await assertHeadTeacher(user, data.head_teacher_id);
   const supabase = await createClient();
   const { error } = await supabase.from("classes").insert({
@@ -112,13 +114,13 @@ export async function createClass(user: AppUser, data: { name: string; grade_id:
     section_id: data.section_id || null,
     academic_year_id: data.academic_year_id,
     room: data.room || null,
-    head_teacher_id: data.head_teacher_id
+    head_teacher_id: data.head_teacher_id || null
   });
 
   if (error) throw new Error(error.message);
 }
 
-export async function updateClass(user: AppUser, classId: string, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id: string }) {
+export async function updateClass(user: AppUser, classId: string, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
   await assertHeadTeacher(user, data.head_teacher_id);
   const supabase = await createClient();
   const { error } = await supabase
@@ -129,7 +131,7 @@ export async function updateClass(user: AppUser, classId: string, data: { name: 
       section_id: data.section_id || null,
       academic_year_id: data.academic_year_id,
       room: data.room || null,
-      head_teacher_id: data.head_teacher_id
+      head_teacher_id: data.head_teacher_id || null
     })
     .eq("school_id", user.schoolId)
     .eq("id", classId);

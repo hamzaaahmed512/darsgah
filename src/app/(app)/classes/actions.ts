@@ -12,7 +12,7 @@ const classSchema = z.object({
   section_id: z.string().uuid().optional().or(z.literal("")),
   academic_year_id: z.string().uuid("Academic year is required"),
   room: z.string().optional(),
-  head_teacher_id: z.string().uuid("Head teacher is required")
+  head_teacher_id: z.string().uuid().optional().or(z.literal(""))
 });
 
 export async function createClassAction(formData: FormData) {
@@ -26,7 +26,7 @@ export async function createClassAction(formData: FormData) {
     head_teacher_id: formData.get("head_teacher_id")
   });
 
-  await createClass(user, { ...data, section_id: data.section_id || null });
+  await createClass(user, { ...data, section_id: data.section_id || null, head_teacher_id: data.head_teacher_id || null });
   revalidatePath("/classes");
   revalidatePath("/academics");
 }
@@ -42,7 +42,7 @@ export async function updateClassAction(classId: string, formData: FormData) {
     head_teacher_id: formData.get("head_teacher_id")
   });
 
-  await updateClass(user, classId, { ...data, section_id: data.section_id || null });
+  await updateClass(user, classId, { ...data, section_id: data.section_id || null, head_teacher_id: data.head_teacher_id || null });
   revalidatePath("/classes");
   revalidatePath("/academics");
 }

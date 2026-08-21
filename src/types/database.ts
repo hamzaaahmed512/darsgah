@@ -142,7 +142,7 @@ export type ClassRow = {
   section_name: string | null;
   academic_year_name: string;
   room: string | null;
-  head_teacher_id: string;
+  head_teacher_id: string | null;
   head_teacher_name?: string | null;
   head_teacher_email?: string | null;
   student_count?: number;

@@ -4,15 +4,11 @@ import { useEffect, useState, useTransition } from "react";
 import { getOnboardingStatusAction } from "@/app/(app)/onboarding/actions";
 import { SchoolOnboardingWizard } from "@/components/onboarding/SchoolOnboardingWizard";
 
-type TeacherOption = { user_id: string; full_name: string };
-
 export function OnboardingGate({
   userRole,
-  teachers,
   children
 }: {
   userRole: string;
-  teachers: TeacherOption[];
   children: React.ReactNode;
 }) {
   const [showWizard, setShowWizard] = useState(false);
@@ -33,7 +29,7 @@ export function OnboardingGate({
   return (
     <>
       {children}
-      {!checking && showWizard ? <SchoolOnboardingWizard teachers={teachers} forceOpen /> : null}
+      {!checking && showWizard ? <SchoolOnboardingWizard forceOpen /> : null}
     </>
   );
 }

@@ -38,7 +38,7 @@ export function ClassFormModal({
     section_id: string | null;
     academic_year_id: string;
     room: string | null;
-    head_teacher_id: string;
+    head_teacher_id: string | null;
   };
 }) {
   const [open, setOpen] = useState(false);
@@ -65,7 +65,7 @@ export function ClassFormModal({
           section_id: initialClass.section_id ?? "",
           academic_year_id: initialClass.academic_year_id,
           room: initialClass.room ?? "",
-          head_teacher_id: initialClass.head_teacher_id
+          head_teacher_id: initialClass.head_teacher_id ?? ""
         }
       : {}
   });
@@ -78,7 +78,7 @@ export function ClassFormModal({
     if (data.section_id) formData.append("section_id", data.section_id);
     formData.append("academic_year_id", data.academic_year_id);
     if (data.room) formData.append("room", data.room);
-    formData.append("head_teacher_id", data.head_teacher_id);
+    if (data.head_teacher_id) formData.append("head_teacher_id", data.head_teacher_id);
 
     startTransition(async () => {
       try {
@@ -279,15 +279,16 @@ export function ClassFormModal({
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1.5 block text-sm font-semibold text-ink">Head Teacher *</label>
-                      <Select {...register("head_teacher_id", { required: true })}>
-                        <option value="" disabled={teachers.length === 0}>
-                          {teachers.length === 0 ? "No teachers found. Invite one first." : "Select Head Teacher"}
-                        </option>
+                      <label className="mb-1.5 block text-sm font-semibold text-ink">Head Teacher</label>
+                      <Select {...register("head_teacher_id")}>
+                        <option value="">Assign later</option>
                         {teachers.map((teacher) => (
                           <option key={teacher.user_id} value={teacher.user_id}>{teacher.full_name}</option>
                         ))}
                       </Select>
+                      {!teachers.length ? (
+                        <p className="mt-1 text-xs text-muted">No teachers yet. You can assign a head teacher later.</p>
+                      ) : null}
                     </div>
 
                     <div className="sm:col-span-2">

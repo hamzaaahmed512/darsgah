@@ -36,38 +36,20 @@ export async function getOnboardingStatus(user: AppUser) {
   };
 }
 
-async function getDefaultHeadTeacherId(user: AppUser, preferredTeacherId?: string) {
+async function resolveHeadTeacherId(user: AppUser, preferredTeacherId?: string) {
+  if (!preferredTeacherId) return null;
+
   const supabase = await createClient();
-
-  if (preferredTeacherId) {
-    const { data, error } = await supabase
-      .from("school_members")
-      .select("user_id")
-      .eq("school_id", user.schoolId)
-      .eq("user_id", preferredTeacherId)
-      .in("role", ["teacher", "head_teacher"])
-      .eq("status", "active")
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (data?.user_id) return data.user_id;
-  }
-
   const { data, error } = await supabase
     .from("school_members")
     .select("user_id")
     .eq("school_id", user.schoolId)
+    .eq("user_id", preferredTeacherId)
     .in("role", ["teacher", "head_teacher"])
     .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
     .maybeSingle();
-
   if (error) throw new Error(error.message);
-  if (!data?.user_id) {
-    throw new Error("Add at least one teacher from Staff before creating classes.");
-  }
-
-  return data.user_id;
+  return data?.user_id ?? null;
 }
 
 async function getOrCreateActiveAcademicYear(user: AppUser) {
@@ -111,7 +93,7 @@ export async function runOnboardingGradeSetup(
   }
 
   const supabase = await createClient();
-  const headTeacherId = await getDefaultHeadTeacherId(user, values.defaultHeadTeacherId);
+  const headTeacherId = await resolveHeadTeacherId(user, values.defaultHeadTeacherId);
   const academicYear = await getOrCreateActiveAcademicYear(user);
 
   const { data: existingGrades, error: gradesError } = await supabase
@@ -168,7 +150,7 @@ export async function runOnboardingGradeSetup(
         grade_id: gradeId,
         section_id: sectionId,
         name: className,
-        head_teacher_id: headTeacherId
+        ...(headTeacherId ? { head_teacher_id: headTeacherId } : {})
       })
       .select("id")
       .single();

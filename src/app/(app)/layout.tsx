@@ -3,7 +3,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
 import { ToastProvider } from "@/components/ui/toast";
 import { requireUser } from "@/lib/auth/session";
-import { getStaff } from "@/lib/services/staff";
 import { getSchoolProfile } from "@/lib/services/settings";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
@@ -14,15 +13,9 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     : null;
   const settings = legacyProfile?.settings ?? {};
 
-  const teachers = user.role === "principal"
-    ? (await getStaff(user))
-        .filter((staffMember: any) => staffMember.role === "teacher" || staffMember.role === "head_teacher")
-        .map((staffMember: any) => ({ user_id: staffMember.user_id, full_name: staffMember.full_name }))
-    : [];
-
   return (
     <ToastProvider>
-      <OnboardingGate userRole={user.role} teachers={teachers}>
+      <OnboardingGate userRole={user.role}>
         <AppShell
           user={user}
           branding={{

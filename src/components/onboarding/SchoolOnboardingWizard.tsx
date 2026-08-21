@@ -13,13 +13,9 @@ import {
   onboardingSubjectSetupAction
 } from "@/app/(app)/onboarding/actions";
 
-type TeacherOption = { user_id: string; full_name: string };
-
 export function SchoolOnboardingWizard({
-  teachers,
   forceOpen = true
 }: {
-  teachers: TeacherOption[];
   forceOpen?: boolean;
 }) {
   const router = useRouter();
@@ -34,7 +30,6 @@ export function SchoolOnboardingWizard({
   const [applyToAllClasses, setApplyToAllClasses] = useState(true);
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customSubjectDraft, setCustomSubjectDraft] = useState("");
-  const [defaultHeadTeacherId, setDefaultHeadTeacherId] = useState(teachers[0]?.user_id ?? "");
 
   const stepLabels = useMemo(
     () => [
@@ -69,7 +64,6 @@ export function SchoolOnboardingWizard({
 
     const formData = new FormData();
     selectedGrades.forEach((grade) => formData.append("grade", grade));
-    if (defaultHeadTeacherId) formData.append("default_head_teacher_id", defaultHeadTeacherId);
 
     startTransition(async () => {
       try {
@@ -182,30 +176,8 @@ export function SchoolOnboardingWizard({
                 })}
               </div>
 
-              {teachers.length ? (
-                <label className="grid gap-2 text-sm font-semibold text-ink">
-                  Default head teacher for generated classes
-                  <select
-                    value={defaultHeadTeacherId}
-                    onChange={(event) => setDefaultHeadTeacherId(event.target.value)}
-                    className="h-11 rounded-xl border border-outline/60 bg-white px-3 text-sm"
-                    required
-                  >
-                    {teachers.map((teacher) => (
-                      <option key={teacher.user_id} value={teacher.user_id}>
-                        {teacher.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  Add at least one teacher from Staff before classes can be generated.
-                </div>
-              )}
-
               <div className="flex justify-end">
-                <Button type="submit" disabled={pending || !selectedGrades.length || !teachers.length}>
+                <Button type="submit" disabled={pending || !selectedGrades.length}>
                   {pending ? "Creating classes..." : "Continue to subjects"}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
