@@ -17,8 +17,9 @@ export async function getOnboardingStatusAction() {
 export async function onboardingGradeSetupAction(formData: FormData) {
   const user = await requireUser("classes:manage");
   const selectedGrades = formData.getAll("grade").map(String);
+  const customGradeNames = formData.getAll("custom_grade").map(String).filter(Boolean);
   const defaultHeadTeacherId = String(formData.get("default_head_teacher_id") ?? "") || undefined;
-  const result = await runOnboardingGradeSetup(user, { selectedGrades, defaultHeadTeacherId });
+  const result = await runOnboardingGradeSetup(user, { selectedGrades, customGradeNames, defaultHeadTeacherId });
   revalidatePath("/classes");
   revalidatePath("/subjects");
   revalidatePath("/academics");

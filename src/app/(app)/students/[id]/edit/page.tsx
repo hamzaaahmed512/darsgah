@@ -45,6 +45,7 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           admission_date: student.admission_date,
           status: student.status,
           class_id: student.class_id ?? "",
+          major: (student as any).major ?? "",
           guardian_name: guardian?.full_name ?? "Guardian",
           guardian_relationship: guardian?.relationship ?? "Guardian",
           guardian_email: guardian?.email ?? "",

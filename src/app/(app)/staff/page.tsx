@@ -12,6 +12,7 @@ import { StaffFormModal } from "@/components/teachers/staff-form";
 import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
 import { StaffSalaryForm } from "@/components/staff/staff-salary-form";
+import { ButtonLink } from "@/components/ui/button";
 
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
@@ -125,6 +126,7 @@ export default async function StaffPage({
                   </div>
                   {canManageSalary ? <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} /> : null}
                 </div>
+                <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div>
               </div>
             </details>
           ))}

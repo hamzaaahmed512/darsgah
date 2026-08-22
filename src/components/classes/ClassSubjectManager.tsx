@@ -3,12 +3,13 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addClassSubjectAction, removeClassSubjectAction } from "@/app/(app)/classes/actions";
+import { addClassSubjectAction, linkExistingClassSubjectAction, removeClassSubjectAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
+import { canonicalSubjectName } from "@/lib/constants/subjectDefaults";
 
 type ClassSubject = {
   id: string;
@@ -21,20 +22,43 @@ type ClassSubject = {
 export function ClassSubjectManager({
   classId,
   gradeName,
-  subjects
+  subjects,
+  availableSubjects = []
 }: {
   classId: string;
   gradeName: string;
   subjects: ClassSubject[];
+  availableSubjects?: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
   const [draft, setDraft] = useState("");
   const [isElective, setIsElective] = useState(false);
+  const [existingSubjectId, setExistingSubjectId] = useState("");
   const [pending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const isHighSchool = isHighSchoolGrade(gradeName);
+  const linkedIds = new Set(subjects.map((subject) => subject.subject_id));
+  const linkedNames = new Set(subjects.map((subject) => canonicalSubjectName(subject.name)));
+  const unlinkedSubjects = availableSubjects.filter((subject) => !linkedIds.has(subject.id) && !linkedNames.has(canonicalSubjectName(subject.name)));
+
+  function handleLinkExisting() {
+    if (!existingSubjectId) return;
+    const formData = new FormData();
+    formData.append("class_id", classId);
+    formData.append("subject_id", existingSubjectId);
+    startTransition(async () => {
+      try {
+        await linkExistingClassSubjectAction(formData);
+        pushToast("Subject linked to this section.", "success");
+        setExistingSubjectId("");
+        router.refresh();
+      } catch (err: any) {
+        pushToast(err?.message ?? "Failed to link subject.", "error");
+      }
+    });
+  }
 
   function handleAddSubject() {
     const name = draft.trim();
@@ -106,6 +130,14 @@ export function ClassSubjectManager({
         ) : (
           <p className="text-xs italic text-muted">No subjects linked yet.</p>
         )}
+      </div>
+
+      <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <select value={existingSubjectId} onChange={(event) => setExistingSubjectId(event.target.value)} className="h-9 rounded-lg border border-outline bg-white px-3 text-sm text-ink">
+          <option value="">Select an existing subject...</option>
+          {unlinkedSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+        </select>
+        <Button type="button" size="sm" variant="secondary" onClick={handleLinkExisting} disabled={pending || !existingSubjectId}>Add existing</Button>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">

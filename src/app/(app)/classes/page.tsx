@@ -4,13 +4,13 @@ import { BookOpenCheck, CalendarDays, GraduationCap, Layers3 } from "lucide-reac
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
-import { getAcademicOptions, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
-import { getStaff } from "@/lib/services/staff";
-import { ClassFormModal } from "@/components/classes/class-form";
+import { getAcademicOptions, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { ClassFilterForm } from "@/components/classes/class-filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { sortGrades } from "@/lib/utils";
 import { ClassGradeGroup } from "@/components/classes/class-grade-group";
+import { AddGradeModal } from "@/components/classes/add-grade-modal";
+import { ButtonLink } from "@/components/ui/button";
 
 export default async function ClassesPage({
   searchParams
@@ -20,13 +20,10 @@ export default async function ClassesPage({
   const params = await searchParams;
   const user = await requireUser("classes:manage");
 
-  const [academicData, classDetails, allStaff, subjectsByClass] = await Promise.all([
+  const [academicData, classDetails] = await Promise.all([
     getAcademicOptions(user),
-    getClassTeachersAndAttendance(user),
-    getStaff(user),
-    getClassSubjectsMap(user)
+    getClassTeachersAndAttendance(user)
   ]);
-  const teachers = allStaff.filter((staffMember: any) => staffMember.role === "teacher" || staffMember.role === "head_teacher");
 
   const filterGrade = params.grade ?? "all";
   const filterClass = params.classId ?? "all";
@@ -57,12 +54,10 @@ export default async function ClassesPage({
         title="Class Management"
         description="Organize the academic structure, assign teachers, and manage each class from one place."
         actions={
-          <ClassFormModal
-            grades={academicData.grades}
-            sections={academicData.sections}
-            academicYears={academicData.years}
-            teachers={teachers}
-          />
+          <>
+            <ButtonLink href="/subjects" variant="secondary">View subjects</ButtonLink>
+            <AddGradeModal existingGradeNames={academicData.grades.map((grade: any) => grade.name)} />
+          </>
         }
       />
 
@@ -82,7 +77,7 @@ export default async function ClassesPage({
       {filteredClasses.length === 0 ? (
         <EmptyState
           title="No classes found"
-          description="Create a new class or try clearing your search filters."
+          description="Add a grade or try clearing your search filters."
         />
       ) : (
         <div className="grid gap-3">
@@ -94,9 +89,6 @@ export default async function ClassesPage({
                 gradeName={gradeName}
                 classes={gradeClasses}
                 classDetails={classDetails}
-                subjectsByClass={subjectsByClass}
-                academicData={academicData}
-                teachers={teachers}
               />
             );
           })}

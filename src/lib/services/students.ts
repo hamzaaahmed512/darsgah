@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
+import { isSubjectExcludedForMajor, majorsForGrade, type StudentMajor } from "@/lib/student-majors";
 
 export type StudentFilters = {
   q?: string;
@@ -75,6 +76,7 @@ export async function getStudentRecord(
   filters: { attendanceFrom?: string; attendanceTo?: string; includeFinance?: boolean } = {}
 ) {
   const supabase = await createClient();
+  const studentMajorsSupported = await supportsStudentMajors(supabase);
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   let headClassIds: string[] | null = null;
 
@@ -100,8 +102,8 @@ export async function getStudentRecord(
   if (filters.attendanceTo) attendanceQuery = attendanceQuery.lte("attendance_date", filters.attendanceTo);
 
   const studentFields: string = isTeacher
-    ? "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date"
-    : "id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date";
+    ? `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
+    : `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
   let studentQuery = supabase
       .from("student_directory")
       .select(studentFields)
@@ -186,6 +188,7 @@ function emptyStudentRecord() {
 export async function createStudent(user: AppUser, values: StudentFormValues) {
   const parsed = studentSchema.parse(values);
   const supabase = await createClient();
+  const studentMajorsSupported = await supportsStudentMajors(supabase);
 
   const isStaff = user.role === "student_staff";
   const initialStatus = isStaff ? "pending_approval" : parsed.status;
@@ -207,6 +210,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
       father_cnic: parsed.father_cnic || null,
       photo_url: parsed.photo_url || null,
       class_id: parsed.class_id || null,
+      ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
       date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
       email: parsed.email || null,
@@ -283,6 +287,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   }
 
   if (!isStaff) {
+    if (studentMajorsSupported && parsed.class_id && parsed.major) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, parsed.major);
     await logActivity(user, "student_created", "student", student.id, {
       admission_number: parsed.admission_number,
       name: `${parsed.first_name} ${parsed.last_name}`
@@ -295,6 +300,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
 export async function updateStudent(user: AppUser, id: string, values: StudentFormValues) {
   const parsed = studentSchema.parse(values);
   const supabase = await createClient();
+  const studentMajorsSupported = await supportsStudentMajors(supabase);
   const { error } = await supabase
     .from("students")
     .update({
@@ -309,6 +315,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       father_cnic: parsed.father_cnic || null,
       photo_url: parsed.photo_url || null,
       class_id: parsed.class_id || null,
+      ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
       date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
       email: parsed.email || null,
@@ -405,6 +412,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       );
 
     if (enrollError) throw new Error(enrollError.message);
+    if (studentMajorsSupported && parsed.major) await removeExcludedStudentSubjects(user, id, parsed.class_id, parsed.major);
   } else {
     // No class selected — withdraw any active enrollments
     await supabase
@@ -416,6 +424,62 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   }
 
   await logActivity(user, "student_updated", "student", id, { admission_number: parsed.admission_number });
+}
+
+async function supportsStudentMajors(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { error } = await supabase.from("students").select("major").limit(1);
+  if (!error) return true;
+  if (error.code === "42703" || error.message.includes("major does not exist")) return false;
+  throw new Error(error.message);
+}
+
+export async function setStudentMajor(user: AppUser, values: { studentId: string; classId: string; major: StudentMajor | null }) {
+  const supabase = await createClient();
+  if (!(await supportsStudentMajors(supabase))) {
+    throw new Error("Student majors are not enabled in the database yet. Apply the pending student-major migration first.");
+  }
+
+  const [{ data: classRow, error: classError }, { data: enrollment, error: enrollmentError }] = await Promise.all([
+    supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", values.classId).maybeSingle(),
+    supabase.from("enrollments").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("student_id", values.studentId).eq("status", "active").maybeSingle()
+  ]);
+  if (classError) throw new Error(classError.message);
+  if (enrollmentError) throw new Error(enrollmentError.message);
+  if (!classRow || !enrollment) throw new Error("The student is not actively enrolled in this section.");
+  const gradeName = (classRow as any).grades?.name ?? "";
+  if (values.major && !majorsForGrade(gradeName).includes(values.major)) throw new Error("That major is not available for this grade.");
+
+  const { error } = await supabase.from("students").update({ major: values.major }).eq("school_id", user.schoolId).eq("id", values.studentId);
+  if (error) throw new Error(error.message);
+  if (values.major) await removeExcludedStudentSubjects(user, values.studentId, values.classId, values.major);
+  await logActivity(user, "student_major_updated", "student", values.studentId, { class_id: values.classId, major: values.major });
+}
+
+async function removeExcludedStudentSubjects(user: AppUser, studentId: string, classId: string, major: StudentMajor) {
+  const supabase = await createClient();
+  const [{ data: classRow, error: classError }, { data: links, error: linksError }] = await Promise.all([
+    supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
+    supabase.from("class_subjects").select("subject_id,subjects(name)").eq("school_id", user.schoolId).eq("class_id", classId)
+  ]);
+  if (classError) throw new Error(classError.message);
+  if (linksError) throw new Error(linksError.message);
+  const gradeName = (classRow as any)?.grades?.name ?? "";
+  const excludedIds = (links ?? []).filter((row: any) => isSubjectExcludedForMajor(gradeName, major, row.subjects?.name ?? "")).map((row: any) => row.subject_id as string);
+  if (excludedIds.length) {
+    const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);
+    if (error) throw new Error(error.message);
+  }
+
+  if (major === "computer_economics_stats") {
+    const statistics = (links ?? []).find((row: any) => (row.subjects?.name ?? "").trim().toLocaleLowerCase() === "statistics");
+    if (statistics) {
+      const { data: assignment } = await supabase.from("teacher_assignments").select("id").eq("school_id", user.schoolId).eq("class_id", classId).eq("subject_id", statistics.subject_id).maybeSingle();
+      if (assignment) {
+        const { error } = await supabase.from("student_subject_enrollments").upsert({ school_id: user.schoolId, student_id: studentId, class_id: classId, subject_id: statistics.subject_id, enrolled_by: user.id }, { onConflict: "school_id,student_id,subject_id,class_id" });
+        if (error) throw new Error(error.message);
+      }
+    }
+  }
 }
 
 export async function archiveStudent(user: AppUser, id: string) {

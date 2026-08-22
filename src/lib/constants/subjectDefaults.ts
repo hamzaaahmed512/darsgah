@@ -117,6 +117,7 @@ export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
     CORE("Chemistry"),
     ELECTIVE("Biology"),
     ELECTIVE("Computer Science"),
+    ELECTIVE("Statistics"),
     ELECTIVE("Principles of Accounting"),
     ELECTIVE("Principles of Economics")
   ],
@@ -130,6 +131,7 @@ export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
     CORE("Chemistry"),
     ELECTIVE("Biology"),
     ELECTIVE("Computer Science"),
+    ELECTIVE("Statistics"),
     ELECTIVE("Advanced Accounting"),
     ELECTIVE("Commercial Geography")
   ]
@@ -151,4 +153,9 @@ export function getAllUniqueDefaultSubjectNames(): string[] {
 
 export function isHighSchoolGrade(gradeName: string) {
   return HIGH_SCHOOL_GRADE_NAMES.has(gradeName);
+}
+
+export function canonicalSubjectName(name: string) {
+  const normalized = name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  return normalized === "computer science" ? "computer" : normalized;
 }

@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster } from "@/lib/services/academics";
+import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster, createSectionClass, linkExistingClassSubject } from "@/lib/services/academics";
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
+import { setStudentMajor } from "@/lib/services/students";
+import { STUDENT_MAJORS, type StudentMajor } from "@/lib/student-majors";
 
 const classSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -76,6 +78,16 @@ export async function addClassSubjectAction(formData: FormData) {
   revalidatePath("/subjects");
 }
 
+export async function linkExistingClassSubjectAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await linkExistingClassSubject(user, {
+    classId: z.string().uuid().parse(formData.get("class_id")),
+    subjectId: z.string().uuid().parse(formData.get("subject_id"))
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+}
+
 export async function removeClassSubjectAction(classSubjectId: string) {
   const user = await requireUser("classes:manage");
   await removeClassSubject(user, classSubjectId);
@@ -124,6 +136,30 @@ export async function createSectionAction(formData: FormData) {
   revalidatePath("/classes");
   revalidatePath("/academics");
   return data;
+}
+
+export async function createSectionClassAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await createSectionClass(user, {
+    gradeId: z.string().uuid().parse(formData.get("grade_id")),
+    gradeName: z.string().min(1).parse(formData.get("grade_name")),
+    sectionName: z.string().min(1, "Section name is required").parse(formData.get("section_name")),
+    room: String(formData.get("room") ?? "") || null
+  });
+  revalidatePath("/classes");
+}
+
+export async function setStudentMajorAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const rawMajor = String(formData.get("major") ?? "");
+  const major = rawMajor ? z.enum(STUDENT_MAJORS).parse(rawMajor) as StudentMajor : null;
+  await setStudentMajor(user, {
+    studentId: z.string().uuid().parse(formData.get("student_id")),
+    classId: z.string().uuid().parse(formData.get("class_id")),
+    major
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
 }
 
 export async function createAcademicYearAction(formData: FormData) {

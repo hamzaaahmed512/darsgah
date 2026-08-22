@@ -10,7 +10,8 @@ import {
   applyDiscount,
   recordPayment,
   voidPayment,
-  generateFeeChallans
+  generateFeeChallans,
+  createManualTransaction
 } from "@/lib/services/finance";
 
 export async function createFeeStructureAction(formData: FormData) {
@@ -32,6 +33,7 @@ export async function createFeeStructureAction(formData: FormData) {
   
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
+  revalidatePath("/finance/transactions");
   revalidatePath("/finance/student-fees");
 }
 
@@ -53,6 +55,7 @@ export async function createFeeStructuresForClassesAction(formData: FormData) {
 
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
+  revalidatePath("/finance/transactions");
   revalidatePath("/finance/student-fees");
 }
 
@@ -125,6 +128,7 @@ export async function recordPaymentAction(formData: FormData) {
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${values.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
+  revalidatePath("/finance/transactions");
   
   return payment;
 }
@@ -138,6 +142,7 @@ export async function voidPaymentAction(paymentId: string, reason: string) {
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${payment.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
+  revalidatePath("/finance/transactions");
 }
 
 export async function generateFeeChallansAction(values: { month: string; student_id?: string; class_id?: string }) {
@@ -149,4 +154,22 @@ export async function generateFeeChallansAction(values: { month: string; student
   } catch (err: any) {
     return { error: err.message };
   }
+}
+
+export async function createManualTransactionAction(formData: FormData) {
+  const user = await requireUser("finance:manage");
+  const transaction = await createManualTransaction(user, {
+    direction: formData.get("direction"),
+    category: formData.get("category"),
+    amount: formData.get("amount"),
+    transaction_date: formData.get("transaction_date"),
+    party_name: formData.get("party_name"),
+    student_id: formData.get("student_id"),
+    payment_method: formData.get("payment_method"),
+    reference_number: formData.get("reference_number"),
+    description: formData.get("description")
+  });
+  revalidatePath("/finance/dashboard");
+  revalidatePath("/finance/transactions");
+  return transaction;
 }

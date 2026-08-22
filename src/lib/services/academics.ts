@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
-import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
+import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
+import { isSubjectExcludedForMajor, type StudentMajor } from "@/lib/student-majors";
 
 
 export async function getAcademicOptions(user: AppUser) {
@@ -18,11 +19,13 @@ export async function getAcademicOptions(user: AppUser) {
       .order("name")
   ]);
 
+  const subjectCatalog = [...new Map((subjects.data ?? []).map((subject) => [canonicalSubjectName(subject.name), subject])).values()];
+
   return {
     years: years.data ?? [],
     grades: grades.data ?? [],
     sections: sections.data ?? [],
-    subjects: subjects.data ?? [],
+    subjects: subjectCatalog,
     classes: (classes.data ?? []).map((row: any) => ({
       id: row.id,
       name: row.name,
@@ -292,6 +295,7 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     supabase.from("school_members").select("user_id,profiles(full_name)").eq("school_id", user.schoolId).in("role", ["teacher", "head_teacher"]).eq("status", "active")
   ]);
   const selectedClassId = classId ?? options.classes[0]?.id;
+  const selectedClass = options.classes.find((item) => item.id === selectedClassId);
   const classSubjects = selectedClassId
     ? await supabase
         .from("class_subjects")
@@ -355,19 +359,26 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     );
   }
 
+  const rosterStudentIds = (roster.data ?? []).map((row: any) => row.student_id as string);
+  const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, rosterStudentIds);
+  const eligibleRosterRows = (roster.data ?? []).filter((row: any) =>
+    !selectedSubject || !isSubjectExcludedForMajor(selectedClass?.grade_name ?? "", majorsByStudentId[row.student_id] as StudentMajor | null, selectedSubject.name)
+  );
+
   const defaultEnrolledStudentIds = isElectiveSubject
     ? enrolledStudentIds
-    : new Set((roster.data ?? []).map((row: any) => row.student_id));
+    : new Set(eligibleRosterRows.map((row: any) => row.student_id));
 
   return {
     ...options,
+    catalogSubjects: options.subjects,
     subjects: availableSubjects,
     teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: row.profiles?.full_name ?? "Unknown" })),
     selectedClassId,
     selectedSubjectId,
     selectedSubject,
     assignments: assignments.data ?? [],
-    roster: (roster.data ?? []).map((row: any) => ({ id: row.student_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admission_number: row.students?.admission_number })),
+    roster: eligibleRosterRows.map((row: any) => ({ id: row.student_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admission_number: row.students?.admission_number, major: majorsByStudentId[row.student_id] ?? null })),
     enrolledStudentIds: defaultEnrolledStudentIds,
     savedEnrolledStudentIds: enrolledStudentIds,
     electiveOptions,
@@ -378,9 +389,16 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
 
 export async function createSubject(user: AppUser, values: { name: string; code?: string; is_elective?: boolean }) {
   const supabase = await createClient();
+  const subjectName = values.name.trim().replace(/\s+/g, " ");
+  if (!subjectName) throw new Error("Subject name is required.");
+  const { data: catalog, error: lookupError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId);
+  if (lookupError) throw new Error(lookupError.message);
+  if ((catalog ?? []).some((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(subjectName))) {
+    throw new Error(`“${subjectName}” already exists in the subject catalog.`);
+  }
   const { error } = await supabase.from("subjects").insert({
     school_id: user.schoolId,
-    name: values.name.trim(),
+    name: subjectName,
     code: values.code?.trim() || null,
     is_elective: Boolean(values.is_elective)
   });
@@ -446,16 +464,22 @@ export async function addClassSubject(
   values: { classId: string; name: string; isClassSpecific?: boolean; isElective?: boolean }
 ) {
   const supabase = await createClient();
-  const subjectName = values.name.trim();
+  const subjectName = values.name.trim().replace(/\s+/g, " ");
   if (!subjectName) throw new Error("Subject name is required.");
 
-  const { data: existingSubject, error: lookupError } = await supabase
+  const { data: catalog, error: lookupError } = await supabase
     .from("subjects")
-    .select("id")
-    .eq("school_id", user.schoolId)
-    .ilike("name", subjectName)
-    .maybeSingle();
+    .select("id,name")
+    .eq("school_id", user.schoolId);
   if (lookupError) throw new Error(lookupError.message);
+
+  const existingSubject = (catalog ?? []).find((subject) =>
+    canonicalSubjectName(subject.name) === canonicalSubjectName(subjectName)
+  );
+
+  if (values.isClassSpecific && existingSubject) {
+    throw new Error(`“${existingSubject.name}” already exists. Select it from Existing subjects instead.`);
+  }
 
   let subjectId = existingSubject?.id;
   if (!subjectId) {
@@ -481,6 +505,18 @@ export async function addClassSubject(
   if (error) throw new Error(error.message);
 
   return subjectId;
+}
+
+export async function linkExistingClassSubject(user: AppUser, values: { classId: string; subjectId: string }) {
+  const supabase = await createClient();
+  const { data: subject, error: subjectError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).eq("id", values.subjectId).maybeSingle();
+  if (subjectError) throw new Error(subjectError.message);
+  if (!subject) throw new Error("Subject not found in this school.");
+  const { data: existing, error: existingError } = await supabase.from("class_subjects").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", subject.id).maybeSingle();
+  if (existingError) throw new Error(existingError.message);
+  if (existing) throw new Error(`${subject.name} is already linked to this section.`);
+  const { error } = await supabase.from("class_subjects").insert({ school_id: user.schoolId, class_id: values.classId, subject_id: subject.id, is_class_specific: false });
+  if (error) throw new Error(error.message);
 }
 
 export async function removeClassSubject(user: AppUser, classSubjectId: string) {
@@ -527,11 +563,11 @@ export async function seedDefaultSubjectsForClass(user: AppUser, classId: string
     .eq("school_id", user.schoolId);
   if (subjectsError) throw new Error(subjectsError.message);
 
-  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [subject.name.toLowerCase(), subject]));
+  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [canonicalSubjectName(subject.name), subject]));
   const subjectIds: string[] = [];
 
   for (const subjectDefault of defaults) {
-    const key = subjectDefault.name.toLowerCase();
+    const key = canonicalSubjectName(subjectDefault.name);
     const existing = subjectMap.get(key);
     if (existing) {
       if (subjectDefault.is_elective && !existing.is_elective) {
@@ -610,13 +646,26 @@ export async function getClassStudentRoster(user: AppUser, classId: string) {
     studentElectiveByStudentId[enrollment.student_id] = enrollment.subject_id;
   }
 
+  const rosterStudentIds = (rosterResult.data ?? []).map((row: any) => row.student_id as string);
+  const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, rosterStudentIds);
   const roster = (rosterResult.data ?? []).map((row: any) => ({
     id: row.student_id as string,
     name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
-    admission_number: row.students?.admission_number as string | null
+    admission_number: row.students?.admission_number as string | null,
+    major: majorsByStudentId[row.student_id] ?? null
   }));
 
   return { roster, electiveOptions, studentElectiveByStudentId };
+}
+
+async function getStudentMajors(supabase: Awaited<ReturnType<typeof createClient>>, schoolId: string, studentIds: string[]) {
+  if (!studentIds.length) return {} as Record<string, string | null>;
+  const { data, error } = await supabase.from("students").select("id,major").eq("school_id", schoolId).in("id", studentIds);
+  if (error) {
+    if (error.code === "42703" || error.message.includes("major does not exist")) return {} as Record<string, string | null>;
+    throw new Error(error.message);
+  }
+  return Object.fromEntries((data ?? []).map((student: any) => [student.id, student.major ?? null]));
 }
 
 export async function assignSubjectTeacher(user: AppUser, values: { classId: string; subjectId: string; teacherId: string }) {
@@ -648,8 +697,26 @@ export async function setStudentSubjectEnrollments(user: AppUser, values: { clas
   const { error: removeError } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", values.subjectId);
   if (removeError) throw new Error(removeError.message);
   if (!values.studentIds.length) return;
-  const { error } = await supabase.from("student_subject_enrollments").insert(values.studentIds.map((student_id) => ({ school_id: user.schoolId, class_id: values.classId, subject_id: values.subjectId, student_id, enrolled_by: user.id })));
+  const eligibleStudentIds = await filterEligibleStudentIds(user, values.classId, values.subjectId, values.studentIds);
+  if (!eligibleStudentIds.length) return;
+  const { error } = await supabase.from("student_subject_enrollments").insert(eligibleStudentIds.map((student_id) => ({ school_id: user.schoolId, class_id: values.classId, subject_id: values.subjectId, student_id, enrolled_by: user.id })));
   if (error) throw new Error(error.message);
+}
+
+async function filterEligibleStudentIds(user: AppUser, classId: string, subjectId: string, studentIds: string[]) {
+  const supabase = await createClient();
+  const [{ data: classRow, error: classError }, { data: subject, error: subjectError }, { data: students, error: studentsError }] = await Promise.all([
+    supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
+    supabase.from("subjects").select("name").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
+    supabase.from("students").select("id").eq("school_id", user.schoolId).in("id", studentIds)
+  ]);
+  if (classError) throw new Error(classError.message);
+  if (subjectError) throw new Error(subjectError.message);
+  if (studentsError) throw new Error(studentsError.message);
+  const gradeName = (classRow as any)?.grades?.name ?? "";
+  const subjectName = subject?.name ?? "";
+  const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, (students ?? []).map((student: any) => student.id));
+  return (students ?? []).filter((student: any) => !isSubjectExcludedForMajor(gradeName, majorsByStudentId[student.id] as StudentMajor | null, subjectName)).map((student: any) => student.id as string);
 }
 
 export async function setStudentElectiveEnrollment(
@@ -657,6 +724,11 @@ export async function setStudentElectiveEnrollment(
   values: { classId: string; studentId: string; subjectId: string | null; electiveGroupSubjectIds: string[] }
 ) {
   const supabase = await createClient();
+  if (values.subjectId) {
+    await assertSubjectLinkedToClass(user, values.classId, values.subjectId);
+    const [eligibleStudentId] = await filterEligibleStudentIds(user, values.classId, values.subjectId, [values.studentId]);
+    if (!eligibleStudentId) throw new Error("This subject is not available for the student's selected major.");
+  }
   if (values.electiveGroupSubjectIds.length) {
     const { error: removeError } = await supabase
       .from("student_subject_enrollments")
@@ -669,7 +741,6 @@ export async function setStudentElectiveEnrollment(
   }
 
   if (!values.subjectId) return;
-  await assertSubjectLinkedToClass(user, values.classId, values.subjectId);
   const { error } = await supabase.from("student_subject_enrollments").insert({
     school_id: user.schoolId,
     class_id: values.classId,
@@ -745,11 +816,63 @@ export async function createGrade(user: AppUser, values: { name: string; sort_or
 
 export async function createSection(user: AppUser, values: { name: string }) {
   const supabase = await createClient();
+  const sectionName = values.name.trim().replace(/^section\s+/i, "");
+  if (!sectionName) throw new Error("Section name is required.");
+  const { data: existingSections, error: lookupError } = await supabase.from("sections").select("id,name").eq("school_id", user.schoolId);
+  if (lookupError) throw new Error(lookupError.message);
+  const existing = (existingSections ?? []).find((section) => section.name.trim().replace(/^section\s+/i, "").toLocaleLowerCase() === sectionName.toLocaleLowerCase());
+  if (existing) return { id: existing.id };
   const { data, error } = await supabase
     .from("sections")
-    .insert({ school_id: user.schoolId, name: values.name.trim() })
+    .insert({ school_id: user.schoolId, name: sectionName })
     .select("id")
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function createSectionClass(
+  user: AppUser,
+  values: { gradeId: string; gradeName: string; sectionName: string; room?: string | null }
+) {
+  const supabase = await createClient();
+  const sectionName = values.sectionName.trim().replace(/^section\s+/i, "");
+  if (!sectionName) throw new Error("Section name is required.");
+
+  const [{ data: grade, error: gradeError }, { data: activeYear, error: yearError }, { data: sections, error: sectionsError }] = await Promise.all([
+    supabase.from("grades").select("id,name").eq("school_id", user.schoolId).eq("id", values.gradeId).maybeSingle(),
+    supabase.from("academic_years").select("id").eq("school_id", user.schoolId).eq("is_active", true).order("starts_on", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("sections").select("id,name").eq("school_id", user.schoolId)
+  ]);
+  if (gradeError) throw new Error(gradeError.message);
+  if (yearError) throw new Error(yearError.message);
+  if (sectionsError) throw new Error(sectionsError.message);
+  if (!grade) throw new Error("Grade not found.");
+  if (!activeYear) throw new Error("Create or activate an academic year first.");
+
+  let sectionId = (sections ?? []).find((section) => section.name.toLocaleLowerCase() === sectionName.toLocaleLowerCase())?.id;
+  if (!sectionId) sectionId = (await createSection(user, { name: sectionName })).id;
+
+  const { data: existingClass, error: existingError } = await supabase
+    .from("classes")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("academic_year_id", activeYear.id)
+    .eq("grade_id", grade.id)
+    .eq("section_id", sectionId)
+    .maybeSingle();
+  if (existingError) throw new Error(existingError.message);
+  if (existingClass) throw new Error(`${grade.name} Section ${sectionName} already exists.`);
+
+  const { data: created, error } = await supabase.from("classes").insert({
+    school_id: user.schoolId,
+    academic_year_id: activeYear.id,
+    grade_id: grade.id,
+    section_id: sectionId,
+    name: `${grade.name} ${sectionName}`,
+    room: values.room?.trim() || null
+  }).select("id").single();
+  if (error) throw new Error(error.message);
+  await seedDefaultSubjectsForClass(user, created.id, grade.name);
+  return created;
 }

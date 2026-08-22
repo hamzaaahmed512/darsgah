@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
-import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema } from "@/lib/validation/finance";
+import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema, manualTransactionSchema } from "@/lib/validation/finance";
 import { startOfMonth, format } from "date-fns";
+import type { TransactionDirection } from "@/lib/finance-transactions";
 
 export async function logFinanceAction(
   user: AppUser,
@@ -450,6 +451,120 @@ export async function voidPayment(user: AppUser, id: string, reason: string) {
 }
 
 // -------------------------------------------------------------
+// Unified income and expense ledger
+// -------------------------------------------------------------
+
+export async function createManualTransaction(user: AppUser, values: unknown) {
+  if (!hasPermission(user.role, "finance:manage", user.permissions)) throw new Error("Unauthorized to record transactions");
+  const parsed = manualTransactionSchema.parse(values);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("finance_transactions").insert({
+    school_id: user.schoolId,
+    direction: parsed.direction,
+    category: parsed.category,
+    amount: parsed.amount,
+    transaction_date: parsed.transaction_date,
+    receipt_number: null,
+    party_name: parsed.party_name || null,
+    student_id: parsed.student_id || null,
+    payment_method: parsed.payment_method || null,
+    reference_number: parsed.reference_number || null,
+    description: parsed.description || null,
+    source: "manual",
+    recorded_by: user.id
+  }).select("id,receipt_number").single();
+  if (error) throw new Error(error.message);
+  await logFinanceAction(user, `${parsed.direction}_recorded`, parsed.student_id || null, null, { ...parsed, transaction_id: data.id });
+  return data;
+}
+
+export async function getFinanceTransactions(user: AppUser, filters: {
+  period?: "month" | "year" | "lifetime" | "custom";
+  dateFrom?: string;
+  dateTo?: string;
+  direction?: TransactionDirection | "all";
+  q?: string;
+  page?: number;
+} = {}) {
+  const supabase = await createClient();
+  const now = new Date();
+  const period = filters.period ?? "month";
+  const page = Math.max(filters.page ?? 1, 1);
+  const pageSize = 50;
+  let dateFrom = filters.dateFrom;
+  let dateTo = filters.dateTo;
+  if (period === "month") {
+    dateFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    dateTo = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+  } else if (period === "year") {
+    dateFrom = `${now.getFullYear()}-01-01`;
+    dateTo = `${now.getFullYear()}-12-31`;
+  } else if (period === "lifetime") {
+    dateFrom = undefined;
+    dateTo = undefined;
+  }
+
+  let query = supabase.from("finance_transactions")
+    .select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)", { count: "exact" })
+    .eq("school_id", user.schoolId)
+    .eq("is_voided", false);
+  let totalsQuery = supabase.from("finance_transactions").select("direction,amount")
+    .eq("school_id", user.schoolId)
+    .eq("is_voided", false);
+  if (dateFrom) query = query.gte("transaction_date", dateFrom);
+  if (dateFrom) totalsQuery = totalsQuery.gte("transaction_date", dateFrom);
+  if (dateTo) query = query.lte("transaction_date", dateTo);
+  if (dateTo) totalsQuery = totalsQuery.lte("transaction_date", dateTo);
+  if (filters.direction && filters.direction !== "all") query = query.eq("direction", filters.direction);
+  if (filters.direction && filters.direction !== "all") totalsQuery = totalsQuery.eq("direction", filters.direction);
+  if (filters.q) query = query.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
+  if (filters.q) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
+  const [{ data, count, error }, { data: totalRows, error: totalsError }] = await Promise.all([
+    query.order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
+    totalsQuery
+  ]);
+  if (error) throw new Error(error.message);
+  if (totalsError) throw new Error(totalsError.message);
+  const rows = (data ?? []).map((row: any) => ({
+    ...row,
+    student_name: row.students ? `${row.students.first_name ?? ""} ${row.students.last_name ?? ""}`.trim() : null,
+    admission_number: row.students?.admission_number ?? null,
+    recorded_by_name: row.profiles?.full_name ?? null
+  }));
+  return {
+    rows,
+    count: count ?? 0,
+    page,
+    pageSize,
+    totals: (totalRows ?? []).reduce((sum, row) => ({
+      income: sum.income + (row.direction === "income" ? Number(row.amount) : 0),
+      expenses: sum.expenses + (row.direction === "expense" ? Number(row.amount) : 0)
+    }), { income: 0, expenses: 0 }),
+    dateFrom,
+    dateTo,
+    period
+  };
+}
+
+async function getLedgerDashboard(user: AppUser) {
+  const supabase = await createClient();
+  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const [{ data: monthRows, error: monthError }, { data: recent, error: recentError }] = await Promise.all([
+    supabase.from("finance_transactions").select("direction,amount").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", monthStart),
+    supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
+  ]);
+  if (monthError || recentError) return { monthlyIncome: 0, monthlyExpenses: 0, netCashFlow: 0, recentTransactions: [] };
+  const monthlyIncome = (monthRows ?? []).filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const monthlyExpenses = (monthRows ?? []).filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  return {
+    monthlyIncome,
+    monthlyExpenses,
+    netCashFlow: monthlyIncome - monthlyExpenses,
+    recentTransactions: (recent ?? []).map((row: any) => ({ ...row, student_name: row.students ? `${row.students.first_name ?? ""} ${row.students.last_name ?? ""}`.trim() : null, recorded_by_name: row.profiles?.full_name ?? null }))
+  };
+}
+
+// -------------------------------------------------------------
 // Financial Dashboard
 // -------------------------------------------------------------
 
@@ -457,6 +572,7 @@ export async function getFinanceDashboard(user: AppUser) {
   const supabase = await createClient();
   const todayStr = new Date().toISOString().slice(0, 10);
   const startOfThisMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const ledger = await getLedgerDashboard(user);
 
   const optimized = await supabase.rpc("get_finance_dashboard", {
     p_school_id: user.schoolId,
@@ -477,7 +593,8 @@ export async function getFinanceDashboard(user: AppUser) {
       overduePayments: Number(data.overduePayments ?? 0),
       recentPayments: data.recentPayments ?? [],
       outstandingByClass: data.outstandingByClass ?? [],
-      collectionMethodData: data.collectionMethodData ?? []
+      collectionMethodData: data.collectionMethodData ?? [],
+      ...ledger
     };
   }
 
@@ -583,7 +700,8 @@ export async function getFinanceDashboard(user: AppUser) {
     overduePayments: overduePaymentsCount,
     recentPayments: recentPayments || [],
     outstandingByClass,
-    collectionMethodData: Array.from(collectionByMethod.entries()).map(([method, amount]) => ({ name: method.replace("_", " "), value: amount }))
+    collectionMethodData: Array.from(collectionByMethod.entries()).map(([method, amount]) => ({ name: method.replace("_", " "), value: amount })),
+    ...ledger
   };
 }
 

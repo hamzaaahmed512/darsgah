@@ -1,13 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition, useState } from "react";
+import { useEffect, useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
+import { majorsForGrade, STUDENT_MAJOR_LABELS, type StudentMajor } from "@/lib/student-majors";
 
 export function StudentForm({
   initialValues,
@@ -47,6 +48,7 @@ export function StudentForm({
       admission_date: new Date().toISOString().slice(0, 10),
       status: "active",
       class_id: "",
+      major: "",
       guardian_name: "",
       guardian_relationship: "",
       guardian_email: "",
@@ -56,6 +58,14 @@ export function StudentForm({
       ...initialValues
     }
   });
+  const selectedClass = classes.find((item) => item.id === watch("class_id"));
+  const majorOptions = majorsForGrade(selectedClass?.grade_name);
+  useEffect(() => {
+    const currentMajor = watch("major");
+    if (currentMajor && !majorOptions.includes(currentMajor as StudentMajor)) {
+      setValue("major", "", { shouldDirty: true });
+    }
+  }, [majorOptions, setValue, watch]);
 
   function submit(values: StudentFormValues) {
     setServerError(null);
@@ -134,6 +144,14 @@ export function StudentForm({
               ))}
             </Select>
           </Field>
+          {majorOptions.length ? (
+            <Field label="Major / study group" error={errors.major?.message}>
+              <Select {...register("major")}>
+                <option value="">Select major...</option>
+                {majorOptions.map((major) => <option key={major} value={major}>{STUDENT_MAJOR_LABELS[major as StudentMajor]}</option>)}
+              </Select>
+            </Field>
+          ) : null}
           <Field label="Address" error={errors.address?.message}>
             <Textarea {...register("address")} />
           </Field>

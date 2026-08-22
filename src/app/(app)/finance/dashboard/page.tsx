@@ -2,14 +2,22 @@ import { requireUser } from "@/lib/auth/session";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LazyCollectionMethodChart, LazyOutstandingByClassChart } from "@/components/finance/lazy-finance-dashboard-charts";
-import Link from "next/link";
-import { Wallet, ArrowDownCircle, Percent, ClipboardList, AlertCircle, Banknote } from "lucide-react";
-import { formatPKR, formatDatePK } from "@/lib/utils";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Percent, ClipboardList, AlertCircle, Banknote } from "lucide-react";
+import { formatPKR } from "@/lib/utils";
+import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
+import { hasPermission } from "@/lib/permissions";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function FinanceDashboardPage() {
   const user = await requireUser("finance:view");
+  const canManage = hasPermission(user.role, "finance:manage", user.permissions);
+  let students: Array<{ id: string; name: string; admissionNumber: string }> = [];
+  if (canManage) {
+    const supabase = await createClient();
+    const { data: studentRows } = await supabase.from("students").select("id,first_name,last_name,admission_number").eq("school_id", user.schoolId).eq("status", "active").order("first_name");
+    students = (studentRows ?? []).map((student) => ({ id: student.id, name: `${student.first_name} ${student.last_name}`.trim(), admissionNumber: student.admission_number }));
+  }
   let data;
   try {
     data = await getFinanceDashboard(user);
@@ -30,6 +38,27 @@ export default async function FinanceDashboardPage() {
   }
 
   const stats = [
+    {
+      label: "Monthly Income",
+      value: formatPKR(data.monthlyIncome),
+      description: "Fees and all other income this month",
+      icon: ArrowDownCircle,
+      color: "text-success bg-success-soft"
+    },
+    {
+      label: "Monthly Expenses",
+      value: formatPKR(data.monthlyExpenses),
+      description: "Payroll and all expenses this month",
+      icon: ArrowUpCircle,
+      color: "text-danger bg-danger-soft"
+    },
+    {
+      label: "Net Cash Flow",
+      value: formatPKR(data.netCashFlow),
+      description: "Monthly income minus expenses",
+      icon: Wallet,
+      color: data.netCashFlow >= 0 ? "text-success bg-success-soft" : "text-danger bg-danger-soft"
+    },
     {
       label: "Total Expected Fees",
       value: formatPKR(data.totalExpected),
@@ -94,13 +123,7 @@ export default async function FinanceDashboardPage() {
         eyebrow="Finance"
         title="Financial Dashboard"
         description="Monitor expected tuition, collected amounts, outstanding balances, daily activity, and discounts."
-        actions={
-          <div className="flex gap-2">
-            <Link href="/finance/payments" className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-soft hover:brightness-105">
-              Record a Payment
-            </Link>
-          </div>
-        }
+        actions={canManage ? <><TransactionFormModal direction="income" students={students} /><TransactionFormModal direction="expense" students={students} /></> : null}
       />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -143,63 +166,6 @@ export default async function FinanceDashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Payments</CardTitle>
-          <Link href="/finance/payments" className="text-sm font-bold text-primary hover:underline">
-            View All History &rarr;
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {!data.recentPayments.length ? (
-            <div className="py-6 text-center text-sm text-muted">No payments recorded yet.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="px-4 py-3">Receipt No</th>
-                    <th className="px-4 py-3">Student</th>
-                    <th className="px-4 py-3">Class</th>
-                    <th className="px-4 py-3">Method</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Collected By</th>
-                    <th className="px-4 py-3">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recentPayments.map((p: any) => (
-                    <tr key={p.id} className="border-t border-outline/60 hover:bg-surface-low/70">
-                      <td className="px-4 py-4 font-mono font-semibold">
-                        <Link href="/finance/fees" className="text-primary hover:underline">
-                          {p.receipt_number}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="font-semibold text-ink">{p.student_name}</p>
-                        <p className="text-xs text-muted">{p.admission_number}</p>
-                      </td>
-                      <td className="px-4 py-4 text-muted">
-                        {p.grade_name} • {p.class_name}
-                      </td>
-                      <td className="px-4 py-4">
-                        <Badge tone="blue">{p.payment_method.replace("_", " ")}</Badge>
-                      </td>
-                      <td className="px-4 py-4 font-semibold text-success">
-                        {formatPKR(Number(p.amount))}
-                      </td>
-                      <td className="px-4 py-4 text-muted">{p.received_by_name}</td>
-                      <td className="px-4 py-4 text-muted">
-                        {formatDatePK(p.payment_date)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </>
   );
 }

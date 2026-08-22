@@ -4,7 +4,7 @@ import {
   DEFAULT_GRADE_NAMES,
   DEFAULT_SECTION_NAME
 } from "@/lib/constants/onboarding";
-import { getAllUniqueDefaultSubjectNames, isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
+import { canonicalSubjectName, getAllUniqueDefaultSubjectNames, isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
 import { createGrade, createSection, seedDefaultSubjectsForClass } from "@/lib/services/academics";
 import { logActivity } from "@/lib/services/activity";
 
@@ -85,9 +85,16 @@ async function getOrCreateActiveAcademicYear(user: AppUser) {
 
 export async function runOnboardingGradeSetup(
   user: AppUser,
-  values: { selectedGrades: string[]; defaultHeadTeacherId?: string }
+  values: { selectedGrades: string[]; customGradeNames?: string[]; defaultHeadTeacherId?: string }
 ) {
-  if (!values.selectedGrades.length) {
+  const requestedGrades = [...new Map(
+    [...values.selectedGrades, ...(values.customGradeNames ?? [])]
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .map((name) => [name.toLocaleLowerCase(), name])
+  ).values()];
+
+  if (!requestedGrades.length) {
     throw new Error("Select at least one grade to continue.");
   }
 
@@ -101,11 +108,15 @@ export async function runOnboardingGradeSetup(
     .eq("school_id", user.schoolId);
   if (gradesError) throw new Error(gradesError.message);
 
-  const gradeMap = new Map((existingGrades ?? []).map((grade) => [grade.name, grade.id]));
-  for (const [index, gradeName] of DEFAULT_GRADE_NAMES.entries()) {
-    if (!values.selectedGrades.includes(gradeName) || gradeMap.has(gradeName)) continue;
-    const created = await createGrade(user, { name: gradeName, sort_order: index + 1 });
-    gradeMap.set(gradeName, created.id);
+  const gradeMap = new Map((existingGrades ?? []).map((grade) => [grade.name.toLocaleLowerCase(), grade.id]));
+  const duplicateCustom = (values.customGradeNames ?? []).map((name) => name.trim()).find((name) => gradeMap.has(name.toLocaleLowerCase()));
+  if (duplicateCustom) throw new Error(`“${duplicateCustom}” already exists.`);
+  for (const gradeName of requestedGrades) {
+    const key = gradeName.toLocaleLowerCase();
+    if (gradeMap.has(key)) continue;
+    const defaultIndex = DEFAULT_GRADE_NAMES.findIndex((name) => name.toLocaleLowerCase() === key);
+    const created = await createGrade(user, { name: gradeName, sort_order: defaultIndex >= 0 ? defaultIndex + 1 : 100 });
+    gradeMap.set(key, created.id);
   }
 
   const { data: existingSections, error: sectionsError } = await supabase
@@ -123,8 +134,8 @@ export async function runOnboardingGradeSetup(
   const createdClassIds: string[] = [];
   const seededSubjectsByGrade: Record<string, number> = {};
 
-  for (const gradeName of values.selectedGrades) {
-    const gradeId = gradeMap.get(gradeName);
+  for (const gradeName of requestedGrades) {
+    const gradeId = gradeMap.get(gradeName.toLocaleLowerCase());
     if (!gradeId) continue;
 
     const className = `${gradeName} ${DEFAULT_SECTION_NAME}`;
@@ -163,7 +174,7 @@ export async function runOnboardingGradeSetup(
   }
 
   await logActivity(user, "onboarding_grades_setup", "school", user.schoolId, {
-    grades: values.selectedGrades,
+    grades: requestedGrades,
     classes_created: createdClassIds.length,
     subjects_seeded: seededSubjectsByGrade
   });
@@ -190,11 +201,11 @@ export async function runOnboardingSubjectSetup(
     .eq("school_id", user.schoolId);
   if (subjectsError) throw new Error(subjectsError.message);
 
-  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [subject.name.toLowerCase(), subject.id]));
+  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [canonicalSubjectName(subject.name), subject.id]));
   const subjectIds: string[] = [];
 
   for (const subjectName of subjectNames) {
-    const existingId = subjectMap.get(subjectName.toLowerCase());
+    const existingId = subjectMap.get(canonicalSubjectName(subjectName));
     if (existingId) {
       subjectIds.push(existingId);
       continue;
@@ -210,7 +221,7 @@ export async function runOnboardingSubjectSetup(
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    subjectMap.set(subjectName.toLowerCase(), createdSubject.id);
+    subjectMap.set(canonicalSubjectName(subjectName), createdSubject.id);
     subjectIds.push(createdSubject.id);
   }
 

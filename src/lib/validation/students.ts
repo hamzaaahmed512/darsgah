@@ -24,6 +24,7 @@ export const studentSchema = z.object({
   admission_date: z.string().date("Enter a valid admission date").or(z.literal("")).optional().nullable(),
   status: z.enum(["active", "graduated", "transferred", "archived", "cancelled"]).default("active"),
   class_id: z.string().uuid("Please select a class").or(z.literal("")).optional().nullable(),
+  major: z.enum(["computer", "biology", "pre_engineering", "computer_economics", "computer_economics_stats"]).or(z.literal("")).optional().nullable(),
   
   // Father details
   father_name_en: z.string().trim().max(120).optional().nullable(),

@@ -1,273 +1,61 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import Link from "next/link";
+import { useState } from "react";
+import { ChevronDown, GraduationCap, MapPin, Settings, Users } from "lucide-react";
+import { AddSectionModal } from "@/components/classes/add-section-modal";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { ChevronDown, MapPin, CalendarCheck, Users, GraduationCap, Settings, X } from "lucide-react";
-import { Select } from "@/components/ui/form-field";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 
-// Component imports
-import { ClassSubjectManager } from "@/components/classes/ClassSubjectManager";
-import { ClassStudentRosterModal } from "@/components/classes/ClassStudentRosterModal";
-import { TeacherAssignmentModal } from "@/components/classes/TeacherAssignmentModal";
-import { ClassFormModal } from "@/components/classes/class-form";
-import { DeleteClassButton } from "@/components/classes/class-actions";
-
-export function ClassGradeGroup({
-  gradeName,
-  classes,
-  classDetails,
-  subjectsByClass,
-  academicData,
-  teachers
-}: {
+export function ClassGradeGroup({ gradeName, classes, classDetails }: {
   gradeName: string;
   classes: any[];
   classDetails: any;
-  subjectsByClass: any;
-  academicData: any;
-  teachers: any[];
+  subjectsByClass?: any;
+  academicData?: any;
+  teachers?: any[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  // Sort classes by section name to ensure A, B, C etc. are in order
-  const sortedClasses = [...classes].sort((a, b) => {
-    const aName = a.section_name || "";
-    const bName = b.section_name || "";
-    return aName.localeCompare(bName);
-  });
-  
-  const [selectedClassId, setSelectedClassId] = useState<string>(sortedClasses[0]?.id || "");
-
-  const totalSections = classes.length;
+  const sortedClasses = [...classes].sort((a, b) => (a.section_name || "").localeCompare(b.section_name || ""));
   const totalStudents = classes.reduce((sum, cls) => sum + (classDetails.studentsByClass[cls.id] || 0), 0);
-
-  const selectedCls = sortedClasses.find((c) => c.id === selectedClassId) || sortedClasses[0];
+  const gradeId = sortedClasses[0]?.grade_id;
 
   return (
-    <div className="group overflow-hidden rounded-[18px] bg-white shadow-card ring-1 ring-outline/70 transition-all">
-      <div 
-        className="grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-surface-low md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
-        onClick={() => setExpanded(!expanded)}
-      >
+    <div className="overflow-hidden rounded-[18px] bg-white shadow-card ring-1 ring-outline/70">
+      <button type="button" className="grid w-full gap-4 px-5 py-4 text-left transition hover:bg-surface-low md:grid-cols-[minmax(0,1fr)_auto] md:items-center" onClick={() => setExpanded((value) => !value)}>
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap gap-2 text-xs">
-              <Badge tone="blue">{gradeName}</Badge>
-          </div>
-          <h3 className="truncate font-display text-lg font-semibold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3>
-          <p className="mt-1 text-sm text-muted">{totalSections} {totalSections === 1 ? "Section" : "Sections"} / {totalStudents} Students</p>
+          <Badge tone="blue">{gradeName}</Badge>
+          <h3 className="mt-2 truncate font-display text-lg font-semibold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3>
+          <p className="mt-1 text-sm text-muted">{classes.length} {classes.length === 1 ? "Section" : "Sections"} / {totalStudents} Students</p>
         </div>
-        <div className="flex items-center justify-end gap-3">
-          <ChevronDown className={`h-5 w-5 text-muted transition duration-200 ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
-        </div>
-      </div>
+        <ChevronDown className={`h-5 w-5 justify-self-end text-muted transition ${expanded ? "rotate-180" : ""}`} />
+      </button>
 
-      {expanded && (
-        <div className="border-t border-outline/60 p-5 bg-surface-low/30">
-          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label className="text-sm font-semibold text-ink shrink-0">Select Section:</label>
-            <div className="w-full sm:w-64">
-              <Select 
-                value={selectedClassId} 
-                onChange={(e) => setSelectedClassId(e.target.value)}
-              >
-                {sortedClasses.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.section_name ? `Section ${cls.section_name}` : "Main Section"} {cls.academic_year_name ? `(${cls.academic_year_name})` : ""}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          {selectedCls && (
-            <SectionDetails 
-              cls={selectedCls}
-              classDetails={classDetails}
-              subjectsByClass={subjectsByClass}
-              academicData={academicData}
-              teachers={teachers}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionDetails({ cls, classDetails, subjectsByClass, academicData, teachers }: any) {
-  const [showManageModal, setShowManageModal] = useState(false);
-  const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
-
-  return (
-    <>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white rounded-xl border border-outline/40 p-4 shadow-sm">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-             <h4 className="font-display font-semibold text-lg">{cls.name}</h4>
-             <Badge tone="gray">{cls.academic_year_name}</Badge>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
-            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> Head: {cls.head_teacher_name || "Unassigned"}</span>
-            <span className="flex items-center gap-1.5"><GraduationCap className="h-4 w-4" /> {studentCount} Students</span>
-            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> Room: {cls.room || "Not set"}</span>
-          </div>
-        </div>
-        
-        <Button onClick={() => setShowManageModal(true)} variant="primary" className="shrink-0 flex items-center gap-2">
-           <Settings className="h-4 w-4" /> Manage Section
-        </Button>
-      </div>
-
-      {showManageModal && (
-        <ManageSectionModal 
-          cls={cls}
-          classDetails={classDetails}
-          subjectsByClass={subjectsByClass}
-          academicData={academicData}
-          teachers={teachers}
-          onClose={() => setShowManageModal(false)}
-        />
-      )}
-    </>
-  );
-}
-
-function ManageSectionModal({ cls, classDetails, subjectsByClass, academicData, teachers, onClose }: any) {
-  const assignedTeachers = classDetails.teachersByClass[cls.id] ?? [];
-  const classSubjects = subjectsByClass[cls.id] ?? [];
-  const attendance = classDetails.attendanceByClass[cls.id];
-  const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
-  
-  const totalRecords = attendance ? attendance.present + attendance.absent + attendance.late + attendance.excused : 0;
-  const attendanceRate = totalRecords > 0
-    ? Math.round(((attendance.present + attendance.late) / totalRecords) * 100)
-    : null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-outline/40 px-6 py-4">
-          <div>
-            <h2 className="text-xl font-display font-bold">Manage {cls.name}</h2>
-            <p className="text-sm text-muted">Configure subjects, faculty, and student roster.</p>
-          </div>
-          <button onClick={onClose} className="text-muted hover:text-ink">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="overflow-y-auto p-6">
-          <div className="grid gap-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <InfoTile icon={<MapPin className="h-4 w-4" />} label="Room" value={cls.room ?? "Not set"} />
-              <InfoTile icon={<CalendarCheck className="h-4 w-4" />} label="Attendance Rate" value={attendanceRate !== null ? `${attendanceRate}%` : "No records yet"} />
-            </div>
-
-            <div className="grid gap-5 xl:grid-cols-[minmax(260px,0.7fr)_minmax(0,1.3fr)]">
-              <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={classSubjects} />
-
-              <div className="rounded-lg border border-outline/40 p-3">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-semibold text-muted">
-                    <Users className="h-4 w-4" /> Assigned Faculty ({assignedTeachers.length + (cls.head_teacher_id ? 1 : 0)})
-                  </span>
+      {expanded ? (
+        <div className="border-t border-outline/60 bg-surface-low/30 p-5">
+          <div className="grid gap-3">
+            {sortedClasses.map((cls) => {
+              const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
+              return (
+                <div key={cls.id} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-outline/40 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h4 className="font-display text-lg font-semibold text-ink">{gradeName} · {cls.section_name ? `Section ${cls.section_name.replace(/^section\s+/i, "")}` : "Main section"}</h4>
+                      <Badge tone="gray">{cls.academic_year_name}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
+                      <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {cls.head_teacher_name || "No head teacher"}</span>
+                      <span className="flex items-center gap-1.5"><GraduationCap className="h-4 w-4" /> {studentCount} Students</span>
+                      <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {cls.room || "Room not set"}</span>
+                    </div>
+                  </div>
+                  <ButtonLink href={`/classes/${cls.id}`} size="sm"><Settings className="h-4 w-4" /> Manage section</ButtonLink>
                 </div>
-                <ul className="space-y-1.5 pr-1">
-                  {cls.head_teacher_id ? (
-                    <li className="flex items-center justify-between gap-2 rounded-md bg-primary-soft px-3 py-2 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-ink">{cls.head_teacher_name}</p>
-                        <p className="truncate text-xs font-semibold text-primary">Head Teacher</p>
-                      </div>
-                    </li>
-                  ) : null}
-                  
-                  {assignedTeachers.map((teacher: any) => (
-                    <li key={teacher.teacher_id} className="flex items-center justify-between gap-2 rounded-md bg-surface-low px-3 py-2 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-ink">{teacher.teacher_name}</p>
-                        {teacher.subject_names.length ? (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {teacher.subject_names.map((subjectName: string) => (
-                              <Badge key={subjectName} tone="gray">{subjectName}</Badge>
-                            ))}
-                          </div>
-                        ) : teacher.subject_name ? (
-                          <p className="truncate text-xs text-muted">{teacher.subject_name}</p>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {!cls.head_teacher_id && assignedTeachers.length === 0 && (
-                  <p className="mt-2 text-xs italic text-muted">No faculty assigned.</p>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-outline/40 p-3">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-semibold text-muted">
-                    <GraduationCap className="h-4 w-4" /> Students ({studentCount})
-                  </span>
-                </div>
-                <p className="text-xs text-muted">Manage enrollments and elective tracks from the roster.</p>
-                <ClassStudentRosterModal
-                  classId={cls.id}
-                  className={cls.name}
-                  gradeName={cls.grade_name}
-                  studentCount={studentCount}
-                />
-                <Link href={`/students?classId=${cls.id}`} className="mt-2 inline-flex text-xs font-semibold text-muted hover:text-primary hover:underline">
-                  Open full student management
-                </Link>
-              </div>
-            </div>
+              );
+            })}
           </div>
+          {gradeId ? <div className="mt-4 flex justify-end"><AddSectionModal gradeId={gradeId} gradeName={gradeName} /></div> : null}
         </div>
-
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-outline/40 bg-surface-low px-6 py-4">
-          <TeacherAssignmentModal
-            classId={cls.id}
-            className={cls.name}
-            teachers={teachers}
-            subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))}
-            compact
-          />
-          <ClassFormModal
-            grades={academicData.grades}
-            sections={academicData.sections}
-            academicYears={academicData.years}
-            teachers={teachers}
-            subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))}
-            assignedTeachers={assignedTeachers}
-            initialClass={{
-              id: cls.id,
-              name: cls.name,
-              grade_id: cls.grade_id,
-              section_id: cls.section_id,
-              academic_year_id: cls.academic_year_id,
-              room: cls.room,
-              head_teacher_id: cls.head_teacher_id
-            }}
-          />
-          <DeleteClassButton classId={cls.id} className={cls.name} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoTile({ icon, label, value, hint }: { icon: ReactNode; label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
-      <div className="mb-1 flex items-center gap-1.5 text-muted">
-        <span className="text-primary">{icon}</span>
-        {label}
-      </div>
-      <p className="truncate text-lg font-bold text-ink">{value}</p>
-      {hint ? <p className="truncate text-xs text-muted">{hint}</p> : null}
+      ) : null}
     </div>
   );
 }

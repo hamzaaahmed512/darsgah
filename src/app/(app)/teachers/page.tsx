@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { getStaff } from "@/lib/services/staff";
 import { StaffFormModal } from "@/components/teachers/staff-form";
+import { ButtonLink } from "@/components/ui/button";
 
 export default async function TeachersPage() {
   const user = await requireUser("teachers:manage");
@@ -52,6 +53,7 @@ export default async function TeachersPage() {
                   {/* Class assignment forms/UI would go here */}
                 </div>
               </div>
+              <div className="mt-4 flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div>
             </CardContent>
           </Card>
         ))}

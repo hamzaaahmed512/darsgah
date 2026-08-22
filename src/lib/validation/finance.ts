@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRANSACTION_CATEGORIES } from "@/lib/finance-transactions";
 
 export const feeStructureSchema = z.object({
   academic_year_id: z.string().uuid("Invalid Academic Session"),
@@ -50,4 +51,16 @@ export const monthlyGenerationSchema = z.object({
 export const payrollGenerationSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Choose a valid month"),
   teacher_id: z.string().uuid().optional()
+});
+
+export const manualTransactionSchema = z.object({
+  direction: z.enum(["income", "expense"]),
+  category: z.enum(TRANSACTION_CATEGORIES),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  transaction_date: z.string().date("Choose a valid date"),
+  party_name: z.string().trim().max(160).optional(),
+  student_id: z.string().uuid().or(z.literal("")).optional(),
+  payment_method: z.enum(["cash", "bank_transfer", "cheque", "online_payment", "other"]).optional(),
+  reference_number: z.string().trim().max(100).optional(),
+  description: z.string().trim().max(500).optional()
 });

@@ -54,7 +54,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                       </div>
                     )}
                     <div>
-                      <Link href={`/students/${student.id}`} className="font-semibold text-primary hover:text-primary-ink">
+                      <Link href={`/students/${student.id}`} prefetch={false} className="font-semibold text-primary hover:text-primary-ink">
                         {student.name_en || `${student.first_name} ${student.last_name}`}
                       </Link>
                       {student.name_ur && <p className="text-xs text-muted" dir="rtl">{student.name_ur}</p>}
@@ -78,8 +78,8 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                       Actions
                     </summary>
                     <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-outline/40 bg-white p-1 shadow-soft">
-                      <Link data-navigation-progress="immediate" href={`/students/${student.id}`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
-                      <Link data-navigation-progress="immediate" href={`/students/${student.id}?edit=true`} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
+                      <Link data-navigation-progress="immediate" href={`/students/${student.id}`} prefetch={false} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
+                      <Link data-navigation-progress="immediate" href={`/students/${student.id}?edit=true`} prefetch={false} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
                     </div>
                   </details>
                 </td> : null}
@@ -90,7 +90,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
       </div>
       <div className="grid gap-3 p-3 lg:hidden">
         {rows.map((student) => (
-          <Link key={student.id} href={`/students/${student.id}`} className="rounded-2xl bg-surface-low p-4 ring-1 ring-outline/70 transition hover:bg-primary-soft">
+          <Link key={student.id} href={`/students/${student.id}`} prefetch={false} className="rounded-2xl bg-surface-low p-4 ring-1 ring-outline/70 transition hover:bg-primary-soft">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 {student.photo_url ? (
