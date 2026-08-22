@@ -92,3 +92,39 @@ export function formatDateNumericPK(value: string | Date | null | undefined): st
     timeZone: PK_TZ
   }).format(d);
 }
+
+// ─── Academic Sorting ─────────────────────────────────────────────────────────
+
+const GRADE_ORDER = [
+  "PG",
+  "Nursery",
+  "Prep",
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
+  "Grade 4",
+  "Grade 5",
+  "Grade 6",
+  "Grade 7",
+  "Grade 8",
+  "Grade 9",
+  "Grade 10",
+  "Grade 11",
+  "Grade 12"
+];
+
+/**
+ * Sort grades based on standard academic progression.
+ */
+export function sortGrades(a: string, b: string): number {
+  const indexA = GRADE_ORDER.indexOf(a);
+  const indexB = GRADE_ORDER.indexOf(b);
+
+  if (indexA === -1 && indexB === -1) {
+    return a.localeCompare(b);
+  }
+  if (indexA === -1) return 1;
+  if (indexB === -1) return -1;
+  return indexA - indexB;
+}
+
