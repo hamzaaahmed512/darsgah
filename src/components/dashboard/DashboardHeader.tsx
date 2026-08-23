@@ -54,17 +54,17 @@ export function DashboardHeader({
 
   return (
     <section
-      className="mb-8 overflow-hidden rounded-[18px] bg-gradient-to-br from-[#0f4c5c] via-[#0b5966] to-[#063b48] px-5 py-5 text-white shadow-soft sm:px-6"
+      className="mb-8 overflow-hidden rounded-[18px] bg-gradient-to-r from-indigo-900 via-primary-ink to-slate-900 px-5 py-5 text-white shadow-soft sm:px-6"
       data-role={role}
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
           {onMenuClick ? (
-            <button type="button" onClick={onMenuClick} className="mt-1 rounded-xl p-2 hover:bg-white/10 lg:hidden" aria-label="Open navigation">
+            <button type="button" onClick={onMenuClick} className="mt-1 rounded-xl p-2 text-indigo-100 hover:bg-white/10 lg:hidden" aria-label="Open navigation">
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
           ) : null}
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/15 text-sm font-bold ring-2 ring-white/25">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-indigo-400/30 bg-white/10 text-sm font-bold text-indigo-50 ring-2 ring-white/15">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -73,27 +73,27 @@ export function DashboardHeader({
             )}
           </div>
           <div className="min-w-0">
-            <span className="inline-flex rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/90">
+            <span className="inline-flex rounded-full border border-indigo-400/30 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-100">
               {roleLabel}
             </span>
             <h1 className="mt-2 truncate font-display text-xl font-bold sm:text-2xl">
               {now ? greetingFor(now.getHours()) : "Welcome"}, {userName}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-white/80">
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-indigo-100">
               {stats.map((stat) => (
                 <span key={stat.label}>
                   {stat.label}: <strong className="text-white">{stat.value}</strong>
                 </span>
               ))}
               <span aria-hidden="true">•</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-100">
+              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-400/30 bg-indigo-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
                 <ShieldCheck className="h-3 w-3" aria-hidden="true" /> {statusText}
               </span>
             </div>
           </div>
         </div>
-        <div className="border-t border-white/15 pt-4 text-left lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
-          <p className="text-sm font-semibold">{date}</p>
+        <div className="border-t border-indigo-400/30 pt-4 text-left lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
+          <p className="text-sm font-semibold text-indigo-100">{date}</p>
           <time className="mt-1 block font-mono text-2xl font-bold tracking-wide">{time}</time>
         </div>
       </div>
