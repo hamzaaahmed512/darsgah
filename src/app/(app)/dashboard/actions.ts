@@ -36,7 +36,7 @@ export async function sendAttendanceReminderAction(classId: string) {
   if (sessionError) return { error: sessionError.message };
   if (existingSession) return { error: "Attendance has already been marked for this class today." };
 
-  const headTeacher = targetClass.head_teacher as { full_name: string; email: string | null } | null;
+  const headTeacher = targetClass.head_teacher?.[0] ?? null;
 
   await logActivity(user, "attendance_reminder_sent", "class", classId, {
     class_name: targetClass.name,
