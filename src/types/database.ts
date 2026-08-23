@@ -405,3 +405,15 @@ export type AnnouncementWithRead = Announcement & {
   is_read?: boolean;
   created_by_name?: string | null;
 };
+
+export type PendingAttendanceClass = {
+  id: string;
+  name: string;
+  room: string | null;
+  grade_name: string | null;
+  section_name: string | null;
+  head_teacher_id: string | null;
+  head_teacher_name: string | null;
+  head_teacher_email: string | null;
+  head_teacher_phone: string | null;
+};

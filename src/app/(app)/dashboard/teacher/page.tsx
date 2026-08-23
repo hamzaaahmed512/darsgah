@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { GraduationCap, School, CalendarX2, CalendarCheck, BookOpen } from "lucide-react";
 import Link from "next/link";
 
@@ -20,6 +21,17 @@ export default async function TeacherDashboardPage() {
 
   return (
     <>
+      <DashboardHeader
+        userName={user.fullName}
+        role={user.role}
+        roleLabel="Teacher"
+        avatarUrl={user.avatarUrl}
+        statusText="ACCOUNT ACTIVE"
+        stats={[
+          { label: "My Classes", value: headClasses.length },
+          { label: "My Students", value: dashboard.totalStudents }
+        ]}
+      />
       <PageHeader
         eyebrow={user.schoolName}
         title="Teacher Dashboard"

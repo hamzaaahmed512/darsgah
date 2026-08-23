@@ -1,12 +1,14 @@
 import { requireUser } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
+import { getApprovalRequests } from "@/lib/services/approvals";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { formatPKR, formatDatePK } from "@/lib/utils";
 import { GraduationCap, Wallet, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -17,13 +19,26 @@ export default async function RegistrarDashboardPage() {
     throw new Error("Unauthorized access to Registrar Dashboard");
   }
 
-  const [dashboard, finance] = await Promise.all([
+  const [dashboard, finance, approvals] = await Promise.all([
     getDashboardData(user),
-    getFinanceDashboard(user)
+    getFinanceDashboard(user),
+    getApprovalRequests(user, { status: "pending" })
   ]);
+  const pendingAdmissions = approvals.filter((request) => request.request_type === "admission").length;
 
   return (
     <>
+      <DashboardHeader
+        userName={user.fullName}
+        role={user.role}
+        roleLabel="Registrar"
+        avatarUrl={user.avatarUrl}
+        statusText="ACCOUNT ACTIVE"
+        stats={[
+          { label: "Pending Admissions", value: pendingAdmissions },
+          { label: "Total Enrolled", value: dashboard.totalStudents }
+        ]}
+      />
       <PageHeader
         eyebrow={user.schoolName}
         title="Registrar Dashboard"

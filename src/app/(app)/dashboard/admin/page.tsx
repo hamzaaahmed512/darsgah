@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ButtonLink } from "@/components/ui/button";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Shield, Settings, Users, UserCog, GraduationCap, UserPlus } from "lucide-react";
 import Link from "next/link";
 
@@ -18,6 +19,17 @@ export default async function AdminDashboardPage() {
 
   return (
     <>
+      <DashboardHeader
+        userName={user.fullName}
+        role={user.role}
+        roleLabel="System Administrator"
+        avatarUrl={user.avatarUrl}
+        statusText="ACCOUNT ACTIVE"
+        stats={[
+          { label: "Students", value: dashboard.totalStudents },
+          { label: "Faculty", value: dashboard.totalTeachers }
+        ]}
+      />
       <PageHeader
         eyebrow="System Control"
         title="Admin Console"

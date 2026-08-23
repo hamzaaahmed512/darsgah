@@ -1,6 +1,6 @@
 import { subDays, formatISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import type { AppUser } from "@/types/database";
+import type { AppUser, PendingAttendanceClass } from "@/types/database";
 import { getTeacherHeadClasses } from "@/lib/services/academics";
 
 export async function getTeacherDashboardData(user: AppUser) {
@@ -27,6 +27,45 @@ export async function getTeacherDashboardData(user: AppUser) {
     absentToday: absences.count ?? 0,
     attendanceCompleted: headClasses.filter((item) => item.attendance_marked_today).length
   };
+}
+
+export async function getPendingAttendanceClasses(user: AppUser): Promise<PendingAttendanceClass[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("classes")
+    .select(`
+      id,
+      name,
+      room,
+      head_teacher_id,
+      grades(name),
+      sections(name),
+      academic_years!inner(is_active),
+      head_teacher:profiles!classes_head_teacher_id_fkey(full_name, email, phone),
+      attendance_sessions!left(id, attendance_date)
+    `)
+    .eq("school_id", user.schoolId)
+    .eq("academic_years.is_active", true)
+    .eq("attendance_sessions.attendance_date", today)
+    .order("name");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? [])
+    .filter((row: any) => !row.attendance_sessions?.length)
+    .map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      room: row.room,
+      grade_name: row.grades?.name ?? null,
+      section_name: row.sections?.name ?? null,
+      head_teacher_id: row.head_teacher_id,
+      head_teacher_name: row.head_teacher?.full_name ?? null,
+      head_teacher_email: row.head_teacher?.email ?? null,
+      head_teacher_phone: row.head_teacher?.phone ?? null
+    }));
 }
 
 export async function getDashboardData(user: AppUser) {
