@@ -158,16 +158,20 @@ export async function generateFeeChallansAction(values: { month: string; student
 
 export async function createManualTransactionAction(formData: FormData) {
   const user = await requireUser("finance:manage");
+  const optionalString = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : "";
+  };
   const transaction = await createManualTransaction(user, {
     direction: formData.get("direction"),
     category: formData.get("category"),
     amount: formData.get("amount"),
     transaction_date: formData.get("transaction_date"),
-    party_name: formData.get("party_name"),
-    student_id: formData.get("student_id"),
+    party_name: optionalString("party_name"),
+    student_id: optionalString("student_id"),
     payment_method: formData.get("payment_method"),
-    reference_number: formData.get("reference_number"),
-    description: formData.get("description")
+    reference_number: optionalString("reference_number"),
+    description: optionalString("description")
   });
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");

@@ -24,7 +24,6 @@ export async function submitLeaveAction(formData: FormData) {
     throw error;
   }
   revalidatePath("/leave");
-  revalidatePath("/approvals");
   redirect("/leave");
 }
 
@@ -36,7 +35,7 @@ export async function reviewLeaveAction(formData: FormData) {
       principal_remarks: String(formData.get("principal_remarks") ?? "")
     });
   } catch (error) {
-    if (isMigrationRequiredError(error)) redirect("/approvals?tab=leaves");
+    if (isMigrationRequiredError(error)) redirect("/leave");
     if (error instanceof ZodError) {
       return { error: error.issues[0]?.message ?? "Check the review details and try again." };
     }
@@ -44,6 +43,5 @@ export async function reviewLeaveAction(formData: FormData) {
     return { error: error instanceof Error ? error.message : "Leave could not be reviewed. Please try again." };
   }
   revalidatePath("/leave");
-  revalidatePath("/approvals");
   return { success: true };
 }

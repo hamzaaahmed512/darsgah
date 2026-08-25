@@ -2,19 +2,26 @@ import { requireUser } from "@/lib/auth/session";
 import { getDashboardData, getPendingAttendanceClasses } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
-import { getAnnouncements } from "@/lib/services/announcements";
-import { PageHeader } from "@/components/layout/page-header";
+import { getApprovalRequests } from "@/lib/services/approvals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { LazyClassDistributionChart } from "@/components/dashboard/lazy-responsive-charts";
+import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components/finance/lazy-finance-dashboard-charts";
 import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { formatPKR, formatDatePK } from "@/lib/utils";
-import { GraduationCap, Users, CalendarX2, AlertTriangle, FileText, Bell, UserPlus } from "lucide-react";
+import { formatPKR } from "@/lib/utils";
+import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, AlertTriangle, UserPlus } from "lucide-react";
 import Link from "next/link";
+
+function percentDelta(current: number, previous: number, lowerIsBetter = false): { text: string; tone: "positive" | "negative" | "neutral" } {
+  if (previous === 0 && current === 0) return { text: "No change vs last month", tone: "neutral" as const };
+  if (previous === 0) return { text: "New activity this month", tone: lowerIsBetter ? "negative" as const : "positive" as const };
+  const change = ((current - previous) / Math.abs(previous)) * 100;
+  const tone: "positive" | "negative" | "neutral" = change === 0 ? "neutral" : lowerIsBetter ? (change < 0 ? "positive" : "negative") : (change > 0 ? "positive" : "negative");
+  const arrow = change >= 0 ? "Up" : "Down";
+  return { text: `${arrow} ${Math.abs(change).toFixed(1)}% vs last month`, tone };
+}
 
 export default async function PrincipalDashboardPage() {
   const user = await requireUser("dashboard:view");
@@ -23,89 +30,91 @@ export default async function PrincipalDashboardPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const [dashboard, finance, results, announcements, pendingAttendanceClasses] = await Promise.all([
+  const [dashboard, finance, results, studentRequests, pendingAttendanceClasses] = await Promise.all([
     getDashboardData(user),
     getFinanceDashboard(user),
     getResultsManagementWorkspace(user, { status: "pending_approval" }),
-    getAnnouncements(user),
+    getApprovalRequests(user, { status: "pending" }),
     getPendingAttendanceClasses(user)
   ]);
 
   const pendingApprovalsCount = results.filter(r => r.workflowStatus === "pending_approval").length;
+  const pendingAdmissionsCount = studentRequests.filter((request) => request.request_type === "admission").length;
+  const incomeDelta = percentDelta(finance.monthlyIncome, finance.previousMonthlyIncome);
+  const expensesDelta = percentDelta(finance.monthlyExpenses, finance.previousMonthlyExpenses, true);
+  const netDelta = percentDelta(finance.netCashFlow, finance.previousNetCashFlow);
 
   return (
     <>
       <DashboardHeader
         userName={user.fullName}
         role={user.role}
-        roleLabel="Principal"
+        eyebrow={user.schoolName}
         avatarUrl={user.avatarUrl}
         statusText="ACCOUNT ACTIVE"
+        decorative
         stats={[
           { label: "Students", value: dashboard.totalStudents },
           { label: "Faculty", value: dashboard.totalTeachers },
           { label: "Pending Approvals", value: pendingApprovalsCount }
         ]}
       />
-      <PageHeader
-        eyebrow={user.schoolName}
-        title="Principal Dashboard"
-        description="Oversee academic progress, fee collections, active announcements, and approve student results."
-      />
 
-      {/* Quick Actions */}
-      <section className="mb-6">
-        <h3 className="mb-3 font-display text-base font-bold text-muted uppercase tracking-wide">Quick Actions</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link
-            href="/students?action=new"
-            className="group flex items-center gap-3 rounded-xl border border-outline/40 bg-surface-low p-4 transition hover:border-primary hover:bg-primary-soft/10"
-          >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary group-hover:bg-primary group-hover:text-white transition">
-              <UserPlus className="h-5 w-5" aria-hidden="true" />
+      {pendingAdmissionsCount > 0 || pendingApprovalsCount > 0 ? (
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          {pendingAdmissionsCount > 0 ? (
+            <div className="rounded-lg bg-primary-soft p-4 text-primary flex items-center gap-3">
+              <UserPlus className="h-5 w-5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">
+                  {pendingAdmissionsCount} new admission request{pendingAdmissionsCount === 1 ? " needs" : "s need"} review.
+                </p>
+                <Link href="/students?status=pending_approval" className="text-xs font-bold underline hover:brightness-110">
+                  Review in Students &rarr;
+                </Link>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-ink text-sm">New Student</p>
-              <p className="text-xs text-muted">Enroll a new admission</p>
+          ) : null}
+          {pendingApprovalsCount > 0 ? (
+            <div className="rounded-lg bg-warning-soft p-4 text-warning flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">{pendingApprovalsCount} exam result sets are pending approval.</p>
+                <Link href="/results?status=pending_approval" className="text-xs font-bold underline hover:brightness-110">
+                  Go to Result Approvals &rarr;
+                </Link>
+              </div>
             </div>
-          </Link>
+          ) : null}
         </div>
-      </section>
-
-      {/* Alert and Actions summary */}
-      <div className="mb-6 grid gap-4 md:grid-cols-2">
-        {pendingApprovalsCount > 0 ? (
-          <div className="rounded-lg bg-warning-soft p-4 text-warning flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">{pendingApprovalsCount} exam result sets are pending approval.</p>
-              <Link href="/results?status=pending_approval" className="text-xs font-bold underline hover:brightness-110">
-                Go to Result Approvals &rarr;
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-lg bg-success-soft p-4 text-success flex items-center gap-3">
-            <FileText className="h-5 w-5 flex-shrink-0" />
-            <p className="text-sm font-semibold">All major exam uploads have been reviewed and approved.</p>
-          </div>
-        )}
-
-        <div className="rounded-lg bg-primary-soft p-4 text-primary flex items-center gap-3">
-          <Bell className="h-5 w-5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-semibold">{announcements.length} active public announcements.</p>
-            <p className="text-xs font-bold">Use the bell menu for history and updates.</p>
-          </div>
-        </div>
-      </div>
+      ) : null}
 
       {/* Stats Grid */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} hint="Active enrollment" icon={GraduationCap} />
-        <StatCard label="Teachers" value={dashboard.totalTeachers.toLocaleString()} hint="Active instructors" icon={Users} />
-        <StatCard label="Outstanding Fees" value={formatPKR(finance.totalOutstanding)} hint="Pending collection" icon={AlertTriangle} />
-        <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="Attendance exceptions" icon={CalendarX2} />
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" trend={`${dashboard.recentAdmissions.length} recent admission${dashboard.recentAdmissions.length === 1 ? "" : "s"}`} trendTone={dashboard.recentAdmissions.length > 0 ? "positive" : "neutral"} />
+        <StatCard label="Teachers" value={dashboard.totalTeachers.toLocaleString()} icon={Users} tone="purple" trend="Current faculty count" />
+        <StatCard label="Monthly income" value={formatPKR(finance.monthlyIncome)} icon={ArrowDownCircle} tone="green" trend={incomeDelta.text} trendTone={incomeDelta.tone} />
+        <StatCard label="Monthly expenses" value={formatPKR(finance.monthlyExpenses)} icon={ArrowUpCircle} tone="red" trend={expensesDelta.text} trendTone={expensesDelta.tone} />
+        <StatCard label="Profits" value={formatPKR(finance.netCashFlow)} icon={Wallet} tone={finance.netCashFlow >= 0 ? "green" : "red"} trend={netDelta.text} trendTone={netDelta.tone} />
+      </section>
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Income Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LazyIncomeTrendChart data={finance.incomeTrend} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Expense Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LazyExpenseDistributionChart data={finance.expenseDistribution} />
+          </CardContent>
+        </Card>
       </section>
 
       {/* Charts and Feeds */}
@@ -126,37 +135,6 @@ export default async function PrincipalDashboardPage() {
         <PendingAttendanceCard classes={pendingAttendanceClasses} today={today} />
       </section>
 
-      {/* Announcements */}
-      <section className="mt-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Active Announcements</CardTitle>
-            <span className="text-xs font-bold text-muted">Bell menu</span>
-          </CardHeader>
-          <CardContent>
-            {!announcements.length ? (
-              <EmptyState title="No active announcements" description="Create an announcement to broadcast school updates." />
-            ) : (
-              <div className="space-y-4">
-                {announcements.slice(0, 3).map((a) => (
-                  <div key={a.id} className="border-b border-outline/25 pb-4 last:border-b-0 last:pb-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-ink">{a.title}</h4>
-                      <Badge tone={a.priority === "critical" ? "red" : a.priority === "high" ? "yellow" : "blue"}>
-                        {a.priority}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted line-clamp-2">{a.description}</p>
-                    <p className="mt-2 text-xs text-muted">
-                      Published: {formatDatePK(a.publish_date)} by {a.created_by_name ?? "Principal"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
     </>
   );
 }

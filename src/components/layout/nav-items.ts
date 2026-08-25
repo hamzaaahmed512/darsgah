@@ -3,7 +3,6 @@ import {
   BarChart3,
   CalendarCheck,
   Bus,
-  ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
   Settings,
@@ -31,7 +30,6 @@ export interface NavItem {
 
 const coreNavItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, permission: "dashboard:view", section: "MAIN" },
-  { href: "/approvals", label: "Action Center", icon: ClipboardCheck, permission: "approvals:view", section: "MANAGE" },
   { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view", section: "MANAGE" },
   { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view", section: "PEOPLE" },
   { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },

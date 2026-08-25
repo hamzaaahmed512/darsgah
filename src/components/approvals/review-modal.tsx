@@ -1,15 +1,17 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/form-field";
 import type { ApprovalRequest } from "@/types/database";
-import { reviewRequestAction } from "@/app/(app)/approvals/actions";
+import { reviewStudentRequestAction } from "@/app/(app)/students/actions";
 
 export function ReviewModal({ request, onClose }: { request: ApprovalRequest; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,11 +23,12 @@ export function ReviewModal({ request, onClose }: { request: ApprovalRequest; on
     }
     
     startTransition(async () => {
-      const result = await reviewRequestAction(request.id, formData);
+      const result = await reviewStudentRequestAction(request.id, formData);
       if (result?.error) {
         setError(result.error);
       } else {
         onClose();
+        router.refresh();
       }
     });
   }

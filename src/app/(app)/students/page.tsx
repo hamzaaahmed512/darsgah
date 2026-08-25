@@ -1,14 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
 import { StudentFilterForm } from "@/components/students/student-filter-form";
 import { StudentFormModal } from "@/components/students/student-form-modal";
 import { StudentActions } from "@/components/students/student-actions";
+import { ApprovalQueue } from "@/components/approvals/approval-queue";
 import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { getStudents } from "@/lib/services/students";
+import { getApprovalRequests } from "@/lib/services/approvals";
 import { getAcademicOptions, getTeacherHeadClasses } from "@/lib/services/academics";
 import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
@@ -17,10 +19,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const params = await searchParams;
   const user = await requireUser("students:view");
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
-  const [students, academics] = await Promise.all([
+  const canReviewStudentRequests = hasPermission(user.role, "approvals:review", user.permissions);
+  const [students, academics, pendingRequests] = await Promise.all([
     getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1) }),
-    isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user)
+    isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user),
+    canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([])
   ]);
+  const pendingStudentRequests = pendingRequests.filter((request) => request.request_type === "admission" || request.request_type === "cancellation");
 
   return (
     <>
@@ -55,6 +60,21 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <StudentFilterForm classes={academics.classes} limitedView={isTeacher} />
         </Suspense>
       </Card>
+
+      {pendingStudentRequests.length ? (
+        <Card className="mb-5">
+          <CardHeader>
+            <div>
+              <CardTitle>Pending Student Requests</CardTitle>
+              <p className="mt-1 text-sm text-muted">Review new admissions and cancellation requests from the Students section.</p>
+            </div>
+            <Badge tone="yellow">{pendingStudentRequests.length} pending</Badge>
+          </CardHeader>
+          <CardContent>
+            <ApprovalQueue initialRequests={pendingStudentRequests} canReview={canReviewStudentRequests} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <StudentTable rows={students.rows} limitedView={isTeacher} />
       <p className="mt-4 text-sm text-muted">

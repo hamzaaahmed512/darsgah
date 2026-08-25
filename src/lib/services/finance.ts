@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema, manualTransactionSchema } from "@/lib/validation/finance";
-import { startOfMonth, format } from "date-fns";
-import type { TransactionDirection } from "@/lib/finance-transactions";
+import { startOfMonth, subMonths, format } from "date-fns";
+import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 
 export async function logFinanceAction(
   user: AppUser,
@@ -548,18 +548,54 @@ export async function getFinanceTransactions(user: AppUser, filters: {
 
 async function getLedgerDashboard(user: AppUser) {
   const supabase = await createClient();
-  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const currentMonthStart = startOfMonth(new Date());
+  const previousMonthStart = startOfMonth(subMonths(new Date(), 1));
+  const monthStart = format(currentMonthStart, "yyyy-MM-dd");
+  const previousMonthStartStr = format(previousMonthStart, "yyyy-MM-dd");
   const [{ data: monthRows, error: monthError }, { data: recent, error: recentError }] = await Promise.all([
-    supabase.from("finance_transactions").select("direction,amount").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", monthStart),
+    supabase.from("finance_transactions").select("direction,amount,transaction_date,category").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", previousMonthStartStr),
     supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
   ]);
-  if (monthError || recentError) return { monthlyIncome: 0, monthlyExpenses: 0, netCashFlow: 0, recentTransactions: [] };
-  const monthlyIncome = (monthRows ?? []).filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
-  const monthlyExpenses = (monthRows ?? []).filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  if (monthError || recentError) return { monthlyIncome: 0, monthlyExpenses: 0, netCashFlow: 0, previousMonthlyIncome: 0, previousMonthlyExpenses: 0, previousNetCashFlow: 0, recentTransactions: [], incomeTrend: [], expenseDistribution: [] };
+  const rows = monthRows ?? [];
+  const currentRows = rows.filter((row) => (row.transaction_date ?? monthStart) >= monthStart);
+  const previousRows = rows.filter((row) => {
+    const transactionDate = row.transaction_date ?? previousMonthStartStr;
+    return transactionDate >= previousMonthStartStr && transactionDate < monthStart;
+  });
+  const monthlyIncome = currentRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const monthlyExpenses = currentRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const previousMonthlyIncome = previousRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const previousMonthlyExpenses = previousRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const incomeByDate = new Map<string, number>();
+  const expensesByCategory = new Map<string, number>();
+
+  currentRows.forEach((row) => {
+    const amount = Number(row.amount ?? 0);
+    if (row.direction === "income") {
+      const date = row.transaction_date ?? monthStart;
+      incomeByDate.set(date, (incomeByDate.get(date) ?? 0) + amount);
+    }
+    if (row.direction === "expense") {
+      const category = row.category as TransactionCategory | null;
+      const label = category && category in TRANSACTION_CATEGORY_LABELS ? TRANSACTION_CATEGORY_LABELS[category] : "Other Expense";
+      expensesByCategory.set(label, (expensesByCategory.get(label) ?? 0) + amount);
+    }
+  });
+
   return {
     monthlyIncome,
     monthlyExpenses,
     netCashFlow: monthlyIncome - monthlyExpenses,
+    previousMonthlyIncome,
+    previousMonthlyExpenses,
+    previousNetCashFlow: previousMonthlyIncome - previousMonthlyExpenses,
+    incomeTrend: Array.from(incomeByDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, amount]) => ({ date, amount })),
+    expenseDistribution: Array.from(expensesByCategory.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value),
     recentTransactions: (recent ?? []).map((row: any) => ({ ...row, student_name: row.students ? `${row.students.first_name ?? ""} ${row.students.last_name ?? ""}`.trim() : null, recorded_by_name: row.profiles?.full_name ?? null }))
   };
 }

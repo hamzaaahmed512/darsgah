@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BriefcaseBusiness, Building2, ChevronDown, LogOut, Menu, UserRound, X } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, LogOut, Menu, UserRound, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppUser } from "@/types/database";
@@ -21,13 +21,23 @@ type SchoolBranding = {
   fullName: string;
 };
 
+function ordinal(day: number) {
+  const remainder = day % 100;
+  if (remainder >= 11 && remainder <= 13) return "th";
+  return ({ 1: "st", 2: "nd", 3: "rd" }[day % 10] ?? "th");
+}
+
+function formatNavDate(date: Date) {
+  return `${date.toLocaleDateString("en-GB", { weekday: "long" })}, ${date.getDate()}${ordinal(date.getDate())} ${date.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
+}
+
 export function AppShell({ user, branding, children }: { user: AppUser; branding: SchoolBranding; children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+  const [navDate, setNavDate] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const items = getNavItems(user.role).filter((item) => {
     if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) {
@@ -37,11 +47,16 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
     return navItemVisible(user.role, item.permission, user.permissions, item.anyPermissions);
   });
   const supabase = useMemo(() => createClient(), []);
+  const schoolDisplayName = branding.shortName ?? branding.fullName;
 
   useEffect(() => {
     setProfileOpen(false);
     setAnnouncementsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setNavDate(formatNavDate(new Date()));
+  }, []);
 
   const prevPathnameRef = useRef(pathname);
 
@@ -80,43 +95,6 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
-  useEffect(() => {
-    if (!hasPermission(user.role, "approvals:review", user.permissions)) return;
-
-    // Fetch initial count
-    async function fetchCount() {
-      const { count } = await supabase
-        .from("approval_requests")
-        .select("*", { count: "exact", head: true })
-        .eq("school_id", user.schoolId)
-        .eq("status", "pending");
-      if (count !== null) setPendingCount(count);
-    }
-    
-    fetchCount();
-
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel("approval_requests_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "approval_requests",
-          filter: `school_id=eq.${user.schoolId}`
-        },
-        () => {
-          fetchCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user.permissions, user.schoolId, user.role, supabase]);
-
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -146,41 +124,38 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
   }, []);
 
   const sidebar = (
-    <aside className="flex h-full w-[280px] flex-col bg-white">
+    <aside className="flex h-full w-[292px] flex-col bg-white">
       {/* Brand header */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary text-white shadow-sm">
+      <div className="flex min-h-[92px] items-center gap-3 border-b border-slate-200 px-7 py-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white shadow-sm">
           {branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={branding.logoUrl} alt={`${branding.fullName} logo`} className="h-full w-full object-cover" />
           ) : (
-            <BookOpen className="h-4 w-4" aria-hidden="true" />
+            <BookOpen className="h-5 w-5" aria-hidden="true" />
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold leading-tight text-slate-800" title={branding.shortName ?? branding.fullName}>{branding.shortName ?? branding.fullName}</p>
-          {branding.shortName ? <p className="max-w-[180px] truncate text-xs font-medium leading-tight text-slate-400" title={branding.fullName}>{branding.fullName}</p> : null}
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Powered by Darsgah</p>
+          <p className="truncate text-sm font-bold leading-tight text-slate-950" title={schoolDisplayName}>{schoolDisplayName}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Powered by Darsgah</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-4 py-5 scrollbar-thin">
         {groupedItems.map(({ section, items: sectionItems }, groupIndex) => (
-          <div key={`${section}-${groupIndex}`} className={groupIndex > 0 ? "mt-5" : ""}>
+          <div key={`${section}-${groupIndex}`} className={groupIndex > 0 ? "mt-6" : ""}>
             {/* Section label */}
             {section && (
-              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 {section}
               </p>
             )}
 
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {sectionItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const isApprovals = item.href === "/approvals";
-                const showBadge = isApprovals && pendingCount > 0 && hasPermission(user.role, "approvals:review", user.permissions);
 
                 if (item.subItems) {
                   const allowedSubItems = item.subItems.filter((sub) =>
@@ -199,28 +174,28 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
                           })
                         }
                         className={cn(
-                          "group flex w-full items-center justify-between gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150",
+                          "group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-sm font-semibold transition-all duration-150",
                           active
-                            ? "bg-primary text-white"
-                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                            ? "bg-blue-50 text-primary"
+                            : "text-slate-700 hover:bg-slate-50 hover:text-primary"
                         )}
                         aria-expanded={expanded}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-3">
                           <Icon
-                            className={cn("h-[15px] w-[15px] shrink-0 transition-colors duration-150", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+                            className={cn("h-[18px] w-[18px] shrink-0 transition-colors duration-150", active ? "text-primary" : "text-slate-600 group-hover:text-primary")}
                             aria-hidden="true"
                           />
                           <span className="font-semibold">{item.label}</span>
                         </div>
                         <ChevronDown
-                          className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200", expanded ? "rotate-180" : "", active ? "text-white/70" : "text-slate-400")}
+                          className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200", expanded ? "rotate-180" : "", active ? "text-primary/70" : "text-slate-400")}
                           aria-hidden="true"
                         />
                       </button>
 
                       {expanded && (
-                        <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
+                        <div className="ml-[24px] mt-1 space-y-1 border-l border-slate-200 pl-3">
                           {allowedSubItems.map((sub) => {
                             const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`);
                             return (
@@ -232,7 +207,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
                                   "flex items-center rounded-md px-3 py-2 text-xs font-semibold transition-all duration-150",
                                   isSubActive
                                     ? "bg-primary/10 text-primary"
-                                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                    : "text-slate-500 hover:bg-slate-50 hover:text-primary"
                                 )}
                               >
                                 {sub.label}
@@ -251,24 +226,19 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
                     key={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "group flex items-center justify-between gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-150",
+                      "group flex items-center justify-between gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-all duration-150",
                       active
-                        ? "bg-primary text-white shadow-sm"
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        ? "bg-blue-50 text-primary"
+                        : "text-slate-700 hover:bg-slate-50 hover:text-primary"
                     )}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                       <Icon
-                        className={cn("h-[15px] w-[15px] shrink-0 transition-colors duration-150", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+                        className={cn("h-[18px] w-[18px] shrink-0 transition-colors duration-150", active ? "text-primary" : "text-slate-600 group-hover:text-primary")}
                         aria-hidden="true"
                       />
                       <span>{item.label}</span>
                     </div>
-                    {showBadge && (
-                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
-                        {pendingCount > 99 ? "99+" : pendingCount}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
@@ -283,11 +253,11 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
     <div className="min-h-screen bg-background text-ink">
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
-      <div className="fixed inset-y-0 left-0 z-40 hidden w-[280px] bg-white shadow-[1px_0_0_rgba(226,232,240,0.9)] lg:block">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 z-40 hidden w-[292px] bg-white shadow-[1px_0_0_rgba(226,232,240,0.95)] lg:block">{sidebar}</div>
       <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[280px] transform bg-white shadow-lift transition duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-[292px] transform bg-white shadow-lift transition duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -299,12 +269,16 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
         {sidebar}
       </div>
 
-      <div className="lg:pl-[280px]">
-        <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.9)] sm:px-6 lg:px-10">
+      <div className="lg:pl-[292px]">
+        <header className="sticky top-0 z-30 flex min-h-[92px] items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.95)] sm:px-6 lg:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button className="rounded-xl p-2 hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />
             </button>
+            <div className="hidden items-center gap-2 text-sm font-bold text-slate-900 sm:flex">
+              <CalendarDays className="h-5 w-5 text-slate-700" aria-hidden="true" />
+              <span>{navDate ?? ""}</span>
+            </div>
           </div>
           <div className="relative flex items-center gap-3" ref={menuRef}>
             {hasPermission(user.role, "announcements:view", user.permissions) && (

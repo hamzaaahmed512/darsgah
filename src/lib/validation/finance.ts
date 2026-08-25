@@ -59,7 +59,7 @@ export const manualTransactionSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   transaction_date: z.string().date("Choose a valid date"),
   party_name: z.string().trim().max(160).optional(),
-  student_id: z.string().uuid().or(z.literal("")).optional(),
+  student_id: z.string().uuid().or(z.literal("")).nullish().transform((value) => value ?? ""),
   payment_method: z.enum(["cash", "bank_transfer", "cheque", "online_payment", "other"]).optional(),
   reference_number: z.string().trim().max(100).optional(),
   description: z.string().trim().max(500).optional()

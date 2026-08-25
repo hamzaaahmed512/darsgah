@@ -11,8 +11,13 @@ const OutstandingByClassChartImpl = dynamic(
   { ssr: false, loading: ChartLoading }
 );
 
-const CollectionMethodChartImpl = dynamic(
-  () => import("@/components/finance/finance-dashboard-charts").then((mod) => mod.CollectionMethodChart),
+const IncomeTrendChartImpl = dynamic(
+  () => import("@/components/finance/finance-dashboard-charts").then((mod) => mod.IncomeTrendChart),
+  { ssr: false, loading: ChartLoading }
+);
+
+const ExpenseDistributionChartImpl = dynamic(
+  () => import("@/components/finance/finance-dashboard-charts").then((mod) => mod.ExpenseDistributionChart),
   { ssr: false, loading: ChartLoading }
 );
 
@@ -20,6 +25,10 @@ export function LazyOutstandingByClassChart({ data }: { data: Array<{ className:
   return <OutstandingByClassChartImpl data={data} />;
 }
 
-export function LazyCollectionMethodChart({ data }: { data: Array<{ name: string; value: number }> }) {
-  return <CollectionMethodChartImpl data={data} />;
+export function LazyIncomeTrendChart({ data }: { data: Array<{ date: string; amount: number }> }) {
+  return <IncomeTrendChartImpl data={data} />;
+}
+
+export function LazyExpenseDistributionChart({ data }: { data: Array<{ name: string; value: number }> }) {
+  return <ExpenseDistributionChartImpl data={data} />;
 }
