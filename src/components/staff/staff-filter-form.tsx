@@ -64,6 +64,7 @@ export function StaffFilterForm({ customRoles = [] }: Props) {
         <option value="principal">Principals</option>
         <option value="teacher">Teachers</option>
         <option value="student_staff">Registrars / Student Staff</option>
+        <option value="other">Others</option>
         {customRoles.map((cr) => (
           <option key={cr.id} value={cr.id}>
             {cr.name}

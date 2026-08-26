@@ -6,8 +6,8 @@ describe("leave review validation", () => {
     expect(leaveReviewSchema.safeParse({ decision: "approved", principal_remarks: "" }).success).toBe(true);
   });
 
-  it("requires a useful rejection comment", () => {
-    expect(leaveReviewSchema.safeParse({ decision: "rejected", principal_remarks: "" }).success).toBe(false);
+  it("allows rejection without a comment", () => {
+    expect(leaveReviewSchema.safeParse({ decision: "rejected", principal_remarks: "" }).success).toBe(true);
     expect(leaveReviewSchema.safeParse({ decision: "rejected", principal_remarks: "Insufficient staffing coverage." }).success).toBe(true);
   });
 });

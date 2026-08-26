@@ -84,6 +84,7 @@ export function ClassSubjectManager({
   }
 
   function handleRemoveSubject(classSubjectId: string, subjectName: string) {
+    if (!window.confirm(`Remove subject "${subjectName}" from this class? This can affect teacher assignments and student subject enrollments.`)) return;
     setRemovingId(classSubjectId);
     startTransition(async () => {
       try {

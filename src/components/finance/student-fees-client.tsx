@@ -39,7 +39,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
   const [error, setError] = useState<string | null>(null);
 
   const [discountType, setDiscountType] = useState<"percentage" | "fixed" | "none">("none");
-  const [discountValue, setDiscountValue] = useState("0");
+  const [discountValue, setDiscountValue] = useState("");
   const [discountReason, setDiscountReason] = useState<"scholarship" | "sibling_discount" | "merit" | "need_based" | "special_approval">("scholarship");
   const [discountRemarks, setDiscountRemarks] = useState("");
 
@@ -62,7 +62,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
   function handleOpenDiscount(acc: any) {
     setSelectedAccount(acc);
     setDiscountType(acc.discount_type);
-    setDiscountValue(acc.discount_value.toString());
+    setDiscountValue(acc.discount_type === "none" ? "" : String(acc.discount_value ?? ""));
     setDiscountReason(acc.discount_reason || "scholarship");
     setDiscountRemarks(acc.discount_remarks || "");
     setError(null);
@@ -75,7 +75,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
 
     const formData = new FormData();
     formData.append("discount_type", discountType);
-    formData.append("discount_value", discountValue);
+    formData.append("discount_value", discountValue.trim() === "" ? "0" : discountValue);
     formData.append("discount_reason", discountReason);
     formData.append("discount_remarks", discountRemarks);
     formData.append("discount_approved_by", user.fullName);
@@ -252,7 +252,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
                     value={discountType}
                     onChange={(e) => {
                       setDiscountType(e.target.value as any);
-                      if (e.target.value === "none") setDiscountValue("0");
+                      if (e.target.value === "none") setDiscountValue("");
                     }}
                   >
                     <option value="none">No Discount</option>
@@ -269,7 +269,6 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
                         min="0"
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
-                        required
                       />
                     </Field>
 

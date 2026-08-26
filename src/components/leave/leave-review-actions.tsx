@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, X, XCircle } from "lucide-react";
 import { reviewLeaveAction } from "@/app/(app)/leave/actions";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,14 @@ import { Field, Textarea } from "@/components/ui/form-field";
 
 export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
   const [rejecting, setRejecting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [remarks, setRemarks] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!rejecting) return;
@@ -23,10 +29,6 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
 
   function review(decision: "approved" | "rejected") {
     setError("");
-    if (decision === "rejected" && !remarks.trim()) {
-      setError("Add a comment explaining why this leave is being rejected.");
-      return;
-    }
 
     const formData = new FormData();
     formData.set("leave_id", leaveId);
@@ -68,7 +70,7 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
 
       {!rejecting && error ? <p className="mt-2 max-w-xs text-right text-xs font-semibold text-danger">{error}</p> : null}
 
-      {rejecting ? (
+      {mounted && rejecting ? createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
           role="dialog"
@@ -78,25 +80,25 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
             if (event.target === event.currentTarget && !pending) setRejecting(false);
           }}
         >
-          <div className="w-full max-w-lg rounded-[18px] bg-white p-5 shadow-lift ring-1 ring-outline">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id={`reject-leave-${leaveId}`} className="font-display text-xl font-bold text-ink">Reject leave request</h2>
-                <p className="mt-1 text-sm text-muted">Give the employee a clear reason for this decision.</p>
+          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
+            <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
+              <div className="min-w-0">
+                <h2 id={`reject-leave-${leaveId}`} className="font-display text-lg font-bold text-ink">Reject Leave Request</h2>
+                <p className="mt-1 text-sm text-muted">Add a reason if you want it saved with this decision.</p>
               </div>
               <button
                 type="button"
                 disabled={pending}
                 onClick={() => setRejecting(false)}
-                className="rounded-xl p-2 text-muted hover:bg-surface-low hover:text-ink disabled:opacity-50"
+                className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink disabled:opacity-50"
                 aria-label="Close rejection dialog"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="mt-5">
-              <Field label="Reason for rejection">
+            <div className="overflow-y-auto p-5">
+              <Field label="Reason for rejection (optional)">
                 <Textarea
                   value={remarks}
                   onChange={(event) => setRemarks(event.target.value)}
@@ -111,19 +113,20 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
                 <span className="font-semibold text-danger">{error}</span>
                 <span className="shrink-0 text-muted">{remarks.length}/500</span>
               </div>
-            </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <Button type="button" variant="secondary" disabled={pending} onClick={() => setRejecting(false)}>
-                Cancel
-              </Button>
-              <Button type="button" variant="danger" disabled={pending || !remarks.trim()} onClick={() => review("rejected")}>
-                <XCircle className="h-4 w-4" aria-hidden="true" />
-                {pending ? "Rejecting…" : "Reject leave"}
-              </Button>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button type="button" variant="secondary" disabled={pending} onClick={() => setRejecting(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="danger" disabled={pending} onClick={() => review("rejected")}>
+                  <XCircle className="h-4 w-4" aria-hidden="true" />
+                  {pending ? "Rejecting…" : "Reject leave"}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );

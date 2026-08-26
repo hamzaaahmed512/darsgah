@@ -30,15 +30,15 @@ export interface NavItem {
 
 const coreNavItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, permission: "dashboard:view", section: "MAIN" },
-  { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view", section: "MANAGE" },
   { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view", section: "PEOPLE" },
-  { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },
-  { href: "/finance/dashboard", label: "Finance", icon: Coins, permission: "finance:view", section: "OPERATIONS" },
-  { href: "/finance/fees", label: "Fee Management", icon: Receipt, permission: "finance:view", section: "OPERATIONS" },
-  { href: "/finance/payroll", label: "Payroll", icon: Wallet, permission: "payroll:view", section: "OPERATIONS" },
-  { href: "/finance/transactions", label: "Transactions", icon: Receipt, permission: "finance:view", section: "OPERATIONS" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:view", section: "PEOPLE" },
+  { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },
+  { href: "/leave", label: "Leave Center", icon: CalendarCheck, permission: "leave:view", section: "MANAGE" },
   { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
+  { href: "/finance/dashboard", label: "Finance", icon: Coins, permission: "finance:view", section: "FINANCE" },
+  { href: "/finance/fees", label: "Fee Management", icon: Receipt, permission: "finance:view", section: "FINANCE" },
+  { href: "/finance/payroll", label: "Payroll", icon: Wallet, permission: "payroll:view", section: "FINANCE" },
+  { href: "/finance/transactions", label: "Transactions", icon: Receipt, permission: "finance:view", section: "FINANCE" },
   { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view", section: "OPERATIONS" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
   { href: "/admin", label: "Admin", icon: Shield, permission: "users:manage", section: "SYSTEM" },
@@ -101,6 +101,8 @@ export function getNavItems(role: UserRole): NavItem[] {
   const items: NavItem[] = [{ ...coreNavItems[0], href: getOverviewHref(role) }];
 
   for (const item of coreNavItems.slice(1)) {
+    items.push(item);
+
     if (item.href === "/classes") {
       if (usesPrincipalAcademicControl(role)) {
         items.push(principalAcademicControlItem());
@@ -110,8 +112,6 @@ export function getNavItems(role: UserRole): NavItem[] {
         items.push(structureAcademicsItem());
       }
     }
-
-    items.push(item);
   }
 
   return items;

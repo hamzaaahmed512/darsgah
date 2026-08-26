@@ -47,7 +47,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <StudentFormModal
               classes={academics.classes}
               onSubmit={createStudentAction}
-              submitLabel={user.role === "student_staff" ? "Submit request" : "Create student"}
+              submitLabel={user.role === "student_staff" ? "Submit request" : "Add student"}
               initialOpen={params.action === "new"}
             />
           ) : null}

@@ -14,12 +14,13 @@ export function ArchiveAnnouncementButton({ announcementId }: { announcementId: 
     <button
       type="button"
       disabled={isPending}
-      onClick={() =>
+      onClick={() => {
+        if (!window.confirm("Archive this announcement?")) return;
         startTransition(async () => {
           const res = await archiveAnnouncementAction(announcementId);
           if (res.ok) setDone(true);
-        })
-      }
+        });
+      }}
       title="Archive announcement"
       className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface-low hover:text-danger disabled:opacity-40"
     >

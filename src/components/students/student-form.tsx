@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,45 +22,51 @@ export function StudentForm({
   onSubmit: (values: StudentFormValues) => Promise<void | { error?: string }>;
   submitLabel: string;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const emptyValues: StudentFormValues = {
+    admission_number: "",
+    name_en: "",
+    name_ur: "",
+    father_name_en: "",
+    father_name_ur: "",
+    father_phone: "",
+    father_cnic: "",
+    father_alive: "yes",
+    photo_url: "",
+    date_of_birth: "",
+    gender: undefined as any,
+    religion: "",
+    email: "",
+    phone: "",
+    address: "",
+    admission_date: new Date().toISOString().slice(0, 10),
+    status: "active",
+    class_id: "",
+    major: "",
+    guardian_name: "",
+    guardian_relationship: "",
+    guardian_email: "",
+    guardian_phone: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
+    ...initialValues
+  };
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors }
   } = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
-    defaultValues: {
-      admission_number: "",
-      name_en: "",
-      name_ur: "",
-      father_name_en: "",
-      father_name_ur: "",
-      father_phone: "",
-      father_cnic: "",
-      photo_url: "",
-      date_of_birth: "",
-      gender: undefined,
-      email: "",
-      phone: "",
-      address: "",
-      admission_date: new Date().toISOString().slice(0, 10),
-      status: "active",
-      class_id: "",
-      major: "",
-      guardian_name: "",
-      guardian_relationship: "",
-      guardian_email: "",
-      guardian_phone: "",
-      emergency_contact_name: "",
-      emergency_contact_phone: "",
-      ...initialValues
-    }
+    defaultValues: emptyValues
   });
   const selectedClass = classes.find((item) => item.id === watch("class_id"));
   const majorOptions = majorsForGrade(selectedClass?.grade_name);
+  const fatherAlive = watch("father_alive");
   useEffect(() => {
     const currentMajor = watch("major");
     if (currentMajor && !majorOptions.includes(currentMajor as StudentMajor)) {
@@ -74,6 +81,9 @@ export function StudentForm({
         const result = await onSubmit(values);
         if (result && result.error) {
           setServerError(result.error);
+        } else if (!initialValues) {
+          reset({ ...emptyValues, admission_date: new Date().toISOString().slice(0, 10) });
+          router.refresh();
         }
       } catch (err: any) {
         if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
@@ -120,6 +130,16 @@ export function StudentForm({
               <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} /> Female</label>
             </div>
           </Field>
+          <Field label="Religion" error={errors.religion?.message}>
+            <Select {...register("religion")}>
+              <option value="">Select religion...</option>
+              <option value="Islam">Islam</option>
+              <option value="Christianity">Christianity</option>
+              <option value="Hinduism">Hinduism</option>
+              <option value="Sikhism">Sikhism</option>
+              <option value="Other">Other</option>
+            </Select>
+          </Field>
 
           <Field label="Date of birth" error={errors.date_of_birth?.message}>
             <Input type="date" {...register("date_of_birth")} />
@@ -131,7 +151,7 @@ export function StudentForm({
             <Input type="email" {...register("email")} />
           </Field>
           <Field label="Phone" error={errors.phone?.message}>
-            <Input {...register("phone")} value={formatPakistaniPhone(watch("phone"))} onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
+            <Input {...register("phone")} value={formatPakistaniPhone(watch("phone"))} onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" />
           </Field>
           <Field label="Class assignment" error={errors.class_id?.message}>
             <Select {...register("class_id")}>
@@ -170,14 +190,20 @@ export function StudentForm({
             <Input {...register("father_name_ur")} dir="rtl" />
           </Field>
           <Field label="Father's Phone" error={errors.father_phone?.message}>
-            <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
+            <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" />
           </Field>
           <Field label="Father's CNIC" error={errors.father_cnic?.message}>
             <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="0000012345678" inputMode="numeric" maxLength={15} />
           </Field>
+          <Field label="Father alive?" error={errors.father_alive?.message}>
+            <div className="flex gap-4 items-center h-10">
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} /> Yes</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} /> No</label>
+            </div>
+          </Field>
           
           <div className="col-span-full border-t border-outline/50 my-2 pt-4">
-            <p className="text-sm font-semibold mb-3">Legacy Guardian Info (Optional)</p>
+            <p className="text-sm font-semibold mb-3">{fatherAlive === "no" ? "Guardian Info" : "Guardian Info (Optional)"}</p>
           </div>
           
           <Field label="Guardian name" error={errors.guardian_name?.message}>
@@ -187,13 +213,13 @@ export function StudentForm({
             <Input {...register("guardian_relationship")} />
           </Field>
           <Field label="Guardian phone" error={errors.guardian_phone?.message}>
-            <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
+            <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" />
           </Field>
-          <Field label="Emergency contact" error={errors.emergency_contact_name?.message}>
+          <Field label="Emergency contact name" error={errors.emergency_contact_name?.message}>
             <Input {...register("emergency_contact_name")} />
           </Field>
           <Field label="Emergency phone" error={errors.emergency_contact_phone?.message}>
-            <Input {...register("emergency_contact_phone")} value={formatPakistaniPhone(watch("emergency_contact_phone"))} onChange={(event) => setValue("emergency_contact_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true })} inputMode="numeric" maxLength={11} placeholder="321 6666666" />
+            <Input {...register("emergency_contact_phone")} value={formatPakistaniPhone(watch("emergency_contact_phone"))} onChange={(event) => setValue("emergency_contact_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" />
           </Field>
         </CardContent>
       </Card>

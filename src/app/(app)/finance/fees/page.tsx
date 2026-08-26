@@ -1,5 +1,7 @@
 import { requireUser } from "@/lib/auth/session";
-import { getFeeStructures, getStudentFees, getPaymentHistory, getFeeChallans } from "@/lib/services/finance";
+import Link from "next/link";
+import { Settings } from "lucide-react";
+import { getStudentFees, getPaymentHistory, getFeeChallans } from "@/lib/services/finance";
 import { getAcademicOptions } from "@/lib/services/academics";
 import { PageHeader } from "@/components/layout/page-header";
 import { FeeManagementClient } from "@/components/finance/fee-management-client";
@@ -11,11 +13,11 @@ import { formatPKR, formatDatePK } from "@/lib/utils";
 export default async function FeeManagementPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const user = await requireUser("finance:view");
   const month = (await searchParams).month ?? new Date().toISOString().slice(0, 7);
-  const [accounts, academics, payments, structures, challans] = await Promise.all([
+  const [accounts, academics, payments, challans] = await Promise.all([
     getStudentFees(user, {}),
     getAcademicOptions(user),
     getPaymentHistory(user, {}),
-    getFeeStructures(user), getFeeChallans(user, month)
+    getFeeChallans(user, month)
   ]);
 
   return (
@@ -24,6 +26,12 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
         eyebrow="Finance"
         title="Fee Management"
         description="Review student fee ledgers, collect payments, apply discounts, and print receipts from one consolidated workspace."
+        actions={
+          <Link href="/finance/fees/structures" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-soft hover:brightness-105">
+            <Settings className="h-4 w-4" aria-hidden="true" />
+            Fee Structures
+          </Link>
+        }
       />
       <ChallanGeneration user={user} month={month} accounts={accounts} classes={academics.classes} />
       <form method="get" className="mb-3 flex items-center gap-2"><label className="text-sm font-semibold text-muted" htmlFor="challan-month">Challan month</label><input id="challan-month" name="month" type="month" defaultValue={month} className="rounded-lg border border-outline/60 bg-surface-low px-3 py-2 text-sm text-ink" /><button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Apply</button></form>
@@ -34,7 +42,6 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
         classes={academics.classes}
         sessions={academics.years}
         payments={payments}
-        structures={structures}
       />
     </>
   );

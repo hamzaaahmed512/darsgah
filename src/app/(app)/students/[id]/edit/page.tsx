@@ -21,7 +21,16 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <PageHeader eyebrow={student.admission_number} title="Edit Student" description="Update the profile. Role and tenant enforcement still happen on the server and in RLS." />
+      <PageHeader
+        eyebrow={student.admission_number}
+        title="Edit Student"
+        description="Update the profile. Role and tenant enforcement still happen on the server and in RLS."
+        actions={
+          <a href={`/students/${id}`} className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition-all duration-200 hover:bg-surface-low hover:text-primary active:scale-[0.98]">
+            Cancel
+          </a>
+        }
+      />
       <StudentForm
         classes={academics.classes}
         onSubmit={submit}
@@ -36,9 +45,11 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           father_name_ur: (student as any).father_name_ur || "",
           father_phone: (student as any).father_phone || guardian?.phone || "",
           father_cnic: (student as any).father_cnic || "",
+          father_alive: (student as any).father_alive === false ? "no" : "yes",
           photo_url: (student as any).photo_url || "",
           date_of_birth: student.date_of_birth,
           gender: (student.gender === "male" || student.gender === "female") ? student.gender : undefined,
+          religion: (student as any).religion || "",
           email: student.email ?? "",
           phone: student.phone ?? "",
           address: student.address ?? "",
@@ -49,9 +60,9 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           guardian_name: guardian?.full_name ?? "Guardian",
           guardian_relationship: guardian?.relationship ?? "Guardian",
           guardian_email: guardian?.email ?? "",
-          guardian_phone: guardian?.phone ?? "+1 555 000 0000",
+          guardian_phone: guardian?.phone ?? "",
           emergency_contact_name: guardian?.emergency_contact_name ?? guardian?.full_name ?? "Emergency Contact",
-          emergency_contact_phone: guardian?.emergency_contact_phone ?? guardian?.phone ?? "+1 555 000 0000"
+          emergency_contact_phone: guardian?.emergency_contact_phone ?? guardian?.phone ?? ""
         }}
       />
     </>

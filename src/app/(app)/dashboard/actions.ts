@@ -46,6 +46,7 @@ export async function sendAttendanceReminderAction(classId: string) {
   });
 
   revalidatePath("/dashboard/principal");
+  revalidatePath("/attendance");
   return {
     ok: true,
     teacherName: headTeacher?.full_name ?? "Head teacher"

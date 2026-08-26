@@ -7,10 +7,12 @@ import { useRouter } from "next/navigation";
 export function TransportRefreshForm({
   action,
   className,
+  confirmText,
   children
 }: {
   action: (formData: FormData) => Promise<void>;
   className?: string;
+  confirmText?: string;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -21,6 +23,7 @@ export function TransportRefreshForm({
     event.preventDefault();
     const form = event.currentTarget;
     if (!form.reportValidity()) return;
+    if (confirmText && !window.confirm(confirmText)) return;
 
     const formData = new FormData(form);
     setError(null);

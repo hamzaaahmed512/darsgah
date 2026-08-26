@@ -15,7 +15,7 @@ export default async function NewStudentPage() {
         title="Add Student" 
         description={user.role === "student_staff" ? "Submit a new student admission request for Principal approval." : "Create a validated student record and optional active class enrollment."} 
       />
-      <StudentForm classes={academics.classes} onSubmit={createStudentAction} submitLabel={user.role === "student_staff" ? "Submit request" : "Create student"} />
+      <StudentForm classes={academics.classes} onSubmit={createStudentAction} submitLabel={user.role === "student_staff" ? "Submit request" : "Add student"} />
     </>
   );
 }

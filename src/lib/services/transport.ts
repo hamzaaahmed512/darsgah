@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hasPermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/services/activity";
 import type { AppUser } from "@/types/database";
+import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 
 function isMissingTransportSchema(error: { code?: string; message?: string } | null) {
   if (!error) return false;
@@ -125,10 +126,12 @@ export async function createTransportRoute(user: AppUser, formData: FormData) {
 export async function createTransportDriver(user: AppUser, formData: FormData) {
   assertCanManageTransport(user);
   const supabase = await createClient();
+  const phone = formatPakistaniPhoneForStorage(String(formData.get("phone") ?? ""));
+  if (!phone) throw new Error("Driver phone number is required.");
   const { error } = await supabase.from("transport_drivers").insert({
     school_id: user.schoolId,
     full_name: String(formData.get("full_name") ?? "").trim(),
-    phone: String(formData.get("phone") ?? "").trim(),
+    phone,
     license_number: String(formData.get("license_number") ?? "").trim(),
     status: "active"
   });

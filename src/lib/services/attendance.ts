@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { attendanceSubmissionSchema, type AttendanceSubmission } from "@/lib/validation/attendance";
 import { logActivity } from "@/lib/services/activity";
+import { sortClassesNaturally } from "@/lib/class-sort";
 
 export async function getClassAttendanceSummary(user: AppUser, classId: string, startDate: string, endDate: string) {
   const supabase = await createClient();
@@ -37,8 +38,10 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
     classQuery = teacherClassIds.length ? classQuery.in("id", teacherClassIds) : classQuery.eq("id", "00000000-0000-0000-0000-000000000000");
   }
 
-  const { data: classes } = await classQuery;
-  const selectedClassId = classId ?? classes?.[0]?.id;
+  const { data: classRows, error: classError } = await classQuery;
+  if (classError) throw new Error(classError.message);
+  const classes = sortClassesNaturally(classRows ?? []);
+  const selectedClassId = classId ?? classes[0]?.id;
   const [enrollments, records] = selectedClassId
     ? await Promise.all([
         supabase
@@ -84,7 +87,7 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
     : { data: null };
 
   return {
-    classes: (classes ?? []).map((row: any) => ({
+    classes: classes.map((row: any) => ({
       id: row.id,
       name: row.name,
       room: row.room,

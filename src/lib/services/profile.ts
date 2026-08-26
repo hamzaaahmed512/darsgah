@@ -26,20 +26,6 @@ export type ProfileDetails = ProfileFormValues & {
   schoolName: string;
 };
 
-/** Strip +92 prefix so the UI only shows the 10-digit local number */
-function stripCountryCode(phone: string | null): string | null {
-  if (!phone) return null;
-  const stripped = phone.replace(/^\+92/, "").replace(/^0/, "");
-  return stripped || null;
-}
-
-/** Add +92 prefix for storage if the number doesn't already have it */
-function withCountryCode(phone: string | null): string | null {
-  if (!phone) return null;
-  if (phone.startsWith("+92")) return phone;
-  return `+92${phone}`;
-}
-
 export async function getProfileDetails(user: AppUser): Promise<ProfileDetails> {
   const supabase = await createClient();
 
@@ -67,8 +53,7 @@ export async function getProfileDetails(user: AppUser): Promise<ProfileDetails> 
     fullName: profile?.full_name ?? user.fullName,
     email: profile?.email ?? user.email,
     avatarUrl: profile?.avatar_url ?? user.avatarUrl,
-    // Strip +92 prefix so users see their 10-digit local number
-    phone: stripCountryCode(profile?.phone ?? null),
+    phone: profile?.phone ?? null,
     personalEmail: profile?.personal_email ?? null,
     department: member?.department ?? user.department,
     jobTitle: member?.job_title ?? user.jobTitle,
@@ -86,8 +71,7 @@ export async function updateProfileDetails(user: AppUser, values: ProfileFormVal
 
   const profileUpdate: Record<string, unknown> = {
     full_name: parsed.fullName,
-    // Prepend +92 before saving to DB
-    phone: withCountryCode(parsed.phone ?? null),
+    phone: parsed.phone ?? null,
     personal_email: parsed.personalEmail ?? null,
     address: parsed.address,
     emergency_contact_name: parsed.emergencyContactName,

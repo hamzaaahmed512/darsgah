@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
-import { getDashboardData, getPendingAttendanceClasses } from "@/lib/services/dashboard";
+import { getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
 import { getApprovalRequests } from "@/lib/services/approvals";
@@ -8,7 +8,6 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { LazyClassDistributionChart } from "@/components/dashboard/lazy-responsive-charts";
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components/finance/lazy-finance-dashboard-charts";
-import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { formatPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, AlertTriangle, UserPlus } from "lucide-react";
@@ -29,13 +28,11 @@ export default async function PrincipalDashboardPage() {
     throw new Error("Unauthorized access to Principal Dashboard");
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [dashboard, finance, results, studentRequests, pendingAttendanceClasses] = await Promise.all([
+  const [dashboard, finance, results, studentRequests] = await Promise.all([
     getDashboardData(user),
     getFinanceDashboard(user),
     getResultsManagementWorkspace(user, { status: "pending_approval" }),
-    getApprovalRequests(user, { status: "pending" }),
-    getPendingAttendanceClasses(user)
+    getApprovalRequests(user, { status: "pending" })
   ]);
 
   const pendingApprovalsCount = results.filter(r => r.workflowStatus === "pending_approval").length;
@@ -54,8 +51,6 @@ export default async function PrincipalDashboardPage() {
         statusText="ACCOUNT ACTIVE"
         decorative
         stats={[
-          { label: "Students", value: dashboard.totalStudents },
-          { label: "Faculty", value: dashboard.totalTeachers },
           { label: "Pending Approvals", value: pendingApprovalsCount }
         ]}
       />
@@ -128,11 +123,6 @@ export default async function PrincipalDashboardPage() {
           </CardContent>
         </Card>
         <ActivityFeed items={dashboard.activity} />
-      </section>
-
-      {/* Attendance follow-up */}
-      <section className="mt-6">
-        <PendingAttendanceCard classes={pendingAttendanceClasses} today={today} />
       </section>
 
     </>

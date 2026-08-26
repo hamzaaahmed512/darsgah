@@ -2,6 +2,9 @@ import { subDays, formatISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, PendingAttendanceClass } from "@/types/database";
 import { getTeacherHeadClasses } from "@/lib/services/academics";
+import { sortClassesNaturally } from "@/lib/class-sort";
+
+type ClassDistributionRow = { class_name: string; grade_name: string | null; student_count: number };
 
 export async function getTeacherDashboardData(user: AppUser) {
   const supabase = await createClient();
@@ -53,7 +56,7 @@ export async function getPendingAttendanceClasses(user: AppUser): Promise<Pendin
 
   if (error) throw new Error(error.message);
 
-  return (data ?? [])
+  return sortClassesNaturally((data ?? [])
     .filter((row: any) => !row.attendance_sessions?.length)
     .map((row: any) => ({
       id: row.id,
@@ -65,7 +68,7 @@ export async function getPendingAttendanceClasses(user: AppUser): Promise<Pendin
       head_teacher_name: row.head_teacher?.full_name ?? null,
       head_teacher_email: row.head_teacher?.email ?? null,
       head_teacher_phone: row.head_teacher?.phone ?? null
-    }));
+    })));
 }
 
 export async function getDashboardData(user: AppUser) {
@@ -90,7 +93,7 @@ export async function getDashboardData(user: AppUser) {
       recentAdmissions: data.recentAdmissions ?? [],
       activity: data.activity ?? [],
       attendanceTrend: data.attendanceTrend ?? [],
-      classDistribution: data.classDistribution ?? []
+      classDistribution: sortClassesNaturally((data.classDistribution ?? []) as ClassDistributionRow[])
     };
   }
 
@@ -151,7 +154,7 @@ export async function getDashboardData(user: AppUser) {
     recentAdmissions: recentAdmissions.data ?? [],
     activity: activity.data ?? [],
     attendanceTrend: toTrend(attendanceRecords.data ?? []),
-    classDistribution: classDistribution.data ?? []
+    classDistribution: sortClassesNaturally((classDistribution.data ?? []) as ClassDistributionRow[])
   };
 }
 

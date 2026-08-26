@@ -10,18 +10,23 @@ const student = {
   preferred_name: "",
   date_of_birth: "2010-04-14",
   gender: "male",
+  religion: "Islam",
   email: "alex@example.com",
-  phone: "+1 (555) 123-4567",
+  phone: "0300-1234567",
   address: "742 Maplewood Dr",
   admission_date: "2026-08-15",
   status: "active",
   class_id: "50000000-0000-0000-0000-000000000001",
+  father_name_en: "Carlos Rivera",
+  father_phone: "0303-1234567",
+  father_cnic: "35202-1234567-1",
+  father_alive: "yes",
   guardian_name: "Maria Rivera",
   guardian_relationship: "Mother",
   guardian_email: "maria@example.com",
-  guardian_phone: "+1 (555) 987-6543",
+  guardian_phone: "0301-9876543",
   emergency_contact_name: "Juan Rivera",
-  emergency_contact_phone: "+1 (555) 987-6544"
+  emergency_contact_phone: "0302-9876544"
 };
 
 describe("validation schemas", () => {

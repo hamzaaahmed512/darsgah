@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/form-field";
+import { PakistaniPhoneInput } from "@/components/ui/pakistani-phone-input";
 import { TransportActionPopover } from "@/components/transport/action-popover";
 import { TransportRefreshForm } from "@/components/transport/transport-refresh-form";
 import { requireUser } from "@/lib/auth/session";
@@ -123,7 +124,7 @@ export default async function TransportPage() {
                             <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm ring-1 ring-outline/40">
                               <span className="min-w-0 truncate">{item.student_name} <span className="text-muted">({item.admission_number})</span></span>
                               {canManage ? (
-                                <TransportRefreshForm action={removeTransportAction}>
+                                <TransportRefreshForm action={removeTransportAction} confirmText={`Remove ${item.student_name} from this transport?`}>
                                   <input type="hidden" name="assignment_id" value={item.id} />
                                   <Button type="submit" variant="ghost" size="sm">Remove</Button>
                                 </TransportRefreshForm>
@@ -154,7 +155,7 @@ function DriverForm() {
   return (
     <TransportRefreshForm action={createDriverAction} className="grid gap-3">
       <Field label="Full name"><Input name="full_name" required /></Field>
-      <Field label="Phone"><Input name="phone" required /></Field>
+      <Field label="Phone"><PakistaniPhoneInput name="phone" required /></Field>
       <Field label="License number"><Input name="license_number" required /></Field>
       <Button type="submit">Save Driver</Button>
     </TransportRefreshForm>

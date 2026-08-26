@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { updateSchoolSettings } from "@/lib/services/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatPakistaniPhone } from "@/lib/pakistan-format";
+import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 
 const SCHOOL_BRANDING_BUCKET = "school-branding";
 const MAX_ASSET_SIZE_BYTES = 5 * 1024 * 1024;
@@ -91,7 +91,7 @@ export async function saveSchoolProfileAction(formData: FormData) {
     const shortName = readString(formData, "shortName").toUpperCase().slice(0, 20);
     const timezone = readString(formData, "timezone");
     const email = readString(formData, "email");
-    const phone = formatPakistaniPhone(readString(formData, "phone"));
+    const phone = formatPakistaniPhoneForStorage(readString(formData, "phone"));
     const website = readString(formData, "website");
     const currentLogoUrl = readString(formData, "currentLogoUrl");
     const currentFaviconUrl = readString(formData, "currentFaviconUrl");

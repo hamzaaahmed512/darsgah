@@ -14,19 +14,26 @@ import {
   createManualTransaction
 } from "@/lib/services/finance";
 
+function numberOrZero(formData: FormData, key: string) {
+  const value = formData.get(key);
+  if (value === null) return 0;
+  if (typeof value === "string" && value.trim() === "") return 0;
+  return Number(value);
+}
+
 export async function createFeeStructureAction(formData: FormData) {
   const user = await requireUser("finance:manage");
   
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
     class_id: formData.get("class_id") as string,
-    tuition_fee: Number(formData.get("tuition_fee")),
-    admission_fee: Number(formData.get("admission_fee")),
-    examination_fee: Number(formData.get("examination_fee")),
-    library_fee: Number(formData.get("library_fee")),
-    laboratory_fee: Number(formData.get("laboratory_fee")),
-    transport_fee: Number(formData.get("transport_fee")),
-    miscellaneous_charges: Number(formData.get("miscellaneous_charges"))
+    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    admission_fee: numberOrZero(formData, "admission_fee"),
+    examination_fee: numberOrZero(formData, "examination_fee"),
+    library_fee: numberOrZero(formData, "library_fee"),
+    laboratory_fee: numberOrZero(formData, "laboratory_fee"),
+    transport_fee: numberOrZero(formData, "transport_fee"),
+    miscellaneous_charges: numberOrZero(formData, "miscellaneous_charges")
   };
 
   await createFeeStructure(user, values);
@@ -42,13 +49,13 @@ export async function createFeeStructuresForClassesAction(formData: FormData) {
   const classIds = formData.getAll("class_ids").map(String).filter(Boolean);
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
-    tuition_fee: Number(formData.get("tuition_fee")),
-    admission_fee: Number(formData.get("admission_fee")),
-    examination_fee: Number(formData.get("examination_fee")),
-    library_fee: Number(formData.get("library_fee")),
-    laboratory_fee: Number(formData.get("laboratory_fee")),
-    transport_fee: Number(formData.get("transport_fee")),
-    miscellaneous_charges: Number(formData.get("miscellaneous_charges"))
+    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    admission_fee: numberOrZero(formData, "admission_fee"),
+    examination_fee: numberOrZero(formData, "examination_fee"),
+    library_fee: numberOrZero(formData, "library_fee"),
+    laboratory_fee: numberOrZero(formData, "laboratory_fee"),
+    transport_fee: numberOrZero(formData, "transport_fee"),
+    miscellaneous_charges: numberOrZero(formData, "miscellaneous_charges")
   };
 
   await upsertFeeStructuresForClasses(user, values, classIds);
@@ -65,13 +72,13 @@ export async function updateFeeStructureAction(id: string, formData: FormData) {
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
     class_id: formData.get("class_id") as string,
-    tuition_fee: Number(formData.get("tuition_fee")),
-    admission_fee: Number(formData.get("admission_fee")),
-    examination_fee: Number(formData.get("examination_fee")),
-    library_fee: Number(formData.get("library_fee")),
-    laboratory_fee: Number(formData.get("laboratory_fee")),
-    transport_fee: Number(formData.get("transport_fee")),
-    miscellaneous_charges: Number(formData.get("miscellaneous_charges"))
+    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    admission_fee: numberOrZero(formData, "admission_fee"),
+    examination_fee: numberOrZero(formData, "examination_fee"),
+    library_fee: numberOrZero(formData, "library_fee"),
+    laboratory_fee: numberOrZero(formData, "laboratory_fee"),
+    transport_fee: numberOrZero(formData, "transport_fee"),
+    miscellaneous_charges: numberOrZero(formData, "miscellaneous_charges")
   };
 
   await updateFeeStructure(user, id, values);
@@ -95,7 +102,7 @@ export async function applyDiscountAction(accountId: string, formData: FormData)
   
   const values = {
     discount_type: formData.get("discount_type") as string,
-    discount_value: Number(formData.get("discount_value")),
+    discount_value: numberOrZero(formData, "discount_value"),
     discount_reason: formData.get("discount_reason") as string,
     discount_remarks: formData.get("discount_remarks") as string || undefined,
     discount_approved_by: formData.get("discount_approved_by") as string

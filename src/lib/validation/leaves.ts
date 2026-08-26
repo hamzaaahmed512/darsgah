@@ -13,9 +13,6 @@ export const leaveRequestSchema = z.object({
 export const leaveReviewSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
   principal_remarks: z.string().trim().max(500).optional().nullable()
-}).refine((value) => value.decision === "approved" || Boolean(value.principal_remarks), {
-  message: "A comment is required when rejecting leave",
-  path: ["principal_remarks"]
 });
 
 export type LeaveRequestValues = z.infer<typeof leaveRequestSchema>;

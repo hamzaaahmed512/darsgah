@@ -12,16 +12,24 @@ import { StaffFormModal } from "@/components/teachers/staff-form";
 import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
 import { StaffSalaryForm } from "@/components/staff/staff-salary-form";
+import { OtherStaffFormModal } from "@/components/staff/other-staff-form";
+import { OtherStaffSalaryForm } from "@/components/staff/other-staff-salary-form";
 import { ButtonLink } from "@/components/ui/button";
+import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
   principal: "Principal",
   teacher: "Teacher",
-  student_staff: "Registrar / Student Staff"
+  student_staff: "Registrar / Student Staff",
+  staff: "Staff",
+  cashier: "Cashier",
+  head_teacher: "Head Teacher",
+  other: "Others"
 };
 
-function getRoleLabel(role: string, customRoleName?: string | null): string {
+function getRoleLabel(role: string, customRoleName?: string | null, otherCategory?: OtherStaffCategory | null): string {
+  if (role === "other") return otherCategory ? OTHER_STAFF_CATEGORY_LABELS[otherCategory] : "Others";
   if (customRoleName) return customRoleName;
   return ROLE_LABELS[role] ?? role.replace(/_/g, " ");
 }
@@ -47,8 +55,8 @@ export default async function StaffPage({
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
-      ? (["administrator", "principal", "teacher", "student_staff"] as const)
-      : (["teacher", "student_staff"] as const);
+      ? (["administrator", "principal", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
+      : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
 
   return (
     <>
@@ -56,7 +64,12 @@ export default async function StaffPage({
         eyebrow="School Directory"
         title="Staff"
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
-        actions={canCreateUsers ? <StaffFormModal allowedRoles={[...allowedRoles]} triggerLabel="Add Staff Member" /> : null}
+        actions={canCreateUsers ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            <StaffFormModal allowedRoles={[...allowedRoles]} triggerLabel="Add Account Staff" />
+            <OtherStaffFormModal />
+          </div>
+        ) : null}
       />
 
       <Card className="mb-5 p-4">
@@ -77,15 +90,20 @@ export default async function StaffPage({
               <summary className="grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-surface-low md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <Badge tone="blue">{getRoleLabel(member.role, member.custom_role_name)}</Badge>
+                    <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
+                    {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     <Badge tone={member.status === "active" ? "green" : "gray"}>{member.status}</Badge>
                     {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                   </div>
                   <h2 className="truncate font-display text-lg font-semibold text-ink">{member.full_name}</h2>
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{member.email}</span>
-                  </p>
+                  {member.email ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+                      <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{member.email}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted">Others / record-only staff</p>
+                  )}
                 </div>
                 <div className="flex items-center justify-end gap-3">
                   <span className="text-sm font-semibold text-muted">
@@ -97,7 +115,7 @@ export default async function StaffPage({
 
               <div className="grid gap-5 border-t border-outline/60 p-5">
                 <div className="grid gap-3 md:grid-cols-4">
-                  <StaffInfo icon={<ShieldCheck className="h-4 w-4" />} label="Role" value={getRoleLabel(member.role, member.custom_role_name)} />
+                  <StaffInfo icon={<ShieldCheck className="h-4 w-4" />} label="Role" value={getRoleLabel(member.role, member.custom_role_name, member.other_category)} />
                   <StaffInfo icon={<Building2 className="h-4 w-4" />} label="Department" value={[member.department, member.job_title].filter(Boolean).join(" / ") || "Not set"} />
                   <StaffInfo icon={<Phone className="h-4 w-4" />} label="Phone" value={member.phone || "Not provided"} />
                   <StaffInfo icon={<Users className="h-4 w-4" />} label="Assigned Classes" value={String(member.assigned_classes ?? 0)} />
@@ -106,10 +124,12 @@ export default async function StaffPage({
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
                     <p className="mb-2 font-label text-xs font-bold uppercase tracking-wide text-muted">Contact</p>
-                    <p className="flex items-center gap-2 font-semibold text-ink">
-                      <Mail className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span className="truncate">{member.email}</span>
-                    </p>
+                    {member.email ? (
+                      <p className="flex items-center gap-2 font-semibold text-ink">
+                        <Mail className="h-4 w-4 text-primary" aria-hidden="true" />
+                        <span className="truncate">{member.email}</span>
+                      </p>
+                    ) : <p className="font-semibold text-ink">No account or email required</p>}
                     {member.personal_email ? (
                       <p className="mt-2 flex items-center gap-2 text-muted">
                         <AtSign className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -121,12 +141,16 @@ export default async function StaffPage({
                     <p className="mb-2 font-label text-xs font-bold uppercase tracking-wide text-muted">Account</p>
                     <p className="flex items-center gap-2 text-muted">
                       <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span>{member.must_change_password ? "Must change password on next login" : "Password is active"}</span>
+                      <span>{member.is_record_only ? "Record only; no login access" : member.must_change_password ? "Must change password on next login" : "Password is active"}</span>
                     </p>
                   </div>
-                  {canManageSalary ? <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} /> : null}
+                  {canManageSalary && member.is_record_only ? (
+                    <OtherStaffSalaryForm staffId={member.member_id} initialSalary={member.monthly_salary} />
+                  ) : canManageSalary ? (
+                    <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} />
+                  ) : null}
                 </div>
-                <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div>
+                {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div> : null}
               </div>
             </details>
           ))}

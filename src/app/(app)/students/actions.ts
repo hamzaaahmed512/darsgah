@@ -18,7 +18,7 @@ export async function createStudentAction(values: StudentFormValues) {
     return { error: error.message || "Failed to create student." };
   }
   revalidatePath("/students");
-  redirect(`/students/${id}`);
+  return { ok: true, id };
 }
 
 export async function updateStudentAction(id: string, values: StudentFormValues) {

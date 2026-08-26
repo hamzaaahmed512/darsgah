@@ -3,6 +3,7 @@ import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
 import { isSubjectExcludedForMajor, majorsForGrade, type StudentMajor } from "@/lib/student-majors";
+import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 
 export type StudentFilters = {
   q?: string;
@@ -77,6 +78,7 @@ export async function getStudentRecord(
 ) {
   const supabase = await createClient();
   const studentMajorsSupported = await supportsStudentMajors(supabase);
+  const studentBioFieldsSupported = await supportsStudentBioFields(supabase);
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   let headClassIds: string[] | null = null;
 
@@ -103,7 +105,7 @@ export async function getStudentRecord(
 
   const studentFields: string = isTeacher
     ? `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
-    : `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
+    : `id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
   let studentQuery = supabase
       .from("student_directory")
       .select(studentFields)
@@ -189,11 +191,16 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   const parsed = studentSchema.parse(values);
   const supabase = await createClient();
   const studentMajorsSupported = await supportsStudentMajors(supabase);
+  const studentBioFieldsSupported = await supportsStudentBioFields(supabase);
 
   const isStaff = user.role === "student_staff";
   const initialStatus = isStaff ? "pending_approval" : parsed.status;
 
   const admissionNumber = parsed.admission_number || `ADM-${Date.now()}`;
+  const phone = formatPakistaniPhoneForStorage(parsed.phone);
+  const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
+  const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
+  const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
 
   const { data: student, error } = await supabase
     .from("students")
@@ -206,15 +213,17 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
       name_ur: parsed.name_ur || null,
       father_name_en: parsed.father_name_en || null,
       father_name_ur: parsed.father_name_ur || null,
-      father_phone: parsed.father_phone || null,
+      father_phone: fatherPhone,
       father_cnic: parsed.father_cnic || null,
+      ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
       photo_url: parsed.photo_url || null,
       class_id: parsed.class_id || null,
       ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
       date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
+      ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
       email: parsed.email || null,
-      phone: parsed.phone || null,
+      phone,
       address: parsed.address || null,
       admission_date: parsed.admission_date || new Date().toISOString().split("T")[0],
       status: initialStatus
@@ -234,9 +243,9 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
         full_name: parsed.guardian_name || parsed.father_name_en,
         relationship: parsed.guardian_relationship || "Father",
         email: parsed.guardian_email || null,
-        phone: parsed.guardian_phone || parsed.father_phone || null,
+        phone: guardianPhone,
         emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: parsed.emergency_contact_phone || null
+        emergency_contact_phone: emergencyContactPhone
       })
       .select("id")
       .single();
@@ -301,6 +310,11 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   const parsed = studentSchema.parse(values);
   const supabase = await createClient();
   const studentMajorsSupported = await supportsStudentMajors(supabase);
+  const studentBioFieldsSupported = await supportsStudentBioFields(supabase);
+  const phone = formatPakistaniPhoneForStorage(parsed.phone);
+  const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
+  const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
+  const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
   const { error } = await supabase
     .from("students")
     .update({
@@ -311,15 +325,17 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       name_ur: parsed.name_ur || null,
       father_name_en: parsed.father_name_en || null,
       father_name_ur: parsed.father_name_ur || null,
-      father_phone: parsed.father_phone || null,
+      father_phone: fatherPhone,
       father_cnic: parsed.father_cnic || null,
+      ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
       photo_url: parsed.photo_url || null,
       class_id: parsed.class_id || null,
       ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
       date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
+      ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
       email: parsed.email || null,
-      phone: parsed.phone || null,
+      phone,
       address: parsed.address || null,
       admission_date: parsed.admission_date,
       status: parsed.status
@@ -347,9 +363,9 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
         full_name: parsed.guardian_name || parsed.father_name_en,
         relationship: parsed.guardian_relationship || "Father",
         email: parsed.guardian_email || null,
-        phone: parsed.guardian_phone || parsed.father_phone || null,
+        phone: guardianPhone,
         emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: parsed.emergency_contact_phone || null
+        emergency_contact_phone: emergencyContactPhone
       })
       .eq("school_id", user.schoolId)
       .eq("id", guardianLink.guardian_id);
@@ -363,9 +379,9 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
         full_name: parsed.guardian_name || parsed.father_name_en,
         relationship: parsed.guardian_relationship || "Father",
         email: parsed.guardian_email || null,
-        phone: parsed.guardian_phone || parsed.father_phone || null,
+        phone: guardianPhone,
         emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: parsed.emergency_contact_phone || null
+        emergency_contact_phone: emergencyContactPhone
       })
       .select("id")
       .single();
@@ -430,6 +446,13 @@ async function supportsStudentMajors(supabase: Awaited<ReturnType<typeof createC
   const { error } = await supabase.from("students").select("major").limit(1);
   if (!error) return true;
   if (error.code === "42703" || error.message.includes("major does not exist")) return false;
+  throw new Error(error.message);
+}
+
+async function supportsStudentBioFields(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { error } = await supabase.from("student_directory").select("religion,father_alive").limit(1);
+  if (!error) return true;
+  if (error.code === "42703" || error.message.includes("does not exist")) return false;
   throw new Error(error.message);
 }
 
@@ -586,7 +609,7 @@ export async function importStudentsBulk(user: AppUser, records: any[]) {
       name_en: r.name_en || null,
       name_ur: r.name_ur || null,
       father_name_en: r.father_name_en || null,
-      father_phone: r.father_phone || null,
+      father_phone: formatPakistaniPhoneForStorage(r.father_phone),
       class_id: classId,
       gender: r.gender || null,
       date_of_birth: r.date_of_birth || null,

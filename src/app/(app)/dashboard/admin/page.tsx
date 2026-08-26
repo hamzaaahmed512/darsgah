@@ -25,10 +25,7 @@ export default async function AdminDashboardPage() {
         roleLabel="System Administrator"
         avatarUrl={user.avatarUrl}
         statusText="ACCOUNT ACTIVE"
-        stats={[
-          { label: "Students", value: dashboard.totalStudents },
-          { label: "Faculty", value: dashboard.totalTeachers }
-        ]}
+        stats={[]}
       />
       <PageHeader
         eyebrow="System Control"

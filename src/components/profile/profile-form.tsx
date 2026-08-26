@@ -110,7 +110,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
           {fieldRow("Work Email", profile.email, <Mail className="h-4 w-4" aria-hidden="true" />)}
           {fieldRow("School", profile.schoolName, <IdCard className="h-4 w-4" aria-hidden="true" />)}
           {fieldRow("Current Title", profile.jobTitle, <BriefcaseBusiness className="h-4 w-4" aria-hidden="true" />)}
-          {fieldRow("Phone", currentPhone ? `+92 ${currentPhone}` : null, <Phone className="h-4 w-4" aria-hidden="true" />)}
+          {fieldRow("Phone", currentPhone || null, <Phone className="h-4 w-4" aria-hidden="true" />)}
         </div>
       </aside>
 
@@ -141,21 +141,15 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
               <Input {...register("fullName")} placeholder="Jane Doe" />
             </Field>
 
-            <Field label="Phone" error={errors.phone?.message} hint="Enter 10 digits; spacing is added automatically (e.g. 321 6666666)">
-              <div className="flex">
-                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-outline/60 bg-surface-low px-3 text-sm font-semibold text-muted">
-                  +92
-                </span>
-                <Input
-                  {...register("phone")}
-                  value={formatPakistaniPhone(watch("phone"))}
-                  onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })}
-                  className="rounded-l-none"
-                  placeholder="321 6666666"
-                  inputMode="numeric"
-                  maxLength={11}
-                />
-              </div>
+            <Field label="Phone" error={errors.phone?.message} hint="Enter 11 digits; formatting is added automatically (e.g. 0300-0000000)">
+              <Input
+                {...register("phone")}
+                value={formatPakistaniPhone(watch("phone"))}
+                onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })}
+                placeholder="0300-0000000"
+                inputMode="numeric"
+                maxLength={12}
+              />
             </Field>
 
             <Field label="Personal Email" error={errors.personalEmail?.message}>
@@ -205,10 +199,10 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
               <Input
                 {...register("emergencyContactPhone")}
                 value={formatPakistaniPhone(watch("emergencyContactPhone"))}
-                onChange={(event) => setValue("emergencyContactPhone", formatPakistaniPhone(event.target.value), { shouldDirty: true })}
-                placeholder="321 6666666"
+                onChange={(event) => setValue("emergencyContactPhone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })}
+                placeholder="0300-0000000"
                 inputMode="numeric"
-                maxLength={11}
+                maxLength={12}
               />
             </Field>
           </div>
@@ -220,7 +214,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
             </div>
             <div className="rounded-[16px] border border-outline/60 bg-surface-low p-4">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Phone</p>
-              <p className="mt-2 font-semibold text-ink">{profile.phone ? `+92 ${formatPakistaniPhone(profile.phone)}` : "Not set"}</p>
+              <p className="mt-2 font-semibold text-ink">{profile.phone || "Not set"}</p>
             </div>
             <div className="rounded-[16px] border border-outline/60 bg-surface-low p-4">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Personal Email</p>

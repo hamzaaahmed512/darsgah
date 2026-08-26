@@ -89,6 +89,7 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
   }
 
   async function handleArchive(id: string) {
+    if (!window.confirm("Archive this announcement?")) return;
     const previous = announcements;
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     const res = await archiveAnnouncementAction(id);

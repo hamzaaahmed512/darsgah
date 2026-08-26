@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { createStaffAccount, updateStaffStatus, assignTeacherToClass, setStaffSalary } from "@/lib/services/teachers";
+import { createOtherStaffRecord, setOtherStaffSalary } from "@/lib/services/staff";
+import type { OtherStaffCategory } from "@/lib/constants/staff";
 import type { StaffFormValues } from "@/lib/validation/staff";
 
 export async function createStaffAction(values: StaffFormValues) {
@@ -29,6 +31,27 @@ export async function updateStatusAction(memberId: string, status: "active" | "d
 export async function setStaffSalaryAction(staffId: string, salary: number) {
   const user = await requireUser("teachers:manage");
   await setStaffSalary(user, staffId, salary);
+  revalidatePath("/staff");
+  revalidatePath("/finance/payroll");
+}
+
+export async function createOtherStaffAction(values: {
+  fullName: string;
+  category: OtherStaffCategory;
+  department?: string;
+  jobTitle?: string;
+  phone?: string;
+  monthlySalary?: number | null;
+}) {
+  const user = await requireUser("teachers:manage");
+  await createOtherStaffRecord(user, values);
+  revalidatePath("/staff");
+  revalidatePath("/finance/payroll");
+}
+
+export async function setOtherStaffSalaryAction(staffId: string, salary: number) {
+  const user = await requireUser("teachers:manage");
+  await setOtherStaffSalary(user, staffId, salary);
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");
 }

@@ -111,6 +111,7 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
 export async function reviewLeaveRequest(user: AppUser, leaveId: string, values: LeaveReviewValues) {
   if (!hasPermission(user.role, "leave:manage", user.permissions)) throw new Error("Unauthorized to review leave requests.");
   const parsed = leaveReviewSchema.parse(values);
+  const principalRemarks = parsed.principal_remarks?.trim() || (parsed.decision === "rejected" ? "" : null);
   const supabase = await createClient();
   const { data: leave, error: fetchError } = await supabase
     .from("staff_leaves")
@@ -128,7 +129,7 @@ export async function reviewLeaveRequest(user: AppUser, leaveId: string, values:
     .from("staff_leaves")
     .update({
       status: parsed.decision,
-      principal_remarks: parsed.principal_remarks || null,
+      principal_remarks: principalRemarks,
       reviewed_by: user.id,
       reviewed_at: new Date().toISOString()
     })
@@ -137,5 +138,5 @@ export async function reviewLeaveRequest(user: AppUser, leaveId: string, values:
 
   if (isMissingStaffLeavesTable(error)) throw new Error(missingStaffLeavesMessage());
   if (error) throw new Error(error.message);
-  await logActivity(user, `leave_${parsed.decision}`, "staff_leave", leaveId, { principal_remarks: parsed.principal_remarks || null });
+  await logActivity(user, `leave_${parsed.decision}`, "staff_leave", leaveId, { principal_remarks: principalRemarks || null });
 }

@@ -147,7 +147,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                         <td className="py-3 pr-4">
                           <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
                         </td>
-                        <td className="py-3 pr-4 text-muted">{leave.principal_remarks ?? "No remarks"}</td>
+                        <td className="py-3 pr-4 text-muted">{leave.principal_remarks || "No remarks"}</td>
                       </tr>
                     ))}
                   </tbody>

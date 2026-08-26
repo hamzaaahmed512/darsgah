@@ -186,7 +186,7 @@ export function SchoolProfileForm({
             <Phone className="mt-0.5 h-4 w-4 text-primary" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Phone Number</p>
-              <p className="mt-1 font-semibold text-ink">{form.phone ? `+92 ${form.phone}` : "Not set"}</p>
+              <p className="mt-1 font-semibold text-ink">{form.phone || "Not set"}</p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -280,19 +280,15 @@ export function SchoolProfileForm({
 
           <Field label="Phone Number">
             {readOnly ? (
-              lockedField(form.phone ? `+92 ${form.phone}` : "")
+              lockedField(form.phone)
             ) : (
-              <div className="flex">
-                <span className="inline-flex items-center rounded-l-lg border border-r-0 border-outline/60 bg-surface-low px-3 text-sm font-semibold text-muted">+92</span>
-                <Input
-                  value={form.phone}
-                  onChange={(event) => updateField("phone", formatPakistaniPhone(event.target.value))}
-                  placeholder="321 6666666"
-                  inputMode="numeric"
-                  maxLength={11}
-                  className="rounded-l-none"
-                />
-              </div>
+              <Input
+                value={form.phone}
+                onChange={(event) => updateField("phone", formatPakistaniPhone(event.target.value))}
+                placeholder="0300-0000000"
+                inputMode="numeric"
+                maxLength={12}
+              />
             )}
           </Field>
 
