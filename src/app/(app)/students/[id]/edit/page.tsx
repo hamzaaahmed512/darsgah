@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { StudentForm } from "@/components/students/student-form";
 import { requireUser } from "@/lib/auth/session";
@@ -26,9 +27,9 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
         title="Edit Student"
         description="Update the profile. Role and tenant enforcement still happen on the server and in RLS."
         actions={
-          <a href={`/students/${id}`} className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition-all duration-200 hover:bg-surface-low hover:text-primary active:scale-[0.98]">
+          <Link href={`/students/${id}`} prefetch={false} className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition-all duration-200 hover:bg-surface-low hover:text-primary active:scale-[0.98]">
             Cancel
-          </a>
+          </Link>
         }
       />
       <StudentForm

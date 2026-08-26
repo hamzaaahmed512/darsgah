@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -26,7 +27,7 @@ export default async function StudentProfilePage({ params, searchParams }: { par
 
   return <>
     <PageHeader eyebrow={student.admission_number} title={`${student.first_name} ${student.last_name}`} description={`${student.grade_name ?? "Unassigned"}${student.section_name ? ` • ${student.section_name}` : ""}`} actions={<>
-      <a href="/students" className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition-all duration-200 hover:bg-surface-low hover:text-primary active:scale-[0.98]">Back</a>
+      <Link href="/students" prefetch={false} className="relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition-all duration-200 hover:bg-surface-low hover:text-primary active:scale-[0.98]">Back</Link>
       {hasPermission(user.role, "students:update", user.permissions) ? <ButtonLink href={`/students/${id}/edit`} variant="secondary">Edit</ButtonLink> : null}
       {hasPermission(user.role, "students:archive", user.permissions) && student.status !== "archived" && !student.status.startsWith("pending") ? <ConfirmButton label={user.role === "student_staff" ? "Request Cancellation" : "Archive"} confirmText={user.role === "student_staff" ? "Submit a cancellation request for this student to the Principal?" : "Archive this student? This keeps the record but removes it from active lists."} action={archive} /> : null}
     </>} />
