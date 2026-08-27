@@ -38,7 +38,7 @@ export async function markPayrollPaidAction(payrollId: string) {
 }
 
 export async function createAdjustmentAction(data: {
-  teacher_id: string;
+  teacherId: string;
   amount: number;
   type: AdjustmentType;
   reason: string;
@@ -46,7 +46,13 @@ export async function createAdjustmentAction(data: {
 }) {
   try {
     const user = await requireUser("payroll:manage");
-    await createSalaryAdjustment(user, data);
+    await createSalaryAdjustment(user, {
+      teacher_id: data.teacherId,
+      amount: data.amount,
+      type: data.type,
+      reason: data.reason,
+      effective_date: data.effective_date
+    });
     revalidatePath("/payroll");
     return { ok: true };
   } catch (err: any) {

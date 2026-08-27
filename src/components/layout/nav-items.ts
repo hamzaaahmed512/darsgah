@@ -1,6 +1,7 @@
 import {
   Activity,
   BarChart3,
+  ClipboardList,
   CalendarCheck,
   Bus,
   GraduationCap,
@@ -30,6 +31,7 @@ export interface NavItem {
 
 const coreNavItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, permission: "dashboard:view", section: "MAIN" },
+  { href: "/operations", label: "Daily Operations", icon: ClipboardList, permission: "dashboard:view", section: "MAIN" },
   { href: "/students", label: "Students", icon: GraduationCap, permission: "students:view", section: "PEOPLE" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:view", section: "PEOPLE" },
   { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance:view", section: "PEOPLE" },
@@ -101,6 +103,9 @@ export function getNavItems(role: UserRole): NavItem[] {
   const items: NavItem[] = [{ ...coreNavItems[0], href: getOverviewHref(role) }];
 
   for (const item of coreNavItems.slice(1)) {
+    if (item.href === "/operations" && role !== "principal" && role !== "administrator") {
+      continue;
+    }
     items.push(item);
 
     if (item.href === "/classes") {

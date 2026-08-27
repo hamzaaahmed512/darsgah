@@ -11,6 +11,7 @@ import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import {
   completeOnboardingAction,
   onboardingGradeSetupAction,
+  onboardingPrincipalTeachingAssignmentAction,
   onboardingSubjectSetupAction
 } from "@/app/(app)/onboarding/actions";
 
@@ -26,6 +27,9 @@ export function SchoolOnboardingWizard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [createdClassIds, setCreatedClassIds] = useState<string[]>([]);
+  const [createdClasses, setCreatedClasses] = useState<Array<{ id: string; name: string; grade_name: string; section_name: string | null }>>([]);
+  const [principalTeaches, setPrincipalTeaches] = useState(false);
+  const [principalClassId, setPrincipalClassId] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<string[]>([...DEFAULT_GRADE_NAMES]);
   const [seededSubjectsByGrade, setSeededSubjectsByGrade] = useState<Record<string, number>>({});
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
@@ -73,6 +77,8 @@ export function SchoolOnboardingWizard({
       try {
         const result = await onboardingGradeSetupAction(formData);
         setCreatedClassIds(result.classIds);
+        setCreatedClasses(result.classSummaries ?? []);
+        setPrincipalClassId(result.classSummaries?.[0]?.id ?? "");
         setSeededSubjectsByGrade(result.seededSubjectsByGrade ?? {});
         pushToast(`Generated ${result.classIds.length} class(es) with default subjects.`, "success");
         router.refresh();
@@ -96,6 +102,11 @@ export function SchoolOnboardingWizard({
         if (customSubjects.length) {
           const result = await onboardingSubjectSetupAction(formData);
           pushToast(`Added ${result.subjectIds.length} custom subject(s) across ${result.classCount} class(es).`, "success");
+        }
+        if (principalTeaches && principalClassId) {
+          const teachingFormData = new FormData();
+          teachingFormData.append("principal_class_id", principalClassId);
+          await onboardingPrincipalTeachingAssignmentAction(teachingFormData);
         }
         await completeOnboardingAction();
         pushToast("School setup complete.", "success");
@@ -226,6 +237,40 @@ export function SchoolOnboardingWizard({
                   ))}
                 </div>
               ) : null}
+
+              <div className="rounded-[16px] border border-outline/50 bg-white px-4 py-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={principalTeaches}
+                    onChange={(event) => setPrincipalTeaches(event.target.checked)}
+                    className="mt-1 h-4 w-4 accent-primary"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-ink">Principal also teaches a class</span>
+                    <span className="mt-1 block text-xs font-medium leading-5 text-muted">
+                      This gives the principal a My Class attendance view while keeping full school management access.
+                    </span>
+                  </span>
+                </label>
+                {principalTeaches ? (
+                  <div className="mt-3">
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted">Principal class</label>
+                    <select
+                      value={principalClassId}
+                      onChange={(event) => setPrincipalClassId(event.target.value)}
+                      className="min-h-11 w-full rounded-xl border border-outline bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    >
+                      {createdClasses.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.grade_name} - {item.name}
+                          {item.section_name ? ` - ${item.section_name}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <Input

@@ -8,6 +8,7 @@ import { archiveAnnouncementAction } from "@/app/(app)/announcements/actions";
 import { hasPermission } from "@/lib/permissions";
 import { cn, formatDatePK } from "@/lib/utils";
 import type { AppUser, AnnouncementWithRead, AnnouncementPriority } from "@/types/database";
+import type { WorkflowNotification } from "@/lib/services/notifications";
 
 const PRIORITY_STYLES: Record<AnnouncementPriority, string> = {
   low: "bg-surface-low text-muted",
@@ -23,8 +24,19 @@ const PRIORITY_DOT: Record<AnnouncementPriority, string> = {
   critical: "bg-danger"
 };
 
-export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function AnnouncementBell({
+  user,
+  initialWorkflowNotifications = [],
+  open,
+  onOpenChange
+}: {
+  user: AppUser;
+  initialWorkflowNotifications?: WorkflowNotification[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [announcements, setAnnouncements] = useState<AnnouncementWithRead[]>([]);
+  const [workflowNotifications, setWorkflowNotifications] = useState<WorkflowNotification[]>(initialWorkflowNotifications);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -32,7 +44,8 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
   const canManage = hasPermission(user.role, "announcements:manage", user.permissions);
   const today = new Date().toISOString().split("T")[0];
 
-  const unreadCount = announcements.filter((a) => !a.is_read && !a.is_archived && a.publish_date <= today).length;
+  const unreadAnnouncementCount = announcements.filter((a) => !a.is_read && !a.is_archived && a.publish_date <= today).length;
+  const unreadCount = unreadAnnouncementCount + workflowNotifications.length;
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
@@ -49,9 +62,21 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
     }
   }, []);
 
+  const fetchWorkflowNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data = await res.json();
+      setWorkflowNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+    } catch {
+      setWorkflowNotifications([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAnnouncements();
-  }, [fetchAnnouncements]);
+    fetchWorkflowNotifications();
+  }, [fetchAnnouncements, fetchWorkflowNotifications]);
 
   // Realtime subscription
   useEffect(() => {
@@ -104,13 +129,16 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
     <div className="relative" ref={panelRef}>
       <button
         type="button"
-        onClick={() => {
-          const nextOpen = !open;
-          onOpenChange(nextOpen);
-          if (nextOpen) void fetchAnnouncements();
+          onClick={() => {
+            const nextOpen = !open;
+            onOpenChange(nextOpen);
+          if (nextOpen) {
+            void fetchAnnouncements();
+            void fetchWorkflowNotifications();
+          }
         }}
         className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted transition duration-200 hover:bg-primary-soft hover:text-primary"
-        aria-label={`Announcements${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
         aria-expanded={open}
       >
         <Bell className="h-5 w-5 text-muted" aria-hidden="true" />
@@ -132,13 +160,13 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-outline px-4 py-4">
           <div>
-            <p className="font-semibold text-ink">Announcements</p>
+            <p className="font-semibold text-ink">Notifications</p>
             {unreadCount > 0 && (
-              <p className="text-xs text-muted">{unreadCount} unread</p>
+              <p className="text-xs text-muted">{unreadCount} active</p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
+            {unreadAnnouncementCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllRead}
@@ -159,13 +187,27 @@ export function AnnouncementBell({ user, open, onOpenChange }: { user: AppUser; 
               <p className="text-sm font-semibold text-danger">{loadError}</p>
               <button type="button" onClick={() => void fetchAnnouncements()} className="mt-3 text-sm font-semibold text-primary hover:underline">Try again</button>
             </div>
-          ) : !announcements.length ? (
+          ) : !announcements.length && !workflowNotifications.length ? (
             <div className="py-10 text-center">
               <Bell className="mx-auto mb-2 h-8 w-8 text-outline" />
-              <p className="text-sm text-muted">No active announcements</p>
+              <p className="text-sm text-muted">No active notifications</p>
             </div>
           ) : (
             <div className="divide-y divide-outline/30">
+              {workflowNotifications.map((item) => (
+                <a key={item.id} href={item.href} className="block px-4 py-3 transition hover:bg-surface-low">
+                  <div className="flex items-start gap-3">
+                    <span className={cn("mt-1.5 inline-flex h-2 w-2 rounded-full", PRIORITY_DOT[item.priority])} />
+                    <div className="min-w-0 flex-1">
+                      <p className="min-w-0 break-words text-sm font-semibold text-primary">{item.title}</p>
+                      <p className="mt-0.5 break-words text-xs leading-5 text-muted">{item.description}</p>
+                      <span className={cn("mt-1.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide", PRIORITY_STYLES[item.priority])}>
+                        {item.category}
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              ))}
               {announcements.map((a) => {
                 const isExpired = Boolean(a.expiry_date && a.expiry_date < today);
                 return (

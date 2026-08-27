@@ -88,7 +88,7 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
         actions={
           canManage ? (
             <div className="flex items-center gap-3">
-              <AddAdjustmentDialog month={month} />
+              <AddAdjustmentDialog month={month} teachers={eligibleStaff} />
               <GeneratePayrollButton month={month} staff={eligibleStaff} />
             </div>
           ) : null

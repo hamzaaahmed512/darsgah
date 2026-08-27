@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
-import { getDashboardData } from "@/lib/services/dashboard";
+import { getDailyOperationsCenter, getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
 import { getApprovalRequests } from "@/lib/services/approvals";
@@ -9,6 +9,7 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { LazyClassDistributionChart } from "@/components/dashboard/lazy-responsive-charts";
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components/finance/lazy-finance-dashboard-charts";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
 import { formatPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, AlertTriangle, UserPlus } from "lucide-react";
 import Link from "next/link";
@@ -28,8 +29,9 @@ export default async function PrincipalDashboardPage() {
     throw new Error("Unauthorized access to Principal Dashboard");
   }
 
-  const [dashboard, finance, results, studentRequests] = await Promise.all([
+  const [dashboard, operations, finance, results, studentRequests] = await Promise.all([
     getDashboardData(user),
+    getDailyOperationsCenter(user),
     getFinanceDashboard(user),
     getResultsManagementWorkspace(user, { status: "pending_approval" }),
     getApprovalRequests(user, { status: "pending" })
@@ -54,6 +56,8 @@ export default async function PrincipalDashboardPage() {
           { label: "Pending Approvals", value: pendingApprovalsCount }
         ]}
       />
+
+      <DailyOperationsCenter items={operations} compact />
 
       {pendingAdmissionsCount > 0 || pendingApprovalsCount > 0 ? (
         <div className="mb-6 grid gap-4 md:grid-cols-2">

@@ -1,11 +1,12 @@
 import { requireUser } from "@/lib/auth/session";
-import { getDashboardData } from "@/lib/services/dashboard";
+import { getDailyOperationsCenter, getDashboardData } from "@/lib/services/dashboard";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ButtonLink } from "@/components/ui/button";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
 import { Shield, Settings, Users, UserCog, GraduationCap, UserPlus } from "lucide-react";
 import Link from "next/link";
 
@@ -15,7 +16,10 @@ export default async function AdminDashboardPage() {
     throw new Error("Unauthorized access to Admin Dashboard");
   }
 
-  const dashboard = await getDashboardData(user);
+  const [dashboard, operations] = await Promise.all([
+    getDashboardData(user),
+    getDailyOperationsCenter(user)
+  ]);
 
   return (
     <>
@@ -32,6 +36,8 @@ export default async function AdminDashboardPage() {
         title="Admin Console"
         description="Manage system configurations, user profiles, role permissions, academic sessions, and check audit logs."
       />
+
+      <DailyOperationsCenter items={operations} compact />
 
       {/* Quick Actions */}
       <section className="mb-6">

@@ -7,9 +7,11 @@ import {
   createAcademicYear,
   updateAcademicYear,
   deleteAcademicYear,
+  updatePrincipalTeachingAssignment,
   updateMemberRole,
   updateMemberStatus
 } from "@/lib/services/settings";
+import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
@@ -24,6 +26,53 @@ export async function updateThemeAction(theme: string) {
       { theme }
     );
     revalidatePath("/settings");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function updateNotificationPreferencesAction(data: {
+  attendanceDeadlineEnabled: boolean;
+  attendanceDeadlineTime: string;
+  leaveRequestNotificationsEnabled: boolean;
+}) {
+  try {
+    const user = await requireUser("settings:manage");
+    const schoolSettings = await getSchoolSettings(user);
+    const current = resolveNotificationPreferences(schoolSettings.settings);
+    const attendanceDeadlineTime = /^\d{2}:\d{2}$/.test(data.attendanceDeadlineTime)
+      ? data.attendanceDeadlineTime
+      : current.attendanceDeadlineTime;
+
+    await updateSchoolSettings(
+      user,
+      schoolSettings.school?.name ?? user.schoolName,
+      schoolSettings.school?.timezone ?? "Asia/Karachi",
+      {
+        notificationPreferences: {
+          attendanceDeadlineEnabled: data.attendanceDeadlineEnabled,
+          attendanceDeadlineTime,
+          leaveRequestNotificationsEnabled: data.leaveRequestNotificationsEnabled
+        }
+      }
+    );
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function updatePrincipalTeachingAssignmentAction(classId: string | null) {
+  try {
+    const user = await requireUser("settings:manage");
+    await updatePrincipalTeachingAssignment(user, classId);
+    revalidatePath("/settings");
+    revalidatePath("/attendance");
+    revalidatePath("/classes");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };

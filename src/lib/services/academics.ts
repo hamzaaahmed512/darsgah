@@ -100,12 +100,12 @@ async function assertHeadTeacher(user: AppUser, teacherId: string | null | undef
     .select("id")
     .eq("school_id", user.schoolId)
     .eq("user_id", teacherId)
-    .in("role", ["teacher", "head_teacher"])
+    .in("role", ["teacher", "head_teacher", "principal"])
     .eq("status", "active")
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Head teacher must be an active teacher in this school.");
+  if (!data) throw new Error("Head teacher must be an active teacher or principal in this school.");
 }
 
 export async function createClass(user: AppUser, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {

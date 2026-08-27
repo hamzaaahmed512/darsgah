@@ -132,6 +132,7 @@ export async function runOnboardingGradeSetup(
   }
 
   const createdClassIds: string[] = [];
+  const classSummaries: Array<{ id: string; name: string; grade_name: string; section_name: string | null }> = [];
   const seededSubjectsByGrade: Record<string, number> = {};
 
   for (const gradeName of requestedGrades) {
@@ -168,6 +169,12 @@ export async function runOnboardingGradeSetup(
     }
 
     createdClassIds.push(classId);
+    classSummaries.push({
+      id: classId,
+      name: className,
+      grade_name: gradeName,
+      section_name: DEFAULT_SECTION_NAME
+    });
 
     const seedResult = await seedDefaultSubjectsForClass(user, classId, gradeName);
     seededSubjectsByGrade[gradeName] = seedResult.linkedCount;
@@ -179,7 +186,7 @@ export async function runOnboardingGradeSetup(
     subjects_seeded: seededSubjectsByGrade
   });
 
-  return { classIds: createdClassIds, academicYearId: academicYear.id, sectionId, seededSubjectsByGrade };
+  return { classIds: createdClassIds, classSummaries, academicYearId: academicYear.id, sectionId, seededSubjectsByGrade };
 }
 
 export async function runOnboardingSubjectSetup(

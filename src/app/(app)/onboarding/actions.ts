@@ -8,6 +8,7 @@ import {
   runOnboardingGradeSetup,
   runOnboardingSubjectSetup
 } from "@/lib/services/onboarding";
+import { updatePrincipalTeachingAssignment } from "@/lib/services/settings";
 
 export async function getOnboardingStatusAction() {
   const user = await requireUser("classes:manage");
@@ -46,4 +47,13 @@ export async function completeOnboardingAction() {
   const user = await requireUser("classes:manage");
   await completeOnboarding(user);
   revalidatePath("/", "layout");
+}
+
+export async function onboardingPrincipalTeachingAssignmentAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const classId = String(formData.get("principal_class_id") ?? "") || null;
+  await updatePrincipalTeachingAssignment(user, classId);
+  revalidatePath("/attendance");
+  revalidatePath("/classes");
+  revalidatePath("/settings");
 }

@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/session";
 import { 
   getSchoolSettings,
   getAcademicYears,
+  getPrincipalTeachingSettings,
   getSchoolMembers
 } from "@/lib/services/settings";
 import { createClient } from "@/lib/supabase/server";
@@ -18,9 +19,10 @@ export default async function SettingsPage({
 
   const supabase = await createClient();
 
-  const [schoolSettings, academicYears, members, customRolesRes, rolePermsRes, overridesRes] = await Promise.all([
+  const [schoolSettings, academicYears, principalTeachingSettings, members, customRolesRes, rolePermsRes, overridesRes] = await Promise.all([
     getSchoolSettings(user),
     getAcademicYears(user),
+    user.role === "principal" ? getPrincipalTeachingSettings(user) : Promise.resolve({ classes: [], assignedClassId: null }),
     user.role === "administrator" ? getSchoolMembers(user) : Promise.resolve([]),
     user.role === "administrator" ? supabase.from("custom_roles").select("*").eq("school_id", user.schoolId).order("name") : Promise.resolve({ data: [] }),
     user.role === "administrator" ? supabase.from("role_permissions").select("*").eq("school_id", user.schoolId) : Promise.resolve({ data: [] }),
@@ -43,6 +45,7 @@ export default async function SettingsPage({
         user={user}
         schoolSettings={schoolSettings}
         academicYears={academicYears}
+        principalTeachingSettings={principalTeachingSettings}
         members={members}
         customRoles={customRoles}
         rolePermissions={rolePermissions}

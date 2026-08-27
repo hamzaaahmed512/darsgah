@@ -227,10 +227,15 @@ export async function getPayrollEligibleStaff(user: AppUser) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("staff_directory")
-    .select("user_id, full_name, email")
+    .select("user_id, full_name, email, role")
     .eq("school_id", user.schoolId).eq("status", "active");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => ({ id: row.user_id, name: row.full_name ?? "Unknown", email: row.email ?? "" }));
+  return (data ?? []).map((row: any) => ({
+    id: row.user_id,
+    name: row.full_name ?? "Unknown",
+    email: row.email ?? "",
+    role: row.role ?? "staff"
+  }));
 }
 
 export async function generateMonthlyPayroll(user: AppUser, month: string, teacherId?: string) {

@@ -1,8 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
-import { attendanceSubmissionSchema, type AttendanceSubmission } from "@/lib/validation/attendance";
+import { attendanceSubmissionSchema, teacherAttendanceSubmissionSchema, type AttendanceSubmission, type TeacherAttendanceSubmission } from "@/lib/validation/attendance";
 import { logActivity } from "@/lib/services/activity";
 import { sortClassesNaturally } from "@/lib/class-sort";
+
+function isMissingTeacherAttendanceTable(error: { code?: string; message?: string } | null) {
+  return error?.code === "PGRST205" || error?.code === "42P01" || Boolean(error?.message?.includes("teacher_attendance_records"));
+}
 
 export async function getClassAttendanceSummary(user: AppUser, classId: string, startDate: string, endDate: string) {
   const supabase = await createClient();
@@ -17,12 +21,18 @@ export async function getClassAttendanceSummary(user: AppUser, classId: string, 
   return data ?? [];
 }
 
-export async function getAttendanceContext(user: AppUser, classId?: string, date?: string) {
+export async function getAttendanceContext(
+  user: AppUser,
+  classId?: string,
+  date?: string,
+  options: { scope?: "school" | "class" } = {}
+) {
   const supabase = await createClient();
   const attendanceDate = date ?? new Date().toISOString().slice(0, 10);
   let teacherClassIds: string[] | null = null;
+  const classScoped = options.scope === "class";
 
-  if (user.role === "teacher" || user.role === "head_teacher") {
+  if (user.role === "teacher" || user.role === "head_teacher" || (user.role === "principal" && classScoped)) {
     const headClasses = await supabase.from("classes").select("id").eq("school_id", user.schoolId).eq("head_teacher_id", user.id);
     if (headClasses.error) throw new Error(headClasses.error.message);
     teacherClassIds = (headClasses.data ?? []).map((row: any) => row.id);
@@ -94,12 +104,103 @@ export async function getAttendanceContext(user: AppUser, classId?: string, date
       grade_name: row.grades?.name,
       section_name: row.sections?.name,
       academic_year_name: row.academic_years?.name,
-      can_mark_attendance: (user.role === "teacher" || user.role === "head_teacher") && row.head_teacher_id === user.id
+      can_mark_attendance: (user.role === "teacher" || user.role === "head_teacher" || (user.role === "principal" && classScoped)) && row.head_teacher_id === user.id
     })),
     selectedClassId,
     attendanceDate,
     roster,
     session: session.data
+  };
+}
+
+export async function principalHasTeachingClass(user: AppUser) {
+  if (user.role !== "principal") return false;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("classes")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("head_teacher_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+function canManageTeacherAttendance(user: AppUser) {
+  return user.role === "administrator" || user.role === "principal";
+}
+
+export async function getTeacherAttendanceContext(user: AppUser, date?: string) {
+  if (!canManageTeacherAttendance(user)) {
+    throw new Error("Only administrators and principals can manage teacher attendance.");
+  }
+
+  const supabase = await createClient();
+  const attendanceDate = date ?? new Date().toISOString().slice(0, 10);
+
+  const [teachersResult, recordsResult] = await Promise.all([
+    supabase
+      .from("school_members")
+      .select("user_id,role,department,job_title,profiles!school_members_user_id_fkey(full_name,email)")
+      .eq("school_id", user.schoolId)
+      .in("role", ["teacher", "head_teacher"])
+      .eq("status", "active")
+      .order("role"),
+    supabase
+      .from("teacher_attendance_records")
+      .select("teacher_id,status,note")
+      .eq("school_id", user.schoolId)
+      .eq("attendance_date", attendanceDate)
+  ]);
+
+  if (teachersResult.error) throw new Error(teachersResult.error.message);
+  if (isMissingTeacherAttendanceTable(recordsResult.error)) {
+    const teachers = (teachersResult.data ?? [])
+      .map((row: any) => ({
+        teacher_id: row.user_id,
+        teacher_name: row.profiles?.full_name ?? "Teacher",
+        teacher_email: row.profiles?.email ?? null,
+        role: row.role,
+        department: row.department,
+        job_title: row.job_title,
+        current_status: null,
+        note: null
+      }))
+      .sort((a, b) => a.teacher_name.localeCompare(b.teacher_name));
+
+    return {
+      attendanceDate,
+      teachers,
+      submitted: false,
+      migrationRequired: true
+    };
+  }
+  if (recordsResult.error) throw new Error(recordsResult.error.message);
+
+  const recordMap = new Map((recordsResult.data ?? []).map((record: any) => [record.teacher_id, record]));
+  const teachers = (teachersResult.data ?? [])
+    .map((row: any) => {
+      const existing = recordMap.get(row.user_id);
+      return {
+        teacher_id: row.user_id,
+        teacher_name: row.profiles?.full_name ?? "Teacher",
+        teacher_email: row.profiles?.email ?? null,
+        role: row.role,
+        department: row.department,
+        job_title: row.job_title,
+        current_status: existing?.status ?? null,
+        note: existing?.note ?? null
+      };
+    })
+    .sort((a, b) => a.teacher_name.localeCompare(b.teacher_name));
+
+  return {
+    attendanceDate,
+    teachers,
+    submitted: teachers.length > 0 && teachers.every((teacher) => teacher.current_status),
+    migrationRequired: false
   };
 }
 
@@ -163,6 +264,52 @@ export async function submitAttendance(user: AppUser, values: AttendanceSubmissi
   if (recordsError) throw new Error(recordsError.message);
   await logActivity(user, "attendance_submitted", "attendance_session", session.id, {
     class_id: parsed.class_id,
+    attendance_date: parsed.attendance_date,
+    records: parsed.records.length
+  });
+}
+
+export async function submitTeacherAttendance(user: AppUser, values: TeacherAttendanceSubmission) {
+  if (!canManageTeacherAttendance(user)) {
+    throw new Error("Only administrators and principals can mark teacher attendance.");
+  }
+
+  const parsed = teacherAttendanceSubmissionSchema.parse(values);
+  const supabase = await createClient();
+  const teacherIds = [...new Set(parsed.records.map((record) => record.teacher_id))];
+
+  const { data: activeTeachers, error: teachersError } = await supabase
+    .from("school_members")
+    .select("user_id")
+    .eq("school_id", user.schoolId)
+    .in("role", ["teacher", "head_teacher"])
+    .eq("status", "active")
+    .in("user_id", teacherIds);
+
+  if (teachersError) throw new Error(teachersError.message);
+
+  const activeTeacherIds = new Set((activeTeachers ?? []).map((row: any) => row.user_id));
+  const invalidTeacherId = teacherIds.find((teacherId) => !activeTeacherIds.has(teacherId));
+  if (invalidTeacherId) throw new Error("Teacher not found or inactive.");
+
+  const { error } = await supabase.from("teacher_attendance_records").upsert(
+    parsed.records.map((record) => ({
+      school_id: user.schoolId,
+      teacher_id: record.teacher_id,
+      attendance_date: parsed.attendance_date,
+      status: record.status,
+      note: record.note || null,
+      recorded_by: user.id
+    })),
+    { onConflict: "school_id,teacher_id,attendance_date" }
+  );
+
+  if (isMissingTeacherAttendanceTable(error)) {
+    throw new Error("Apply the latest database migration to enable teacher attendance.");
+  }
+  if (error) throw new Error(error.message);
+
+  await logActivity(user, "teacher_attendance_submitted", "teacher_attendance", user.schoolId, {
     attendance_date: parsed.attendance_date,
     records: parsed.records.length
   });

@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { createAdjustmentAction } from "@/app/(app)/finance/payroll/actions";
 import type { AdjustmentType } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 interface Props {
   month: string;
+  teachers: Array<{ id: string; name: string; email?: string; role?: string }>;
 }
 
-export function AddAdjustmentDialog({ month }: Props) {
+export function AddAdjustmentDialog({ month, teachers }: Props) {
   const [open, setOpen] = useState(false);
+  const [teacherSelectOpen, setTeacherSelectOpen] = useState(false);
+  const [teacherSearch, setTeacherSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +26,25 @@ export function AddAdjustmentDialog({ month }: Props) {
     effective_date: `${month}-01`
   });
 
+  const selectedTeacher = teachers.find((teacher) => teacher.id === form.teacher_id) ?? null;
+  const filteredTeachers = useMemo(() => {
+    const query = teacherSearch.trim().toLocaleLowerCase();
+    if (!query) return teachers;
+    return teachers.filter((teacher) =>
+      [teacher.name, teacher.email, teacher.role]
+        .filter(Boolean)
+        .some((value) => value!.toLocaleLowerCase().includes(query))
+    );
+  }, [teacherSearch, teachers]);
+
   function handleChange(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function selectTeacher(teacherId: string) {
+    handleChange("teacher_id", teacherId);
+    setTeacherSelectOpen(false);
+    setTeacherSearch("");
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -34,7 +56,7 @@ export function AddAdjustmentDialog({ month }: Props) {
     }
     startTransition(async () => {
       const res = await createAdjustmentAction({
-        teacher_id: form.teacher_id,
+        teacherId: form.teacher_id,
         amount: Number(form.amount),
         type: form.type,
         reason: form.reason,
@@ -66,15 +88,61 @@ export function AddAdjustmentDialog({ month }: Props) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-ink">
-                  Teacher ID <span className="text-danger">*</span>
+                  Select Teacher <span className="text-danger">*</span>
                 </label>
-                <input
-                  value={form.teacher_id}
-                  onChange={(e) => handleChange("teacher_id", e.target.value)}
-                  placeholder="Teacher UUID"
-                  className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <p className="mt-0.5 text-xs text-muted">Copy from Staff → Teachers page</p>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setTeacherSelectOpen((value) => !value)}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-outline bg-white px-4 py-2.5 text-left text-sm font-medium text-ink shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    aria-haspopup="listbox"
+                    aria-expanded={teacherSelectOpen}
+                  >
+                    <span className={cn("min-w-0 flex-1 truncate", !selectedTeacher && "text-muted/70")}>
+                      {selectedTeacher ? selectedTeacher.name : "Choose a teacher"}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                  </button>
+
+                  {teacherSelectOpen ? (
+                    <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-outline bg-white shadow-lift">
+                      <div className="flex items-center gap-2 border-b border-outline/60 px-3 py-2">
+                        <Search className="h-4 w-4 text-muted" aria-hidden="true" />
+                        <input
+                          value={teacherSearch}
+                          onChange={(event) => setTeacherSearch(event.target.value)}
+                          placeholder="Search teacher"
+                          className="min-h-9 w-full bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted/60"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto p-1" role="listbox">
+                        {!filteredTeachers.length ? (
+                          <p className="px-3 py-3 text-sm font-medium text-muted">No teachers found.</p>
+                        ) : (
+                          filteredTeachers.map((teacher) => (
+                            <button
+                              key={teacher.id}
+                              type="button"
+                              onClick={() => selectTeacher(teacher.id)}
+                              className="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-surface-low"
+                              role="option"
+                              aria-selected={teacher.id === form.teacher_id}
+                            >
+                              <Check className={cn("mt-0.5 h-4 w-4 shrink-0 text-primary", teacher.id === form.teacher_id ? "opacity-100" : "opacity-0")} aria-hidden="true" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-ink">{teacher.name}</span>
+                                <span className="block truncate text-xs font-medium text-muted">
+                                  {[teacher.email, teacher.role?.replace("_", " ")].filter(Boolean).join(" • ")}
+                                </span>
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -126,14 +194,17 @@ export function AddAdjustmentDialog({ month }: Props) {
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    setOpen(false);
+                    setTeacherSelectOpen(false);
+                  }}
                   className="rounded-lg border border-outline/60 px-4 py-2 text-sm font-semibold text-muted hover:bg-surface-low"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || !form.teacher_id}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105 disabled:opacity-60"
                 >
                   {isPending ? "Saving…" : "Save Adjustment"}

@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import type { WorkflowNotification } from "@/lib/services/notifications";
 
 type SchoolBranding = {
   logoUrl: string | null;
@@ -31,7 +32,19 @@ function formatNavDate(date: Date) {
   return `${date.toLocaleDateString("en-GB", { weekday: "long" })}, ${date.getDate()}${ordinal(date.getDate())} ${date.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
 }
 
-export function AppShell({ user, branding, children }: { user: AppUser; branding: SchoolBranding; children: ReactNode }) {
+export function AppShell({
+  user,
+  branding,
+  sidebarBadges = { attendance: 0, leave: 0 },
+  initialWorkflowNotifications = [],
+  children
+}: {
+  user: AppUser;
+  branding: SchoolBranding;
+  sidebarBadges?: { attendance: number; leave: number };
+  initialWorkflowNotifications?: WorkflowNotification[];
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -99,6 +112,19 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
     await supabase.auth.signOut();
     window.location.href = "/";
   }
+
+  function badgeForHref(href: string) {
+    if (href === "/attendance") return sidebarBadges.attendance;
+    if (href === "/leave") return sidebarBadges.leave;
+    return 0;
+  }
+
+  const renderBadge = (count: number) =>
+    count > 0 ? (
+      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold leading-none text-white">
+        {count > 99 ? "99+" : count}
+      </span>
+    ) : null;
 
   const renderProfileAvatar = () => (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-sm font-bold text-primary ring-1 ring-outline/70">
@@ -239,6 +265,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
                       />
                       <span>{item.label}</span>
                     </div>
+                    {renderBadge(badgeForHref(item.href))}
                   </Link>
                 );
               })}
@@ -282,7 +309,7 @@ export function AppShell({ user, branding, children }: { user: AppUser; branding
           </div>
           <div className="relative flex items-center gap-3" ref={menuRef}>
             {hasPermission(user.role, "announcements:view", user.permissions) && (
-              <AnnouncementBell user={user} open={announcementsOpen} onOpenChange={(nextOpen) => {
+              <AnnouncementBell user={user} initialWorkflowNotifications={initialWorkflowNotifications} open={announcementsOpen} onOpenChange={(nextOpen) => {
                 setAnnouncementsOpen(nextOpen);
                 if (nextOpen) setProfileOpen(false);
               }} />

@@ -2,6 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
+import { sortClassesNaturally } from "@/lib/class-sort";
+
+function isOutdatedHeadTeacherGuard(error: { message?: string } | null) {
+  return Boolean(error?.message?.includes("Head teacher must be an active teacher in this school."));
+}
 
 async function loadSchoolProfile(user: AppUser) {
   const adminClient = createAdminClient();
@@ -29,6 +34,88 @@ export async function getSchoolSettings(user: AppUser) {
     throw new Error("Unauthorized to access school settings");
   }
   return loadSchoolProfile(user);
+}
+
+export async function getPrincipalTeachingSettings(user: AppUser) {
+  if (user.role !== "principal" && user.role !== "administrator") {
+    return { classes: [], assignedClassId: null };
+  }
+
+  const supabase = await createClient();
+  const [classesResult, assignmentResult] = await Promise.all([
+    supabase
+      .from("classes")
+      .select("id,name,head_teacher_id,grades(name),sections(name),academic_years(name)")
+      .eq("school_id", user.schoolId)
+      .order("name"),
+    supabase
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("head_teacher_id", user.id)
+      .limit(1)
+      .maybeSingle()
+  ]);
+
+  if (classesResult.error) throw new Error(classesResult.error.message);
+  if (assignmentResult.error) throw new Error(assignmentResult.error.message);
+
+  return {
+    assignedClassId: assignmentResult.data?.id ?? null,
+    classes: sortClassesNaturally(classesResult.data ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      grade_name: row.grades?.name ?? "Grade",
+      section_name: row.sections?.name ?? null,
+      academic_year_name: row.academic_years?.name ?? "Academic year",
+      assigned_to_principal: row.head_teacher_id === user.id,
+      has_other_head_teacher: Boolean(row.head_teacher_id && row.head_teacher_id !== user.id)
+    }))
+  };
+}
+
+export async function updatePrincipalTeachingAssignment(user: AppUser, classId: string | null) {
+  if (user.role !== "principal") {
+    throw new Error("Only principals can manage their teaching assignment.");
+  }
+
+  const adminClient = createAdminClient();
+
+  if (classId) {
+    const { data: targetClass, error: targetError } = await adminClient
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("id", classId)
+      .maybeSingle();
+
+    if (targetError) throw new Error(targetError.message);
+    if (!targetClass) throw new Error("Class not found.");
+  }
+
+  const { error: clearError } = await adminClient
+    .from("classes")
+    .update({ head_teacher_id: null })
+    .eq("school_id", user.schoolId)
+    .eq("head_teacher_id", user.id);
+
+  if (isOutdatedHeadTeacherGuard(clearError)) {
+    throw new Error("Apply the latest database migration so principals can be assigned as class head teachers.");
+  }
+  if (clearError) throw new Error(clearError.message);
+
+  if (!classId) return;
+
+  const { error } = await adminClient
+    .from("classes")
+    .update({ head_teacher_id: user.id })
+    .eq("school_id", user.schoolId)
+    .eq("id", classId);
+
+  if (isOutdatedHeadTeacherGuard(error)) {
+    throw new Error("Apply the latest database migration so principals can be assigned as class head teachers.");
+  }
+  if (error) throw new Error(error.message);
 }
 
 export async function updateSchoolSettings(

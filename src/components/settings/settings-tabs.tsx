@@ -3,15 +3,32 @@
 import { useState, useTransition } from "react";
 import {
   createAcademicYearAction,
-  deleteAcademicYearAction
+  deleteAcademicYearAction,
+  updateNotificationPreferencesAction,
+  updatePrincipalTeachingAssignmentAction
 } from "@/app/(app)/settings/actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/form-field";
 import { RolesTab } from "@/components/settings/roles-tab";
+import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 
 interface Props {
   user: any;
   schoolSettings: any;
   academicYears: any[];
+  principalTeachingSettings: {
+    assignedClassId: string | null;
+    classes: Array<{
+      id: string;
+      name: string;
+      grade_name: string;
+      section_name: string | null;
+      academic_year_name: string;
+      assigned_to_principal: boolean;
+      has_other_head_teacher: boolean;
+    }>;
+  };
   members: any[];
   customRoles: any[];
   rolePermissions: any[];
@@ -23,6 +40,7 @@ export function SettingsTabs({
   user,
   schoolSettings,
   academicYears,
+  principalTeachingSettings,
   members,
   customRoles,
   rolePermissions,
@@ -30,15 +48,18 @@ export function SettingsTabs({
   initialTab = "notifications"
 }: Props) {
   const isAdmin = user.role === "administrator";
-  const allowedTabs = new Set(["notifications", ...(isAdmin ? ["academics", "roles"] : [])]);
+  const isPrincipal = user.role === "principal";
+  const allowedTabs = new Set(["notifications", ...(isPrincipal ? ["teaching"] : []), ...(isAdmin ? ["academics", "roles"] : [])]);
   const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const initialNotifications = resolveNotificationPreferences(schoolSettings?.settings);
 
   const [notifications, setNotifications] = useState({
-    emailAnnouncements: true,
-    emailPayroll: true
+    attendanceDeadlineEnabled: initialNotifications.attendanceDeadlineEnabled,
+    attendanceDeadlineTime: initialNotifications.attendanceDeadlineTime,
+    leaveRequestNotificationsEnabled: initialNotifications.leaveRequestNotificationsEnabled
   });
   const [newYear, setNewYear] = useState({
     name: "",
@@ -46,6 +67,8 @@ export function SettingsTabs({
     ends_on: "",
     is_active: false
   });
+  const [principalTeaches, setPrincipalTeaches] = useState(Boolean(principalTeachingSettings.assignedClassId));
+  const [principalClassId, setPrincipalClassId] = useState(principalTeachingSettings.assignedClassId ?? principalTeachingSettings.classes[0]?.id ?? "");
 
   function selectTab(tab: string) {
     setActiveTab(tab);
@@ -83,6 +106,26 @@ export function SettingsTabs({
     });
   }
 
+  function handleTeachingSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    startTransition(async () => {
+      const res = await updatePrincipalTeachingAssignmentAction(principalTeaches ? principalClassId || null : null);
+      if (res.error) setMessage({ type: "error", text: res.error });
+      else setMessage({ type: "success", text: "Teaching assignment saved." });
+    });
+  }
+
+  function handleNotificationSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    startTransition(async () => {
+      const res = await updateNotificationPreferencesAction(notifications);
+      if (res.error) setMessage({ type: "error", text: res.error });
+      else setMessage({ type: "success", text: "Notification settings saved." });
+    });
+  }
+
 
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
@@ -93,6 +136,15 @@ export function SettingsTabs({
         >
           Notifications
         </button>
+
+        {isPrincipal ? (
+          <button
+            onClick={() => selectTab("teaching")}
+            className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "teaching" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+          >
+            Teaching
+          </button>
+        ) : null}
 
         {isAdmin ? (
           <>
@@ -124,38 +176,101 @@ export function SettingsTabs({
         ) : null}
 
         {activeTab === "notifications" ? (
-          <div className="space-y-4">
+          <form onSubmit={handleNotificationSave} className="space-y-5">
             <h3 className="font-display text-xl font-bold text-ink">Notification Preferences</h3>
 
             <div className="space-y-3">
-              <label className="flex cursor-pointer items-center gap-3">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline/40 bg-surface-low/50 p-4">
                 <input
                   type="checkbox"
-                  checked={notifications.emailAnnouncements}
-                  onChange={(e) => setNotifications({ ...notifications, emailAnnouncements: e.target.checked })}
+                  checked={notifications.attendanceDeadlineEnabled}
+                  onChange={(e) => setNotifications({ ...notifications, attendanceDeadlineEnabled: e.target.checked })}
                   className="h-4 w-4 rounded border-outline/60 text-primary focus:ring-primary/30"
                 />
-                <span className="text-sm font-semibold text-ink">Email notifications for new announcements</span>
+                <span>
+                  <span className="block text-sm font-semibold text-ink">Attendance deadline notifications</span>
+                  <span className="mt-1 block text-xs font-medium leading-5 text-muted">
+                    Teachers are reminded one hour before the deadline. Principal and admin are alerted after the deadline if attendance is still pending.
+                  </span>
+                </span>
               </label>
 
-              <label className="flex cursor-pointer items-center gap-3">
+              <div className="max-w-xs">
+                <label className="mb-1.5 block text-sm font-semibold text-ink">Daily attendance deadline</label>
+                <input
+                  type="time"
+                  value={notifications.attendanceDeadlineTime}
+                  onChange={(e) => setNotifications({ ...notifications, attendanceDeadlineTime: e.target.value })}
+                  disabled={!notifications.attendanceDeadlineEnabled}
+                  className="min-h-11 w-full rounded-xl border border-outline bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted"
+                />
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline/40 bg-surface-low/50 p-4">
                 <input
                   type="checkbox"
-                  checked={notifications.emailPayroll}
-                  onChange={(e) => setNotifications({ ...notifications, emailPayroll: e.target.checked })}
+                  checked={notifications.leaveRequestNotificationsEnabled}
+                  onChange={(e) => setNotifications({ ...notifications, leaveRequestNotificationsEnabled: e.target.checked })}
                   className="h-4 w-4 rounded border-outline/60 text-primary focus:ring-primary/30"
                 />
-                <span className="text-sm font-semibold text-ink">Email notifications when payroll is generated</span>
+                <span>
+                  <span className="block text-sm font-semibold text-ink">Leave request notifications</span>
+                  <span className="mt-1 block text-xs font-medium leading-5 text-muted">
+                    Principal and admin see pending leave alerts in the notification bell and Leave Center badge.
+                  </span>
+                </span>
               </label>
             </div>
-            <button
-              type="button"
-              onClick={() => setMessage({ type: "success", text: "Preferences saved successfully." })}
-              className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105"
-            >
-              Save Preferences
-            </button>
-          </div>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Saving..." : "Save Preferences"}
+            </Button>
+          </form>
+        ) : null}
+
+        {activeTab === "teaching" && isPrincipal ? (
+          <form onSubmit={handleTeachingSave} className="space-y-5">
+            <div>
+              <h3 className="font-display text-xl font-bold text-ink">Teaching Assignment</h3>
+              <p className="mt-1 text-sm text-muted">Set this principal as head teacher for one class to unlock the My Class workflow.</p>
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline/40 bg-surface-low/50 p-4">
+              <input
+                type="checkbox"
+                checked={principalTeaches}
+                onChange={(e) => setPrincipalTeaches(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-outline/60 text-primary focus:ring-primary/30"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink">Principal also teaches a class</span>
+                <span className="mt-1 block text-xs font-medium leading-5 text-muted">
+                  Attendance will show both School Register and My Class views.
+                </span>
+              </span>
+            </label>
+
+            {principalTeaches ? (
+              <div className="max-w-xl">
+                <label className="mb-1.5 block text-sm font-semibold text-ink">My Class</label>
+                <Select value={principalClassId} onChange={(e) => setPrincipalClassId(e.target.value)} disabled={!principalTeachingSettings.classes.length}>
+                  {principalTeachingSettings.classes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.grade_name} - {item.name}
+                      {item.section_name ? ` - ${item.section_name}` : ""}
+                      {item.has_other_head_teacher ? " - replacing current head teacher" : ""}
+                    </option>
+                  ))}
+                </Select>
+                {!principalTeachingSettings.classes.length ? (
+                  <p className="mt-2 text-xs font-medium text-muted">Create classes first, then return here to choose one.</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <Button type="submit" disabled={isPending || (principalTeaches && !principalClassId)}>
+              {isPending ? "Saving..." : "Save Teaching Assignment"}
+            </Button>
+          </form>
         ) : null}
 
         {activeTab === "academics" && isAdmin ? (
