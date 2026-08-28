@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { getSupabaseBrowserErrorMessage } from "@/lib/supabase/browser-error";
 import { createClient } from "@/lib/supabase/browser";
+import { normalizeEmail } from "@/lib/email";
 
 export default function ForgotPasswordPage() {
   const [message, setMessage] = useState("");
@@ -20,7 +21,7 @@ export default function ForgotPasswordPage() {
     setMessage("");
     try {
       const supabase = createClient();
-      const email = String(new FormData(event.currentTarget).get("email") ?? "");
+      const email = normalizeEmail(String(new FormData(event.currentTarget).get("email") ?? ""));
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`
       });
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
       {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
       <form className="mt-6 grid gap-4" onSubmit={onSubmit}>
         <Field label="Email address">
-          <Input name="email" type="email" autoComplete="email" required />
+          <Input name="email" type="email" autoComplete="email" onChange={(event) => { event.currentTarget.value = normalizeEmail(event.currentTarget.value); }} required />
         </Field>
         <Button disabled={loading}>{loading ? "Sending..." : "Send reset link"}</Button>
       </form>

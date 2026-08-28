@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
-import { isSubjectExcludedForMajor, majorsForGrade, type StudentMajor } from "@/lib/student-majors";
+import { getCustomCombinationOptionForClass } from "@/lib/services/student-combinations";
+import { isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 
 export type StudentFilters = {
@@ -201,6 +202,9 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
+  if (studentMajorsSupported && parsed.class_id && parsed.major) {
+    await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
+  }
 
   const { data: student, error } = await supabase
     .from("students")
@@ -315,6 +319,9 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
+  if (studentMajorsSupported && parsed.class_id && parsed.major) {
+    await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
+  }
   const { error } = await supabase
     .from("students")
     .update({
@@ -456,7 +463,7 @@ async function supportsStudentBioFields(supabase: Awaited<ReturnType<typeof crea
   throw new Error(error.message);
 }
 
-export async function setStudentMajor(user: AppUser, values: { studentId: string; classId: string; major: StudentMajor | null }) {
+export async function setStudentMajor(user: AppUser, values: { studentId: string; classId: string; major: MajorValue | string | null }) {
   const supabase = await createClient();
   if (!(await supportsStudentMajors(supabase))) {
     throw new Error("Student majors are not enabled in the database yet. Apply the pending student-major migration first.");
@@ -470,7 +477,7 @@ export async function setStudentMajor(user: AppUser, values: { studentId: string
   if (enrollmentError) throw new Error(enrollmentError.message);
   if (!classRow || !enrollment) throw new Error("The student is not actively enrolled in this section.");
   const gradeName = (classRow as any).grades?.name ?? "";
-  if (values.major && !majorsForGrade(gradeName).includes(values.major)) throw new Error("That major is not available for this grade.");
+  if (values.major) await assertMajorAvailableForClass(supabase, user, values.classId, values.major, gradeName);
 
   const { error } = await supabase.from("students").update({ major: values.major }).eq("school_id", user.schoolId).eq("id", values.studentId);
   if (error) throw new Error(error.message);
@@ -478,7 +485,31 @@ export async function setStudentMajor(user: AppUser, values: { studentId: string
   await logActivity(user, "student_major_updated", "student", values.studentId, { class_id: values.classId, major: values.major });
 }
 
-async function removeExcludedStudentSubjects(user: AppUser, studentId: string, classId: string, major: StudentMajor) {
+async function assertMajorAvailableForClass(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: AppUser,
+  classId: string,
+  major: string,
+  knownGradeName?: string
+) {
+  let gradeName = knownGradeName;
+  if (!gradeName) {
+    const { data: classRow, error } = await supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();
+    if (error) throw new Error(error.message);
+    gradeName = (classRow as any)?.grades?.name ?? "";
+  }
+
+  if (isDefaultStudentMajor(major)) {
+    if (!majorsForGrade(gradeName).includes(major)) throw new Error("That combination is not available for this grade.");
+    return;
+  }
+
+  if (!isCustomStudentMajor(major)) throw new Error("That combination is not available for this grade.");
+  const combination = await getCustomCombinationOptionForClass(supabase, user.schoolId, classId, major);
+  if (!combination) throw new Error("That combination is not available for this class.");
+}
+
+async function removeExcludedStudentSubjects(user: AppUser, studentId: string, classId: string, major: MajorValue | string) {
   const supabase = await createClient();
   const [{ data: classRow, error: classError }, { data: links, error: linksError }] = await Promise.all([
     supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
@@ -487,6 +518,27 @@ async function removeExcludedStudentSubjects(user: AppUser, studentId: string, c
   if (classError) throw new Error(classError.message);
   if (linksError) throw new Error(linksError.message);
   const gradeName = (classRow as any)?.grades?.name ?? "";
+
+  if (isCustomStudentMajor(major)) {
+    const combination = await getCustomCombinationOptionForClass(supabase, user.schoolId, classId, major);
+    if (!combination) throw new Error("That combination is not available for this class.");
+    const allowedIds = new Set(combination.subjectIds ?? []);
+    const excludedIds = (links ?? []).filter((row: any) => !allowedIds.has(row.subject_id as string)).map((row: any) => row.subject_id as string);
+    if (excludedIds.length) {
+      const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);
+      if (error) throw new Error(error.message);
+    }
+    const missingAllowedIds = [...allowedIds].filter((subjectId) => (links ?? []).some((row: any) => row.subject_id === subjectId));
+    if (missingAllowedIds.length) {
+      const { error } = await supabase.from("student_subject_enrollments").upsert(
+        missingAllowedIds.map((subjectId) => ({ school_id: user.schoolId, student_id: studentId, class_id: classId, subject_id: subjectId, enrolled_by: user.id })),
+        { onConflict: "school_id,student_id,subject_id,class_id" }
+      );
+      if (error) throw new Error(error.message);
+    }
+    return;
+  }
+
   const excludedIds = (links ?? []).filter((row: any) => isSubjectExcludedForMajor(gradeName, major, row.subjects?.name ?? "")).map((row: any) => row.subject_id as string);
   if (excludedIds.length) {
     const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);

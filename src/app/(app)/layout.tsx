@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { requireUser } from "@/lib/auth/session";
 import { getSchoolProfile } from "@/lib/services/settings";
 import { getNotificationSummary } from "@/lib/services/notifications";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
@@ -17,6 +18,12 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     console.error("Notification summary failed:", error);
     return { notifications: [], sidebarBadges: { attendance: 0, leave: 0 } };
   });
+  const canAccessAcademicControl = user.role === "principal"
+    ? await principalCanAccessAcademicControl(user).catch((error) => {
+        console.error("Principal Academic Control access check failed:", error);
+        return false;
+      })
+    : false;
 
   return (
     <ToastProvider>
@@ -31,6 +38,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           }}
           sidebarBadges={notificationSummary.sidebarBadges}
           initialWorkflowNotifications={notificationSummary.notifications}
+          principalCanAccessAcademicControl={canAccessAcademicControl}
         >
           {children}
         </AppShell>

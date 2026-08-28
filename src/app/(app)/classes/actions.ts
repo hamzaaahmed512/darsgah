@@ -6,7 +6,8 @@ import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWi
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
-import { STUDENT_MAJORS, type StudentMajor } from "@/lib/student-majors";
+import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination } from "@/lib/services/student-combinations";
+
 
 const classSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -152,7 +153,7 @@ export async function createSectionClassAction(formData: FormData) {
 export async function setStudentMajorAction(formData: FormData) {
   const user = await requireUser("classes:manage");
   const rawMajor = String(formData.get("major") ?? "");
-  const major = rawMajor ? z.enum(STUDENT_MAJORS).parse(rawMajor) as StudentMajor : null;
+  const major = rawMajor ? z.string().trim().min(1).max(120).parse(rawMajor) : null;
   await setStudentMajor(user, {
     studentId: z.string().uuid().parse(formData.get("student_id")),
     classId: z.string().uuid().parse(formData.get("class_id")),
@@ -161,6 +162,39 @@ export async function setStudentMajorAction(formData: FormData) {
   revalidatePath("/classes");
   revalidatePath("/subjects");
 }
+
+export async function createStudentSubjectCombinationAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await createStudentSubjectCombination(user, {
+    name: z.string().trim().min(1, "Combination name is required.").max(120).parse(formData.get("name")),
+    classIds: formData.getAll("class_id").map(String).filter(Boolean),
+    subjectIds: formData.getAll("subject_id").map(String).filter(Boolean)
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
+}
+
+export async function updateStudentSubjectCombinationAction(combinationId: string, formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await updateStudentSubjectCombination(user, z.string().uuid().parse(combinationId), {
+    name: z.string().trim().min(1, "Combination name is required.").max(120).parse(formData.get("name")),
+    classIds: formData.getAll("class_id").map(String).filter(Boolean),
+    subjectIds: formData.getAll("subject_id").map(String).filter(Boolean)
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
+}
+
+export async function deleteStudentSubjectCombinationAction(combinationId: string) {
+  const user = await requireUser("classes:manage");
+  await deleteStudentSubjectCombination(user, z.string().uuid().parse(combinationId));
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
+}
+
 
 export async function createAcademicYearAction(formData: FormData) {
   const user = await requireUser("settings:manage");

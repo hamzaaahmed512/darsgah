@@ -7,6 +7,15 @@ export const STUDENT_MAJORS = [
 ] as const;
 
 export type StudentMajor = typeof STUDENT_MAJORS[number];
+export type MajorValue = StudentMajor | `custom:${string}`;
+
+export type StudentCombinationOption = {
+  value: MajorValue;
+  label: string;
+  kind: "default" | "custom";
+  subjectIds?: string[];
+  classIds?: string[];
+};
 
 export const STUDENT_MAJOR_LABELS: Record<StudentMajor, string> = {
   computer: "Computer",
@@ -28,9 +37,39 @@ export function majorsForGrade(gradeName?: string | null): StudentMajor[] {
   return [];
 }
 
+export function defaultCombinationOptionsForGrade(gradeName?: string | null): StudentCombinationOption[] {
+  return majorsForGrade(gradeName).map((major) => ({
+    value: major,
+    label: STUDENT_MAJOR_LABELS[major],
+    kind: "default"
+  }));
+}
+
+export function isDefaultStudentMajor(value: string | null | undefined): value is StudentMajor {
+  return STUDENT_MAJORS.includes(value as StudentMajor);
+}
+
+export function isCustomStudentMajor(value: string | null | undefined): value is `custom:${string}` {
+  return Boolean(value?.startsWith("custom:"));
+}
+
+export function customCombinationId(value: string | null | undefined) {
+  return isCustomStudentMajor(value) ? value.slice("custom:".length) : null;
+}
+
+export function studentMajorLabel(value: string | null | undefined, options: StudentCombinationOption[] = []) {
+  if (!value) return "";
+  const option = options.find((item) => item.value === value);
+  if (option) return option.label;
+  if (isDefaultStudentMajor(value)) return STUDENT_MAJOR_LABELS[value];
+  return "Custom combination";
+}
+
 const normalized = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
-export function isSubjectExcludedForMajor(gradeName: string, major: StudentMajor | null | undefined, subjectName: string) {
+export function isSubjectExcludedForMajor(gradeName: string, major: string | null | undefined, subjectName: string) {
+  if (isCustomStudentMajor(major)) return false;
+  if (major && !isDefaultStudentMajor(major)) return false;
   if (!major) return false;
   const grade = gradeNumber(gradeName);
   const subject = normalized(subjectName);

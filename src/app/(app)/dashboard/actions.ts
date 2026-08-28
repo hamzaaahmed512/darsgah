@@ -36,7 +36,36 @@ export async function sendAttendanceReminderAction(classId: string) {
   if (sessionError) return { error: sessionError.message };
   if (existingSession) return { error: "Attendance has already been marked for this class today." };
 
-  const headTeacher = targetClass.head_teacher?.[0] ?? null;
+  const { data: existingReminder, error: reminderError } = await supabase
+    .from("activity_logs")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("action", "attendance_reminder_sent")
+    .eq("entity_type", "class")
+    .eq("entity_id", classId)
+    .contains("metadata", { attendance_date: today })
+    .limit(1)
+    .maybeSingle();
+
+  if (reminderError) return { error: reminderError.message };
+  if (existingReminder) return { error: "A reminder has already been sent for this class today." };
+
+  const headTeacher = Array.isArray(targetClass.head_teacher) ? targetClass.head_teacher[0] : targetClass.head_teacher;
+
+  const { error: announcementError } = await supabase.from("announcements").insert({
+    school_id: user.schoolId,
+    title: "Attendance reminder",
+    description: `Please mark attendance for ${targetClass.name} today.`,
+    priority: "high",
+    type: "urgent",
+    audience_type: "roles",
+    audience_value: `user:${targetClass.head_teacher_id}`,
+    publish_date: today,
+    expiry_date: today,
+    created_by: user.id
+  });
+
+  if (announcementError) return { error: announcementError.message };
 
   await logActivity(user, "attendance_reminder_sent", "class", classId, {
     class_name: targetClass.name,

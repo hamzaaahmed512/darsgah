@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResultCardsFilters, ResultCardsPanel } from "@/app/(app)/results/_components/result-cards-panel";
 import { ResultsTable } from "@/app/(app)/results/_components/results-table";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getResultCardsWorkspace, getResultsManagementWorkspace } from "@/lib/services/marks";
 import type { ResultWorkflowStatus, UserRole } from "@/types/database";
 
@@ -30,6 +33,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const user = await requireUser("results:view");
   const status = (params.status as ResultWorkflowStatus | "all" | undefined) ?? "all";
   const view = params.view ?? (user.role === "student_staff" ? "cards" : "management");
+  const canViewOwnClassResults = user.role === "principal" && await principalCanAccessAcademicControl(user);
 
   const [results, cardsWorkspace] = await Promise.all([
     getResultsManagementWorkspace(user, { classId: params.classId, term: params.term, status }),
@@ -51,6 +55,18 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         eyebrow="Results management"
         title={user.role === "teacher" ? "My Exams & Results" : user.role === "principal" ? "Exam & Result Approvals" : "Exams & Results"}
         description={roleDescription(user.role)}
+        actions={
+          canViewOwnClassResults ? (
+            <>
+              <ButtonLink href="/results" variant="primary">
+                Whole School Results
+              </ButtonLink>
+              <ButtonLink href="/academics/results" variant="secondary">
+                <BookOpen className="h-4 w-4" /> My Class Results
+              </ButtonLink>
+            </>
+          ) : null
+        }
       />
 
       {user.role === "principal" ? (

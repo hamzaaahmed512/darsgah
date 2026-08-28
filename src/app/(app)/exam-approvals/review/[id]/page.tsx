@@ -1,6 +1,6 @@
 import { CheckCircle2, ChevronLeft, XCircle } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/form-field";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultsForReviewByApprovalId } from "@/lib/services/marks";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { reviewExamApprovalAction } from "@/app/(app)/exam-approvals/actions";
 
 export default async function ExamApprovalReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser("marks:approve");
+  if (!(await principalCanAccessAcademicControl(user))) redirect("/unauthorized");
 
   let reviewData;
   try {

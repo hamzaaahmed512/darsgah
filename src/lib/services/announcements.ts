@@ -4,6 +4,21 @@ import { hasPermission } from "@/lib/permissions";
 
 // ─── Read Announcements ────────────────────────────────────────────────────────
 
+function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
+  const audienceValue = announcement.audience_value?.trim();
+
+  if (audienceValue === `user:${user.id}`) return true;
+  if (announcement.audience_type === "all") return true;
+  if (announcement.audience_type === "teachers") return user.role === "teacher" || user.role === "head_teacher" || user.role === "principal";
+  if (announcement.audience_type === "registrar") return user.role === "student_staff";
+  if (announcement.audience_type === "admin") return user.role === "administrator" || user.role === "principal";
+  if (announcement.audience_type === "roles") {
+    return Boolean(audienceValue?.split(",").map((item) => item.trim()).includes(user.role));
+  }
+
+  return true;
+}
+
 export async function getAnnouncements(user: AppUser): Promise<AnnouncementWithRead[]> {
   const supabase = await createClient();
 
@@ -21,11 +36,13 @@ export async function getAnnouncements(user: AppUser): Promise<AnnouncementWithR
 
   if (error) throw new Error(error.message);
 
-  return (data || []).map((row: any) => ({
-    ...row,
-    created_by_name: row.profiles?.full_name ?? null,
-    is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0
-  }));
+  return (data || [])
+    .filter((row: any) => announcementVisibleToUser(row, user))
+    .map((row: any) => ({
+      ...row,
+      created_by_name: row.profiles?.full_name ?? null,
+      is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0
+    }));
 }
 
 export async function getAnnouncementHistory(user: AppUser): Promise<AnnouncementWithRead[]> {

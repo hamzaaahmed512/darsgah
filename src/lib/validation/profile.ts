@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeOptionalEmail } from "@/lib/email";
 import { formatPakistaniPhoneForStorage, isValidPakistaniPhone } from "@/lib/pakistan-format";
 
 const optionalText = (max: number) =>
@@ -11,11 +12,7 @@ const optionalText = (max: number) =>
     .transform((value) => (value ? value : null));
 
 const optionalEmail = z
-  .string()
-  .trim()
-  .optional()
-  .nullable()
-  .transform((v) => (v ? v : null))
+  .preprocess(normalizeOptionalEmail, z.string().email("Enter a valid email address").nullable())
   .pipe(z.string().email("Enter a valid email address").nullable());
 
 const pakistaniPhone = z

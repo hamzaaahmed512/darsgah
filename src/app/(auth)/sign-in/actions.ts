@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseBrowserErrorMessage } from "@/lib/supabase/browser-error";
 import { isPlatformAdminUser } from "@/lib/platform/auth";
 import { resolveAuthDestination } from "@/lib/auth/destination";
+import { normalizeEmail } from "@/lib/email";
 
 const signInSchema = z.object({
-  email: z.string().email("Enter a valid email address."),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address.").transform(normalizeEmail),
   password: z.string().min(1, "Enter your password."),
   next: z.string().optional()
 });

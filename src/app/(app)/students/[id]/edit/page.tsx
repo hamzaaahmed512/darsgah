@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StudentForm } from "@/components/students/student-form";
 import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions } from "@/lib/services/academics";
+import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
 import { getStudent } from "@/lib/services/students";
 import { updateStudentAction } from "@/app/(app)/students/actions";
 import type { StudentFormValues } from "@/lib/validation/students";
@@ -11,7 +12,7 @@ import type { StudentFormValues } from "@/lib/validation/students";
 export default async function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser("students:update");
-  const [{ student, guardians }, academics] = await Promise.all([getStudent(user, id), getAcademicOptions(user)]);
+  const [{ student, guardians }, academics, combinations] = await Promise.all([getStudent(user, id), getAcademicOptions(user), getSubjectCombinationCatalog(user)]);
   if (!student) notFound();
   const guardian = guardians[0];
 
@@ -34,6 +35,7 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
       />
       <StudentForm
         classes={academics.classes}
+        combinations={combinations.customCombinations.map((combination) => ({ value: combination.value, label: combination.name, kind: "custom", classIds: combination.classIds, subjectIds: combination.subjectIds }))}
         onSubmit={submit}
         submitLabel="Save changes"
         initialValues={{
@@ -58,11 +60,11 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           status: student.status,
           class_id: student.class_id ?? "",
           major: (student as any).major ?? "",
-          guardian_name: guardian?.full_name ?? "Guardian",
-          guardian_relationship: guardian?.relationship ?? "Guardian",
+          guardian_name: guardian?.full_name ?? "",
+          guardian_relationship: guardian?.relationship ?? "",
           guardian_email: guardian?.email ?? "",
           guardian_phone: guardian?.phone ?? "",
-          emergency_contact_name: guardian?.emergency_contact_name ?? guardian?.full_name ?? "Emergency Contact",
+          emergency_contact_name: guardian?.emergency_contact_name ?? guardian?.full_name ?? "",
           emergency_contact_phone: guardian?.emergency_contact_phone ?? guardian?.phone ?? ""
         }}
       />

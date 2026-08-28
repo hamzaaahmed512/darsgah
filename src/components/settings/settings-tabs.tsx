@@ -5,11 +5,12 @@ import {
   createAcademicYearAction,
   deleteAcademicYearAction,
   updateNotificationPreferencesAction,
-  updatePrincipalTeachingAssignmentAction
+  updatePrincipalTeachingAssignmentAction,
+  updateResultCardTemplateAction
 } from "@/app/(app)/settings/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/form-field";
+import { Input, Select } from "@/components/ui/form-field";
 import { RolesTab } from "@/components/settings/roles-tab";
 import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 
@@ -49,7 +50,7 @@ export function SettingsTabs({
 }: Props) {
   const isAdmin = user.role === "administrator";
   const isPrincipal = user.role === "principal";
-  const allowedTabs = new Set(["notifications", ...(isPrincipal ? ["teaching"] : []), ...(isAdmin ? ["academics", "roles"] : [])]);
+  const allowedTabs = new Set(["notifications", ...(isPrincipal ? ["teaching", "result-cards"] : []), ...(isAdmin ? ["academics", "roles", "result-cards"] : [])]);
   const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
   const [isPending, startTransition] = useTransition();
@@ -69,6 +70,19 @@ export function SettingsTabs({
   });
   const [principalTeaches, setPrincipalTeaches] = useState(Boolean(principalTeachingSettings.assignedClassId));
   const [principalClassId, setPrincipalClassId] = useState(principalTeachingSettings.assignedClassId ?? principalTeachingSettings.classes[0]?.id ?? "");
+  const initialResultCardTemplate = schoolSettings?.settings?.resultCardTemplate ?? {};
+  const initialAccentColor = typeof initialResultCardTemplate.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(initialResultCardTemplate.accentColor)
+    ? initialResultCardTemplate.accentColor
+    : "#2563eb";
+  const [resultCardTemplate, setResultCardTemplate] = useState({
+    title: initialResultCardTemplate.title ?? "Result Card",
+    accentColor: initialAccentColor,
+    layout: initialResultCardTemplate.layout === "compact" ? "compact" : "standard",
+    showAcademicYear: initialResultCardTemplate.showAcademicYear !== false,
+    showAdmissionNumber: initialResultCardTemplate.showAdmissionNumber !== false,
+    showTeacherComments: initialResultCardTemplate.showTeacherComments === true,
+    signatureLabels: Array.isArray(initialResultCardTemplate.signatureLabels) ? initialResultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
+  });
 
   function selectTab(tab: string) {
     setActiveTab(tab);
@@ -126,6 +140,16 @@ export function SettingsTabs({
     });
   }
 
+  function handleResultCardTemplateSave(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    startTransition(async () => {
+      const res = await updateResultCardTemplateAction(resultCardTemplate);
+      if (res.error) setMessage({ type: "error", text: res.error });
+      else setMessage({ type: "success", text: "Result card template saved." });
+    });
+  }
+
 
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
@@ -143,6 +167,15 @@ export function SettingsTabs({
             className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "teaching" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
           >
             Teaching
+          </button>
+        ) : null}
+
+        {isPrincipal || isAdmin ? (
+          <button
+            onClick={() => selectTab("result-cards")}
+            className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "result-cards" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+          >
+            Result Cards
           </button>
         ) : null}
 
@@ -269,6 +302,85 @@ export function SettingsTabs({
 
             <Button type="submit" disabled={isPending || (principalTeaches && !principalClassId)}>
               {isPending ? "Saving..." : "Save Teaching Assignment"}
+            </Button>
+          </form>
+        ) : null}
+
+        {activeTab === "result-cards" && (isPrincipal || isAdmin) ? (
+          <form onSubmit={handleResultCardTemplateSave} className="space-y-5">
+            <div>
+              <h3 className="font-display text-xl font-bold text-ink">Result Card Template</h3>
+              <p className="mt-1 text-sm text-muted">School-specific layout used by Registrar print and PDF export.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-semibold text-ink">
+                Card title
+                <Input
+                  value={resultCardTemplate.title}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, title: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-ink">
+                Accent color
+                <Input
+                  type="color"
+                  value={resultCardTemplate.accentColor}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, accentColor: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-ink">
+                Layout
+                <Select
+                  value={resultCardTemplate.layout}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, layout: event.target.value }))}
+                >
+                  <option value="standard">Standard</option>
+                  <option value="compact">Compact</option>
+                </Select>
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-ink">
+                Signature labels
+                <Input
+                  value={resultCardTemplate.signatureLabels}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, signatureLabels: event.target.value }))}
+                />
+                <span className="text-xs font-medium text-muted">Comma-separated, up to three.</span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-5 text-sm font-semibold text-ink">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={resultCardTemplate.showAcademicYear}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, showAcademicYear: event.target.checked }))}
+                  className="h-4 w-4 accent-primary"
+                />
+                Academic year
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={resultCardTemplate.showAdmissionNumber}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, showAdmissionNumber: event.target.checked }))}
+                  className="h-4 w-4 accent-primary"
+                />
+                Admission number
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={resultCardTemplate.showTeacherComments}
+                  onChange={(event) => setResultCardTemplate((current) => ({ ...current, showTeacherComments: event.target.checked }))}
+                  className="h-4 w-4 accent-primary"
+                />
+                Teacher comments
+              </label>
+            </div>
+
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Saving..." : "Save Result Card Template"}
             </Button>
           </form>
         ) : null}

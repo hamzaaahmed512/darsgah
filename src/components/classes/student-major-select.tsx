@@ -5,24 +5,25 @@ import { useRouter } from "next/navigation";
 import { setStudentMajorAction } from "@/app/(app)/classes/actions";
 import { Select } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
-import { majorsForGrade, STUDENT_MAJOR_LABELS, type StudentMajor } from "@/lib/student-majors";
+import { defaultCombinationOptionsForGrade, type StudentCombinationOption } from "@/lib/student-majors";
 
-export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor }: {
+export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor, options: providedOptions }: {
   studentId: string;
   classId: string;
   gradeName: string;
-  currentMajor: StudentMajor | null;
+  currentMajor: string | null;
+  options?: StudentCombinationOption[];
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
-  const options = majorsForGrade(gradeName);
+  const options = providedOptions?.length ? providedOptions : defaultCombinationOptionsForGrade(gradeName);
   const [value, setValue] = useState(currentMajor ?? "");
   const [pending, startTransition] = useTransition();
   if (!options.length) return null;
 
   function change(nextValue: string) {
     const previous = value;
-    setValue(nextValue as StudentMajor | "");
+    setValue(nextValue);
     const formData = new FormData();
     formData.set("student_id", studentId);
     formData.set("class_id", classId);
@@ -30,17 +31,17 @@ export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor
     startTransition(async () => {
       try {
         await setStudentMajorAction(formData);
-        pushToast("Student major updated.", "success");
+        pushToast("Student combination updated.", "success");
         router.refresh();
       } catch (error: any) {
         setValue(previous);
-        pushToast(error?.message ?? "Failed to update major.", "error");
+        pushToast(error?.message ?? "Failed to update combination.", "error");
       }
     });
   }
 
   return <Select value={value} onChange={(event) => change(event.target.value)} disabled={pending} className="h-9 min-w-52 text-xs">
-    <option value="">Select major...</option>
-    {options.map((major) => <option key={major} value={major}>{STUDENT_MAJOR_LABELS[major]}</option>)}
+    <option value="">Select combination...</option>
+    {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
   </Select>;
 }

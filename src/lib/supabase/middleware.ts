@@ -29,11 +29,18 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Verifies/refreshes the JWT. With asymmetric signing keys this is local
-  // after the JWKS is cached, unlike getUser(), which always calls Auth.
-  // Password-change enforcement lives in the protected layout/requireUser,
-  // where the already-needed profile data is available without a duplicate query.
-  await supabase.auth.getClaims();
+  // Verifies/refreshes the JWT. Malformed local auth cookies can make the
+  // Supabase client throw while parsing JSON, so expire them and let the app
+  // redirect through the normal unauthenticated path.
+  try {
+    await supabase.auth.getClaims();
+  } catch {
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith("sb-")) {
+        response.cookies.set(cookie.name, "", { path: "/", maxAge: 0 });
+      }
+    }
+  }
 
   return response;
 }

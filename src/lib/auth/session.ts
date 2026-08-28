@@ -34,7 +34,7 @@ type CurrentUserRow = {
 
 async function loadCurrentUser(): Promise<AppUser | null> {
   const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims().catch(() => ({ data: null, error: new Error("Invalid auth session") }));
   const userId = claimsData?.claims?.sub;
 
   if (claimsError || !userId) return null;

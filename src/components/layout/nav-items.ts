@@ -78,6 +78,26 @@ function academicEvaluationModule(): NavItem {
   };
 }
 
+function assessmentsItem(permission: Permission = "marks:manage"): NavItem {
+  return {
+    href: "/academics/exams-setup",
+    label: "Assessments",
+    icon: ClipboardList,
+    permission,
+    section: "ACADEMICS"
+  };
+}
+
+function teacherResultsItem(permission: Permission = "results:view"): NavItem {
+  return {
+    href: "/academics/results",
+    label: "Results",
+    icon: BarChart3,
+    permission,
+    section: "ACADEMICS"
+  };
+}
+
 function principalAcademicControlItem(): NavItem {
   return {
     href: "/admin/academic-control",
@@ -86,6 +106,17 @@ function principalAcademicControlItem(): NavItem {
     permission: "marks:approve",
     section: "ACADEMICS",
     anyPermissions: ["results:view"]
+  };
+}
+
+function principalResultsManagementItem(): NavItem {
+  return {
+    href: "/results",
+    label: "Results Management",
+    icon: BarChart3,
+    permission: "results:view",
+    section: "ACADEMICS",
+    anyPermissions: ["marks:approve"]
   };
 }
 
@@ -99,7 +130,7 @@ function structureAcademicsItem(): NavItem {
   };
 }
 
-export function getNavItems(role: UserRole): NavItem[] {
+export function getNavItems(role: UserRole, options: { principalCanAccessAcademicControl?: boolean } = {}): NavItem[] {
   const items: NavItem[] = [{ ...coreNavItems[0], href: getOverviewHref(role) }];
 
   for (const item of coreNavItems.slice(1)) {
@@ -109,8 +140,14 @@ export function getNavItems(role: UserRole): NavItem[] {
     items.push(item);
 
     if (item.href === "/classes") {
-      if (usesPrincipalAcademicControl(role)) {
+      if (usesPrincipalAcademicControl(role) && options.principalCanAccessAcademicControl) {
         items.push(principalAcademicControlItem());
+      }
+      if (role === "principal") {
+        items.push(principalResultsManagementItem());
+      } else if (role === "teacher" || role === "head_teacher") {
+        items.push(assessmentsItem());
+        items.push(teacherResultsItem());
       } else if (usesAcademicEvaluationTabs(role)) {
         items.push(academicEvaluationModule());
       } else {

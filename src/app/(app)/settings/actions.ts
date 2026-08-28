@@ -65,6 +65,45 @@ export async function updateNotificationPreferencesAction(data: {
   }
 }
 
+export async function updateResultCardTemplateAction(data: {
+  title: string;
+  accentColor: string;
+  layout: string;
+  showAcademicYear: boolean;
+  showAdmissionNumber: boolean;
+  showTeacherComments: boolean;
+  signatureLabels: string;
+}) {
+  try {
+    const user = await requireUser("settings:manage");
+    const schoolSettings = await getSchoolSettings(user);
+    const accentColor = /^#[0-9a-f]{6}$/i.test(data.accentColor) ? data.accentColor : "#2563eb";
+
+    await updateSchoolSettings(
+      user,
+      schoolSettings.school?.name ?? user.schoolName,
+      schoolSettings.school?.timezone ?? "Asia/Karachi",
+      {
+        resultCardTemplate: {
+          title: data.title.trim().slice(0, 80) || "Result Card",
+          accentColor,
+          layout: data.layout === "compact" ? "compact" : "standard",
+          showAcademicYear: data.showAcademicYear,
+          showAdmissionNumber: data.showAdmissionNumber,
+          showTeacherComments: data.showTeacherComments,
+          signatureLabels: data.signatureLabels.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 3)
+        }
+      }
+    );
+
+    revalidatePath("/settings");
+    revalidatePath("/results/print");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
 export async function updatePrincipalTeachingAssignmentAction(classId: string | null) {
   try {
     const user = await requireUser("settings:manage");

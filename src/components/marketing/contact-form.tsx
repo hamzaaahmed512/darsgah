@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { normalizeEmail } from "@/lib/email";
 
 export function ContactForm() {
   const [sent, setSent] = useState(false);
   function submit(formData: FormData) {
     const name = String(formData.get("name") ?? "");
     const school = String(formData.get("school") ?? "");
-    const email = String(formData.get("email") ?? "");
+    const email = normalizeEmail(String(formData.get("email") ?? ""));
     const message = String(formData.get("message") ?? "");
     const subject = encodeURIComponent(`Darsgah enquiry from ${school || name}`);
     const body = encodeURIComponent(`Name: ${name}\nSchool: ${school}\nEmail: ${email}\n\n${message}`);
@@ -24,4 +25,4 @@ export function ContactForm() {
     <p className="text-center text-[11px] leading-5 text-muted">Submitting opens your email app. Your information is not stored by this website form.</p>
   </form>;
 }
-function Field({ label, name, type = "text", placeholder }: { label: string; name: string; type?: string; placeholder: string }) { return <label className="grid gap-2 text-sm font-bold text-ink">{label}<input name={name} type={type} required placeholder={placeholder} className="h-12 rounded-xl border border-outline bg-white px-4 text-sm font-normal text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-blue-100" /></label>; }
+function Field({ label, name, type = "text", placeholder }: { label: string; name: string; type?: string; placeholder: string }) { return <label className="grid gap-2 text-sm font-bold text-ink">{label}<input name={name} type={type} required placeholder={placeholder} onChange={type === "email" ? (event) => { event.currentTarget.value = normalizeEmail(event.currentTarget.value); } : undefined} className="h-12 rounded-xl border border-outline bg-white px-4 text-sm font-normal text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-blue-100" /></label>; }

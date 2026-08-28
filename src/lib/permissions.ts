@@ -83,7 +83,6 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "marks:manage",
     "results:view",
     "leave:view",
-    "payroll:view",
     "announcements:view"
   ],
   student_staff: [
@@ -157,13 +156,15 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "marks:manage",
     "results:view",
     "leave:view",
-    "payroll:view",
     "announcements:view"
   ]
 };
 
 export function hasPermission(role: UserRole | undefined, permission: Permission, userPermissions?: string[] | null) {
   if (!role) return false;
+  if ((role === "teacher" || role === "head_teacher") && (permission === "payroll:view" || permission === "payroll:manage")) {
+    return false;
+  }
   if (permission === "announcements:manage" && (role === "principal" || role === "administrator")) {
     return true;
   }

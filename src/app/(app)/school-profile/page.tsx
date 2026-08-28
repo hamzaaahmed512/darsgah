@@ -29,7 +29,6 @@ export default async function SchoolProfilePage() {
         logoUrl={settings.schoolLogoUrl ?? ""}
         faviconUrl={canManageSchoolProfile ? settings.schoolFaviconUrl ?? "" : ""}
         brandVersion={String(settings.schoolBrandVersion ?? "")}
-        resultCardTemplate={settings.resultCardTemplate ?? {}}
       />
     </>
   );

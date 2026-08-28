@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createSchoolAction } from "@/app/(platform)/platform/actions";
+import { normalizeEmail } from "@/lib/email";
 
 const initialState = { ok: false, error: "", errors: {} as Record<string, string[]> };
 
@@ -81,7 +82,7 @@ function Field({ label, name, placeholder, type = "text", hint, errors }: { labe
   return (
     <label className="grid gap-2 text-xs font-bold text-ink">
       {label}
-      <input className="platform-input" required={["name", "slug", "principalName", "principalEmail"].includes(name)} name={name} type={type} placeholder={placeholder} />
+      <input className="platform-input" required={["name", "slug", "principalName", "principalEmail"].includes(name)} name={name} type={type} placeholder={placeholder} onChange={type === "email" ? (event) => { event.currentTarget.value = normalizeEmail(event.currentTarget.value); } : undefined} />
       {errors && errors.length > 0 && <span className="text-danger">{errors[0]}</span>}
       {hint && !errors ? <span className="font-normal text-muted">{hint}</span> : null}
     </label>

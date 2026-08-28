@@ -37,12 +37,14 @@ export function AppShell({
   branding,
   sidebarBadges = { attendance: 0, leave: 0 },
   initialWorkflowNotifications = [],
+  principalCanAccessAcademicControl = false,
   children
 }: {
   user: AppUser;
   branding: SchoolBranding;
   sidebarBadges?: { attendance: number; leave: number };
   initialWorkflowNotifications?: WorkflowNotification[];
+  principalCanAccessAcademicControl?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -52,7 +54,7 @@ export function AppShell({
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [navDate, setNavDate] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const items = getNavItems(user.role).filter((item) => {
+  const items = getNavItems(user.role, { principalCanAccessAcademicControl }).filter((item) => {
     if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) {
       return false;
     }

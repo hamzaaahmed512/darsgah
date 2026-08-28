@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateGrade, defaultGradeScale, percentage, type GradeScale } from "@/lib/grades";
 import { logActivity } from "@/lib/services/activity";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import type {
   AppUser,
   AssessmentCategory,
@@ -100,19 +101,35 @@ async function getGradeScale(user: AppUser): Promise<GradeScale[]> {
 }
 
 async function assertTeacherCanUseSubject(user: AppUser, classId: string, subjectId: string) {
-  if (user.role !== "teacher" && user.role !== "head_teacher") throw new Error("Only teachers can manage marks.");
+  const canUseTeacherWorkspace =
+    user.role === "teacher" ||
+    user.role === "head_teacher" ||
+    (user.role === "principal" && await principalCanAccessAcademicControl(user));
+  if (!canUseTeacherWorkspace) throw new Error("Only assigned teachers can manage marks.");
+
   const supabase = await createClient();
-  const assignment = await supabase
-    .from("teacher_assignments")
-    .select("id")
-    .eq("school_id", user.schoolId)
-    .eq("teacher_id", user.id)
-    .eq("class_id", classId)
-    .eq("subject_id", subjectId)
-    .maybeSingle();
+  const [assignment, headClass] = await Promise.all([
+    supabase
+      .from("teacher_assignments")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", user.id)
+      .eq("class_id", classId)
+      .eq("subject_id", subjectId)
+      .maybeSingle(),
+    supabase
+      .from("classes")
+      .select("id,class_subjects!inner(subject_id)")
+      .eq("school_id", user.schoolId)
+      .eq("id", classId)
+      .eq("head_teacher_id", user.id)
+      .eq("class_subjects.subject_id", subjectId)
+      .maybeSingle()
+  ]);
 
   if (assignment.error) throw new Error(assignment.error.message);
-  if (!assignment.data) throw new Error("You can enter marks only for subjects explicitly assigned to you.");
+  if (headClass.error) throw new Error(headClass.error.message);
+  if (!assignment.data && !headClass.data) throw new Error("You can enter marks only for subjects assigned to you or your head-teacher class.");
 }
 
 async function getEditableExam(user: AppUser, examId: string) {
@@ -137,16 +154,30 @@ async function getEditableExam(user: AppUser, examId: string) {
 }
 
 export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId?: string; subjectId?: string; examId?: string } = {}) {
+  const canUseTeacherWorkspace =
+    user.role === "teacher" ||
+    user.role === "head_teacher" ||
+    (user.role === "principal" && await principalCanAccessAcademicControl(user));
+  if (!canUseTeacherWorkspace) throw new Error("Only assigned teachers can manage marks.");
+
   const supabase = await createClient();
-  const assignments = await supabase
-    .from("teacher_assignments")
-    .select("class_id,subject_id,classes(id,name,room,grades(name),sections(name)),subjects(id,name,code)")
-    .eq("school_id", user.schoolId)
-    .eq("teacher_id", user.id)
-    .not("subject_id", "is", null)
-    .order("created_at", { ascending: false });
+  const [assignments, headClassSubjects] = await Promise.all([
+    supabase
+      .from("teacher_assignments")
+      .select("class_id,subject_id,classes(id,name,room,grades(name),sections(name)),subjects(id,name,code)")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", user.id)
+      .not("subject_id", "is", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("class_subjects")
+      .select("class_id,subject_id,classes!inner(id,name,room,head_teacher_id,grades(name),sections(name)),subjects(id,name,code)")
+      .eq("school_id", user.schoolId)
+      .eq("classes.head_teacher_id", user.id)
+  ]);
 
   if (assignments.error) throw new Error(assignments.error.message);
+  if (headClassSubjects.error) throw new Error(headClassSubjects.error.message);
 
   const optionMap = new Map<string, any>();
   for (const row of assignments.data ?? []) {
@@ -159,15 +190,30 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
       section_name: item.classes.sections?.name,
       subject_id: item.subjects.id,
       subject_name: item.subjects.name,
-      is_head_teacher: user.role === "head_teacher"
+      is_head_teacher: false
+    });
+  }
+  for (const row of headClassSubjects.data ?? []) {
+    const item: any = row;
+    if (!item.classes?.id || !item.subjects?.id) continue;
+    optionMap.set(`${item.classes.id}:${item.subjects.id}`, {
+      ...(optionMap.get(`${item.classes.id}:${item.subjects.id}`) ?? {}),
+      class_id: item.classes.id,
+      class_name: item.classes.name,
+      grade_name: item.classes.grades?.name,
+      section_name: item.classes.sections?.name,
+      subject_id: item.subjects.id,
+      subject_name: item.subjects.name,
+      is_head_teacher: true
     });
   }
 
   const options = [...optionMap.values()].sort((a, b) => `${a.class_name} ${a.subject_name}`.localeCompare(`${b.class_name} ${b.subject_name}`));
   const selected = options.find((item) => item.class_id === filters.classId && item.subject_id === filters.subjectId) ?? options[0];
 
+  const readClient = user.role === "principal" ? createAdminClient() : supabase;
   const exams = selected
-    ? await supabase
+    ? await readClient
         .from("exams")
         .select("*")
         .eq("school_id", user.schoolId)
@@ -177,9 +223,11 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     : { data: [], error: null };
 
   if (exams.error) throw new Error(exams.error.message);
-  const selectedExam = (exams.data ?? []).find((exam: any) => exam.id === filters.examId) ?? exams.data?.[0] ?? null;
+  const examRows = exams.data ?? [];
+  const selectedExam = filters.examId ? examRows.find((exam: any) => exam.id === filters.examId) ?? null : null;
+  const examIds = examRows.map((exam: any) => exam.id);
 
-  const [roster, marks] = selected
+  const [roster, marks, assessmentMarks] = selected
     ? await Promise.all([
         supabase
           .from("student_subject_enrollments")
@@ -189,24 +237,38 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
           .eq("subject_id", selected.subject_id)
           .order("enrolled_at"),
         selectedExam
-          ? supabase.from("marks").select("*").eq("school_id", user.schoolId).eq("exam_id", selectedExam.id)
+          ? readClient.from("marks").select("*").eq("school_id", user.schoolId).eq("exam_id", selectedExam.id)
+          : Promise.resolve({ data: [], error: null }),
+        examIds.length
+          ? readClient.from("marks").select("exam_id,student_id").eq("school_id", user.schoolId).in("exam_id", examIds)
           : Promise.resolve({ data: [], error: null })
       ])
-    : [{ data: [], error: null }, { data: [], error: null }];
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
   if (roster.error) throw new Error(roster.error.message);
   if (marks.error) throw new Error(marks.error.message);
+  if (assessmentMarks.error) throw new Error(assessmentMarks.error.message);
 
   const markMap = new Map((marks.data ?? []).map((mark: any) => [mark.student_id, mark]));
+  const markCounts = (assessmentMarks.data ?? []).reduce<Record<string, number>>((counts, mark: any) => {
+    counts[mark.exam_id] = (counts[mark.exam_id] ?? 0) + 1;
+    return counts;
+  }, {});
+  const rosterCount = (roster.data ?? []).length;
+
+  const examsWithMarking = examRows.map((exam: any) => ({
+    ...exam,
+    workflow_status: getWorkflowStatusFromExam(exam),
+    marked_count: markCounts[exam.id] ?? 0,
+    roster_count: rosterCount,
+    is_marked: rosterCount > 0 && (markCounts[exam.id] ?? 0) >= rosterCount
+  }));
 
   return {
     options,
     selected,
-    exams: (exams.data ?? []).map((exam: any) => ({
-      ...exam,
-      workflow_status: getWorkflowStatusFromExam(exam)
-    })),
-    selectedExam: selectedExam ? { ...selectedExam, workflow_status: getWorkflowStatusFromExam(selectedExam) } : null,
+    exams: examsWithMarking,
+    selectedExam: selectedExam ? examsWithMarking.find((exam: any) => exam.id === selectedExam.id) ?? null : null,
     roster: (roster.data ?? [])
       .map((row: any) => ({
         student_id: row.student_id,
@@ -243,7 +305,8 @@ export async function createExam(user: AppUser, values: ExamFormValues) {
   const assessmentCategory = getAssessmentCategory(parsed.exam_type, requiresApproval);
   const initialStatus: ExamStatus = requiresApproval ? "pending_approval" : "draft";
   const queuedAt = new Date().toISOString();
-  const { data, error } = await supabase
+  const writeClient = user.role === "principal" ? createAdminClient() : supabase;
+  const { data, error } = await writeClient
     .from("exams")
     .insert({
       ...parsed,
@@ -266,7 +329,7 @@ export async function createExam(user: AppUser, values: ExamFormValues) {
   if (isMissingCurrentExamWorkflow(error)) throw new Error(examWorkflowMigrationMessage());
   if (error) throw new Error(error.message);
   if (requiresApproval) {
-    const { error: approvalError } = await supabase.from("result_approvals").insert({
+    const { error: approvalError } = await writeClient.from("result_approvals").insert({
       school_id: user.schoolId,
       exam_id: data.id,
       submitted_by: user.id,
@@ -303,7 +366,8 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
 
   const regularAssessment = !exam.requires_approval;
   const markStatus = regularAssessment ? "approved" : "draft";
-  const { error } = await supabase.from("marks").upsert(
+  const writeClient = user.role === "principal" ? createAdminClient() : supabase;
+  const { error } = await writeClient.from("marks").upsert(
     parsed.records.map((record) => ({
       school_id: user.schoolId,
       exam_id: exam.id,
@@ -323,7 +387,7 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
 
   if (regularAssessment) {
     const now = new Date().toISOString();
-    const { error: examError } = await supabase
+    const { error: examError } = await writeClient
       .from("exams")
       .update({
         status: "approved",
@@ -351,6 +415,7 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   if (!exam.requires_approval) throw new Error("This assessment does not require principal approval.");
   if (exam.status !== "rejected") throw new Error("This exam is already queued for Principal review.");
   const supabase = await createClient();
+  const writeClient = user.role === "principal" ? createAdminClient() : supabase;
 
   const [roster, marks] = await Promise.all([
     supabase
@@ -369,7 +434,7 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   if (missing.length) throw new Error("All enrolled students must be marked before submitting for approval.");
 
   const now = new Date().toISOString();
-  const { error: marksError } = await supabase.from("marks").update({ status: "draft" }).eq("school_id", user.schoolId).eq("exam_id", exam.id);
+  const { error: marksError } = await writeClient.from("marks").update({ status: "draft" }).eq("school_id", user.schoolId).eq("exam_id", exam.id);
   if (marksError) throw new Error(marksError.message);
 
   const approvalPayload = {
@@ -386,12 +451,12 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   const { data: existing, error: existingError } = await supabase.from("result_approvals").select("id,status").eq("school_id", user.schoolId).eq("exam_id", exam.id).maybeSingle();
   if (existingError) throw new Error(existingError.message);
   const approvalResult = existing
-    ? await supabase.from("result_approvals").update(approvalPayload).eq("id", existing.id)
-    : await supabase.from("result_approvals").insert(approvalPayload);
+    ? await writeClient.from("result_approvals").update(approvalPayload).eq("id", existing.id)
+    : await writeClient.from("result_approvals").insert(approvalPayload);
 
   if (approvalResult.error) throw new Error(approvalResult.error.message);
 
-  const { error: examError } = await supabase
+  const { error: examError } = await writeClient
     .from("exams")
     .update({
       status: "pending_approval",
@@ -493,7 +558,10 @@ export async function getResultCardsWorkspace(user: AppUser, filters: { classId?
   return { classes: classes ?? [], selectedClassId, examType, month, readiness };
 }
 
-export async function getResultsManagementWorkspace(user: AppUser, filters: { classId?: string; term?: string; status?: ResultWorkflowStatus | "all"; from?: string; to?: string } = {}) {
+export async function getResultsManagementWorkspace(
+  user: AppUser,
+  filters: { classId?: string; term?: string; status?: ResultWorkflowStatus | "all"; from?: string; to?: string; scope?: "teacher" } = {}
+) {
   const supabase = await createClient();
   let query = supabase
     .from("exams")
@@ -509,7 +577,9 @@ export async function getResultsManagementWorkspace(user: AppUser, filters: { cl
   if (filters.from) query = query.gte("exam_date", filters.from);
   if (filters.to) query = query.lte("exam_date", filters.to);
 
-  if (user.role === "teacher") {
+  if (filters.scope === "teacher") {
+    query = query.eq("created_by", user.id);
+  } else if (user.role === "teacher") {
     query = query.eq("created_by", user.id);
   } else if (user.role === "student_staff") {
     query = query.eq("requires_approval", true).eq("approval_status", "approved");
@@ -529,8 +599,8 @@ export async function getResultsManagementWorkspace(user: AppUser, filters: { cl
       approvalId: approval?.id ?? null,
       uploadedByTeacherId: row.uploaded_by_teacher_id ?? row.creator?.id ?? null,
       uploadedByTeacherName: row.uploaded_by_teacher_name ?? row.creator?.full_name ?? "Teacher",
-      canApprove: user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
-      canReject: user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
+      canApprove: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
+      canReject: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canPrint:
         user.role === "student_staff" &&
         row.requires_approval &&

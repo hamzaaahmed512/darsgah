@@ -12,6 +12,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getStudents } from "@/lib/services/students";
 import { getApprovalRequests } from "@/lib/services/approvals";
 import { getAcademicOptions, getTeacherHeadClasses } from "@/lib/services/academics";
+import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
 import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
 
@@ -20,10 +21,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const user = await requireUser("students:view");
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   const canReviewStudentRequests = hasPermission(user.role, "approvals:review", user.permissions);
-  const [students, academics, pendingRequests] = await Promise.all([
+  const [students, academics, pendingRequests, combinations] = await Promise.all([
     getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1) }),
     isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user),
-    canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([])
+    canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([]),
+    getSubjectCombinationCatalog(user).catch(() => ({ customCombinations: [] }))
   ]);
   const pendingStudentRequests = pendingRequests.filter((request) => request.request_type === "admission" || request.request_type === "cancellation");
 
@@ -44,8 +46,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
               <StudentActions filters={{ q: params.q, status: params.status ?? "active", classId: params.classId }} />
             ) : null}
             {hasPermission(user.role, "students:create", user.permissions) ? (
-            <StudentFormModal
+              <StudentFormModal
               classes={academics.classes}
+              combinations={combinations.customCombinations.map((combination) => ({ value: combination.value, label: combination.name, kind: "custom", classIds: combination.classIds, subjectIds: combination.subjectIds }))}
               onSubmit={createStudentAction}
               submitLabel={user.role === "student_staff" ? "Submit request" : "Add student"}
               initialOpen={params.action === "new"}

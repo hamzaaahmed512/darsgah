@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions, getClassStudentRoster, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { getStaff } from "@/lib/services/staff";
-import { isSubjectExcludedForMajor, STUDENT_MAJOR_LABELS, type StudentMajor } from "@/lib/student-majors";
+import { isCustomStudentMajor, isSubjectExcludedForMajor, studentMajorLabel } from "@/lib/student-majors";
 
 export default async function ManageSectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -55,10 +55,10 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
         <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" /> Students ({rosterData.roster.length})</CardTitle></CardHeader>
         <CardContent className="grid max-h-96 gap-2 overflow-y-auto">
           {rosterData.roster.map((student: any) => {
-            const major = student.major as StudentMajor | null;
+            const major = student.major as string | null;
             return <div key={student.id} className="flex flex-col items-start justify-between gap-3 rounded-xl bg-surface-low px-4 py-3 sm:flex-row sm:items-center">
               <Link href={`/students/${student.id}`} prefetch={false} className="min-w-0 hover:text-primary"><p className="truncate font-semibold">{student.name}</p><p className="mt-1 text-xs text-muted">Admission: {student.admission_number ?? "—"}</p></Link>
-              <StudentMajorSelect studentId={student.id} classId={cls.id} gradeName={cls.grade_name} currentMajor={major} />
+              <StudentMajorSelect studentId={student.id} classId={cls.id} gradeName={cls.grade_name} currentMajor={major} options={rosterData.combinationOptions} />
             </div>;
           })}
           {!rosterData.roster.length ? <EmptyState title="No active students" description="Add students from Student Management." className="min-h-32" /> : null}
@@ -70,10 +70,13 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
     <section className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.5fr)]">
       <div>
         <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={classSubjects} availableSubjects={academicData.subjects} />
-        {rosterData.roster.some((student: any) => student.major) ? <Card className="mt-4"><CardHeader><CardTitle className="text-base">Subjects by student major</CardTitle></CardHeader><CardContent className="grid gap-3">
+        {rosterData.roster.some((student: any) => student.major) ? <Card className="mt-4"><CardHeader><CardTitle className="text-base">Subjects by student combination</CardTitle></CardHeader><CardContent className="grid gap-3">
           {rosterData.roster.filter((student: any) => student.major).map((student: any) => {
-            const allowed = classSubjects.filter((subject: any) => !isSubjectExcludedForMajor(cls.grade_name, student.major, subject.name));
-            return <div key={student.id} className="rounded-xl border border-outline/50 p-3"><p className="text-sm font-semibold text-ink">{student.name} · {STUDENT_MAJOR_LABELS[student.major as StudentMajor]}</p><p className="mt-1 text-xs leading-5 text-muted">{allowed.map((subject: any) => subject.name).join(", ")}</p></div>;
+            const combination = rosterData.combinationOptions.find((option: any) => option.value === student.major);
+            const allowed = isCustomStudentMajor(student.major)
+              ? classSubjects.filter((subject: any) => combination?.subjectIds?.includes(subject.subject_id))
+              : classSubjects.filter((subject: any) => !isSubjectExcludedForMajor(cls.grade_name, student.major, subject.name));
+            return <div key={student.id} className="rounded-xl border border-outline/50 p-3"><p className="text-sm font-semibold text-ink">{student.name} · {studentMajorLabel(student.major, rosterData.combinationOptions)}</p><p className="mt-1 text-xs leading-5 text-muted">{allowed.map((subject: any) => subject.name).join(", ") || "No subjects selected"}</p></div>;
           })}
         </CardContent></Card> : null}
       </div>

@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
-import { isSubjectExcludedForMajor, type StudentMajor } from "@/lib/student-majors";
+import { isSubjectExcludedForMajor } from "@/lib/student-majors";
+import { formatStudentName } from "@/lib/student-name";
+import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
 
 export async function getAcademicOptions(user: AppUser) {
@@ -89,6 +91,49 @@ export async function getTeacherHeadClasses(user: AppUser) {
     academic_year_name: row.academic_years?.name,
     attendance_marked_today: Boolean(row.attendance_sessions?.length)
   }));
+}
+
+export async function principalCanAccessAcademicControl(user: AppUser) {
+  if (user.role !== "principal") return false;
+  const supabase = await createClient();
+
+  const [memberResult, headClassResult, assignmentResult] = await Promise.all([
+    supabase
+      .from("school_members")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("user_id", user.id)
+      .in("role", ["teacher", "head_teacher"])
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("head_teacher_id", user.id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("teacher_assignments")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", user.id)
+      .limit(1)
+      .maybeSingle()
+  ]);
+
+  if (memberResult.error) throw new Error(memberResult.error.message);
+  if (headClassResult.error) throw new Error(headClassResult.error.message);
+  if (assignmentResult.error) throw new Error(assignmentResult.error.message);
+
+  return Boolean(memberResult.data || headClassResult.data || assignmentResult.data);
+}
+
+export async function assertPrincipalAcademicControlAccess(user: AppUser) {
+  if (!(await principalCanAccessAcademicControl(user))) {
+    throw new Error("Academic Control is available only when the principal has an active teaching assignment in this school.");
+  }
 }
 
 async function assertHeadTeacher(user: AppUser, teacherId: string | null | undefined) {
@@ -361,8 +406,13 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
 
   const rosterStudentIds = (roster.data ?? []).map((row: any) => row.student_id as string);
   const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, rosterStudentIds);
+  const customCombinations = selectedClassId ? await getCustomCombinationOptionsForClass(supabase, user.schoolId, selectedClassId) : [];
+  const customCombinationsByValue = new Map(customCombinations.map((option) => [option.value, option]));
   const eligibleRosterRows = (roster.data ?? []).filter((row: any) =>
-    !selectedSubject || !isSubjectExcludedForMajor(selectedClass?.grade_name ?? "", majorsByStudentId[row.student_id] as StudentMajor | null, selectedSubject.name)
+    !selectedSubject ||
+    (customCombinationsByValue.has(majorsByStudentId[row.student_id] as any)
+      ? customCombinationsByValue.get(majorsByStudentId[row.student_id] as any)?.subjectIds?.includes(selectedSubject.id)
+      : !isSubjectExcludedForMajor(selectedClass?.grade_name ?? "", majorsByStudentId[row.student_id], selectedSubject.name))
   );
 
   const defaultEnrolledStudentIds = isElectiveSubject
@@ -378,7 +428,8 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     selectedSubjectId,
     selectedSubject,
     assignments: assignments.data ?? [],
-    roster: eligibleRosterRows.map((row: any) => ({ id: row.student_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admission_number: row.students?.admission_number, major: majorsByStudentId[row.student_id] ?? null })),
+    roster: eligibleRosterRows.map((row: any) => ({ id: row.student_id, name: formatStudentName({ firstName: row.students?.first_name, lastName: row.students?.last_name }), admission_number: row.students?.admission_number, major: majorsByStudentId[row.student_id] ?? null })),
+    combinationOptions: selectedClassId ? await getCombinationOptionsForClass(user, selectedClassId, selectedClass?.grade_name ?? "") : [],
     enrolledStudentIds: defaultEnrolledStudentIds,
     savedEnrolledStudentIds: enrolledStudentIds,
     electiveOptions,
@@ -648,14 +699,17 @@ export async function getClassStudentRoster(user: AppUser, classId: string) {
 
   const rosterStudentIds = (rosterResult.data ?? []).map((row: any) => row.student_id as string);
   const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, rosterStudentIds);
+  const classRow = await supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();
+  if (classRow.error) throw new Error(classRow.error.message);
+  const combinationOptions = await getCombinationOptionsForClass(user, classId, (classRow.data as any)?.grades?.name ?? "");
   const roster = (rosterResult.data ?? []).map((row: any) => ({
     id: row.student_id as string,
-    name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+    name: formatStudentName({ firstName: row.students?.first_name, lastName: row.students?.last_name }),
     admission_number: row.students?.admission_number as string | null,
     major: majorsByStudentId[row.student_id] ?? null
   }));
 
-  return { roster, electiveOptions, studentElectiveByStudentId };
+  return { roster, electiveOptions, studentElectiveByStudentId, combinationOptions };
 }
 
 async function getStudentMajors(supabase: Awaited<ReturnType<typeof createClient>>, schoolId: string, studentIds: string[]) {
@@ -716,7 +770,14 @@ async function filterEligibleStudentIds(user: AppUser, classId: string, subjectI
   const gradeName = (classRow as any)?.grades?.name ?? "";
   const subjectName = subject?.name ?? "";
   const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, (students ?? []).map((student: any) => student.id));
-  return (students ?? []).filter((student: any) => !isSubjectExcludedForMajor(gradeName, majorsByStudentId[student.id] as StudentMajor | null, subjectName)).map((student: any) => student.id as string);
+  const customCombinations = await getCustomCombinationOptionsForClass(supabase, user.schoolId, classId);
+  const customCombinationsByValue = new Map(customCombinations.map((option) => [option.value, option]));
+  return (students ?? []).filter((student: any) => {
+    const major = majorsByStudentId[student.id] as string | null;
+    const customCombination = customCombinationsByValue.get(major as any);
+    if (customCombination) return customCombination.subjectIds?.includes(subjectId);
+    return !isSubjectExcludedForMajor(gradeName, major, subjectName);
+  }).map((student: any) => student.id as string);
 }
 
 export async function setStudentElectiveEnrollment(

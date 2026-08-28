@@ -7,9 +7,16 @@ function isMissingPayrollLeaveFlagsView(error: { code?: string; message?: string
   return error?.code === "PGRST205" || error?.message?.includes("public.payroll_unpaid_leave_flags");
 }
 
+function assertPayrollPortalAccess(user: AppUser) {
+  if (user.role === "teacher" || user.role === "head_teacher") {
+    throw new Error("Teachers cannot access payroll.");
+  }
+}
+
 // ─── Employment Details ────────────────────────────────────────────────────────
 
 export async function getTeacherEmploymentDetails(user: AppUser, teacherId?: string) {
+  assertPayrollPortalAccess(user);
   const supabase = await createClient();
   const targetId = teacherId ?? user.id;
 
@@ -33,6 +40,7 @@ export async function upsertTeacherEmploymentDetails(
   teacherId: string,
   values: Partial<Omit<TeacherEmploymentDetails, "teacher_id" | "school_id" | "created_at" | "updated_at">>
 ) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) {
     throw new Error("Unauthorized to manage payroll");
   }
@@ -48,6 +56,7 @@ export async function upsertTeacherEmploymentDetails(
 // ─── Salary History ────────────────────────────────────────────────────────────
 
 export async function getSalaryHistory(user: AppUser, teacherId?: string) {
+  assertPayrollPortalAccess(user);
   const supabase = await createClient();
   const targetId = teacherId ?? user.id;
 
@@ -78,6 +87,7 @@ export async function recordSalaryChange(
   effectiveDate: string,
   remarks?: string
 ) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
   const supabase = await createClient();
   const { error } = await supabase.from("salary_history").insert({
@@ -96,6 +106,7 @@ export async function recordSalaryChange(
 // ─── Salary Adjustments ────────────────────────────────────────────────────────
 
 export async function getSalaryAdjustments(user: AppUser, teacherId?: string, month?: string) {
+  assertPayrollPortalAccess(user);
   const supabase = await createClient();
   let query = supabase
     .from("salary_adjustments")
@@ -128,6 +139,7 @@ export async function createSalaryAdjustment(
   user: AppUser,
   values: Pick<SalaryAdjustment, "teacher_id" | "amount" | "type" | "reason" | "effective_date">
 ) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
   const supabase = await createClient();
   const { error } = await supabase.from("salary_adjustments").insert({
@@ -143,6 +155,7 @@ export async function createSalaryAdjustment(
 }
 
 export async function deleteSalaryAdjustment(user: AppUser, adjustmentId: string) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
   const supabase = await createClient();
   const { error } = await supabase
@@ -156,6 +169,7 @@ export async function deleteSalaryAdjustment(user: AppUser, adjustmentId: string
 // ─── Payroll ───────────────────────────────────────────────────────────────────
 
 export async function getPayrollList(user: AppUser, month?: string) {
+  assertPayrollPortalAccess(user);
   const supabase = await createClient();
   let query = supabase
     .from("payroll")
@@ -181,6 +195,7 @@ export async function getPayrollList(user: AppUser, month?: string) {
 }
 
 export async function getPayrollDashboardStats(user: AppUser, month: string) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:view")) throw new Error("Unauthorized");
   const supabase = await createClient();
 
@@ -205,6 +220,7 @@ export async function getPayrollDashboardStats(user: AppUser, month: string) {
 }
 
 export async function getApprovedUnpaidLeaveFlags(user: AppUser, month: string) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:view", user.permissions)) throw new Error("Unauthorized");
   const supabase = await createClient();
   const monthStart = `${month}-01`;
@@ -223,6 +239,7 @@ export async function getApprovedUnpaidLeaveFlags(user: AppUser, month: string) 
 }
 
 export async function getPayrollEligibleStaff(user: AppUser) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage", user.permissions)) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -239,6 +256,7 @@ export async function getPayrollEligibleStaff(user: AppUser) {
 }
 
 export async function generateMonthlyPayroll(user: AppUser, month: string, teacherId?: string) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
   const parsed = payrollGenerationSchema.parse({ month, teacher_id: teacherId });
   const supabase = await createClient();
@@ -253,6 +271,7 @@ export async function generateMonthlyPayroll(user: AppUser, month: string, teach
 }
 
 export async function markPayrollPaid(user: AppUser, payrollId: string) {
+  assertPayrollPortalAccess(user);
   if (!hasPermission(user.role, "payroll:manage")) throw new Error("Unauthorized");
   const supabase = await createClient();
   const { error } = await supabase

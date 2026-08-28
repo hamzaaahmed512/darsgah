@@ -9,6 +9,7 @@ import { staffFormSchema, type StaffFormValues } from "@/lib/validation/staff";
 import { createStaffAction } from "@/app/(app)/teachers/actions";
 import { Plus, X } from "lucide-react";
 import type { UserRole } from "@/types/database";
+import { normalizeEmail } from "@/lib/email";
 
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
@@ -31,7 +32,7 @@ export function StaffFormModal({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<StaffFormValues>({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: { role: allowedRoles[0] ?? "teacher" }
   });
@@ -84,7 +85,7 @@ export function StaffFormModal({
 
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-sm font-semibold text-ink">Email Address *</label>
-                  <Input {...register("email")} type="email" placeholder="jane.doe@school.edu" />
+                  <Input {...register("email")} type="email" placeholder="jane.doe@school.edu" onChange={(event) => setValue("email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} />
                   {errors.email?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.email.message}</p> : null}
                 </div>
 

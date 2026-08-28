@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/platform/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordPlatformAudit } from "@/lib/services/platform";
+import { normalizeEmail, normalizeOptionalEmail } from "@/lib/email";
 
 const createSchoolSchema = z.object({
   name: z.string().trim().min(2).max(120).transform((value) => value.toUpperCase()),
@@ -19,9 +20,9 @@ const createSchoolSchema = z.object({
   ),
   timezone: z.string().trim().min(1),
   contactName: z.string().trim().max(120).optional(),
-  contactEmail: z.string().trim().email().optional().or(z.literal("")),
+  contactEmail: z.preprocess(normalizeOptionalEmail, z.string().email().nullable()),
   principalName: z.string().trim().min(2).max(120),
-  principalEmail: z.string().trim().email(),
+  principalEmail: z.string().trim().toLowerCase().email().transform(normalizeEmail),
   temporaryPassword: z.string().min(12, "Temporary password must contain at least 12 characters."),
   platformStatus: z.enum(["trial", "active"]),
   subscriptionPlan: z.enum(["school", "network", "custom"]),

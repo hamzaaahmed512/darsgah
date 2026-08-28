@@ -7,6 +7,7 @@ import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { signInAction } from "@/app/(auth)/sign-in/actions";
+import { normalizeEmail } from "@/lib/email";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function SignInPage() {
     startTransition(async () => {
       try {
         const result = await signInAction({
-          email: String(formData.get("email") ?? ""),
+          email: normalizeEmail(String(formData.get("email") ?? "")),
           password: String(formData.get("password") ?? ""),
           next: new URLSearchParams(window.location.search).get("next") ?? undefined
         });
@@ -50,7 +51,7 @@ export default function SignInPage() {
         <label className="relative block">
           <span className="sr-only">Email address</span>
           <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-          <Input name="email" type="email" autoComplete="email" required placeholder="Email address" className="h-14 rounded-2xl bg-slate-50/80 pl-12 text-base shadow-none" />
+          <Input name="email" type="email" autoComplete="email" required placeholder="Email address" onChange={(event) => { event.currentTarget.value = normalizeEmail(event.currentTarget.value); }} className="h-14 rounded-2xl bg-slate-50/80 pl-12 text-base shadow-none" />
         </label>
         <label className="relative block">
           <span className="sr-only">Password</span>

@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ClipboardPenLine, FileText, ListChecks } from "lucide-react";
+import { AssessmentsView } from "@/components/marks/assessments-view";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { defaultGradeScale } from "@/lib/grades";
+import { hasPermission } from "@/lib/permissions";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 
-export default async function ExamsSetupPage() {
+export default async function ExamsSetupPage(props: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser("academics:view");
-  if (user.role === "principal") redirect("/admin/academic-control");
+  if (user.role === "principal") {
+    if (!(await principalCanAccessAcademicControl(user))) redirect("/classes");
+    return <AssessmentsView searchParams={props.searchParams} />;
+  }
+  if (hasPermission(user.role, "marks:manage", user.permissions)) return <AssessmentsView searchParams={props.searchParams} />;
 
   return <>
     <PageHeader eyebrow="Academics" title="Exams & Marks Setup" description="Create assessment tasks and review the grading rubric before marks entry." />

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { attendanceSubmissionSchema } from "@/lib/validation/attendance";
+import { profileFormSchema } from "@/lib/validation/profile";
+import { staffFormSchema } from "@/lib/validation/staff";
 import { studentSchema } from "@/lib/validation/students";
 
 const student = {
@@ -37,6 +39,81 @@ describe("validation schemas", () => {
   it("rejects invalid student email and phone", () => {
     const result = studentSchema.safeParse({ ...student, email: "bad", guardian_phone: "abc" });
     expect(result.success).toBe(false);
+  });
+
+  it("normalizes student and guardian emails to lowercase", () => {
+    const result = studentSchema.safeParse({
+      ...student,
+      email: "  Alex.Rivera@Example.COM  ",
+      guardian_email: "Maria.Guardian@Example.COM"
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.email).toBe("alex.rivera@example.com");
+    expect(result.data.guardian_email).toBe("maria.guardian@example.com");
+  });
+
+  it("normalizes staff and profile emails to lowercase", () => {
+    const staffResult = staffFormSchema.safeParse({
+      full_name: "Jane Doe",
+      email: "Jane.Doe@School.EDU",
+      password: "secret123",
+      role: "teacher"
+    });
+    const profileResult = profileFormSchema.safeParse({
+      fullName: "Jane Doe",
+      phone: "",
+      personalEmail: "Jane.Personal@Gmail.COM",
+      department: "",
+      jobTitle: "",
+      address: "",
+      emergencyContactName: "",
+      emergencyContactPhone: ""
+    });
+
+    expect(staffResult.success).toBe(true);
+    expect(profileResult.success).toBe(true);
+    if (!staffResult.success || !profileResult.success) return;
+    expect(staffResult.data.email).toBe("jane.doe@school.edu");
+    expect(profileResult.data.personalEmail).toBe("jane.personal@gmail.com");
+  });
+
+  it("normalizes blank optional student fields to null", () => {
+    const result = studentSchema.safeParse({
+      ...student,
+      admission_number: "   ",
+      name_ur: "   ",
+      email: "",
+      phone: "",
+      address: "   ",
+      class_id: "",
+      major: "",
+      father_name_ur: "none",
+      guardian_name: "Guardian",
+      guardian_relationship: "",
+      guardian_email: "",
+      guardian_phone: "",
+      emergency_contact_name: "Emergency Contact",
+      emergency_contact_phone: ""
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.admission_number).toBeNull();
+    expect(result.data.name_ur).toBeNull();
+    expect(result.data.email).toBeNull();
+    expect(result.data.phone).toBeNull();
+    expect(result.data.address).toBeNull();
+    expect(result.data.class_id).toBeNull();
+    expect(result.data.major).toBeNull();
+    expect(result.data.father_name_ur).toBeNull();
+    expect(result.data.guardian_name).toBeNull();
+    expect(result.data.guardian_relationship).toBeNull();
+    expect(result.data.guardian_email).toBeNull();
+    expect(result.data.guardian_phone).toBeNull();
+    expect(result.data.emergency_contact_name).toBeNull();
+    expect(result.data.emergency_contact_phone).toBeNull();
   });
 
   it("prevents empty attendance submissions", () => {

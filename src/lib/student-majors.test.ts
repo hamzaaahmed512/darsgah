@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSubjectExcludedForMajor, majorsForGrade } from "@/lib/student-majors";
+import { defaultCombinationOptionsForGrade, isCustomStudentMajor, isSubjectExcludedForMajor, majorsForGrade, studentMajorLabel } from "@/lib/student-majors";
 
 describe("student major subject rules", () => {
   it("offers the correct majors for secondary grades", () => {
@@ -20,5 +20,14 @@ describe("student major subject rules", () => {
     expect(isSubjectExcludedForMajor("Grade 12", "biology", "Mathematics")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 12", "computer_economics_stats", "Physics")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 12", "computer_economics_stats", "Statistics")).toBe(false);
+  });
+
+  it("supports custom combinations as major options", () => {
+    const custom = { value: "custom:11111111-1111-1111-1111-111111111111" as const, label: "Arts with Computer", kind: "custom" as const };
+
+    expect(defaultCombinationOptionsForGrade("Grade 9").map((option) => option.value)).toEqual(["computer", "biology"]);
+    expect(isCustomStudentMajor(custom.value)).toBe(true);
+    expect(studentMajorLabel(custom.value, [custom])).toBe("Arts with Computer");
+    expect(isSubjectExcludedForMajor("Grade 10", custom.value, "Biology")).toBe(false);
   });
 });

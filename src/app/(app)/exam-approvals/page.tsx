@@ -9,7 +9,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrincipalExamApprovals, getWorkflowStatusFromExam } from "@/lib/services/marks";
+import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import type { ResultApprovalStatus } from "@/types/database";
+import { redirect } from "next/navigation";
 
 const statusTone = {
   pending: "yellow",
@@ -20,6 +22,8 @@ const statusTone = {
 export default async function ExamApprovalsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("marks:approve");
+  if (!(await principalCanAccessAcademicControl(user))) redirect("/unauthorized");
+
   const status = (params.status as ResultApprovalStatus | "all" | undefined) ?? "pending";
   const approvals = await getPrincipalExamApprovals(user, status);
 

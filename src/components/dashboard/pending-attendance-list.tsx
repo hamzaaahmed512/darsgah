@@ -14,6 +14,7 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
   const { pushToast } = useToast();
   const [pending, startTransition] = useTransition();
   const [activeClassId, setActiveClassId] = useState<string | null>(null);
+  const [statusByClassId, setStatusByClassId] = useState<Record<string, { type: "success" | "error"; text: string }>>({});
 
   if (!classes.length) {
     return (
@@ -27,14 +28,35 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
 
   function sendReminder(classId: string) {
     setActiveClassId(classId);
+    setStatusByClassId((current) => {
+      const next = { ...current };
+      delete next[classId];
+      return next;
+    });
     startTransition(async () => {
       const result = await sendAttendanceReminderAction(classId);
       setActiveClassId(null);
       if (result.error) {
+        setStatusByClassId((current) => ({ ...current, [classId]: { type: "error", text: result.error } }));
         pushToast(result.error, "error");
+        setTimeout(() => {
+          setStatusByClassId((current) => {
+            const next = { ...current };
+            delete next[classId];
+            return next;
+          });
+        }, 4000);
         return;
       }
+      setStatusByClassId((current) => ({ ...current, [classId]: { type: "success", text: "Reminder sent successfully." } }));
       pushToast(`Reminder sent to ${result.teacherName}.`, "success");
+      setTimeout(() => {
+        setStatusByClassId((current) => {
+          const next = { ...current };
+          delete next[classId];
+          return next;
+        });
+      }, 4000);
       router.refresh();
     });
   }
@@ -44,6 +66,7 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
       {classes.map((item) => {
         const contact = item.head_teacher_email ?? item.head_teacher_phone;
         const isSending = pending && activeClassId === item.id;
+        const rowStatus = statusByClassId[item.id];
 
         return (
           <div
@@ -76,23 +99,29 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
                 </div>
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="shrink-0"
-              disabled={!item.head_teacher_id || isSending}
-              onClick={() => sendReminder(item.id)}
-            >
-              {isSending ? (
-                "Sending..."
-              ) : (
-                <>
-                  <BellRing className="h-4 w-4" aria-hidden="true" />
-                  Send Reminder
-                </>
-              )}
-            </Button>
+            <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={!item.head_teacher_id || isSending}
+                onClick={() => sendReminder(item.id)}
+              >
+                {isSending ? (
+                  "Sending..."
+                ) : (
+                  <>
+                    <BellRing className="h-4 w-4" aria-hidden="true" />
+                    Send Reminder
+                  </>
+                )}
+              </Button>
+              {rowStatus ? (
+                <p className={`text-xs font-semibold ${rowStatus.type === "success" ? "text-success" : "text-danger"}`}>
+                  {rowStatus.text}
+                </p>
+              ) : null}
+            </div>
           </div>
         );
       })}

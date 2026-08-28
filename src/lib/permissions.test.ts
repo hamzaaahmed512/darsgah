@@ -54,4 +54,11 @@ describe("role permissions", () => {
     expect(hasPermission("teacher", "finance:view")).toBe(false);
     expect(hasPermission("teacher", "finance:manage")).toBe(false);
   });
+
+  it("removes payroll access from teacher portal roles even when resolved permissions include it", () => {
+    expect(hasPermission("teacher", "payroll:view")).toBe(false);
+    expect(hasPermission("teacher", "payroll:manage")).toBe(false);
+    expect(hasPermission("head_teacher", "payroll:view", ["payroll:view"])).toBe(false);
+    expect(hasPermission("principal", "payroll:view")).toBe(true);
+  });
 });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { StudentFormValues } from "@/lib/validation/students";
+import type { StudentCombinationOption } from "@/lib/student-majors";
 
 type ClassOption = {
   id: string;
@@ -24,12 +25,14 @@ const StudentForm = dynamic(
 
 export function StudentFormModal({
   classes,
+  combinations,
   onSubmit,
   submitLabel,
   triggerLabel = "Add student",
   initialOpen = false
 }: {
   classes: ClassOption[];
+  combinations?: StudentCombinationOption[];
   onSubmit: (values: StudentFormValues) => Promise<void | { error?: string }>;
   submitLabel: string;
   triggerLabel?: string;
@@ -63,7 +66,7 @@ export function StudentFormModal({
               </button>
             </div>
             <div className="overflow-y-auto p-6">
-              <StudentForm classes={classes} onSubmit={onSubmit} submitLabel={submitLabel} />
+              <StudentForm classes={classes} combinations={combinations} onSubmit={onSubmit} submitLabel={submitLabel} />
             </div>
           </div>
         </div>

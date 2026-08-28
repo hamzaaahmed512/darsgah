@@ -4,10 +4,11 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Download, Globe, Lock, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/form-field";
+import { Field, Input } from "@/components/ui/form-field";
 import { saveSchoolProfileAction } from "@/app/(app)/school-profile/actions";
 import { initials } from "@/lib/utils";
 import { formatPakistaniPhone } from "@/lib/pakistan-format";
+import { normalizeEmail } from "@/lib/email";
 
 type Props = {
   canManage: boolean;
@@ -20,7 +21,6 @@ type Props = {
   logoUrl: string;
   faviconUrl: string;
   brandVersion: string;
-  resultCardTemplate: Record<string, any>;
 };
 
 function displayValue(value: string, fallback = "Not set") {
@@ -37,8 +37,7 @@ export function SchoolProfileForm({
   website,
   logoUrl,
   faviconUrl,
-  brandVersion,
-  resultCardTemplate
+  brandVersion
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -52,18 +51,11 @@ export function SchoolProfileForm({
     name: schoolName,
     shortName: shortName.toUpperCase(),
     timezone: schoolTimezone,
-    email,
+    email: normalizeEmail(email),
     phone: formatPakistaniPhone(phone),
     website,
     logoUrl,
-    faviconUrl,
-    resultCardTitle: resultCardTemplate.title ?? "Result Card",
-    resultCardAccentColor: resultCardTemplate.accentColor ?? "#2563eb",
-    resultCardLayout: resultCardTemplate.layout === "compact" ? "compact" : "standard",
-    resultCardShowAcademicYear: resultCardTemplate.showAcademicYear !== false,
-    resultCardShowAdmissionNumber: resultCardTemplate.showAdmissionNumber !== false,
-    resultCardShowTeacherComments: resultCardTemplate.showTeacherComments === true,
-    resultCardSignatureLabels: Array.isArray(resultCardTemplate.signatureLabels) ? resultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
+    faviconUrl
   });
 
   const displayName = form.shortName.trim() || form.name.trim() || schoolName;
@@ -113,19 +105,12 @@ export function SchoolProfileForm({
       payload.set("name", form.name.trim());
       payload.set("shortName", form.shortName.trim());
       payload.set("timezone", form.timezone);
-      payload.set("email", form.email.trim());
+      payload.set("email", normalizeEmail(form.email));
       payload.set("phone", form.phone.trim());
       payload.set("website", form.website.trim());
       payload.set("currentLogoUrl", form.logoUrl.trim());
       payload.set("currentFaviconUrl", form.faviconUrl.trim());
       payload.set("currentBrandVersion", brandVersion);
-      payload.set("resultCardTitle", form.resultCardTitle.trim());
-      payload.set("resultCardAccentColor", form.resultCardAccentColor);
-      payload.set("resultCardLayout", form.resultCardLayout);
-      payload.set("resultCardShowAcademicYear", String(form.resultCardShowAcademicYear));
-      payload.set("resultCardShowAdmissionNumber", String(form.resultCardShowAdmissionNumber));
-      payload.set("resultCardShowTeacherComments", String(form.resultCardShowTeacherComments));
-      payload.set("resultCardSignatureLabels", form.resultCardSignatureLabels);
       if (logoFile) payload.set("logoFile", logoFile);
       if (faviconFile) payload.set("faviconFile", faviconFile);
 
@@ -272,7 +257,7 @@ export function SchoolProfileForm({
               <Input
                 type="email"
                 value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
+                onChange={(event) => updateField("email", normalizeEmail(event.target.value))}
                 placeholder="school@example.com"
               />
             )}
@@ -327,33 +312,6 @@ export function SchoolProfileForm({
             </div>
           ) : null}
 
-          <div className="md:col-span-2 mt-3 border-t border-outline/60 pt-5">
-            <h3 className="font-display text-lg font-bold text-ink">Result Card Template</h3>
-            <p className="mt-1 text-sm text-muted">School-specific layout used by Registrar print and PDF export.</p>
-          </div>
-          <Field label="Card title">
-            {readOnly ? lockedField(form.resultCardTitle) : <Input value={form.resultCardTitle} onChange={(event) => updateField("resultCardTitle", event.target.value)} />}
-          </Field>
-          <Field label="Accent color">
-            {readOnly ? lockedField(form.resultCardAccentColor) : <Input type="color" value={form.resultCardAccentColor} onChange={(event) => updateField("resultCardAccentColor", event.target.value)} />}
-          </Field>
-          <Field label="Layout">
-            {readOnly ? lockedField(form.resultCardLayout) : (
-              <Select value={form.resultCardLayout} onChange={(event) => updateField("resultCardLayout", event.target.value)}>
-                <option value="standard">Standard</option><option value="compact">Compact</option>
-              </Select>
-            )}
-          </Field>
-          <Field label="Signature labels" hint="Comma-separated, up to three">
-            {readOnly ? lockedField(form.resultCardSignatureLabels) : <Input value={form.resultCardSignatureLabels} onChange={(event) => updateField("resultCardSignatureLabels", event.target.value)} />}
-          </Field>
-          {canManage && editing ? (
-            <div className="md:col-span-2 flex flex-wrap gap-5 text-sm font-semibold text-ink">
-              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowAcademicYear} onChange={(event) => updateField("resultCardShowAcademicYear", event.target.checked)} /> Academic year</label>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowAdmissionNumber} onChange={(event) => updateField("resultCardShowAdmissionNumber", event.target.checked)} /> Admission number</label>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={form.resultCardShowTeacherComments} onChange={(event) => updateField("resultCardShowTeacherComments", event.target.checked)} /> Teacher comments</label>
-            </div>
-          ) : null}
         </div>
 
         {canManage ? (
@@ -378,14 +336,7 @@ export function SchoolProfileForm({
                       phone: formatPakistaniPhone(phone),
                       website,
                       logoUrl,
-                      faviconUrl,
-                      resultCardTitle: resultCardTemplate.title ?? "Result Card",
-                      resultCardAccentColor: resultCardTemplate.accentColor ?? "#2563eb",
-                      resultCardLayout: resultCardTemplate.layout === "compact" ? "compact" : "standard",
-                      resultCardShowAcademicYear: resultCardTemplate.showAcademicYear !== false,
-                      resultCardShowAdmissionNumber: resultCardTemplate.showAdmissionNumber !== false,
-                      resultCardShowTeacherComments: resultCardTemplate.showTeacherComments === true,
-                      resultCardSignatureLabels: Array.isArray(resultCardTemplate.signatureLabels) ? resultCardTemplate.signatureLabels.join(", ") : "Class Teacher, Principal"
+                      faviconUrl
                     });
                   }}
                 >

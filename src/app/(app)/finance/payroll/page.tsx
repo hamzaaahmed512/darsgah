@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import { 
   getApprovedUnpaidLeaveFlags, 
   getPayrollDashboardStats, 
@@ -22,6 +23,8 @@ import { MarkPaidButton } from "@/components/payroll/mark-paid-button";
 
 export default async function PayrollDashboardPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const user = await requireUser("payroll:view");
+  if (user.role === "teacher" || user.role === "head_teacher") redirect("/unauthorized");
+
   const sp = await searchParams;
   const month = sp.month ?? currentMonthKey();
   const canManage = hasPermission(user.role, "payroll:manage", user.permissions);

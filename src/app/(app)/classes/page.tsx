@@ -55,7 +55,7 @@ export default async function ClassesPage({
         description="Organize the academic structure, assign teachers, and manage each class from one place."
         actions={
           <>
-            <ButtonLink href="/subjects" variant="secondary">View subjects</ButtonLink>
+            <ButtonLink href="/subjects" variant="secondary">Subjects and Combinations</ButtonLink>
             <AddGradeModal existingGradeNames={academicData.grades.map((grade: any) => grade.name)} />
           </>
         }

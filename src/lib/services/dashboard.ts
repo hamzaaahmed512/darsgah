@@ -1,7 +1,7 @@
 import { subDays, formatISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, PendingAttendanceClass } from "@/types/database";
-import { getTeacherHeadClasses } from "@/lib/services/academics";
+import { getTeacherHeadClasses, principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { sortClassesNaturally } from "@/lib/class-sort";
 import { hasPermission } from "@/lib/permissions";
 
@@ -129,6 +129,7 @@ async function countPendingStudentApprovals(user: AppUser) {
 
 async function countPendingResultApprovals(user: AppUser) {
   if (!hasPermission(user.role, "marks:approve", user.permissions)) return 0;
+  if (user.role === "principal" && !(await principalCanAccessAcademicControl(user))) return 0;
   const supabase = await createClient();
   const { count, error } = await supabase
     .from("exams")
@@ -157,6 +158,7 @@ async function countOverdueFeeAccounts(user: AppUser) {
 
 export async function getDailyOperationsCenter(user: AppUser): Promise<DailyOperationItem[]> {
   const today = new Date().toISOString().slice(0, 10);
+  const canShowResultApprovals = user.role !== "principal" || (await principalCanAccessAcademicControl(user).catch(() => false));
   const [
     pendingAttendance,
     teacherAttendanceConcerns,
@@ -169,7 +171,7 @@ export async function getDailyOperationsCenter(user: AppUser): Promise<DailyOper
     countTeacherAttendanceConcerns(user, today).catch(() => 0),
     countPendingLeaves(user).catch(() => 0),
     countPendingStudentApprovals(user).catch(() => 0),
-    countPendingResultApprovals(user).catch(() => 0),
+    canShowResultApprovals ? countPendingResultApprovals(user).catch(() => 0) : Promise.resolve(0),
     countOverdueFeeAccounts(user).catch(() => 0)
   ]);
 
@@ -231,7 +233,7 @@ export async function getDailyOperationsCenter(user: AppUser): Promise<DailyOper
   ];
 
   return items.filter((item) => {
-    if (item.id === "result-approvals") return hasPermission(user.role, "marks:approve", user.permissions);
+    if (item.id === "result-approvals") return hasPermission(user.role, "marks:approve", user.permissions) && canShowResultApprovals;
     if (item.id === "fees") return hasPermission(user.role, "finance:view", user.permissions);
     if (item.id === "leaves") return hasPermission(user.role, "leave:manage", user.permissions);
     if (item.id === "student-approvals") return hasPermission(user.role, "approvals:review", user.permissions);

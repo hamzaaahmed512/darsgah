@@ -11,6 +11,7 @@ import { profileFormSchema, type ProfileFormValues } from "@/lib/validation/prof
 import type { ProfileDetails } from "@/lib/services/profile";
 import { initials } from "@/lib/utils";
 import { formatPakistaniPhone } from "@/lib/pakistan-format";
+import { normalizeEmail } from "@/lib/email";
 
 function displayValue(value: string | null | undefined, fallback = "Not set") {
   return value && value.trim().length ? value : fallback;
@@ -153,7 +154,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
             </Field>
 
             <Field label="Personal Email" error={errors.personalEmail?.message}>
-              <Input {...register("personalEmail")} type="email" placeholder="personal@gmail.com" />
+              <Input {...register("personalEmail")} type="email" placeholder="personal@gmail.com" onChange={(event) => setValue("personalEmail", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} />
             </Field>
 
             <Field

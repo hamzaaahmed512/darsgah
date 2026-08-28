@@ -1,7 +1,6 @@
 import { requireUser } from "@/lib/auth/session";
 import { getDailyOperationsCenter, getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
-import { getResultsManagementWorkspace } from "@/lib/services/marks";
 import { getApprovalRequests } from "@/lib/services/approvals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -11,7 +10,7 @@ import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
 import { formatPKR } from "@/lib/utils";
-import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, AlertTriangle, UserPlus } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 function percentDelta(current: number, previous: number, lowerIsBetter = false): { text: string; tone: "positive" | "negative" | "neutral" } {
@@ -29,15 +28,13 @@ export default async function PrincipalDashboardPage() {
     throw new Error("Unauthorized access to Principal Dashboard");
   }
 
-  const [dashboard, operations, finance, results, studentRequests] = await Promise.all([
+  const [dashboard, operations, finance, studentRequests] = await Promise.all([
     getDashboardData(user),
     getDailyOperationsCenter(user),
     getFinanceDashboard(user),
-    getResultsManagementWorkspace(user, { status: "pending_approval" }),
     getApprovalRequests(user, { status: "pending" })
   ]);
 
-  const pendingApprovalsCount = results.filter(r => r.workflowStatus === "pending_approval").length;
   const pendingAdmissionsCount = studentRequests.filter((request) => request.request_type === "admission").length;
   const incomeDelta = percentDelta(finance.monthlyIncome, finance.previousMonthlyIncome);
   const expensesDelta = percentDelta(finance.monthlyExpenses, finance.previousMonthlyExpenses, true);
@@ -53,14 +50,14 @@ export default async function PrincipalDashboardPage() {
         statusText="ACCOUNT ACTIVE"
         decorative
         stats={[
-          { label: "Pending Approvals", value: pendingApprovalsCount }
+          { label: "Pending Admissions", value: pendingAdmissionsCount }
         ]}
       />
 
       <DailyOperationsCenter items={operations} compact />
 
-      {pendingAdmissionsCount > 0 || pendingApprovalsCount > 0 ? (
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
+      {pendingAdmissionsCount > 0 ? (
+        <div className="mb-6 grid gap-4">
           {pendingAdmissionsCount > 0 ? (
             <div className="rounded-lg bg-primary-soft p-4 text-primary flex items-center gap-3">
               <UserPlus className="h-5 w-5 flex-shrink-0" />
@@ -70,17 +67,6 @@ export default async function PrincipalDashboardPage() {
                 </p>
                 <Link href="/students?status=pending_approval" className="text-xs font-bold underline hover:brightness-110">
                   Review in Students &rarr;
-                </Link>
-              </div>
-            </div>
-          ) : null}
-          {pendingApprovalsCount > 0 ? (
-            <div className="rounded-lg bg-warning-soft p-4 text-warning flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold">{pendingApprovalsCount} exam result sets are pending approval.</p>
-                <Link href="/results?status=pending_approval" className="text-xs font-bold underline hover:brightness-110">
-                  Go to Result Approvals &rarr;
                 </Link>
               </div>
             </div>

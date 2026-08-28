@@ -38,7 +38,7 @@ export default async function SettingsPage({
       <PageHeader
         eyebrow="Configuration"
         title="Settings"
-        description="Configure notification preferences, academic sessions, and user roles."
+        description="Configure notification preferences, teaching assignments, result cards, academic sessions, and user roles."
       />
 
       <SettingsTabs
