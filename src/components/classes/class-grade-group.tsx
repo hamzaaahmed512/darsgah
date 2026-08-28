@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, GraduationCap, MapPin, Settings, Users } from "lucide-react";
 import { AddSectionModal } from "@/components/classes/add-section-modal";
 import { Badge } from "@/components/ui/badge";
+import { formatGradeSection } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 
 export function ClassGradeGroup({ gradeName, classes, classDetails }: {
@@ -39,7 +40,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails }: {
                 <div key={cls.id} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-outline/40 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <h4 className="font-display text-lg font-semibold text-ink">{gradeName} · {cls.section_name ? `Section ${cls.section_name.replace(/^section\s+/i, "")}` : "Main section"}</h4>
+                      <h4 className="font-display text-lg font-semibold text-ink">{formatGradeSection(gradeName, cls.section_name)}</h4>
                       <Badge tone="gray">{cls.academic_year_name}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">

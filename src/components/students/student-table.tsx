@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { initials, formatGradeSection } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -66,9 +67,9 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                   {student.father_phone && <div className="text-xs text-muted/70">{student.father_phone}</div>}
                 </td> : null}
                 <td className="px-4 py-4">
-                  <Badge tone="gray">
-                    {student.grade_name ?? "Unassigned"} {student.section_name ? `• ${student.section_name}` : ""}
-                  </Badge>
+                  <div className="text-sm font-medium text-ink">
+                    {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
+                  </div>
                 </td>
                 <td className="px-4 py-4 font-semibold">{student.admission_number}</td>
                 <td className="px-4 py-4 text-muted capitalize">{student.gender || "-"}</td>
@@ -110,7 +111,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
               <Badge tone={statusTone[student.status as keyof typeof statusTone] ?? "gray"}>{student.status}</Badge>
             </div>
             <p className="mt-3 text-sm text-muted">
-              {student.grade_name ?? "Unassigned"} {student.section_name ? `• ${student.section_name}` : ""}
+              {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
             </p>
           </Link>
         ))}

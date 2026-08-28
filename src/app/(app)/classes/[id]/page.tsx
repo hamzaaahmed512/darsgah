@@ -15,6 +15,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions, getClassStudentRoster, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { getStaff } from "@/lib/services/staff";
 import { isCustomStudentMajor, isSubjectExcludedForMajor, studentMajorLabel } from "@/lib/student-majors";
+import { formatGradeSection } from "@/lib/utils";
 
 export default async function ManageSectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,7 +34,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
     <div className="mb-4"><Link href="/classes" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-primary"><ArrowLeft className="h-4 w-4" /> Back to classes</Link></div>
     <PageHeader
       eyebrow={cls.academic_year_name}
-      title={`${cls.grade_name} · ${cls.section_name ? `Section ${cls.section_name.replace(/^section\s+/i, "")}` : "Main section"}`}
+      title={formatGradeSection(cls.grade_name, cls.section_name)}
       description="Manage this section's people, subjects, room, and assignments on one page."
       actions={<>
         <TeacherAssignmentModal classId={cls.id} className={cls.name} teachers={teachers} subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))} />

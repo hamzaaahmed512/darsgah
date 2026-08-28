@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { recordPaymentAction, voidPaymentAction } from "@/app/(app)/finance/actions";
+import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
 import { format } from "date-fns";
@@ -192,7 +193,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                     </Badge>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-muted">
-                    <span>{acc.grade_name} {acc.section_name ? `• ${acc.section_name}` : ""}</span>
+                    <span>{formatGradeSection(acc.grade_name, acc.section_name)}</span>
                     <span className="font-bold text-ink">Remaining: ${Number(acc.remaining_balance).toLocaleString()}</span>
                   </div>
                 </button>
@@ -223,7 +224,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle>{selectedAccount.student_name}</CardTitle>
-                      <p className="text-xs text-muted">Admission No: {selectedAccount.admission_number} • Class: {selectedAccount.grade_name} {selectedAccount.section_name ? `• ${selectedAccount.section_name}` : ""}</p>
+                      <p className="text-xs text-muted">Admission No: {selectedAccount.admission_number} • Class: {formatGradeSection(selectedAccount.grade_name, selectedAccount.section_name)}</p>
                     </div>
                     <Badge tone={statusTone[selectedAccount.payment_status as keyof typeof statusTone] ?? "gray"}>
                       {selectedAccount.payment_status}

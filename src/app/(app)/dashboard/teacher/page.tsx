@@ -9,6 +9,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { GraduationCap, School, CalendarX2, CalendarCheck, BookOpen } from "lucide-react";
 import Link from "next/link";
+import { formatGradeSection } from "@/lib/utils";
 
 export default async function TeacherDashboardPage() {
   const user = await requireUser("dashboard:view");
@@ -94,7 +95,7 @@ export default async function TeacherDashboardPage() {
                 </div>
                 <h2 className="mt-4 font-display text-2xl font-semibold text-ink">{item.name}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  {item.grade_name} {item.section_name ? `- ${item.section_name}` : ""} {item.room ? `- ${item.room}` : ""}
+                  {formatGradeSection(item.grade_name, item.section_name)} {item.room ? `- Room ${item.room}` : ""}
                 </p>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   <ButtonLink href={`/students?classId=${item.id}`} variant="secondary" className="w-full">

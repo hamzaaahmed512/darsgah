@@ -7,6 +7,7 @@ import { updateStudentSubjectCombinationAction, deleteStudentSubjectCombinationA
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
+import { formatGradeSection } from "@/lib/utils";
 
 type ClassOption = { id: string; name: string; grade_name?: string | null; section_name?: string | null };
 type SubjectOption = { id: string; name: string };
@@ -90,7 +91,7 @@ export function SubjectCombinationEditModal({
         className="inline-flex items-center gap-1.5 rounded-lg border border-outline/50 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:bg-surface-low hover:text-primary active:scale-95"
       >
         <Edit2 className="h-3.5 w-3.5" />
-        Edit
+        Edit Combination
       </button>
 
       {open ? (
@@ -124,17 +125,20 @@ export function SubjectCombinationEditModal({
               <fieldset className="grid gap-2">
                 <legend className="text-sm font-semibold text-ink">Classes</legend>
                 <div className="grid max-h-44 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low/50 p-3 sm:grid-cols-2">
-                  {classes.map((item) => (
-                    <label key={item.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={classIds.includes(item.id)}
-                        onChange={() => toggle(item.id, classIds, setClassIds)}
-                        className="h-4 w-4 rounded border-outline accent-primary"
-                      />
-                      <span>{[item.grade_name, item.name, item.section_name].filter(Boolean).join(" · ")}</span>
-                    </label>
-                  ))}
+                  {classes.map((item) => {
+                    const displayName = formatGradeSection(item.grade_name || item.name, item.section_name);
+                    return (
+                      <label key={item.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={classIds.includes(item.id)}
+                          onChange={() => toggle(item.id, classIds, setClassIds)}
+                          className="h-4 w-4 rounded border-outline accent-primary"
+                        />
+                        <span>{displayName}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </fieldset>
 

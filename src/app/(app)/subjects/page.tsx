@@ -22,10 +22,11 @@ export default async function SubjectsPage() {
       actions={<>
         <ButtonLink href="/classes" variant="secondary"><ArrowLeft className="h-4 w-4" /> Back to classes</ButtonLink>
         <SubjectCreateModal />
+        <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} />
       </>}
     />
 
-    <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.55fr)]">
+    <div className="mb-6 grid gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Current combinations</CardTitle>
@@ -34,19 +35,32 @@ export default async function SubjectsPage() {
           {combinations.defaultCombinations.length || combinations.customCombinations.length ? (
             <>
               {combinations.defaultCombinations.map((combination: any, index: number) => (
-                <div key={`${combination.value}-${combination.className}-${index}`} className="rounded-xl border border-outline/50 bg-surface-low px-4 py-3">
-                  <p className="font-semibold text-ink">{combination.name}</p>
-                  <p className="mt-1 text-xs text-muted">{combination.className} · Default</p>
+                <div key={`${combination.value}-${combination.className}-${index}`} className="flex items-start justify-between gap-4 rounded-xl border border-outline/50 bg-surface-low px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">{combination.className} — {combination.name}</p>
+                    <p className="mt-1 text-xs text-muted">Default combination</p>
+                  </div>
                 </div>
               ))}
               {combinations.customCombinations.map((combination) => (
-                <div key={combination.id} className="flex items-start justify-between gap-4 rounded-xl border border-outline/50 bg-white px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">{combination.name}</p>
-                    <p className="mt-1 text-xs text-muted">{combination.classNames.join(", ") || "No classes"} · Custom</p>
-                    <p className="mt-2 text-xs leading-5 text-muted">{combination.subjectNames.join(", ") || "No subjects selected"}</p>
+                <div key={combination.id} className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-xl border border-outline/50 bg-white px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-lg font-bold text-ink">{combination.classNames.join(", ") || "No classes"} — {combination.name}</p>
+                    
+                    <div className="mt-4">
+                      <p className="font-semibold text-ink mb-1.5">Subjects:</p>
+                      {combination.subjectNames.length > 0 ? (
+                        <ul className="list-inside list-disc text-sm text-muted space-y-1">
+                          {combination.subjectNames.map((subject: string, idx: number) => (
+                            <li key={idx}>{subject}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted">No subjects selected</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="shrink-0">
+                  <div className="shrink-0 mt-4 sm:mt-0">
                     <SubjectCombinationEditModal
                       combination={combination}
                       classes={data.classes}
@@ -59,8 +73,6 @@ export default async function SubjectsPage() {
           ) : <EmptyState title="No combinations yet" description="Create a class first, then add combinations here." />}
         </CardContent>
       </Card>
-
-      <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} />
     </div>
 
     <Card>

@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { applyDiscountAction } from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatPKR, formatDatePK } from "@/lib/utils";
+import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 
 interface StudentFeesClientProps {
   user: AppUser;
@@ -178,7 +178,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
                     </td>
                     <td className="px-4 py-4 text-muted">{acc.academic_year_name}</td>
                     <td className="px-4 py-4 font-semibold text-ink">
-                      {acc.grade_name} {acc.section_name ? `• ${acc.section_name}` : ""}
+                      {formatGradeSection(acc.grade_name, acc.section_name)}
                     </td>
                     <td className="px-4 py-4">
                       {acc.discount_type !== "none" ? (

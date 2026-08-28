@@ -128,3 +128,26 @@ export function sortGrades(a: string, b: string): number {
   return indexA - indexB;
 }
 
+/**
+ * Format Grade and Section as "Grade number.Section" or "Name.Section".
+ * Examples: "Grade 10" + "A" -> "Grade 10.A"
+ * "Grade 10A" + "A" -> "Grade 10.A"
+ */
+export function formatGradeSection(grade: string | null | undefined, section: string | null | undefined): string {
+  if (!grade) return section?.trim() || "";
+  if (!section) return grade.trim();
+
+  let cleanGrade = grade.trim();
+  const cleanSection = section.trim();
+
+  // If grade ends with the section name (ignoring case), remove it
+  if (cleanGrade.toLowerCase().endsWith(cleanSection.toLowerCase())) {
+    cleanGrade = cleanGrade.slice(0, -cleanSection.length).trim();
+  }
+
+  // Remove trailing non-alphanumeric characters (like '-' or space)
+  cleanGrade = cleanGrade.replace(/[^a-zA-Z0-9]+$/, "");
+
+  return `${cleanGrade}.${cleanSection}`;
+}
+

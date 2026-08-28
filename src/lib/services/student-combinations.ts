@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { defaultCombinationOptionsForGrade, type StudentCombinationOption } from "@/lib/student-majors";
-
+import { formatGradeSection } from "@/lib/utils";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 export type CustomCombinationSummary = {
@@ -239,8 +239,8 @@ export async function deleteStudentSubjectCombination(user: AppUser, combination
 
 function formatClassName(classRow: any) {
   if (!classRow) return "Unknown class";
-  const grade = classRow.grades?.name;
+  const grade = classRow.grades?.name || classRow.name;
   const section = classRow.sections?.name;
-  return [grade, classRow.name, section].filter(Boolean).join(" · ");
+  return formatGradeSection(grade, section);
 }
 

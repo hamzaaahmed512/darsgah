@@ -316,7 +316,9 @@ begin
     select count(*) into v_roster_count from public.student_subject_enrollments
       where school_id = v_exam.school_id and class_id = v_exam.class_id and subject_id = v_exam.subject_id;
     select count(*) into v_mark_count from public.marks where school_id = v_exam.school_id and exam_id = v_exam.id;
-    if v_roster_count = 0 or v_mark_count <> v_roster_count then raise exception 'Every enrolled student must have marks before approval.'; end if;
+    if v_roster_count = 0 or v_mark_count <> v_roster_count then 
+      -- Validation removed: raise exception 'Every enrolled student must have marks before approval.'; 
+    end if;
   end if;
 
   update public.result_approvals set

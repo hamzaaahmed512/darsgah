@@ -13,7 +13,7 @@ import {
 } from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatPKR, formatDatePK } from "@/lib/utils";
+import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 
 interface FeeManagementClientProps {
   user: AppUser;
@@ -263,8 +263,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                           <p className="text-xs text-muted">Adm: {acc.admission_number}</p>
                         </button>
                       </td>
-                      <td className="px-4 py-4 text-muted">
-                        {acc.grade_name} {acc.section_name ? `• ${acc.section_name}` : ""}
+                      <td className="px-4 py-4">
+                        <div className="text-xs text-muted">{formatGradeSection(acc.grade_name, acc.section_name)}</div>
                       </td>
                       <td className="px-4 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
                       <td className="px-4 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
@@ -468,7 +468,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <div className="grid gap-3 rounded-lg bg-surface-low p-4 sm:grid-cols-2">
                 <ReceiptLine label="Student" value={selectedReceipt.student_name} />
                 <ReceiptLine label="Admission" value={selectedReceipt.admission_number} />
-                <ReceiptLine label="Class" value={`${selectedReceipt.grade_name} ${selectedReceipt.section_name ?? ""}`} />
+                <ReceiptLine label="Class" value={formatGradeSection(selectedReceipt.grade_name, selectedReceipt.section_name)} />
                 <ReceiptLine label="Session" value={selectedReceipt.academic_year_name} />
               </div>
               <div className="grid gap-3 rounded-lg border border-outline/60 p-4 sm:grid-cols-2">
@@ -491,7 +491,7 @@ function downloadReport(rows: any[]) {
   const body = rows.map((row) => [
     row.student_name,
     row.admission_number,
-    `${row.grade_name ?? ""} ${row.section_name ?? ""}`.trim(),
+    formatGradeSection(row.grade_name, row.section_name),
     row.total_payable,
     row.amount_paid,
     row.remaining_balance,
