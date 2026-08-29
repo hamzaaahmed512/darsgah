@@ -408,10 +408,14 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
   const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, rosterStudentIds);
   const customCombinations = selectedClassId ? await getCustomCombinationOptionsForClass(supabase, user.schoolId, selectedClassId) : [];
   const customCombinationsByValue = new Map(customCombinations.map((option) => [option.value, option]));
+  const combinationOptions = selectedClassId ? await getCombinationOptionsForClass(user, selectedClassId, selectedClass?.grade_name ?? "") : [];
+  const defaultCombinationsByValue = new Map(combinationOptions.filter((option) => option.kind === "default" && option.subjectIds?.length).map((option) => [option.value, option]));
   const eligibleRosterRows = (roster.data ?? []).filter((row: any) =>
     !selectedSubject ||
     (customCombinationsByValue.has(majorsByStudentId[row.student_id] as any)
       ? customCombinationsByValue.get(majorsByStudentId[row.student_id] as any)?.subjectIds?.includes(selectedSubject.id)
+      : defaultCombinationsByValue.has(majorsByStudentId[row.student_id] as any)
+        ? defaultCombinationsByValue.get(majorsByStudentId[row.student_id] as any)?.subjectIds?.includes(selectedSubject.id)
       : !isSubjectExcludedForMajor(selectedClass?.grade_name ?? "", majorsByStudentId[row.student_id], selectedSubject.name))
   );
 
@@ -429,7 +433,7 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     selectedSubject,
     assignments: assignments.data ?? [],
     roster: eligibleRosterRows.map((row: any) => ({ id: row.student_id, name: formatStudentName({ firstName: row.students?.first_name, lastName: row.students?.last_name }), admission_number: row.students?.admission_number, major: majorsByStudentId[row.student_id] ?? null })),
-    combinationOptions: selectedClassId ? await getCombinationOptionsForClass(user, selectedClassId, selectedClass?.grade_name ?? "") : [],
+    combinationOptions,
     enrolledStudentIds: defaultEnrolledStudentIds,
     savedEnrolledStudentIds: enrolledStudentIds,
     electiveOptions,
@@ -772,10 +776,14 @@ async function filterEligibleStudentIds(user: AppUser, classId: string, subjectI
   const majorsByStudentId = await getStudentMajors(supabase, user.schoolId, (students ?? []).map((student: any) => student.id));
   const customCombinations = await getCustomCombinationOptionsForClass(supabase, user.schoolId, classId);
   const customCombinationsByValue = new Map(customCombinations.map((option) => [option.value, option]));
+  const combinationOptions = await getCombinationOptionsForClass(user, classId, gradeName);
+  const defaultCombinationsByValue = new Map(combinationOptions.filter((option) => option.kind === "default" && option.subjectIds?.length).map((option) => [option.value, option]));
   return (students ?? []).filter((student: any) => {
     const major = majorsByStudentId[student.id] as string | null;
     const customCombination = customCombinationsByValue.get(major as any);
     if (customCombination) return customCombination.subjectIds?.includes(subjectId);
+    const defaultCombination = defaultCombinationsByValue.get(major as any);
+    if (defaultCombination) return defaultCombination.subjectIds?.includes(subjectId);
     return !isSubjectExcludedForMajor(gradeName, major, subjectName);
   }).map((student: any) => student.id as string);
 }

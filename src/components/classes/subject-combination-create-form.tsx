@@ -7,24 +7,25 @@ import { createStudentSubjectCombinationAction } from "@/app/(app)/classes/actio
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
-import { formatGradeSection } from "@/lib/utils";
 
-type ClassOption = { id: string; name: string; grade_name?: string | null; section_name?: string | null };
+type ClassOption = { id: string; name: string; grade_id?: string | null; grade_name?: string | null; section_name?: string | null };
 type SubjectOption = { id: string; name: string };
+type GradeOption = { id: string; name: string; classIds: string[] };
 
 export function SubjectCombinationCreateForm({ classes, subjects }: { classes: ClassOption[]; subjects: SubjectOption[] }) {
   const router = useRouter();
   const { pushToast } = useToast();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [classIds, setClassIds] = useState<string[]>([]);
+  const [gradeIds, setGradeIds] = useState<string[]>([]);
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  const grades = getGradesFromClasses(classes);
 
   function close() {
     setOpen(false);
     setName("");
-    setClassIds([]);
+    setGradeIds([]);
     setSubjectIds([]);
   }
 
@@ -35,7 +36,7 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
   function submit() {
     const formData = new FormData();
     formData.set("name", name);
-    classIds.forEach((classId) => formData.append("class_id", classId));
+    getClassIdsForGrades(grades, gradeIds).forEach((classId) => formData.append("class_id", classId));
     subjectIds.forEach((subjectId) => formData.append("subject_id", subjectId));
 
     startTransition(async () => {
@@ -63,7 +64,7 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
             <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
               <div>
                 <h2 className="font-display text-xl font-bold text-ink">Create combination</h2>
-                <p className="mt-1 text-sm text-muted">Create a new subject combination and assign it to classes.</p>
+                <p className="mt-1 text-sm text-muted">Create a new subject combination and assign it to grades.</p>
               </div>
               <button type="button" onClick={close} className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink" aria-label="Close form">
                 <X className="h-5 w-5" />
@@ -77,17 +78,14 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
               </label>
 
               <fieldset className="grid gap-2">
-                <legend className="text-sm font-semibold text-ink">Classes</legend>
+                <legend className="text-sm font-semibold text-ink">Grades</legend>
                 <div className="grid max-h-44 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low p-3 sm:grid-cols-2">
-                  {classes.map((item) => {
-                    const displayName = formatGradeSection(item.grade_name || item.name, item.section_name);
-                    return (
-                      <label key={item.id} className="flex items-center gap-2 text-sm text-ink">
-                        <input type="checkbox" checked={classIds.includes(item.id)} onChange={() => toggle(item.id, classIds, setClassIds)} className="h-4 w-4 accent-primary" />
-                        <span>{displayName}</span>
-                      </label>
-                    );
-                  })}
+                  {grades.map((grade) => (
+                    <label key={grade.id} className="flex items-center gap-2 text-sm text-ink">
+                      <input type="checkbox" checked={gradeIds.includes(grade.id)} onChange={() => toggle(grade.id, gradeIds, setGradeIds)} className="h-4 w-4 accent-primary" />
+                      <span>{grade.name}</span>
+                    </label>
+                  ))}
                 </div>
               </fieldset>
 
@@ -107,7 +105,7 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
                 <Button type="button" variant="secondary" onClick={close} disabled={pending}>
                   Cancel
                 </Button>
-                <Button type="button" onClick={submit} disabled={pending || !name.trim() || !classIds.length || !subjectIds.length}>
+                <Button type="button" onClick={submit} disabled={pending || !name.trim() || !gradeIds.length || !subjectIds.length}>
                   {pending ? "Creating..." : "Create combination"}
                 </Button>
               </div>
@@ -117,4 +115,22 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
       ) : null}
     </>
   );
+}
+
+function getGradesFromClasses(classes: ClassOption[]): GradeOption[] {
+  const byGrade = new Map<string, GradeOption>();
+  for (const item of classes) {
+    const gradeId = item.grade_id ?? item.grade_name ?? item.name;
+    const gradeName = item.grade_name || item.name;
+    if (!gradeId || !gradeName) continue;
+    const grade = byGrade.get(gradeId) ?? { id: gradeId, name: gradeName, classIds: [] };
+    grade.classIds.push(item.id);
+    byGrade.set(gradeId, grade);
+  }
+  return [...byGrade.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
+
+function getClassIdsForGrades(grades: GradeOption[], gradeIds: string[]) {
+  const selected = new Set(gradeIds);
+  return [...new Set(grades.filter((grade) => selected.has(grade.id)).flatMap((grade) => grade.classIds))];
 }

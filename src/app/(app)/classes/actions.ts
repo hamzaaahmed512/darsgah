@@ -6,7 +6,7 @@ import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWi
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
-import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination } from "@/lib/services/student-combinations";
+import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
 
 
 const classSchema = z.object({
@@ -180,6 +180,19 @@ export async function updateStudentSubjectCombinationAction(combinationId: strin
   await updateStudentSubjectCombination(user, z.string().uuid().parse(combinationId), {
     name: z.string().trim().min(1, "Combination name is required.").max(120).parse(formData.get("name")),
     classIds: formData.getAll("class_id").map(String).filter(Boolean),
+    subjectIds: formData.getAll("subject_id").map(String).filter(Boolean)
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
+}
+
+export async function updateDefaultStudentSubjectCombinationAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await updateDefaultStudentSubjectCombination(user, {
+    combinationKey: z.string().trim().min(1).max(120).parse(formData.get("combination_key")),
+    gradeId: z.string().uuid().parse(formData.get("grade_id")),
+    name: z.string().trim().min(1, "Combination name is required.").max(120).parse(formData.get("name")),
     subjectIds: formData.getAll("subject_id").map(String).filter(Boolean)
   });
   revalidatePath("/classes");

@@ -35,30 +35,27 @@ export default async function SubjectsPage() {
           {combinations.defaultCombinations.length || combinations.customCombinations.length ? (
             <>
               {combinations.defaultCombinations.map((combination: any, index: number) => (
-                <div key={`${combination.value}-${combination.className}-${index}`} className="flex items-start justify-between gap-4 rounded-xl border border-outline/50 bg-surface-low px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">{combination.className} — {combination.name}</p>
+                <div key={`${combination.value}-${combination.gradeId}-${index}`} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-outline/50 bg-surface-low px-5 py-4 sm:flex-row">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-lg font-bold text-ink">{combination.name} for {combination.gradeName}</p>
                     <p className="mt-1 text-xs text-muted">Default combination</p>
+                    <SubjectList subjects={combination.subjectNames} />
+                  </div>
+                  <div className="shrink-0">
+                    <SubjectCombinationEditModal
+                      combination={combination}
+                      classes={data.classes}
+                      subjects={data.subjects}
+                    />
                   </div>
                 </div>
               ))}
               {combinations.customCombinations.map((combination) => (
                 <div key={combination.id} className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-xl border border-outline/50 bg-white px-5 py-4">
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-lg font-bold text-ink">{combination.classNames.join(", ") || "No classes"} — {combination.name}</p>
-                    
-                    <div className="mt-4">
-                      <p className="font-semibold text-ink mb-1.5">Subjects:</p>
-                      {combination.subjectNames.length > 0 ? (
-                        <ul className="list-inside list-disc text-sm text-muted space-y-1">
-                          {combination.subjectNames.map((subject: string, idx: number) => (
-                            <li key={idx}>{subject}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted">No subjects selected</p>
-                      )}
-                    </div>
+                    <p className="font-display text-lg font-bold text-ink">{combination.name} for {combination.gradeNames.join(", ") || "No grades"}</p>
+                    <p className="mt-1 text-xs text-muted">Custom combination</p>
+                    <SubjectList subjects={combination.subjectNames} />
                   </div>
                   <div className="shrink-0 mt-4 sm:mt-0">
                     <SubjectCombinationEditModal
@@ -93,4 +90,19 @@ export default async function SubjectsPage() {
       </CardContent>
     </Card>
   </>;
+}
+
+function SubjectList({ subjects }: { subjects: string[] }) {
+  return (
+    <div className="mt-3">
+      {subjects.length > 0 ? (
+        <p className="line-clamp-2 text-sm leading-6 text-muted">
+          <span className="font-semibold text-ink">Subjects: </span>
+          {subjects.join(", ")}
+        </p>
+      ) : (
+        <p className="text-sm text-muted">No subjects selected</p>
+      )}
+    </div>
+  );
 }

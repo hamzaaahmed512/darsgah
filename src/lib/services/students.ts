@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
-import { getCustomCombinationOptionForClass } from "@/lib/services/student-combinations";
+import { getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
 import { isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 
@@ -523,6 +523,25 @@ async function removeExcludedStudentSubjects(user: AppUser, studentId: string, c
     const combination = await getCustomCombinationOptionForClass(supabase, user.schoolId, classId, major);
     if (!combination) throw new Error("That combination is not available for this class.");
     const allowedIds = new Set(combination.subjectIds ?? []);
+    const excludedIds = (links ?? []).filter((row: any) => !allowedIds.has(row.subject_id as string)).map((row: any) => row.subject_id as string);
+    if (excludedIds.length) {
+      const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);
+      if (error) throw new Error(error.message);
+    }
+    const missingAllowedIds = [...allowedIds].filter((subjectId) => (links ?? []).some((row: any) => row.subject_id === subjectId));
+    if (missingAllowedIds.length) {
+      const { error } = await supabase.from("student_subject_enrollments").upsert(
+        missingAllowedIds.map((subjectId) => ({ school_id: user.schoolId, student_id: studentId, class_id: classId, subject_id: subjectId, enrolled_by: user.id })),
+        { onConflict: "school_id,student_id,subject_id,class_id" }
+      );
+      if (error) throw new Error(error.message);
+    }
+    return;
+  }
+
+  const defaultOverride = await getDefaultCombinationOverrideForClass(supabase, user.schoolId, classId, major);
+  if (defaultOverride) {
+    const allowedIds = new Set(defaultOverride.subjectIds ?? []);
     const excludedIds = (links ?? []).filter((row: any) => !allowedIds.has(row.subject_id as string)).map((row: any) => row.subject_id as string);
     if (excludedIds.length) {
       const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);

@@ -2,20 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { Edit2, Trash2, X } from "lucide-react";
-import { updateStudentSubjectCombinationAction, deleteStudentSubjectCombinationAction } from "@/app/(app)/classes/actions";
+import { deleteStudentSubjectCombinationAction, updateDefaultStudentSubjectCombinationAction, updateStudentSubjectCombinationAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
-import { formatGradeSection } from "@/lib/utils";
 
-type ClassOption = { id: string; name: string; grade_name?: string | null; section_name?: string | null };
+type ClassOption = { id: string; name: string; grade_id?: string | null; grade_name?: string | null; section_name?: string | null };
 type SubjectOption = { id: string; name: string };
+type GradeOption = { id: string; name: string; classIds: string[] };
 
 type CombinationData = {
-  id: string;
+  id?: string;
+  value?: string;
+  kind?: "default" | "custom";
   name: string;
-  classIds: string[];
+  gradeId?: string;
+  classIds?: string[];
+  gradeIds?: string[];
   subjectIds: string[];
 };
 
@@ -30,11 +35,14 @@ export function SubjectCombinationEditModal({
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
+  const grades = getGradesFromClasses(classes);
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [name, setName] = useState(combination.name);
-  const [classIds, setClassIds] = useState<string[]>(combination.classIds);
+  const [gradeIds, setGradeIds] = useState<string[]>(() => combination.gradeId ? [combination.gradeId] : getSelectedGradeIds(grades, combination.classIds ?? [], combination.gradeIds));
   const [subjectIds, setSubjectIds] = useState<string[]>(combination.subjectIds);
   const [pending, startTransition] = useTransition();
+  const isDefaultCombination = combination.kind === "default";
 
   function toggle(value: string, selected: string[], setSelected: (values: string[]) => void) {
     setSelected(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
@@ -42,26 +50,37 @@ export function SubjectCombinationEditModal({
 
   function handleOpen() {
     setName(combination.name);
-    setClassIds(combination.classIds);
+    setGradeIds(combination.gradeId ? [combination.gradeId] : getSelectedGradeIds(grades, combination.classIds ?? [], combination.gradeIds));
     setSubjectIds(combination.subjectIds);
     setOpen(true);
+    requestAnimationFrame(() => setVisible(true));
   }
 
   function handleClose() {
-    setOpen(false);
+    setVisible(false);
+    window.setTimeout(() => setOpen(false), 150);
   }
 
   function submit() {
     const formData = new FormData();
     formData.set("name", name);
-    classIds.forEach((classId) => formData.append("class_id", classId));
+    if (isDefaultCombination) {
+      formData.set("combination_key", combination.value ?? "");
+      formData.set("grade_id", combination.gradeId ?? "");
+    } else {
+      getClassIdsForGrades(grades, gradeIds).forEach((classId) => formData.append("class_id", classId));
+    }
     subjectIds.forEach((subjectId) => formData.append("subject_id", subjectId));
 
     startTransition(async () => {
       try {
-        await updateStudentSubjectCombinationAction(combination.id, formData);
+        if (isDefaultCombination) {
+          await updateDefaultStudentSubjectCombinationAction(formData);
+        } else if (combination.id) {
+          await updateStudentSubjectCombinationAction(combination.id, formData);
+        }
         pushToast("Combination updated successfully.", "success");
-        setOpen(false);
+        handleClose();
         router.refresh();
       } catch (error: any) {
         pushToast(error?.message ?? "Failed to update combination.", "error");
@@ -70,12 +89,14 @@ export function SubjectCombinationEditModal({
   }
 
   function handleDelete() {
+    if (!combination.id || isDefaultCombination) return;
+    const combinationId = combination.id;
     if (!confirm("Are you sure you want to delete this combination?")) return;
     startTransition(async () => {
       try {
-        await deleteStudentSubjectCombinationAction(combination.id);
+        await deleteStudentSubjectCombinationAction(combinationId);
         pushToast("Combination deleted.", "success");
-        setOpen(false);
+        handleClose();
         router.refresh();
       } catch (error: any) {
         pushToast(error?.message ?? "Failed to delete combination.", "error");
@@ -94,24 +115,31 @@ export function SubjectCombinationEditModal({
         Edit Combination
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
-            <div className="flex items-center justify-between border-b border-outline/40 px-6 py-4">
+      {open ? createPortal(
+        <div
+          className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}
+          onClick={handleClose}
+        >
+          <div
+            className={`flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift transition-all duration-150 ${visible ? "scale-100 opacity-100" : "scale-[0.98] opacity-0"}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
               <div>
-                <h2 className="font-display text-lg font-bold text-ink">Edit Combination</h2>
-                <p className="mt-0.5 text-xs text-muted">Update combination name, target classes, or included subjects.</p>
+                <h2 className="font-display text-xl font-bold text-ink">Edit combination</h2>
+                <p className="mt-1 text-sm text-muted">{isDefaultCombination ? "Update combination name or included subjects." : "Update combination name, target grades, or included subjects."}</p>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-lg p-1.5 text-muted hover:bg-surface-low hover:text-ink"
+                className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink"
+                aria-label="Close form"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="grid gap-4 overflow-y-auto p-6">
+            <div className="grid gap-6 overflow-y-auto p-6">
               <label className="grid gap-1.5 text-sm font-semibold text-ink">
                 Name
                 <Input
@@ -122,29 +150,28 @@ export function SubjectCombinationEditModal({
                 />
               </label>
 
-              <fieldset className="grid gap-2">
-                <legend className="text-sm font-semibold text-ink">Classes</legend>
-                <div className="grid max-h-44 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low/50 p-3 sm:grid-cols-2">
-                  {classes.map((item) => {
-                    const displayName = formatGradeSection(item.grade_name || item.name, item.section_name);
-                    return (
-                      <label key={item.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              {isDefaultCombination ? null : (
+                <fieldset className="grid gap-2">
+                  <legend className="text-sm font-semibold text-ink">Grades</legend>
+                  <div className="grid max-h-44 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low p-3 sm:grid-cols-2">
+                    {grades.map((grade) => (
+                      <label key={grade.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={classIds.includes(item.id)}
-                          onChange={() => toggle(item.id, classIds, setClassIds)}
+                          checked={gradeIds.includes(grade.id)}
+                          onChange={() => toggle(grade.id, gradeIds, setGradeIds)}
                           className="h-4 w-4 rounded border-outline accent-primary"
                         />
-                        <span>{displayName}</span>
+                        <span>{grade.name}</span>
                       </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
 
               <fieldset className="grid gap-2">
                 <legend className="text-sm font-semibold text-ink">Subjects</legend>
-                <div className="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low/50 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low p-3 sm:grid-cols-2 lg:grid-cols-3">
                   {subjects.map((subject) => (
                     <label key={subject.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
                       <input
@@ -160,18 +187,20 @@ export function SubjectCombinationEditModal({
               </fieldset>
             </div>
 
-            <div className="flex items-center justify-between border-t border-outline/40 px-6 py-4">
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                onClick={handleDelete}
-                disabled={pending}
-                className="gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </Button>
+            <div className="flex items-center justify-between border-t border-outline/50 px-6 py-5">
+              {isDefaultCombination ? <span /> : (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={pending}
+                  className="gap-1.5"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              )}
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" size="sm" onClick={handleClose} disabled={pending}>
                   Cancel
@@ -180,15 +209,40 @@ export function SubjectCombinationEditModal({
                   type="button"
                   size="sm"
                   onClick={submit}
-                  disabled={pending || !name.trim() || !classIds.length || !subjectIds.length}
+                  disabled={pending || !name.trim() || (!isDefaultCombination && !gradeIds.length) || !subjectIds.length}
                 >
                   {pending ? "Saving..." : "Save changes"}
                 </Button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );
+}
+
+function getGradesFromClasses(classes: ClassOption[]): GradeOption[] {
+  const byGrade = new Map<string, GradeOption>();
+  for (const item of classes) {
+    const gradeId = item.grade_id ?? item.grade_name ?? item.name;
+    const gradeName = item.grade_name || item.name;
+    if (!gradeId || !gradeName) continue;
+    const grade = byGrade.get(gradeId) ?? { id: gradeId, name: gradeName, classIds: [] };
+    grade.classIds.push(item.id);
+    byGrade.set(gradeId, grade);
+  }
+  return [...byGrade.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
+
+function getSelectedGradeIds(grades: GradeOption[], classIds: string[], explicitGradeIds?: string[]) {
+  if (explicitGradeIds?.length) return explicitGradeIds;
+  const selectedClassIds = new Set(classIds);
+  return grades.filter((grade) => grade.classIds.some((classId) => selectedClassIds.has(classId))).map((grade) => grade.id);
+}
+
+function getClassIdsForGrades(grades: GradeOption[], gradeIds: string[]) {
+  const selected = new Set(gradeIds);
+  return [...new Set(grades.filter((grade) => selected.has(grade.id)).flatMap((grade) => grade.classIds))];
 }
