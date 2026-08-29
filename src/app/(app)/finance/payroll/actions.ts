@@ -8,7 +8,9 @@ import {
   createSalaryAdjustment,
   deleteSalaryAdjustment,
   markPayrollPaid,
-  upsertTeacherEmploymentDetails
+  upsertTeacherEmploymentDetails,
+  saveStaffPay,
+  setStaffPayStatus
 } from "@/lib/services/payroll";
 import { revalidatePath } from "next/cache";
 import type { AdjustmentType } from "@/types/database";
@@ -37,6 +39,39 @@ export async function markPayrollPaidAction(payrollId: string) {
   }
 }
 
+export async function saveStaffPayAction(formData: FormData) {
+  try {
+    const user = await requireUser("payroll:manage");
+    await saveStaffPay(user, {
+      staffId: String(formData.get("staff_id") ?? ""),
+      month: String(formData.get("month") ?? ""),
+      baseSalary: Number(formData.get("base_salary") ?? 0),
+      bonus: Number(formData.get("bonus") ?? 0),
+      deduction: Number(formData.get("deduction") ?? 0),
+      remarks: String(formData.get("remarks") ?? "")
+    });
+    revalidatePath("/finance/payroll");
+    revalidatePath("/finance/dashboard");
+    revalidatePath("/finance/transactions");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function setStaffPayStatusAction(staffId: string, month: string, status: "paid" | "unpaid") {
+  try {
+    const user = await requireUser("payroll:manage");
+    await setStaffPayStatus(user, staffId, month, status);
+    revalidatePath("/finance/payroll");
+    revalidatePath("/finance/dashboard");
+    revalidatePath("/finance/transactions");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
 export async function createAdjustmentAction(data: {
   teacherId: string;
   amount: number;
@@ -53,7 +88,9 @@ export async function createAdjustmentAction(data: {
       reason: data.reason,
       effective_date: data.effective_date
     });
-    revalidatePath("/payroll");
+    revalidatePath("/finance/payroll");
+    revalidatePath("/finance/dashboard");
+    revalidatePath("/finance/transactions");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };

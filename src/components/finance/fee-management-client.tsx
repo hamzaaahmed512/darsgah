@@ -30,6 +30,10 @@ const statusTone = {
   overdue: "red"
 } as const;
 
+function canViewFinancialReports(role: string) {
+  return role !== "administrator";
+}
+
 export function FeeManagementClient({ user, accounts, classes, sessions, payments }: FeeManagementClientProps) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -55,6 +59,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
 
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
+  const showReports = canViewFinancialReports(user.role);
 
   const latestReceiptByAccount = useMemo(() => {
     const map = new Map<string, any>();
@@ -166,15 +171,17 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <p className="text-sm font-semibold text-ink">Fee ledger</p>
               <p className="text-xs text-muted">Search, filter, collect payments, and apply discounts.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => downloadReport(filtered)}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft"
-              >
-                <Download className="h-4 w-4" /> Download Report
-              </button>
-            </div>
+            {showReports ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => downloadReport(filtered)}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft"
+                >
+                  <Download className="h-4 w-4" /> Download Report
+                </button>
+              </div>
+            ) : null}
           </div>
           <div className="grid gap-4 md:grid-cols-5">
             <div className="relative md:col-span-2">
@@ -216,20 +223,22 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
           </label>
         </Card>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Expected Billing</p>
-            <p className="mt-1 font-display text-2xl font-bold text-ink">{formatPKR(totals.payable)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Collected</p>
-            <p className="mt-1 font-display text-2xl font-bold text-success">{formatPKR(totals.paid)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Outstanding</p>
-            <p className="mt-1 font-display text-2xl font-bold text-danger">{formatPKR(totals.outstanding)}</p>
-          </Card>
-        </div>
+        {showReports ? (
+          <div className="mb-6 grid gap-4 sm:grid-cols-3">
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">Expected Billing</p>
+              <p className="mt-1 font-display text-2xl font-bold text-ink">{formatPKR(totals.payable)}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">Collected</p>
+              <p className="mt-1 font-display text-2xl font-bold text-success">{formatPKR(totals.paid)}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">Outstanding</p>
+              <p className="mt-1 font-display text-2xl font-bold text-danger">{formatPKR(totals.outstanding)}</p>
+            </Card>
+          </div>
+        ) : null}
 
         {!filtered.length ? (
           <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
@@ -361,20 +370,22 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:pl-[280px]">
-        <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-3">
-          <p className="text-sm text-muted">
-            Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
-          </p>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-button hover:brightness-105"
-          >
-            <Printer className="h-4 w-4" /> Print Report
-          </button>
+      {showReports ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:pl-[280px]">
+          <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-button hover:brightness-105"
+            >
+              <Printer className="h-4 w-4" /> Print Report
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {isDiscountOpen && selectedAccount ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

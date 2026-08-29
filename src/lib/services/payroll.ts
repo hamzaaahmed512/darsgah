@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { AppUser, SalaryAdjustment, TeacherEmploymentDetails } from "@/types/database";
+import type { AppUser, PayrollStatus, SalaryAdjustment, TeacherEmploymentDetails } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { payrollGenerationSchema } from "@/lib/validation/finance";
 
@@ -152,6 +152,40 @@ export async function createSalaryAdjustment(
     approved_by: user.id
   });
   if (error) throw new Error(error.message);
+
+  const month = values.effective_date.slice(0, 7);
+  const { data: payroll } = await supabase
+    .from("payroll")
+    .select("id, base_salary, status")
+    .eq("school_id", user.schoolId)
+    .eq("teacher_id", values.teacher_id)
+    .eq("month", month)
+    .maybeSingle();
+
+  if (payroll && payroll.status !== "paid") {
+    const { data: adjustments, error: adjustmentError } = await supabase
+      .from("salary_adjustments")
+      .select("amount, type")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", values.teacher_id)
+      .gte("effective_date", `${month}-01`)
+      .lt("effective_date", getNextMonth(month));
+    if (adjustmentError) throw new Error(adjustmentError.message);
+
+    const bonus = (adjustments ?? []).filter((row) => row.type === "bonus").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const deduction = (adjustments ?? []).filter((row) => row.type === "deduction").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const baseSalary = Number(payroll.base_salary ?? 0);
+    const { error: payrollUpdateError } = await supabase
+      .from("payroll")
+      .update({
+        total_bonus: bonus,
+        total_deductions: deduction,
+        net_salary: Math.max(0, baseSalary + bonus - deduction)
+      })
+      .eq("id", payroll.id)
+      .eq("school_id", user.schoolId);
+    if (payrollUpdateError) throw new Error(payrollUpdateError.message);
+  }
 }
 
 export async function deleteSalaryAdjustment(user: AppUser, adjustmentId: string) {
@@ -279,6 +313,251 @@ export async function markPayrollPaid(user: AppUser, payrollId: string) {
     .update({ status: "paid", payment_date: new Date().toISOString().split("T")[0] })
     .eq("id", payrollId)
     .eq("school_id", user.schoolId);
+  if (error) throw new Error(error.message);
+}
+
+export type StaffPayRow = {
+  staffId: string;
+  name: string;
+  email: string | null;
+  role: string;
+  jobTitle: string | null;
+  baseSalary: number;
+  bonus: number;
+  deduction: number;
+  netSalary: number;
+  status: "unpaid" | "paid";
+  paymentDate: string | null;
+  remarks: string | null;
+  payrollId: string | null;
+  yearlyPaidTotal: number;
+};
+
+export async function getStaffPayRows(user: AppUser, month: string): Promise<StaffPayRow[]> {
+  assertPayrollPortalAccess(user);
+  if (!hasPermission(user.role, "payroll:view", user.permissions)) throw new Error("Unauthorized");
+  const supabase = await createClient();
+  const year = month.slice(0, 4);
+
+  const [staffRes, employmentRes, payrollRes, adjustmentRes, yearPaidRes] = await Promise.all([
+    supabase
+      .from("staff_directory")
+      .select("user_id, full_name, email, role, job_title")
+      .eq("school_id", user.schoolId)
+      .eq("status", "active")
+      .order("full_name"),
+    supabase
+      .from("teacher_employment_details")
+      .select("teacher_id, monthly_salary")
+      .eq("school_id", user.schoolId),
+    supabase
+      .from("payroll")
+      .select("*")
+      .eq("school_id", user.schoolId)
+      .eq("month", month),
+    supabase
+      .from("salary_adjustments")
+      .select("teacher_id, amount, type")
+      .eq("school_id", user.schoolId)
+      .gte("effective_date", `${month}-01`)
+      .lt("effective_date", getNextMonth(month)),
+    supabase
+      .from("payroll")
+      .select("teacher_id, net_salary")
+      .eq("school_id", user.schoolId)
+      .eq("status", "paid")
+      .gte("month", `${year}-01`)
+      .lte("month", `${year}-12`)
+  ]);
+
+  if (staffRes.error) throw new Error(staffRes.error.message);
+  if (employmentRes.error) throw new Error(employmentRes.error.message);
+  if (payrollRes.error) throw new Error(payrollRes.error.message);
+  if (adjustmentRes.error) throw new Error(adjustmentRes.error.message);
+  if (yearPaidRes.error) throw new Error(yearPaidRes.error.message);
+
+  const employmentByStaff = new Map((employmentRes.data ?? []).map((row: any) => [row.teacher_id, Number(row.monthly_salary ?? 0)]));
+  const payrollByStaff = new Map((payrollRes.data ?? []).map((row: any) => [row.teacher_id, row]));
+  const adjustmentByStaff = new Map<string, { bonus: number; deduction: number }>();
+  for (const adjustment of adjustmentRes.data ?? []) {
+    const current = adjustmentByStaff.get(adjustment.teacher_id) ?? { bonus: 0, deduction: 0 };
+    if (adjustment.type === "bonus") {
+      current.bonus += Number(adjustment.amount ?? 0);
+    } else {
+      current.deduction += Number(adjustment.amount ?? 0);
+    }
+    adjustmentByStaff.set(adjustment.teacher_id, current);
+  }
+  const yearlyPaidByStaff = new Map<string, number>();
+  for (const row of yearPaidRes.data ?? []) {
+    yearlyPaidByStaff.set(row.teacher_id, (yearlyPaidByStaff.get(row.teacher_id) ?? 0) + Number(row.net_salary ?? 0));
+  }
+
+  return (staffRes.data ?? []).map((staff: any) => {
+    const payroll = payrollByStaff.get(staff.user_id);
+    const adjustments = adjustmentByStaff.get(staff.user_id) ?? { bonus: 0, deduction: 0 };
+    const baseSalary = Number(payroll?.base_salary ?? employmentByStaff.get(staff.user_id) ?? 0);
+    const bonus = Number(payroll?.total_bonus ?? adjustments.bonus);
+    const deduction = Number(payroll?.total_deductions ?? adjustments.deduction);
+    const netSalary = Math.max(0, baseSalary + bonus - deduction);
+
+    return {
+      staffId: staff.user_id,
+      name: staff.full_name ?? "Unknown",
+      email: staff.email ?? null,
+      role: staff.role ?? "staff",
+      jobTitle: staff.job_title ?? null,
+      baseSalary,
+      bonus,
+      deduction,
+      netSalary: Number(payroll?.net_salary ?? netSalary),
+      status: payroll?.status === "paid" ? "paid" : "unpaid",
+      paymentDate: payroll?.payment_date ?? null,
+      remarks: payroll?.remarks ?? null,
+      payrollId: payroll?.id ?? null,
+      yearlyPaidTotal: yearlyPaidByStaff.get(staff.user_id) ?? 0
+    };
+  });
+}
+
+export async function saveStaffPay(
+  user: AppUser,
+  values: {
+    staffId: string;
+    month: string;
+    baseSalary: number;
+    bonus: number;
+    deduction: number;
+    remarks?: string | null;
+  }
+) {
+  assertPayrollPortalAccess(user);
+  if (!hasPermission(user.role, "payroll:manage", user.permissions)) throw new Error("Unauthorized");
+  if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(values.month)) throw new Error("Month must use YYYY-MM");
+  if (values.baseSalary <= 0) throw new Error("Base salary must be greater than zero");
+  if (values.bonus < 0 || values.deduction < 0) throw new Error("Bonus and deduction cannot be negative");
+
+  const supabase = await createClient();
+  const effectiveDate = `${values.month}-01`;
+  const netSalary = Math.max(0, values.baseSalary + values.bonus - values.deduction);
+
+  const [{ data: currentPayroll, error: payrollError }, { data: employment, error: employmentError }] = await Promise.all([
+    supabase
+      .from("payroll")
+      .select("id, status")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", values.staffId)
+      .eq("month", values.month)
+      .maybeSingle(),
+    supabase
+      .from("teacher_employment_details")
+      .select("*")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", values.staffId)
+      .maybeSingle()
+  ]);
+
+  if (payrollError) throw new Error(payrollError.message);
+  if (employmentError) throw new Error(employmentError.message);
+  if (currentPayroll?.status === "paid") throw new Error("Mark this salary as unpaid before editing it.");
+
+  const previousSalary = Number(employment?.monthly_salary ?? 0);
+  const salaryChanged = previousSalary !== values.baseSalary;
+
+  const { error: employmentUpsertError } = await supabase.from("teacher_employment_details").upsert({
+    teacher_id: values.staffId,
+    school_id: user.schoolId,
+    designation: employment?.designation ?? null,
+    department: employment?.department ?? null,
+    joining_date: employment?.joining_date ?? effectiveDate,
+    monthly_salary: values.baseSalary,
+    payment_method: employment?.payment_method ?? "cash",
+    salary_start_date: salaryChanged ? effectiveDate : employment?.salary_start_date ?? effectiveDate,
+    employment_status: employment?.employment_status ?? "active"
+  });
+  if (employmentUpsertError) throw new Error(employmentUpsertError.message);
+
+  if (salaryChanged) {
+    await recordSalaryChange(
+      user,
+      values.staffId,
+      previousSalary,
+      values.baseSalary,
+      previousSalary === 0 ? "initial" : values.baseSalary > previousSalary ? "increase" : "decrease",
+      effectiveDate,
+      values.remarks ?? undefined
+    );
+  }
+
+  const { error: payrollUpsertError } = await supabase.from("payroll").upsert({
+    school_id: user.schoolId,
+    teacher_id: values.staffId,
+    month: values.month,
+    base_salary: values.baseSalary,
+    total_bonus: values.bonus,
+    total_deductions: values.deduction,
+    net_salary: netSalary,
+    status: "generated" satisfies PayrollStatus,
+    payment_date: null,
+    approved_by: user.id,
+    remarks: values.remarks || null
+  }, { onConflict: "school_id,teacher_id,month" });
+
+  if (payrollUpsertError) throw new Error(payrollUpsertError.message);
+}
+
+export async function setStaffPayStatus(user: AppUser, staffId: string, month: string, status: "paid" | "unpaid") {
+  assertPayrollPortalAccess(user);
+  if (!hasPermission(user.role, "payroll:manage", user.permissions)) throw new Error("Unauthorized");
+  if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Month must use YYYY-MM");
+
+  const supabase = await createClient();
+  const { data: currentPayroll, error: payrollError } = await supabase
+    .from("payroll")
+    .select("*")
+    .eq("school_id", user.schoolId)
+    .eq("teacher_id", staffId)
+    .eq("month", month)
+    .maybeSingle();
+  if (payrollError) throw new Error(payrollError.message);
+
+  if (status === "unpaid") {
+    if (!currentPayroll) return;
+    const { error } = await supabase
+      .from("payroll")
+      .update({ status: "generated", payment_date: null, approved_by: user.id })
+      .eq("id", currentPayroll.id)
+      .eq("school_id", user.schoolId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  if (currentPayroll) {
+    const { error } = await supabase
+      .from("payroll")
+      .update({ status: "paid", payment_date: new Date().toISOString().split("T")[0], approved_by: user.id })
+      .eq("id", currentPayroll.id)
+      .eq("school_id", user.schoolId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const rows = await getStaffPayRows(user, month);
+  const row = rows.find((item) => item.staffId === staffId);
+  if (!row || row.baseSalary <= 0) throw new Error("Set this employee's base salary before marking paid.");
+  const { error } = await supabase.from("payroll").insert({
+    school_id: user.schoolId,
+    teacher_id: staffId,
+    month,
+    base_salary: row.baseSalary,
+    total_bonus: row.bonus,
+    total_deductions: row.deduction,
+    net_salary: row.netSalary,
+    status: "paid",
+    payment_date: new Date().toISOString().split("T")[0],
+    approved_by: user.id,
+    remarks: row.remarks
+  });
   if (error) throw new Error(error.message);
 }
 

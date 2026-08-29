@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowDownCircle, ArrowUpCircle, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -11,22 +12,41 @@ import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type Transaction
 import { getFinanceTransactions } from "@/lib/services/finance";
 import { formatDatePK, formatPKR } from "@/lib/utils";
 
+function canViewFinancialReports(role: string) {
+  return role !== "administrator";
+}
+
+function financeDashboardHref(params: Record<string, string | undefined>) {
+  const nextParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) nextParams.set(key, value);
+  });
+  const query = nextParams.toString();
+  return query ? `/finance/dashboard?${query}` : "/finance/dashboard";
+}
+
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("finance:view");
+  const showTotals = canViewFinancialReports(user.role);
+  if (!showTotals) {
+    redirect(financeDashboardHref(params));
+  }
   const period = (["month", "year", "lifetime", "custom"].includes(params.period ?? "") ? params.period : "month") as "month" | "year" | "lifetime" | "custom";
   const direction = (["income", "expense"].includes(params.direction ?? "") ? params.direction : "all") as TransactionDirection | "all";
-  const data = await getFinanceTransactions(user, { period, direction, dateFrom: params.dateFrom, dateTo: params.dateTo, q: params.q, page: Number(params.page ?? 1) });
+  const data = await getFinanceTransactions(user, { period, direction, dateFrom: params.dateFrom, dateTo: params.dateTo, q: params.q, page: Number(params.page ?? 1), includeTotals: showTotals });
   const pageCount = Math.max(1, Math.ceil(data.count / data.pageSize));
 
   return <>
     <PageHeader eyebrow="Operations" title="Transactions" description="A read-only ledger of income, student-fee payments, payroll, and expenses. Record new entries from the Finance dashboard." />
 
-    <section className="mb-5 grid gap-4 sm:grid-cols-3">
-      <Summary label="Income" value={formatPKR(data.totals.income)} tone="income" />
-      <Summary label="Expenses" value={formatPKR(data.totals.expenses)} tone="expense" />
-      <Summary label="Net" value={formatPKR(data.totals.income - data.totals.expenses)} tone="net" />
-    </section>
+    {showTotals ? (
+      <section className="mb-5 grid gap-4 sm:grid-cols-3">
+        <Summary label="Income" value={formatPKR(data.totals.income)} tone="income" />
+        <Summary label="Expenses" value={formatPKR(data.totals.expenses)} tone="expense" />
+        <Summary label="Net" value={formatPKR(data.totals.income - data.totals.expenses)} tone="net" />
+      </section>
+    ) : null}
 
     <Card className="mb-5 p-4">
       <form method="get" className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_160px_160px_150px_150px_auto]">

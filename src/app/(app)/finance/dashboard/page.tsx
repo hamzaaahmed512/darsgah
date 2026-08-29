@@ -1,13 +1,23 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
-import { getFinanceDashboard } from "@/lib/services/finance";
+import { getFinanceDashboard, getFinanceTransactions } from "@/lib/services/finance";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input, Select } from "@/components/ui/form-field";
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart, LazyOutstandingByClassChart } from "@/components/finance/lazy-finance-dashboard-charts";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Percent, ClipboardList, AlertCircle, Banknote, LucideIcon } from "lucide-react";
-import { formatPKR } from "@/lib/utils";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Percent, ClipboardList, AlertCircle, Banknote, LucideIcon, Search } from "lucide-react";
+import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
+import { formatDatePK, formatPKR } from "@/lib/utils";
 import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
 import { hasPermission } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+
+function canViewFinancialReports(role: string) {
+  return role !== "administrator";
+}
 
 const statTones = {
   green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
@@ -84,15 +94,67 @@ function percentDelta(current: number, previous: number, lowerIsBetter = false):
   return { text: `${arrow} ${Math.abs(change).toFixed(1)}% vs last month`, tone };
 }
 
-export default async function FinanceDashboardPage() {
+export default async function FinanceDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
   const user = await requireUser("finance:view");
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
+  const canViewReports = canViewFinancialReports(user.role);
   let students: Array<{ id: string; name: string; admissionNumber: string }> = [];
   if (canManage) {
     const supabase = await createClient();
     const { data: studentRows } = await supabase.from("students").select("id,first_name,last_name,admission_number").eq("school_id", user.schoolId).eq("status", "active").order("first_name");
     students = (studentRows ?? []).map((student) => ({ id: student.id, name: `${student.first_name} ${student.last_name}`.trim(), admissionNumber: student.admission_number }));
   }
+
+  if (!canViewReports) {
+    const period = (["month", "year", "lifetime", "custom"].includes(params.period ?? "") ? params.period : "month") as "month" | "year" | "lifetime" | "custom";
+    const direction = (["income", "expense"].includes(params.direction ?? "") ? params.direction : "all") as TransactionDirection | "all";
+    const transactions = await getFinanceTransactions(user, {
+      period,
+      direction,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      q: params.q,
+      page: Number(params.page ?? 1),
+      includeTotals: false
+    });
+    const pageCount = Math.max(1, Math.ceil(transactions.count / transactions.pageSize));
+
+    return (
+      <>
+        <PageHeader
+          eyebrow="Finance"
+          title="Finance"
+          description="Record income and expenses, then review posted transaction entries."
+          actions={canManage ? <><TransactionFormModal direction="income" students={students} /><TransactionFormModal direction="expense" students={students} /></> : null}
+        />
+
+        <Card className="mb-5 p-4">
+          <form method="get" className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_160px_160px_150px_150px_auto]">
+            <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input name="q" defaultValue={params.q ?? ""} placeholder="Receipt, person, reference..." className="pl-9" /></div>
+            <Select name="period" defaultValue={period}><option value="month">This month</option><option value="year">This year</option><option value="lifetime">Lifetime</option><option value="custom">Custom dates</option></Select>
+            <Select name="direction" defaultValue={direction}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></Select>
+            <Input name="dateFrom" type="date" defaultValue={params.dateFrom ?? ""} aria-label="Date from" />
+            <Input name="dateTo" type="date" defaultValue={params.dateTo ?? ""} aria-label="Date to" />
+            <Button type="submit">Apply</Button>
+          </form>
+          <p className="mt-2 text-xs text-muted">Choose Custom dates to use the From and To fields.</p>
+        </Card>
+
+        <Card>
+          <CardContent className="p-0">
+            {!transactions.rows.length ? <EmptyState title="No transactions found" description="Try another period or record a new income or expense." className="m-5" /> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm">
+              <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted"><tr><th className="px-4 py-3">Receipt</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Student / party</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Recorded by</th><th className="px-4 py-3">Reference</th></tr></thead>
+              <tbody>{transactions.rows.map((row: any) => <tr key={row.id} className="border-t border-outline/60"><td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{row.receipt_number}</td><td className="px-4 py-3"><Badge tone={row.direction === "income" ? "green" : "red"}>{TRANSACTION_CATEGORY_LABELS[row.category as TransactionCategory] ?? row.category.replace(/_/g, " ")}</Badge><p className="mt-1 text-xs capitalize text-muted">{row.source.replace(/_/g, " ")}</p></td><td className="px-4 py-3"><p className="font-semibold text-ink">{row.student_name || row.party_name || "—"}</p>{row.admission_number ? <p className="text-xs text-muted">{row.admission_number}</p> : null}<p className="max-w-xs truncate text-xs text-muted">{row.description}</p></td><td className={`px-4 py-3 font-bold ${row.direction === "income" ? "text-success" : "text-danger"}`}>{row.direction === "income" ? "+" : "−"}{formatPKR(Number(row.amount))}</td><td className="px-4 py-3 text-muted">{formatDatePK(row.transaction_date)}</td><td className="px-4 py-3 text-muted">{row.recorded_by_name || "System"}</td><td className="px-4 py-3 text-muted">{row.reference_number || "—"}</td></tr>)}</tbody>
+            </table></div>}
+          </CardContent>
+        </Card>
+
+        {pageCount > 1 ? <nav className="mt-4 flex items-center gap-3 text-sm"><span className="text-muted">Page {transactions.page} of {pageCount}</span>{transactions.page > 1 ? <Link className="font-semibold text-primary" href={`/finance/dashboard?${new URLSearchParams({ ...params, page: String(transactions.page - 1) })}`}>Previous</Link> : null}{transactions.page < pageCount ? <Link className="font-semibold text-primary" href={`/finance/dashboard?${new URLSearchParams({ ...params, page: String(transactions.page + 1) })}`}>Next</Link> : null}</nav> : null}
+      </>
+    );
+  }
+
   let data;
   try {
     data = await getFinanceDashboard(user);

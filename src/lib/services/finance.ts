@@ -485,6 +485,7 @@ export async function getFinanceTransactions(user: AppUser, filters: {
   direction?: TransactionDirection | "all";
   q?: string;
   page?: number;
+  includeTotals?: boolean;
 } = {}) {
   const supabase = await createClient();
   const now = new Date();
@@ -508,21 +509,24 @@ export async function getFinanceTransactions(user: AppUser, filters: {
     .select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)", { count: "exact" })
     .eq("school_id", user.schoolId)
     .eq("is_voided", false);
-  let totalsQuery = supabase.from("finance_transactions").select("direction,amount")
-    .eq("school_id", user.schoolId)
-    .eq("is_voided", false);
+  let totalsQuery = filters.includeTotals === false
+    ? null
+    : supabase.from("finance_transactions").select("direction,amount")
+      .eq("school_id", user.schoolId)
+      .eq("is_voided", false);
   if (dateFrom) query = query.gte("transaction_date", dateFrom);
-  if (dateFrom) totalsQuery = totalsQuery.gte("transaction_date", dateFrom);
+  if (dateFrom && totalsQuery) totalsQuery = totalsQuery.gte("transaction_date", dateFrom);
   if (dateTo) query = query.lte("transaction_date", dateTo);
-  if (dateTo) totalsQuery = totalsQuery.lte("transaction_date", dateTo);
+  if (dateTo && totalsQuery) totalsQuery = totalsQuery.lte("transaction_date", dateTo);
   if (filters.direction && filters.direction !== "all") query = query.eq("direction", filters.direction);
-  if (filters.direction && filters.direction !== "all") totalsQuery = totalsQuery.eq("direction", filters.direction);
+  if (filters.direction && filters.direction !== "all" && totalsQuery) totalsQuery = totalsQuery.eq("direction", filters.direction);
   if (filters.q) query = query.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
-  if (filters.q) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
-  const [{ data, count, error }, { data: totalRows, error: totalsError }] = await Promise.all([
+  if (filters.q && totalsQuery) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
+  const [{ data, count, error }, totalsResult] = await Promise.all([
     query.order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
-    totalsQuery
+    totalsQuery ?? Promise.resolve({ data: [], error: null })
   ]);
+  const { data: totalRows, error: totalsError } = totalsResult;
   if (error) throw new Error(error.message);
   if (totalsError) throw new Error(totalsError.message);
   const rows = (data ?? []).map((row: any) => ({

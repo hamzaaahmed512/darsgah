@@ -39,7 +39,7 @@ const coreNavItems: NavItem[] = [
   { href: "/classes", label: "Classes", icon: BookOpen, permission: "classes:manage", section: "ACADEMICS" },
   { href: "/finance/dashboard", label: "Finance", icon: Coins, permission: "finance:view", section: "FINANCE" },
   { href: "/finance/fees", label: "Fee Management", icon: Receipt, permission: "finance:view", section: "FINANCE" },
-  { href: "/finance/payroll", label: "Payroll", icon: Wallet, permission: "payroll:view", section: "FINANCE" },
+  { href: "/finance/payroll", label: "Staff Pay", icon: Wallet, permission: "payroll:view", section: "FINANCE" },
   { href: "/finance/transactions", label: "Transactions", icon: Receipt, permission: "finance:view", section: "FINANCE" },
   { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view", section: "OPERATIONS" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
@@ -135,6 +135,9 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
 
   for (const item of coreNavItems.slice(1)) {
     if (item.href === "/operations" && role !== "principal" && role !== "administrator") {
+      continue;
+    }
+    if (item.href === "/finance/transactions" && role === "administrator") {
       continue;
     }
     items.push(item);
