@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { X, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
 import { importStudentsAction } from "@/app/(app)/students/actions";
 import { Badge } from "@/components/ui/badge";
+import { formatFullName } from "@/lib/student-name";
 
 type Props = {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
         const admNo = String(lowerRow["admission number"] || lowerRow["admission no"] || lowerRow["admission_number"] || "");
         const firstName = String(lowerRow["first name"] || lowerRow["name"] || lowerRow["name (en)"] || "");
         const lastName = String(lowerRow["last name"] || "");
-        const nameEn = String(lowerRow["name (en)"] || (firstName + (lastName ? ` ${lastName}` : ""))).trim();
+        const nameEn = String(lowerRow["name (en)"] || formatFullName(firstName, lastName)).trim();
         const grade = String(lowerRow["grade"] || lowerRow["class"] || "");
 
         const record: ParsedRecord = {

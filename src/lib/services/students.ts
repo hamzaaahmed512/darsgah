@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/services/activity";
 import { getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
 import { isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
+import { formatDisplayName, formatFullName, splitFullName } from "@/lib/student-name";
 
 export type StudentFilters = {
   q?: string;
@@ -202,6 +203,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
+  const studentName = splitFullName(parsed.name_en);
   if (studentMajorsSupported && parsed.class_id && parsed.major) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
   }
@@ -211,8 +213,8 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
     .insert({
       school_id: user.schoolId,
       admission_number: admissionNumber,
-      first_name: parsed.name_en.split(" ")[0],
-      last_name: parsed.name_en.split(" ").slice(1).join(" ") || parsed.name_en,
+      first_name: studentName.firstName,
+      last_name: studentName.lastName,
       name_en: parsed.name_en,
       name_ur: parsed.name_ur || null,
       father_name_en: parsed.father_name_en || null,
@@ -294,7 +296,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
     if (reqError) throw new Error(reqError.message);
     await logActivity(user, "admission_request_submitted", "approval_request", student.id, {
       admission_number: parsed.admission_number,
-      name: `${parsed.first_name} ${parsed.last_name}`
+      name: formatDisplayName(parsed.name_en)
     });
     return student.id as string;
   }
@@ -303,7 +305,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
     if (studentMajorsSupported && parsed.class_id && parsed.major) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, parsed.major);
     await logActivity(user, "student_created", "student", student.id, {
       admission_number: parsed.admission_number,
-      name: `${parsed.first_name} ${parsed.last_name}`
+      name: formatDisplayName(parsed.name_en)
     });
   }
 
@@ -319,6 +321,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
+  const studentName = splitFullName(parsed.name_en);
   if (studentMajorsSupported && parsed.class_id && parsed.major) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
   }
@@ -326,8 +329,8 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
     .from("students")
     .update({
       admission_number: parsed.admission_number,
-      first_name: parsed.name_en.split(" ")[0],
-      last_name: parsed.name_en.split(" ").slice(1).join(" ") || parsed.name_en,
+      first_name: studentName.firstName,
+      last_name: studentName.lastName,
       name_en: parsed.name_en,
       name_ur: parsed.name_ur || null,
       father_name_en: parsed.father_name_en || null,
@@ -672,11 +675,12 @@ export async function importStudentsBulk(user: AppUser, records: any[]) {
 
   const studentsToInsert = records.map(r => {
     const classId = r.class_name ? classMap.get(r.class_name.toLowerCase()) : null;
+    const studentName = splitFullName(r.name_en);
     return {
       school_id: user.schoolId,
       admission_number: r.admission_number || `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      first_name: r.name_en?.split(" ")[0] || "Unknown",
-      last_name: r.name_en?.split(" ").slice(1).join(" ") || r.name_en,
+      first_name: studentName.firstName || "Unknown",
+      last_name: studentName.lastName,
       name_en: r.name_en || null,
       name_ur: r.name_ur || null,
       father_name_en: r.father_name_en || null,

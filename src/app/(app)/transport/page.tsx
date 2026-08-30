@@ -12,6 +12,7 @@ import { TransportRefreshForm } from "@/components/transport/transport-refresh-f
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { getTransportDashboard } from "@/lib/services/transport";
+import { formatFullName } from "@/lib/student-name";
 import {
   assignTransportAction,
   createDriverAction,
@@ -225,7 +226,7 @@ function AssignStudentForm({ data, vehicle }: { data: any; vehicle: any }) {
           <option value="">Choose student</option>
           {data.students.map((student: any) => (
             <option key={student.id} value={student.id}>
-              {student.first_name} {student.last_name} / {student.admission_number}
+              {formatFullName(student.first_name, student.last_name)} / {student.admission_number}
             </option>
           ))}
         </Select>

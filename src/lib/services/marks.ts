@@ -12,6 +12,7 @@ import type {
   ResultWorkflowStatus
 } from "@/types/database";
 import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type MarkEntryValues } from "@/lib/validation/marks";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -272,7 +273,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     roster: (roster.data ?? [])
       .map((row: any) => ({
         student_id: row.student_id,
-        student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+        student_name: formatFullName(row.students?.first_name, row.students?.last_name),
         admission_number: row.students?.admission_number,
         mark: markMap.get(row.students?.id) ?? null
       }))
@@ -598,7 +599,7 @@ export async function getResultsManagementWorkspace(
       workflowStatus,
       approvalId: approval?.id ?? null,
       uploadedByTeacherId: row.uploaded_by_teacher_id ?? row.creator?.id ?? null,
-      uploadedByTeacherName: row.uploaded_by_teacher_name ?? row.creator?.full_name ?? "Teacher",
+      uploadedByTeacherName: formatDisplayName(row.uploaded_by_teacher_name) || formatDisplayName(row.creator?.full_name) || "Teacher",
       canApprove: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canReject: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canPrint:
@@ -647,7 +648,7 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
     exam: { ...exam, workflowStatus },
     approval,
     marks: (marks ?? []).map((row: any) => ({
-      student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+      student_name: formatFullName(row.students?.first_name, row.students?.last_name),
       admission_number: row.students?.admission_number,
       marks_obtained: Number(row.marks_obtained),
       grade: row.grade,
@@ -701,7 +702,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
       students: (students.data ?? [])
         .map((row: any) => ({
           id: row.students?.id,
-          name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+          name: formatFullName(row.students?.first_name, row.students?.last_name),
           admission_number: row.students?.admission_number
         }))
         .filter((row) => row.id),
@@ -731,7 +732,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
     students: (students.data ?? [])
       .map((row: any) => ({
         id: row.students?.id,
-        name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+        name: formatFullName(row.students?.first_name, row.students?.last_name),
         admission_number: row.students?.admission_number
       }))
       .filter((row) => row.id)
@@ -842,7 +843,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     return {
       student: {
         id: student?.id,
-        name: `${student?.first_name ?? ""} ${student?.last_name ?? ""}`.trim(),
+        name: formatFullName(student?.first_name, student?.last_name),
         admission_number: student?.admission_number
       },
       rows,

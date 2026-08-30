@@ -3,7 +3,7 @@ import type { AppUser } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import { isSubjectExcludedForMajor } from "@/lib/student-majors";
-import { formatStudentName } from "@/lib/student-name";
+import { formatDisplayName, formatStudentName } from "@/lib/student-name";
 import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
 
@@ -39,7 +39,7 @@ export async function getAcademicOptions(user: AppUser) {
       section_id: row.section_id,
       academic_year_id: row.academic_year_id,
       head_teacher_id: row.head_teacher_id,
-      head_teacher_name: row.head_teacher?.full_name ?? null,
+      head_teacher_name: formatDisplayName(row.head_teacher?.full_name) || null,
       head_teacher_email: row.head_teacher?.email ?? null
     }))
   };
@@ -303,7 +303,7 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     teachersByClass[classId].push({
       id: a.id,
       teacher_id: a.teacher_id,
-      teacher_name: a.profiles?.full_name ?? "Unknown",
+      teacher_name: formatDisplayName(a.profiles?.full_name) || "Unknown",
       subject_name: subjectName,
       subject_names: subjectName ? [subjectName] : [],
       assignment_ids: [a.id]
@@ -427,11 +427,14 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     ...options,
     catalogSubjects: options.subjects,
     subjects: availableSubjects,
-    teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: row.profiles?.full_name ?? "Unknown" })),
+    teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: formatDisplayName(row.profiles?.full_name) || "Unknown" })),
     selectedClassId,
     selectedSubjectId,
     selectedSubject,
-    assignments: assignments.data ?? [],
+    assignments: (assignments.data ?? []).map((row: any) => ({
+      ...row,
+      profiles: row.profiles ? { ...row.profiles, full_name: formatDisplayName(row.profiles.full_name) } : row.profiles
+    })),
     roster: eligibleRosterRows.map((row: any) => ({ id: row.student_id, name: formatStudentName({ firstName: row.students?.first_name, lastName: row.students?.last_name }), admission_number: row.students?.admission_number, major: majorsByStudentId[row.student_id] ?? null })),
     combinationOptions,
     enrolledStudentIds: defaultEnrolledStudentIds,

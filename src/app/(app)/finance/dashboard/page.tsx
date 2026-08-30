@@ -14,6 +14,7 @@ import { formatDatePK, formatPKR } from "@/lib/utils";
 import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
 import { hasPermission } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { formatFullName } from "@/lib/student-name";
 
 function canViewFinancialReports(role: string) {
   return role !== "administrator";
@@ -103,7 +104,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
   if (canManage) {
     const supabase = await createClient();
     const { data: studentRows } = await supabase.from("students").select("id,first_name,last_name,admission_number").eq("school_id", user.schoolId).eq("status", "active").order("first_name");
-    students = (studentRows ?? []).map((student) => ({ id: student.id, name: `${student.first_name} ${student.last_name}`.trim(), admissionNumber: student.admission_number }));
+    students = (studentRows ?? []).map((student) => ({ id: student.id, name: formatFullName(student.first_name, student.last_name), admissionNumber: student.admission_number }));
   }
 
   if (!canViewReports) {

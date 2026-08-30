@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultDetail } from "@/lib/services/marks";
+import { formatDisplayName } from "@/lib/student-name";
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -45,7 +46,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
             <CardTitle>Uploaded By</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold text-ink">{exam.uploaded_by_teacher_name ?? exam.creator?.full_name ?? "Teacher"}</p>
+            <p className="font-semibold text-ink">{formatDisplayName(exam.uploaded_by_teacher_name) || formatDisplayName(exam.creator?.full_name) || "Teacher"}</p>
             <p className="text-xs text-muted">{exam.uploaded_by_teacher_id ?? exam.creator?.id ?? "—"}</p>
             <p className="mt-2 text-sm text-muted">{formatDateTime(exam.uploaded_at)}</p>
           </CardContent>

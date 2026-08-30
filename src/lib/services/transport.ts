@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/services/activity";
 import type { AppUser } from "@/types/database";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 function isMissingTransportSchema(error: { code?: string; message?: string } | null) {
   if (!error) return false;
@@ -69,7 +70,7 @@ export async function getTransportDashboard(user: AppUser) {
 
   return {
     routes: routes.data ?? [],
-    drivers: drivers.data ?? [],
+    drivers: (drivers.data ?? []).map((driver: any) => ({ ...driver, full_name: formatDisplayName(driver.full_name) })),
     vehicles: (vehicles.data ?? []).map((vehicle: any) => {
       const driver = driverById.get(vehicle.driver_id);
       const route = routeById.get(vehicle.route_id);
@@ -77,7 +78,7 @@ export async function getTransportDashboard(user: AppUser) {
 
       return {
         ...vehicle,
-        driver_name: driver?.full_name ?? null,
+        driver_name: formatDisplayName(driver?.full_name) || null,
         driver_phone: driver?.phone ?? null,
         route_name: route?.name ?? null,
         start_point: route?.start_point ?? null,
@@ -90,7 +91,7 @@ export async function getTransportDashboard(user: AppUser) {
       id: row.id,
       vehicle_id: row.vehicle_id,
       student_id: row.student_id,
-      student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+      student_name: formatFullName(row.students?.first_name, row.students?.last_name),
       admission_number: row.students?.admission_number
     })),
     students: students.data ?? [],

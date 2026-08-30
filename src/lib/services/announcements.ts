@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, Announcement, AnnouncementWithRead } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
+import { formatDisplayName } from "@/lib/student-name";
 
 // ─── Read Announcements ────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ export async function getAnnouncements(user: AppUser): Promise<AnnouncementWithR
     .filter((row: any) => announcementVisibleToUser(row, user))
     .map((row: any) => ({
       ...row,
-      created_by_name: row.profiles?.full_name ?? null,
+      created_by_name: formatDisplayName(row.profiles?.full_name) || null,
       is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0
     }));
 }
@@ -63,7 +64,7 @@ export async function getAnnouncementHistory(user: AppUser): Promise<Announcemen
 
   return (data || []).map((row: any) => ({
     ...row,
-    created_by_name: row.profiles?.full_name ?? null,
+    created_by_name: formatDisplayName(row.profiles?.full_name) || null,
     is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0
   }));
 }

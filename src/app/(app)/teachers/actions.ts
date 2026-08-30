@@ -2,16 +2,32 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createStaffAccount, updateStaffStatus, assignTeacherToClass, setStaffSalary } from "@/lib/services/teachers";
+import { createStaffAccount, updateStaffStatus, assignTeacherToClass, setStaffSalary, StaffEmailAlreadyAssignedError } from "@/lib/services/teachers";
 import { createOtherStaffRecord, setOtherStaffSalary } from "@/lib/services/staff";
 import type { OtherStaffCategory } from "@/lib/constants/staff";
 import type { StaffFormValues } from "@/lib/validation/staff";
 
-export async function createStaffAction(values: StaffFormValues) {
+type StaffActionResult =
+  | { success: true; error: null; field?: never }
+  | { success: false; error: string; field?: keyof StaffFormValues };
+
+export async function createStaffAction(values: StaffFormValues): Promise<StaffActionResult> {
   const user = await requireUser("teachers:manage");
-  await createStaffAccount(user, values);
-  revalidatePath("/teachers");
-  revalidatePath("/staff");
+  try {
+    await createStaffAccount(user, values);
+    revalidatePath("/teachers");
+    revalidatePath("/staff");
+    return { success: true, error: null };
+  } catch (error) {
+    if (error instanceof StaffEmailAlreadyAssignedError) {
+      return { success: false, error: error.message, field: error.field };
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create staff member. Please try again."
+    };
+  }
 }
 
 export async function assignTeacherAction(teacherId: string, classId: string, subjectId?: string) {

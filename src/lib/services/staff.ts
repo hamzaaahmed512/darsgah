@@ -3,6 +3,7 @@ import type { AppUser } from "@/types/database";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { logActivity } from "@/lib/services/activity";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
+import { formatDisplayName } from "@/lib/student-name";
 
 function isMissingOtherStaffTable(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.other_staff_records");
@@ -28,7 +29,7 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
 
     const { data, error } = await accountQuery;
     if (error) throw new Error(error.message);
-    accountRows = data ?? [];
+    accountRows = (data ?? []).map((row: any) => ({ ...row, full_name: formatDisplayName(row.full_name) }));
   }
 
   let otherRows: any[] = [];
@@ -45,7 +46,7 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
     else otherRows = (others ?? []).map((row: any) => ({
       member_id: row.id,
       user_id: null,
-      full_name: row.full_name,
+      full_name: formatDisplayName(row.full_name),
       email: null,
       avatar_url: null,
       role: "other",
@@ -78,7 +79,7 @@ export async function getStaffProfile(user: AppUser, staffId: string) {
   if (headClasses.error) throw new Error(headClasses.error.message);
   if (employment.error && employment.error.code !== "PGRST116") throw new Error(employment.error.message);
   return {
-    member,
+    member: member ? { ...member, full_name: formatDisplayName(member.full_name) } : member,
     assignments: assignments.data ?? [],
     headClasses: headClasses.data ?? [],
     employment: employment.data ?? null

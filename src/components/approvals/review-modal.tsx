@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/form-field";
 import type { ApprovalRequest } from "@/types/database";
 import { reviewStudentRequestAction } from "@/app/(app)/students/actions";
+import { formatFullName } from "@/lib/student-name";
 
 export function ReviewModal({ request, onClose }: { request: ApprovalRequest; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
@@ -46,7 +47,7 @@ export function ReviewModal({ request, onClose }: { request: ApprovalRequest; on
         <div className="mb-6 space-y-4 rounded-lg bg-surface-low p-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-muted">Student</p>
-            <p className="font-semibold text-ink">{request.student_first_name} {request.student_last_name}</p>
+            <p className="font-semibold text-ink">{formatFullName(request.student_first_name, request.student_last_name)}</p>
             <p className="text-sm text-muted">{request.student_admission_number}</p>
           </div>
           <div>

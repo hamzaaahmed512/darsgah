@@ -2,6 +2,7 @@ import Link from "next/link";
 import { initials, formatGradeSection } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatStudentName } from "@/lib/student-name";
 
 const statusTone = {
   active: "green",
@@ -56,7 +57,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                     )}
                     <div>
                       <Link href={`/students/${student.id}`} prefetch={false} className="font-semibold text-primary hover:text-primary-ink">
-                        {student.name_en || `${student.first_name} ${student.last_name}`}
+                        {formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}
                       </Link>
                       {student.name_ur && <p className="text-xs text-muted" dir="rtl">{student.name_ur}</p>}
                     </div>
@@ -103,7 +104,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                 )}
                 <div>
                   <p className="font-semibold text-ink">
-                    {student.name_en || `${student.first_name} ${student.last_name}`}
+                    {formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}
                   </p>
                   <p className="text-xs text-muted">{student.admission_number}</p>
                 </div>

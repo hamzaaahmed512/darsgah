@@ -4,6 +4,7 @@ import type { AppUser, PendingAttendanceClass } from "@/types/database";
 import { getTeacherHeadClasses, principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { sortClassesNaturally } from "@/lib/class-sort";
 import { hasPermission } from "@/lib/permissions";
+import { formatDisplayName } from "@/lib/student-name";
 
 type ClassDistributionRow = { class_name: string; grade_name: string | null; student_count: number };
 
@@ -80,7 +81,7 @@ export async function getPendingAttendanceClasses(user: AppUser): Promise<Pendin
       grade_name: row.grades?.name ?? null,
       section_name: row.sections?.name ?? null,
       head_teacher_id: row.head_teacher_id,
-      head_teacher_name: row.head_teacher?.full_name ?? null,
+      head_teacher_name: formatDisplayName(row.head_teacher?.full_name) || null,
       head_teacher_email: row.head_teacher?.email ?? null,
       head_teacher_phone: row.head_teacher?.phone ?? null
     })));

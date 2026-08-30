@@ -3,6 +3,7 @@ import type { AppUser } from "@/types/database";
 import { attendanceSubmissionSchema, teacherAttendanceSubmissionSchema, type AttendanceSubmission, type TeacherAttendanceSubmission } from "@/lib/validation/attendance";
 import { logActivity } from "@/lib/services/activity";
 import { sortClassesNaturally } from "@/lib/class-sort";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 function isMissingTeacherAttendanceTable(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.code === "42P01" || Boolean(error?.message?.includes("teacher_attendance_records"));
@@ -77,7 +78,7 @@ export async function getAttendanceContext(
       return {
         enrollment_id: row.id,
         student_id: row.students?.id,
-        student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+        student_name: formatFullName(row.students?.first_name, row.students?.last_name),
         admission_number: row.students?.admission_number,
         current_status: existing?.status ?? null,
         note: existing?.note ?? null
@@ -160,7 +161,7 @@ export async function getTeacherAttendanceContext(user: AppUser, date?: string) 
     const teachers = (teachersResult.data ?? [])
       .map((row: any) => ({
         teacher_id: row.user_id,
-        teacher_name: row.profiles?.full_name ?? "Teacher",
+        teacher_name: formatDisplayName(row.profiles?.full_name) || "Teacher",
         teacher_email: row.profiles?.email ?? null,
         role: row.role,
         department: row.department,
@@ -185,7 +186,7 @@ export async function getTeacherAttendanceContext(user: AppUser, date?: string) 
       const existing = recordMap.get(row.user_id);
       return {
         teacher_id: row.user_id,
-        teacher_name: row.profiles?.full_name ?? "Teacher",
+        teacher_name: formatDisplayName(row.profiles?.full_name) || "Teacher",
         teacher_email: row.profiles?.email ?? null,
         role: row.role,
         department: row.department,

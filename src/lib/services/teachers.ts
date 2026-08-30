@@ -4,6 +4,17 @@ import type { AppUser, UserRole } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
 import { staffFormSchema, type StaffFormValues } from "@/lib/validation/staff";
 
+export const STAFF_EMAIL_ALREADY_ASSIGNED_MESSAGE = "This email address is already assigned to another staff member.";
+
+export class StaffEmailAlreadyAssignedError extends Error {
+  field = "email" as const;
+
+  constructor() {
+    super(STAFF_EMAIL_ALREADY_ASSIGNED_MESSAGE);
+    this.name = "StaffEmailAlreadyAssignedError";
+  }
+}
+
 const creatableRoles: Record<UserRole, UserRole[]> = {
   administrator: ["administrator", "principal", "teacher", "head_teacher", "staff", "student_staff", "cashier"],
   principal: ["teacher", "head_teacher", "staff", "student_staff", "cashier"],
@@ -14,6 +25,32 @@ const creatableRoles: Record<UserRole, UserRole[]> = {
   head_teacher: []
 };
 
+function isDuplicateEmailError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const candidate = error as {
+    code?: string;
+    status?: number;
+    message?: string;
+    meta?: { target?: string[] | string };
+    details?: string;
+    constraint?: string;
+  };
+  const message = `${candidate.message ?? ""} ${candidate.details ?? ""} ${candidate.constraint ?? ""}`.toLowerCase();
+  const target = Array.isArray(candidate.meta?.target) ? candidate.meta.target.join(" ") : candidate.meta?.target ?? "";
+  const targetMentionsEmail = target.toLowerCase().includes("email") || message.includes("email");
+  const authDuplicateEmail =
+    candidate.code === "email_exists" ||
+    message.includes("already registered") ||
+    message.includes("already been registered") ||
+    message.includes("user already exists");
+
+  if (candidate.code === "P2002") return targetMentionsEmail;
+  if (candidate.code === "23505") return targetMentionsEmail;
+
+  return (candidate.status === 400 || candidate.status === 422) && authDuplicateEmail;
+}
+
 export async function createStaffAccount(user: AppUser, values: StaffFormValues) {
   const parsed = staffFormSchema.parse(values);
   const adminClient = createAdminClient();
@@ -21,6 +58,15 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
   if (!(creatableRoles[user.role] ?? []).includes(parsed.role)) {
     throw new Error("You do not have permission to create that role.");
   }
+
+  const { data: existingProfile, error: existingProfileError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("email", parsed.email)
+    .maybeSingle();
+
+  if (existingProfileError) throw new Error(existingProfileError.message);
+  if (existingProfile) throw new StaffEmailAlreadyAssignedError();
 
   // 1. Create auth user via admin API
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
@@ -30,6 +76,7 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
   });
 
   if (authError || !authData.user) {
+    if (isDuplicateEmailError(authError)) throw new StaffEmailAlreadyAssignedError();
     throw new Error(authError?.message || "Failed to create auth user");
   }
 
@@ -46,7 +93,10 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
       must_change_password: true,
     });
 
-  if (profileError) throw new Error(profileError.message);
+  if (profileError) {
+    if (isDuplicateEmailError(profileError)) throw new StaffEmailAlreadyAssignedError();
+    throw new Error(profileError.message);
+  }
 
   // 3. Insert into school_members
   const { error: memberError } = await adminClient

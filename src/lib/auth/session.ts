@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, UserRole } from "@/types/database";
 import { hasPermission, type Permission } from "@/lib/permissions";
+import { formatDisplayName } from "@/lib/student-name";
 
 type MemberRow = {
   school_id: string;
@@ -48,7 +49,7 @@ async function loadCurrentUser(): Promise<AppUser | null> {
     return {
       id: row.user_id,
       email: row.email,
-      fullName: row.full_name ?? row.email ?? "Darsgah User",
+      fullName: formatDisplayName(row.full_name) || row.email || "Darsgah User",
       avatarUrl: row.avatar_url,
       schoolId: row.school_id,
       schoolName: row.school_name,
@@ -107,7 +108,7 @@ async function loadCurrentUser(): Promise<AppUser | null> {
   return {
     id: userId,
     email: profile?.email ?? (typeof claimsData.claims.email === "string" ? claimsData.claims.email : null),
-    fullName: profile?.full_name ?? (typeof claimsData.claims.email === "string" ? claimsData.claims.email : "Darsgah User"),
+    fullName: formatDisplayName(profile?.full_name) || (typeof claimsData.claims.email === "string" ? claimsData.claims.email : "Darsgah User"),
     avatarUrl: profile?.avatar_url ?? null,
     schoolId: member.school_id,
     schoolName: member.schools?.name ?? "School",

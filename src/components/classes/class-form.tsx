@@ -15,6 +15,7 @@ import {
 import { RemoveAssignmentButton } from "@/components/classes/class-actions";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, X } from "lucide-react";
+import { formatDisplayName } from "@/lib/student-name";
 
 export function ClassFormModal({
   grades,
@@ -283,7 +284,7 @@ export function ClassFormModal({
                       <Select {...register("head_teacher_id")}>
                         <option value="">Assign later</option>
                         {teachers.map((teacher) => (
-                          <option key={teacher.user_id} value={teacher.user_id}>{teacher.full_name}</option>
+                          <option key={teacher.user_id} value={teacher.user_id}>{formatDisplayName(teacher.full_name)}</option>
                         ))}
                       </Select>
                       {!teachers.length ? (
@@ -340,7 +341,7 @@ export function ClassFormModal({
                         <Select name="teacher_id" required>
                           <option value="">Select Teacher</option>
                           {teachers.map((t) => (
-                            <option key={t.user_id} value={t.user_id}>{t.full_name}</option>
+                            <option key={t.user_id} value={t.user_id}>{formatDisplayName(t.full_name)}</option>
                           ))}
                         </Select>
                       </div>

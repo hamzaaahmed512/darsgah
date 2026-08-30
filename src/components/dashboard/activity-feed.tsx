@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
+import { formatDisplayName } from "@/lib/student-name";
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,7 +23,7 @@ export function ActivityFeed({ items }: { items: any[] }) {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-ink">{humanize(item.action)}</p>
                   <p className="text-xs leading-5 text-muted">
-                    {item.profiles?.full_name ?? "System"} • {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                    {formatDisplayName(item.profiles?.full_name) || "System"} • {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                   </p>
                 </div>
               </li>

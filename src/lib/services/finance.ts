@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema, manualTransactionSchema } from "@/lib/validation/finance";
 import { startOfMonth, subMonths, format } from "date-fns";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 export async function logFinanceAction(
   user: AppUser,
@@ -232,7 +233,7 @@ export async function getFeeChallans(user: AppUser, month: string) {
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: any) => ({
     ...row,
-    student_name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(),
+    student_name: formatFullName(row.students?.first_name, row.students?.last_name),
     admission_number: row.students?.admission_number ?? "—",
     class_name: row.classes?.name ?? "—",
     payment_status: Number(row.student_fee_accounts?.amount_paid ?? 0) >= Number(row.student_fee_accounts?.total_payable ?? 1) ? "paid" : "unpaid"
@@ -531,9 +532,9 @@ export async function getFinanceTransactions(user: AppUser, filters: {
   if (totalsError) throw new Error(totalsError.message);
   const rows = (data ?? []).map((row: any) => ({
     ...row,
-    student_name: row.students ? `${row.students.first_name ?? ""} ${row.students.last_name ?? ""}`.trim() : null,
+    student_name: row.students ? formatFullName(row.students.first_name, row.students.last_name) : null,
     admission_number: row.students?.admission_number ?? null,
-    recorded_by_name: row.profiles?.full_name ?? null
+    recorded_by_name: formatDisplayName(row.profiles?.full_name) || null
   }));
   return {
     rows,
@@ -600,7 +601,7 @@ async function getLedgerDashboard(user: AppUser) {
     expenseDistribution: Array.from(expensesByCategory.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value),
-    recentTransactions: (recent ?? []).map((row: any) => ({ ...row, student_name: row.students ? `${row.students.first_name ?? ""} ${row.students.last_name ?? ""}`.trim() : null, recorded_by_name: row.profiles?.full_name ?? null }))
+    recentTransactions: (recent ?? []).map((row: any) => ({ ...row, student_name: row.students ? formatFullName(row.students.first_name, row.students.last_name) : null, recorded_by_name: formatDisplayName(row.profiles?.full_name) || null }))
   };
 }
 

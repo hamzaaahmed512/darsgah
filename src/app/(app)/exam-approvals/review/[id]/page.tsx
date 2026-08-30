@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultsForReviewByApprovalId } from "@/lib/services/marks";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { reviewExamApprovalAction } from "@/app/(app)/exam-approvals/actions";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 export default async function ExamApprovalReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,7 +73,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                   {marks.map((m: any) => (
                     <tr key={m.id} className="hover:bg-surface-low/50">
                       <td className="px-4 py-3 font-semibold text-ink">
-                        {m.students?.first_name} {m.students?.last_name}
+                        {formatFullName(m.students?.first_name, m.students?.last_name)}
                       </td>
                       <td className="px-4 py-3 text-muted">{m.students?.admission_number || "—"}</td>
                       <td className="px-4 py-3">
@@ -121,7 +122,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
               </div>
               <div>
                 <p className="font-semibold text-ink">Submitted By</p>
-                <p className="text-muted mt-1">{approval.submitter?.full_name ?? "Teacher"}</p>
+                <p className="text-muted mt-1">{formatDisplayName(approval.submitter?.full_name) || "Teacher"}</p>
               </div>
             </CardContent>
           </Card>

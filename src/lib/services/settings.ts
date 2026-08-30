@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { sortClassesNaturally } from "@/lib/class-sort";
+import { formatDisplayName } from "@/lib/student-name";
 
 function isOutdatedHeadTeacherGuard(error: { message?: string } | null) {
   return Boolean(error?.message?.includes("Head teacher must be an active teacher in this school."));
@@ -269,7 +270,7 @@ export async function getSchoolMembers(user: AppUser) {
   return (data || []).map((row: any) => ({
     memberId: row.id,
     userId: row.profiles?.id,
-    fullName: row.profiles?.full_name ?? "—",
+    fullName: formatDisplayName(row.profiles?.full_name) || "—",
     email: row.profiles?.email ?? "—",
     avatarUrl: row.profiles?.avatar_url,
     role: row.role,

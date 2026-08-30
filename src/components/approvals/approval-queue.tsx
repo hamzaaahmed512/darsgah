@@ -5,6 +5,7 @@ import { ReviewModal } from "./review-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApprovalRequest } from "@/types/database";
+import { formatFullName } from "@/lib/student-name";
 
 export function ApprovalQueue({ initialRequests, canReview }: { initialRequests: ApprovalRequest[]; canReview: boolean }) {
   const requests = initialRequests;
@@ -39,7 +40,7 @@ export function ApprovalQueue({ initialRequests, canReview }: { initialRequests:
                     </Badge>
                   </td>
                   <td className="py-3 pr-4">
-                    <div className="font-semibold">{request.student_first_name} {request.student_last_name}</div>
+                    <div className="font-semibold">{formatFullName(request.student_first_name, request.student_last_name)}</div>
                     <div className="text-xs text-muted">{request.student_admission_number}</div>
                   </td>
                   <td className="py-3 pr-4">{request.submitted_by_name}</td>

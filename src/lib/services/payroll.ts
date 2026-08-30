@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser, PayrollStatus, SalaryAdjustment, TeacherEmploymentDetails } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { payrollGenerationSchema } from "@/lib/validation/finance";
+import { formatDisplayName } from "@/lib/student-name";
 
 function isMissingPayrollLeaveFlagsView(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.payroll_unpaid_leave_flags");
@@ -74,7 +75,7 @@ export async function getSalaryHistory(user: AppUser, teacherId?: string) {
   if (error) throw new Error(error.message);
   return (data || []).map((row: any) => ({
     ...row,
-    approved_by_name: row.profiles?.full_name ?? null
+    approved_by_name: formatDisplayName(row.profiles?.full_name) || null
   }));
 }
 
@@ -131,7 +132,7 @@ export async function getSalaryAdjustments(user: AppUser, teacherId?: string, mo
   if (error) throw new Error(error.message);
   return (data || []).map((row: any) => ({
     ...row,
-    teacher_name: row.profiles?.full_name ?? null
+    teacher_name: formatDisplayName(row.profiles?.full_name) || null
   }));
 }
 
@@ -223,7 +224,7 @@ export async function getPayrollList(user: AppUser, month?: string) {
   if (error) throw new Error(error.message);
   return (data || []).map((row: any) => ({
     ...row,
-    teacher_name: row.profiles?.full_name ?? null,
+    teacher_name: formatDisplayName(row.profiles?.full_name) || null,
     teacher_email: row.profiles?.email ?? null
   }));
 }
@@ -283,7 +284,7 @@ export async function getPayrollEligibleStaff(user: AppUser) {
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: any) => ({
     id: row.user_id,
-    name: row.full_name ?? "Unknown",
+    name: formatDisplayName(row.full_name) || "Unknown",
     email: row.email ?? "",
     role: row.role ?? "staff"
   }));
@@ -403,7 +404,7 @@ export async function getStaffPayRows(user: AppUser, month: string): Promise<Sta
 
     return {
       staffId: staff.user_id,
-      name: staff.full_name ?? "Unknown",
+      name: formatDisplayName(staff.full_name) || "Unknown",
       email: staff.email ?? null,
       role: staff.role ?? "staff",
       jobTitle: staff.job_title ?? null,

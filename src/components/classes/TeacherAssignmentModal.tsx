@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { formatDisplayName } from "@/lib/student-name";
 
 type SubjectOption = { id: string; name: string };
 
@@ -105,7 +106,7 @@ export function TeacherAssignmentModal({
                   <option value="">Select teacher...</option>
                   {teachers.map((teacher) => (
                     <option key={teacher.user_id} value={teacher.user_id}>
-                      {teacher.full_name}
+                      {formatDisplayName(teacher.full_name)}
                     </option>
                   ))}
                 </Select>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { logActivity } from "@/lib/services/activity";
 import { createClient } from "@/lib/supabase/server";
+import { formatDisplayName } from "@/lib/student-name";
 
 export async function sendAttendanceReminderAction(classId: string) {
   const user = await requireUser("dashboard:view");
@@ -70,7 +71,7 @@ export async function sendAttendanceReminderAction(classId: string) {
   await logActivity(user, "attendance_reminder_sent", "class", classId, {
     class_name: targetClass.name,
     head_teacher_id: targetClass.head_teacher_id,
-    head_teacher_name: headTeacher?.full_name ?? null,
+    head_teacher_name: formatDisplayName(headTeacher?.full_name) || null,
     attendance_date: today
   });
 
@@ -78,6 +79,6 @@ export async function sendAttendanceReminderAction(classId: string) {
   revalidatePath("/attendance");
   return {
     ok: true,
-    teacherName: headTeacher?.full_name ?? "Head teacher"
+    teacherName: formatDisplayName(headTeacher?.full_name) || "Head teacher"
   };
 }

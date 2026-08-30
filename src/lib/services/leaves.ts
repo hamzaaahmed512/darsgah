@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/services/activity";
 import { leaveRequestSchema, leaveReviewSchema, type LeaveRequestValues, type LeaveReviewValues } from "@/lib/validation/leaves";
 import type { AppUser, StaffLeave, StaffLeaveStatus } from "@/types/database";
+import { formatDisplayName } from "@/lib/student-name";
 
 function isMissingStaffLeavesTable(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.staff_leaves");
@@ -25,7 +26,7 @@ export async function getMyLeaveRequests(user: AppUser) {
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: any) => ({
     ...row,
-    reviewed_by_name: row.reviewer?.full_name ?? null
+    reviewed_by_name: formatDisplayName(row.reviewer?.full_name) || null
   })) as StaffLeave[];
 }
 
@@ -55,7 +56,7 @@ export async function getMyLeaveCenter(user: AppUser, range: LeaveDateRange = {}
   return {
     leaves: (data ?? []).map((row: any) => ({
       ...row,
-      reviewed_by_name: row.reviewer?.full_name ?? null
+      reviewed_by_name: formatDisplayName(row.reviewer?.full_name) || null
     })) as StaffLeave[],
     migrationRequired: false
   };
@@ -79,8 +80,8 @@ export async function getLeaveRequestsForReview(user: AppUser, status: StaffLeav
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: any) => ({
     ...row,
-    applicant_name: row.applicant?.full_name ?? row.applicant?.email ?? "Employee",
-    reviewed_by_name: row.reviewer?.full_name ?? null
+    applicant_name: formatDisplayName(row.applicant?.full_name) || row.applicant?.email || "Employee",
+    reviewed_by_name: formatDisplayName(row.reviewer?.full_name) || null
   })) as StaffLeave[];
 }
 

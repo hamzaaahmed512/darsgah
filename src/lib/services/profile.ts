@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
 import { profileFormSchema, type ProfileFormValues } from "@/lib/validation/profile";
+import { formatDisplayName } from "@/lib/student-name";
 
 type ProfileDetailsRow = {
   full_name: string;
@@ -50,7 +51,7 @@ export async function getProfileDetails(user: AppUser): Promise<ProfileDetails> 
   const member = memberResult.data;
 
   return {
-    fullName: profile?.full_name ?? user.fullName,
+    fullName: formatDisplayName(profile?.full_name) || user.fullName,
     email: profile?.email ?? user.email,
     avatarUrl: profile?.avatar_url ?? user.avatarUrl,
     phone: profile?.phone ?? null,

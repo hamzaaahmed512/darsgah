@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, ApprovalRequestStatus } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
+import { formatDisplayName } from "@/lib/student-name";
 
 export type ApprovalFilters = {
   status?: ApprovalRequestStatus | "all";
@@ -38,8 +39,8 @@ export async function getApprovalRequests(user: AppUser, filters: ApprovalFilter
     student_first_name: row.students?.first_name,
     student_last_name: row.students?.last_name,
     student_admission_number: row.students?.admission_number,
-    submitted_by_name: row.profiles?.full_name,
-    reviewed_by_name: row.reviewer?.full_name,
+    submitted_by_name: formatDisplayName(row.profiles?.full_name),
+    reviewed_by_name: formatDisplayName(row.reviewer?.full_name),
   }));
 }
 
@@ -169,4 +170,3 @@ export async function reviewRequest(user: AppUser, requestId: string, decision: 
     { request_type: request.request_type }
   );
 }
-

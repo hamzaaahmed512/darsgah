@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrincipalExamApprovals, getWorkflowStatusFromExam } from "@/lib/services/marks";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
+import { formatDisplayName } from "@/lib/student-name";
 import type { ResultApprovalStatus } from "@/types/database";
 import { redirect } from "next/navigation";
 
@@ -70,7 +71,7 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
                       {formatExamType(exam?.exam_type)} / {exam?.term} / {exam?.exam_date}
                     </p>
                     <p className="mt-1 text-xs text-muted">
-                      Uploaded by {exam?.uploaded_by_teacher_name ?? approval.submitter?.full_name ?? exam?.creator?.full_name ?? "Teacher"}
+                      Uploaded by {formatDisplayName(exam?.uploaded_by_teacher_name) || formatDisplayName(approval.submitter?.full_name) || formatDisplayName(exam?.creator?.full_name) || "Teacher"}
                       {exam?.uploaded_by_teacher_id ? ` (${exam.uploaded_by_teacher_id.slice(0, 8)}…)` : ""}
                       {exam?.uploaded_at ? ` on ${new Date(exam.uploaded_at).toLocaleString()}` : ""}
                     </p>

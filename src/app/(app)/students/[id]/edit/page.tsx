@@ -8,6 +8,7 @@ import { getSubjectCombinationCatalog } from "@/lib/services/student-combination
 import { getStudent } from "@/lib/services/students";
 import { updateStudentAction } from "@/app/(app)/students/actions";
 import type { StudentFormValues } from "@/lib/validation/students";
+import { formatDisplayName, formatFullName } from "@/lib/student-name";
 
 export default async function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,9 +43,9 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           admission_number: student.admission_number,
           first_name: student.first_name,
           last_name: student.last_name,
-          name_en: (student as any).name_en || `${student.first_name} ${student.last_name}`,
+          name_en: (student as any).name_en || formatFullName(student.first_name, student.last_name),
           name_ur: (student as any).name_ur || "",
-          father_name_en: (student as any).father_name_en || guardian?.full_name || "",
+          father_name_en: (student as any).father_name_en || formatDisplayName(guardian?.full_name),
           father_name_ur: (student as any).father_name_ur || "",
           father_phone: (student as any).father_phone || guardian?.phone || "",
           father_cnic: (student as any).father_cnic || "",
@@ -60,11 +61,11 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           status: student.status,
           class_id: student.class_id ?? "",
           major: (student as any).major ?? "",
-          guardian_name: guardian?.full_name ?? "",
+          guardian_name: formatDisplayName(guardian?.full_name),
           guardian_relationship: guardian?.relationship ?? "",
           guardian_email: guardian?.email ?? "",
           guardian_phone: guardian?.phone ?? "",
-          emergency_contact_name: guardian?.emergency_contact_name ?? guardian?.full_name ?? "",
+          emergency_contact_name: formatDisplayName(guardian?.emergency_contact_name) || formatDisplayName(guardian?.full_name),
           emergency_contact_phone: guardian?.emergency_contact_phone ?? guardian?.phone ?? ""
         }}
       />

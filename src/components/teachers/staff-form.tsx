@@ -32,16 +32,25 @@ export function StaffFormModal({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<StaffFormValues>({
+  const { register, handleSubmit, formState: { errors }, reset, setValue, setError: setFieldError, clearErrors } = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: { role: allowedRoles[0] ?? "teacher" }
   });
 
   const onSubmit = (data: StaffFormValues) => {
     setError(null);
+    clearErrors("email");
     startTransition(async () => {
       try {
-        await createStaffAction(data);
+        const result = await createStaffAction(data);
+        if (!result.success) {
+          if (result.field === "email") {
+            setFieldError("email", { type: "server", message: result.error });
+            return;
+          }
+          setError(result.error || "Failed to create account.");
+          return;
+        }
         reset();
         setOpen(false);
       } catch (err: any) {
