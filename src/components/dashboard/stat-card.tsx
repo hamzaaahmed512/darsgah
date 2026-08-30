@@ -14,7 +14,6 @@ const toneClasses = {
 export function StatCard({
   label,
   value,
-  hint,
   icon: Icon,
   tone = "blue",
   trend,

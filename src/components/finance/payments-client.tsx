@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { recordPaymentAction, voidPaymentAction } from "@/app/(app)/finance/actions";
-import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
 import { format } from "date-fns";

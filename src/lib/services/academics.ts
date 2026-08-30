@@ -4,6 +4,7 @@ import { logActivity } from "@/lib/services/activity";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import { isSubjectExcludedForMajor } from "@/lib/student-majors";
 import { formatDisplayName, formatStudentName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
 

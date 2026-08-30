@@ -169,7 +169,7 @@ export function formatGradeSection(grade: string | null | undefined, section: st
     cleanGrade = cleanGrade.slice(0, -cleanSection.length).replace(/[^a-zA-Z0-9]+$/, "").trim();
   }
 
-  // If cleanGrade contains cleanSection as a distinct word, strip it (e.g. "Grade 9 orange" -> "Grade 9")
+  // If cleanGrade contains cleanSection as a distinct word, strip it
   if (cleanGrade && cleanSection) {
     const wordPattern = new RegExp(`\\b${escapeRegExp(cleanSection)}\\b`, "gi");
     cleanGrade = cleanGrade.replace(wordPattern, "").replace(/\s+/g, " ").trim();
@@ -182,17 +182,23 @@ export function formatGradeSection(grade: string | null | undefined, section: st
   // Deduplicate repeated section (e.g. "orange - orange" or "Orange Orange")
   cleanSection = cleanSection.replace(/^(.+?)\s*[- ]+\1$/i, "$1").trim();
 
+  // Fix A.A / B.B duplication bug specifically
+  cleanSection = cleanSection.replace(/^([A-Za-z])\.\1$/i, "$1").trim();
+
   // Deduplicate repeated grade (e.g. "Grade 9 - Grade 9" or "Grade 9 Grade 9")
   cleanGrade = cleanGrade.replace(/^(\bGrade\s+\d+\b|\bPG\b|\bNursery\b|\bPrep\b)\s*[- ]+\1$/i, "$1").trim();
 
-  // Title case section
-  cleanSection = cleanSection.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  cleanSection = cleanSection.toUpperCase();
+  cleanGrade = cleanGrade.toUpperCase();
 
-  // Capitalize "Grade"
-  cleanGrade = cleanGrade.replace(/\bgrade\b/i, "Grade");
+  if (cleanGrade && !cleanGrade.startsWith("GRADE") && /^\d+$/.test(cleanGrade.replace(/[^0-9]/g, ""))) {
+     cleanGrade = cleanGrade.replace(/^(\d+.*)$/, "GRADE $1");
+  } else if (cleanGrade && !cleanGrade.startsWith("GRADE") && !cleanGrade.startsWith("PG") && !cleanGrade.startsWith("NURSERY") && !cleanGrade.startsWith("PREP")) {
+     // Optional fallback for things that might just say "NINE" or something
+  }
 
   if (!cleanGrade) return cleanSection;
-  if (!cleanSection || cleanGrade.toLowerCase() === cleanSection.toLowerCase()) return cleanGrade;
+  if (!cleanSection || cleanGrade === cleanSection) return cleanGrade;
 
   return `${cleanGrade} - ${cleanSection}`;
 }
@@ -219,7 +225,7 @@ export function formatClassDisplayName(
 
   const gradeSection = formatGradeSection(cleanGrade, cleanSection);
   if (!cleanClassName) return gradeSection;
-  if (!gradeSection) return cleanClassName;
+  if (!gradeSection) return cleanClassName.toUpperCase();
 
   // Check if cleanClassName is redundant with grade and section
   // Strip out grade, section, "grade", "section", numbers, delimiters from cleanClassName
@@ -233,7 +239,7 @@ export function formatClassDisplayName(
   residual = residual.replace(/\bgrade\b/gi, "").replace(/\bsection\b/gi, "");
   residual = residual.replace(/[^a-zA-Z0-9]/g, "").trim();
 
-  // If nothing meaningful is left, className was just redundant repetition (e.g. "Grade 9 orange", "Grade 9 - Orange - orange", "orange", "Grade 9")
+  // If nothing meaningful is left, className was just redundant repetition
   if (!residual) {
     return gradeSection;
   }
@@ -257,5 +263,5 @@ export function formatClassDisplayName(
     return gradeSection;
   }
 
-  return `${gradeSection} - ${distinctClassLabel}`;
+  return `${gradeSection} - ${distinctClassLabel.toUpperCase()}`;
 }

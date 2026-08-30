@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/services/activity";
 import { getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
 import { isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
-import { formatDisplayName, formatFullName, splitFullName } from "@/lib/student-name";
+import { formatDisplayName, splitFullName } from "@/lib/student-name";
 
 export type StudentFilters = {
   q?: string;

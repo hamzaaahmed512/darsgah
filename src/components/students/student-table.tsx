@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { initials, formatGradeSection } from "@/lib/utils";
+import { formatGradeSection } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatStudentName } from "@/lib/student-name";

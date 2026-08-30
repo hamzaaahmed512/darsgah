@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultDetail } from "@/lib/services/marks";
 import { formatDisplayName } from "@/lib/student-name";
-import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName } from "@/lib/utils";
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";

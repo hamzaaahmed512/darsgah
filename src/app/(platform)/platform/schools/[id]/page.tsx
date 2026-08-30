@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, GraduationCap, Users } from "lucide-react";
-import { changeSchoolStatusAction, updateSubscriptionAction } from "@/app/(platform)/platform/actions";
+import { updateSubscriptionAction } from "@/app/(platform)/platform/actions";
 import { PlatformHeader, StatCard, StatusBadge, formatDate } from "@/components/platform/platform-ui";
 import { getPlatformSchool } from "@/lib/services/platform";
 import { SchoolStatusForm } from "@/components/platform/school-status-form";
