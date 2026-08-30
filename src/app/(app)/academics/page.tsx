@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { getAcademicOptions, getTeacherSubjectAssignments } from "@/lib/services/academics";
+import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
 
 export default async function AcademicsPage() {
   const user = await requireUser("academics:view");
@@ -36,11 +37,11 @@ export default async function AcademicsPage() {
                 <div className="h-1.5 bg-primary" />
                 <div className="p-5">
                   <Badge tone="blue">{item.subject_name ?? "General"}</Badge>
-                  <h2 className="mt-4 font-display text-2xl font-semibold text-ink">{item.name}</h2>
+                  <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
+                    {formatGradeSection(item.grade_name, item.section_name)}
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-muted">
-                    {item.grade_name}
-                    {item.section_name ? ` - ${item.section_name}` : ""}
-                    {item.room ? ` - ${item.room}` : ""}
+                    {item.room ? `Room ${item.room}` : "No room assigned"}
                   </p>
                   <p className="mt-4 rounded-lg bg-surface-low p-3 text-xs font-bold uppercase tracking-wide text-muted">
                     {item.academic_year_name ?? "Current academic year"}
@@ -89,9 +90,9 @@ export default async function AcademicsPage() {
                 <tbody>
                   {academics.classes.map((item) => (
                     <tr key={item.id} className="border-t border-outline/60">
-                      <td className="py-3 pr-4 font-semibold">{item.name}</td>
+                      <td className="py-3 pr-4 font-semibold">{formatClassDisplayName(item.grade_name, item.name, item.section_name)}</td>
                       <td className="py-3 pr-4">{item.grade_name}</td>
-                      <td className="py-3 pr-4">{item.section_name ?? "—"}</td>
+                      <td className="py-3 pr-4">{formatGradeSection(null, item.section_name) || "—"}</td>
                       <td className="py-3 pr-4">{item.room ?? "—"}</td>
                       <td className="py-3 pr-4">{item.academic_year_name}</td>
                     </tr>

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Field, Select } from "@/components/ui/form-field";
+import { formatClassDisplayName } from "@/lib/utils";
 
 type ClassSubjectOption = {
   class_id: string;
@@ -43,9 +44,7 @@ export function ClassSubjectSelect({
       >
         {options.map((option) => (
           <option key={`${option.class_id}:${option.subject_id}`} value={`${option.class_id}:${option.subject_id}`}>
-            {option.grade_name ? `${option.grade_name} / ` : ""}
-            {option.class_name}
-            {option.section_name ? ` / ${option.section_name}` : ""} - {option.subject_name}
+            {formatClassDisplayName(option.grade_name, option.class_name, option.section_name)} - {option.subject_name}
           </option>
         ))}
       </Select>

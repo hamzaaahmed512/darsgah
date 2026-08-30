@@ -59,7 +59,7 @@ export async function getTeacherSubjectAssignments(user: AppUser) {
   const { data } = await query.order("created_at", { ascending: false });
   return (data ?? []).map((row: any) => ({
     id: row.classes?.id,
-    name: row.classes?.name,
+    name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name),
     room: row.classes?.room,
     grade_name: row.classes?.grades?.name,
     section_name: row.classes?.sections?.name,
@@ -84,7 +84,7 @@ export async function getTeacherHeadClasses(user: AppUser) {
 
   return (data ?? []).map((row: any) => ({
     id: row.id,
-    name: row.name,
+    name: formatClassDisplayName(row.grades?.name, row.name, row.sections?.name),
     room: row.room,
     grade_name: row.grades?.name,
     section_name: row.sections?.name,

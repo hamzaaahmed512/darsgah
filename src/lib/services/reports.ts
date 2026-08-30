@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export async function getReports(user: AppUser) {
   const supabase = await createClient();
@@ -23,7 +24,10 @@ export async function getReports(user: AppUser) {
   return {
     attendance: attendance.data ?? [],
     archived: archived.data ?? [],
-    enrollment: enrollment.data ?? [],
+    enrollment: (enrollment.data ?? []).map((row: any) => ({
+      ...row,
+      class_name: formatClassDisplayName(row.grade_name, row.class_name, row.section_name)
+    })),
     activity: activity.data ?? []
   };
 }

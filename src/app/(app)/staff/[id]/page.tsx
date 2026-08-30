@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { getStaffProfile } from "@/lib/services/staff";
-import { formatDatePK, formatPKR } from "@/lib/utils";
+import { formatDatePK, formatGradeSection, formatPKR } from "@/lib/utils";
 
 const roleLabel = (role: string, custom?: string | null) => custom || ({ administrator: "Administrator", principal: "Principal", teacher: "Teacher", head_teacher: "Head Teacher", student_staff: "Registrar / Student Staff" } as Record<string, string>)[role] || role.replace(/_/g, " ");
 
@@ -35,8 +35,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         {data.employment ? <div className="grid gap-2 rounded-xl border border-outline/50 p-3"><p><span className="font-semibold">Employment:</span> {data.employment.employment_status}</p><p><span className="font-semibold">Joined:</span> {data.employment.joining_date ? formatDatePK(data.employment.joining_date) : "Not set"}</p>{(user.role === "administrator" || user.role === "principal") ? <p><span className="font-semibold">Monthly salary:</span> {data.employment.monthly_salary ? formatPKR(Number(data.employment.monthly_salary)) : "Not set"}</p> : null}</div> : null}
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Classes and subjects</CardTitle></CardHeader><CardContent className="grid gap-2">
-        {data.headClasses.map((row: any) => <Link key={`head-${row.id}`} href={`/classes/${row.id}`} className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3"><span className="font-semibold text-ink">{row.grades?.name} · Section {row.sections?.name}</span><Badge tone="blue">Head Teacher</Badge></Link>)}
-        {data.assignments.map((row: any) => <Link key={row.id} href={`/classes/${row.classes?.id}`} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3"><span className="font-semibold text-ink">{row.classes?.grades?.name} · Section {row.classes?.sections?.name}</span><Badge tone="gray">{row.subjects?.name || "Class teacher"}</Badge></Link>)}
+        {data.headClasses.map((row: any) => <Link key={`head-${row.id}`} href={`/classes/${row.id}`} className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3"><span className="font-semibold text-ink">{formatGradeSection(row.grades?.name, row.sections?.name)}</span><Badge tone="blue">Head Teacher</Badge></Link>)}
+        {data.assignments.map((row: any) => <Link key={row.id} href={`/classes/${row.classes?.id}`} className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3"><span className="font-semibold text-ink">{formatGradeSection(row.classes?.grades?.name, row.classes?.sections?.name)}</span><Badge tone="gray">{row.subjects?.name || "Class teacher"}</Badge></Link>)}
         {!data.headClasses.length && !data.assignments.length ? <p className="py-6 text-center text-sm text-muted">No classes assigned.</p> : null}
       </CardContent></Card>
     </section>

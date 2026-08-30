@@ -5,6 +5,7 @@ import { getTeacherHeadClasses, principalCanAccessAcademicControl } from "@/lib/
 import { sortClassesNaturally } from "@/lib/class-sort";
 import { hasPermission } from "@/lib/permissions";
 import { formatDisplayName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 
 type ClassDistributionRow = { class_name: string; grade_name: string | null; student_count: number };
 
@@ -325,7 +326,10 @@ export async function getDashboardData(user: AppUser) {
     recentAdmissions: recentAdmissions.data ?? [],
     activity: activity.data ?? [],
     attendanceTrend: toTrend(attendanceRecords.data ?? []),
-    classDistribution: sortClassesNaturally((classDistribution.data ?? []) as ClassDistributionRow[])
+    classDistribution: sortClassesNaturally(((classDistribution.data ?? []) as ClassDistributionRow[]).map((row) => ({
+      ...row,
+      class_name: formatClassDisplayName(row.grade_name, row.class_name, null)
+    })))
   };
 }
 

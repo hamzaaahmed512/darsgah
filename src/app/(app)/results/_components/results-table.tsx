@@ -26,7 +26,7 @@ type ResultRow = {
   subjects?: { name?: string };
 };
 
-import { formatDateTimePK } from "@/lib/utils";
+import { formatClassDisplayName, formatDateTimePK, formatGradeSection } from "@/lib/utils";
 
 function formatDateTime(value: string | null) {
   return formatDateTimePK(value);
@@ -72,11 +72,8 @@ export function ResultsTable({
                 <p className="text-xs text-muted">{row.title}</p>
               </td>
               <td className="py-3 pr-3">{row.subjects?.name ?? "—"}</td>
-              <td className="py-3 pr-3">
-                {row.classes?.grades?.name ? `${row.classes.grades.name} / ` : ""}
-                {row.classes?.name ?? "—"}
-              </td>
-              <td className="py-3 pr-3">{row.classes?.sections?.name ?? "—"}</td>
+              <td className="py-3 pr-3">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</td>
+              <td className="py-3 pr-3">{formatGradeSection(null, row.classes?.sections?.name) || "—"}</td>
               <td className="py-3 pr-3">
                 <p className="font-semibold">{row.uploadedByTeacherName}</p>
                 {row.uploadedByTeacherId ? <p className="text-xs text-muted">{row.uploadedByTeacherId.slice(0, 8)}…</p> : null}

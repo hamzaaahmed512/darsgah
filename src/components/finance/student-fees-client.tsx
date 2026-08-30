@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { applyDiscountAction } from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 
 interface StudentFeesClientProps {
   user: AppUser;
@@ -108,7 +108,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
             <option value="all">All Classes</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.grade_name} • {c.name}
+                {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
               </option>
             ))}
           </Select>

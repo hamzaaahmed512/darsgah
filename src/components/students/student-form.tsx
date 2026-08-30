@@ -11,6 +11,7 @@ import { sanitizeStudentFormValues, studentSchema, type StudentFormValues } from
 import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 import { defaultCombinationOptionsForGrade, type StudentCombinationOption } from "@/lib/student-majors";
 import { normalizeEmail } from "@/lib/email";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export function StudentForm({
   initialValues,
@@ -169,8 +170,7 @@ export function StudentForm({
               <option value="">No class yet</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.grade_name} • {item.name}
-                  {item.section_name ? ` • ${item.section_name}` : ""}
+                  {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
                 </option>
               ))}
             </Select>

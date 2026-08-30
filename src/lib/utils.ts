@@ -128,26 +128,134 @@ export function sortGrades(a: string, b: string): number {
   return indexA - indexB;
 }
 
-/**
- * Format Grade and Section as "Grade number.Section" or "Name.Section".
- * Examples: "Grade 10" + "A" -> "Grade 10.A"
- * "Grade 10A" + "A" -> "Grade 10.A"
- */
-export function formatGradeSection(grade: string | null | undefined, section: string | null | undefined): string {
-  if (!grade) return section?.trim() || "";
-  if (!section) return grade.trim();
-
-  let cleanGrade = grade.trim();
-  const cleanSection = section.trim();
-
-  // If grade ends with the section name (ignoring case), remove it
-  if (cleanGrade.toLowerCase().endsWith(cleanSection.toLowerCase())) {
-    cleanGrade = cleanGrade.slice(0, -cleanSection.length).trim();
-  }
-
-  // Remove trailing non-alphanumeric characters (like '-' or space)
-  cleanGrade = cleanGrade.replace(/[^a-zA-Z0-9]+$/, "");
-
-  return `${cleanGrade}.${cleanSection}`;
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Format Grade and Section as "Grade number - Section".
+ * Examples: "Grade 10" + "A" -> "Grade 10 - A"
+ * "Grade 10A" + "A" -> "Grade 10 - A"
+ * "Grade 9" + "Grade 9 orange - orange" -> "Grade 9 - Orange"
+ */
+export function formatGradeSection(grade: string | null | undefined, section: string | null | undefined): string {
+  let cleanGrade = grade?.trim() ?? "";
+  let cleanSection = section?.trim() ?? "";
+
+  // Normalize numeric grade e.g. "9" -> "Grade 9"
+  if (/^\d+$/.test(cleanGrade)) {
+    cleanGrade = `Grade ${cleanGrade}`;
+  }
+
+  // Remove "section" or "sec" prefix
+  cleanSection = cleanSection.replace(/^section\s+/i, "").replace(/^sec\s+/i, "");
+
+  // If grade is missing but section contains "Grade X - Y" or "Grade X Y"
+  if (!cleanGrade && cleanSection) {
+    const match = cleanSection.match(/^(Grade\s+\d+|PG|Nursery|Prep)\s*[- ]\s*(.+)$/i);
+    if (match) {
+      cleanGrade = match[1];
+      cleanSection = match[2];
+    }
+  }
+
+  // If cleanSection starts with cleanGrade, remove it
+  if (cleanGrade && cleanSection.toLowerCase().startsWith(cleanGrade.toLowerCase())) {
+    cleanSection = cleanSection.slice(cleanGrade.length).replace(/^[^a-zA-Z0-9]+/, "").trim();
+  }
+
+  // If cleanGrade ends with cleanSection, remove it
+  if (cleanGrade && cleanSection && cleanGrade.toLowerCase().endsWith(cleanSection.toLowerCase())) {
+    cleanGrade = cleanGrade.slice(0, -cleanSection.length).replace(/[^a-zA-Z0-9]+$/, "").trim();
+  }
+
+  // If cleanGrade contains cleanSection as a distinct word, strip it (e.g. "Grade 9 orange" -> "Grade 9")
+  if (cleanGrade && cleanSection) {
+    const wordPattern = new RegExp(`\\b${escapeRegExp(cleanSection)}\\b`, "gi");
+    cleanGrade = cleanGrade.replace(wordPattern, "").replace(/\s+/g, " ").trim();
+  }
+
+  // Clean trailing/leading non-alphanumeric characters
+  cleanGrade = cleanGrade.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "").trim();
+  cleanSection = cleanSection.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "").trim();
+
+  // Deduplicate repeated section (e.g. "orange - orange" or "Orange Orange")
+  cleanSection = cleanSection.replace(/^(.+?)\s*[- ]+\1$/i, "$1").trim();
+
+  // Deduplicate repeated grade (e.g. "Grade 9 - Grade 9" or "Grade 9 Grade 9")
+  cleanGrade = cleanGrade.replace(/^(\bGrade\s+\d+\b|\bPG\b|\bNursery\b|\bPrep\b)\s*[- ]+\1$/i, "$1").trim();
+
+  // Title case section
+  cleanSection = cleanSection.replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+  // Capitalize "Grade"
+  cleanGrade = cleanGrade.replace(/\bgrade\b/i, "Grade");
+
+  if (!cleanGrade) return cleanSection;
+  if (!cleanSection || cleanGrade.toLowerCase() === cleanSection.toLowerCase()) return cleanGrade;
+
+  return `${cleanGrade} - ${cleanSection}`;
+}
+
+export function formatClassDisplayName(
+  grade: string | null | undefined,
+  className: string | null | undefined,
+  section: string | null | undefined
+): string {
+  const cleanClassName = className?.trim() ?? "";
+  let cleanGrade = grade?.trim() ?? "";
+  let cleanSection = section?.trim() ?? "";
+
+  // If grade is missing, try to extract from className
+  if (!cleanGrade && cleanClassName) {
+    const match = cleanClassName.match(/^(Grade\s+\d+|PG|Nursery|Prep)\b/i);
+    if (match) cleanGrade = match[1];
+  }
+
+  // If section is missing, try to extract from className
+  if (!cleanSection && cleanClassName && cleanGrade && cleanClassName.toLowerCase().startsWith(cleanGrade.toLowerCase())) {
+    cleanSection = cleanClassName.slice(cleanGrade.length).replace(/^[^a-zA-Z0-9]+/, "").trim();
+  }
+
+  const gradeSection = formatGradeSection(cleanGrade, cleanSection);
+  if (!cleanClassName) return gradeSection;
+  if (!gradeSection) return cleanClassName;
+
+  // Check if cleanClassName is redundant with grade and section
+  // Strip out grade, section, "grade", "section", numbers, delimiters from cleanClassName
+  let residual = cleanClassName;
+  if (cleanGrade) {
+    residual = residual.replace(new RegExp(escapeRegExp(cleanGrade), "gi"), "");
+  }
+  if (cleanSection) {
+    residual = residual.replace(new RegExp(escapeRegExp(cleanSection), "gi"), "");
+  }
+  residual = residual.replace(/\bgrade\b/gi, "").replace(/\bsection\b/gi, "");
+  residual = residual.replace(/[^a-zA-Z0-9]/g, "").trim();
+
+  // If nothing meaningful is left, className was just redundant repetition (e.g. "Grade 9 orange", "Grade 9 - Orange - orange", "orange", "Grade 9")
+  if (!residual) {
+    return gradeSection;
+  }
+
+  if (cleanClassName.toLowerCase() === gradeSection.toLowerCase()) {
+    return gradeSection;
+  }
+
+  // Clean distinct class label
+  let distinctClassLabel = cleanClassName;
+  if (cleanGrade) {
+    distinctClassLabel = distinctClassLabel.replace(new RegExp(`\\b${escapeRegExp(cleanGrade)}\\b`, "gi"), "");
+  }
+  if (cleanSection) {
+    distinctClassLabel = distinctClassLabel.replace(new RegExp(`\\b${escapeRegExp(cleanSection)}\\b`, "gi"), "");
+  }
+  distinctClassLabel = distinctClassLabel.replace(/\bgrade\b/gi, "").replace(/\bsection\b/gi, "");
+  distinctClassLabel = distinctClassLabel.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "").trim();
+
+  if (!distinctClassLabel || distinctClassLabel.toLowerCase() === cleanSection.toLowerCase() || distinctClassLabel.toLowerCase() === cleanGrade.toLowerCase()) {
+    return gradeSection;
+  }
+
+  return `${gradeSection} - ${distinctClassLabel}`;
+}

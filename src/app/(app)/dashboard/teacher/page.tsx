@@ -93,9 +93,11 @@ export default async function TeacherDashboardPage() {
                     {item.attendance_marked_today ? "Marked today" : "Head teacher"}
                   </Badge>
                 </div>
-                <h2 className="mt-4 font-display text-2xl font-semibold text-ink">{item.name}</h2>
+                <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
+                  {formatGradeSection(item.grade_name, item.section_name)}
+                </h2>
                 <p className="mt-1 text-sm text-muted">
-                  {formatGradeSection(item.grade_name, item.section_name)} {item.room ? `- Room ${item.room}` : ""}
+                  {item.room ? `Room ${item.room}` : "No room assigned"}
                 </p>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   <ButtonLink href={`/students?classId=${item.id}`} variant="secondary" className="w-full">

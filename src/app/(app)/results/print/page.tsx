@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrintableResultCards } from "@/lib/services/marks";
 import type { ExamType } from "@/types/database";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export default async function PrintableResultsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -44,7 +45,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
               <p className="font-label text-sm font-bold uppercase tracking-[0.24em]" style={{ color: template.accentColor }}>{user.schoolName}</p>
               <h2 className="mt-2 font-display text-3xl font-bold">{template.title}</h2>
               <p className="mt-1 text-sm text-muted">
-                {classRow?.grades?.name} / {classRow?.name} / {classRow?.sections?.name ?? "Section"} / {examLabel}
+                {formatClassDisplayName(classRow?.grades?.name, classRow?.name, classRow?.sections?.name)} / {examLabel}
               </p>
             </header>
 

@@ -13,6 +13,7 @@ import type {
 } from "@/types/database";
 import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type MarkEntryValues } from "@/lib/validation/marks";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -186,7 +187,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     if (!item.classes?.id || !item.subjects?.id) continue;
     optionMap.set(`${item.classes.id}:${item.subjects.id}`, {
       class_id: item.classes.id,
-      class_name: item.classes.name,
+      class_name: formatClassDisplayName(item.classes.grades?.name, item.classes.name, item.classes.sections?.name),
       grade_name: item.classes.grades?.name,
       section_name: item.classes.sections?.name,
       subject_id: item.subjects.id,
@@ -200,7 +201,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     optionMap.set(`${item.classes.id}:${item.subjects.id}`, {
       ...(optionMap.get(`${item.classes.id}:${item.subjects.id}`) ?? {}),
       class_id: item.classes.id,
-      class_name: item.classes.name,
+      class_name: formatClassDisplayName(item.classes.grades?.name, item.classes.name, item.classes.sections?.name),
       grade_name: item.classes.grades?.name,
       section_name: item.classes.sections?.name,
       subject_id: item.subjects.id,

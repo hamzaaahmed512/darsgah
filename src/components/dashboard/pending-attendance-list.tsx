@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import type { PendingAttendanceClass } from "@/types/database";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export function PendingAttendanceList({ classes, todayLabel }: { classes: PendingAttendanceClass[]; todayLabel: string }) {
   const router = useRouter();
@@ -75,11 +76,9 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="font-display text-lg font-semibold text-ink">{item.name}</h4>
+                <h4 className="font-display text-lg font-semibold text-ink">{formatClassDisplayName(item.grade_name, item.name, item.section_name)}</h4>
                 {item.grade_name ? (
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    {item.grade_name}
-                    {item.section_name ? ` · ${item.section_name}` : ""}
                     {item.room ? ` · ${item.room}` : ""}
                   </span>
                 ) : null}

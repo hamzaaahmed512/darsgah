@@ -7,6 +7,7 @@ import { createSectionClassAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
+import { formatGradeSection } from "@/lib/utils";
 
 export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; gradeName: string }) {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; grade
     startTransition(async () => {
       try {
         await createSectionClassAction(formData);
-        pushToast(`Created ${gradeName} Section ${formData.get("section_name")}.`, "success");
+        pushToast(`Created ${formatGradeSection(gradeName, formData.get("section_name") as string)}.`, "success");
         setOpen(false);
         router.refresh();
       } catch (err: any) {

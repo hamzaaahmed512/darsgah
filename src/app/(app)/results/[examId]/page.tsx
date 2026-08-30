@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultDetail } from "@/lib/services/marks";
 import { formatDisplayName } from "@/lib/student-name";
+import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -57,10 +58,9 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
           </CardHeader>
           <CardContent>
             <p className="font-semibold text-ink">
-              {exam.classes?.grades?.name ? `${exam.classes.grades.name} / ` : ""}
-              {exam.classes?.name}
+              {formatClassDisplayName(exam.classes?.grades?.name, exam.classes?.name, exam.classes?.sections?.name) || "Class"}
             </p>
-            <p className="text-sm text-muted">{exam.classes?.sections?.name ?? "—"}</p>
+            {exam.classes?.room ? <p className="text-sm text-muted">Room: {exam.classes.room}</p> : null}
           </CardContent>
         </Card>
         <Card>

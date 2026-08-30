@@ -37,7 +37,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
       title={formatGradeSection(cls.grade_name, cls.section_name)}
       description="Manage this section's people, subjects, room, and assignments on one page."
       actions={<>
-        <TeacherAssignmentModal classId={cls.id} className={cls.name} teachers={teachers} subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))} />
+        <TeacherAssignmentModal classId={cls.id} className={formatGradeSection(cls.grade_name, cls.section_name)} teachers={teachers} subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))} />
         <ClassFormModal grades={academicData.grades} sections={academicData.sections} academicYears={academicData.years} teachers={teachers} subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))} assignedTeachers={assignedTeachers} initialClass={{ id: cls.id, name: cls.name, grade_id: cls.grade_id, section_id: cls.section_id, academic_year_id: cls.academic_year_id, room: cls.room, head_teacher_id: cls.head_teacher_id }} />
       </>}
     />
@@ -86,7 +86,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
         <CardContent className="grid gap-3 text-sm">
           <div className="flex items-center gap-2 rounded-xl bg-surface-low p-3"><MapPin className="h-4 w-4 text-primary" /> Room: {cls.room || "Not set"}</div>
           <div className="flex items-center gap-2 rounded-xl bg-surface-low p-3"><BookOpenCheck className="h-4 w-4 text-primary" /> {classSubjects.length} subjects</div>
-          <div className="pt-2"><DeleteClassButton classId={cls.id} className={cls.name} /></div>
+          <div className="pt-2"><DeleteClassButton classId={cls.id} className={formatGradeSection(cls.grade_name, cls.section_name)} /></div>
         </CardContent>
       </Card>
     </section>

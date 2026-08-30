@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { recordPaymentAction, voidPaymentAction } from "@/app/(app)/finance/actions";
-import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
 import { format } from "date-fns";
@@ -151,7 +151,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                   <option value="all">All Classes</option>
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.grade_name} • {c.name}
+                      {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
                     </option>
                   ))}
                 </Select>

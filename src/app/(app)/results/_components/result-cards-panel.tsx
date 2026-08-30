@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Select } from "@/components/ui/form-field";
 import { formatExamType, requiredResultExamTypes } from "@/lib/services/marks";
+import { formatClassDisplayName } from "@/lib/utils";
 
 type ResultCardsWorkspace = {
   classes: any[];
@@ -111,7 +112,7 @@ export function ResultCardsFilters({ workspace }: { workspace: ResultCardsWorksp
         <Select name="classId" defaultValue={workspace.selectedClassId ?? ""}>
           {workspace.classes.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.grades?.name} / {item.name}
+              {formatClassDisplayName(item.grades?.name, item.name, item.sections?.name)}
             </option>
           ))}
         </Select>

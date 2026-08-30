@@ -5,6 +5,7 @@ import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSch
 import { startOfMonth, subMonths, format } from "date-fns";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export async function logFinanceAction(
   user: AppUser,
@@ -32,7 +33,7 @@ export async function getFeeStructures(user: AppUser) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("fee_structures")
-    .select("*, academic_years(name), classes(name, grades(name))")
+    .select("*, academic_years(name), classes(name, grades(name), sections(name))")
     .eq("school_id", user.schoolId)
     .order("created_at", { ascending: false });
 
@@ -42,7 +43,8 @@ export async function getFeeStructures(user: AppUser) {
     classes: row.classes
       ? {
           ...row.classes,
-          grade_name: row.classes.grades?.name ?? "Unassigned"
+          grade_name: row.classes.grades?.name ?? "Unassigned",
+          section_name: row.classes.sections?.name ?? null
         }
       : null
   }));
@@ -226,7 +228,7 @@ export async function getFeeChallans(user: AppUser, month: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("fee_challans")
-    .select("*, students(first_name, last_name, admission_number), classes(name), student_fee_accounts(total_payable, amount_paid)")
+    .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), student_fee_accounts(total_payable, amount_paid)")
     .eq("school_id", user.schoolId)
     .eq("fee_month", `${month}-01`)
     .order("created_at", { ascending: false });
@@ -235,7 +237,7 @@ export async function getFeeChallans(user: AppUser, month: string) {
     ...row,
     student_name: formatFullName(row.students?.first_name, row.students?.last_name),
     admission_number: row.students?.admission_number ?? "—",
-    class_name: row.classes?.name ?? "—",
+    class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
     payment_status: Number(row.student_fee_accounts?.amount_paid ?? 0) >= Number(row.student_fee_accounts?.total_payable ?? 1) ? "paid" : "unpaid"
   }));
 }
@@ -623,6 +625,10 @@ export async function getFinanceDashboard(user: AppUser) {
 
   if (!optimized.error && optimized.data && typeof optimized.data === "object") {
     const data = optimized.data as any;
+    const outstandingByClass = (data.outstandingByClass ?? []).map((row: any) => ({
+      ...row,
+      className: formatClassDisplayName(row.grade_name ?? row.gradeName, row.className ?? row.class_name, row.section_name ?? row.sectionName)
+    }));
     return {
       totalExpected: Number(data.totalExpected ?? 0),
       totalCollected: Number(data.totalCollected ?? 0),
@@ -633,7 +639,7 @@ export async function getFinanceDashboard(user: AppUser) {
       pendingPayments: Number(data.pendingPayments ?? 0),
       overduePayments: Number(data.overduePayments ?? 0),
       recentPayments: data.recentPayments ?? [],
-      outstandingByClass: data.outstandingByClass ?? [],
+      outstandingByClass,
       collectionMethodData: data.collectionMethodData ?? [],
       ...ledger
     };
@@ -644,7 +650,7 @@ export async function getFinanceDashboard(user: AppUser) {
   const [accountsRes, todayPaymentsRes, monthPaymentsRes] = await Promise.all([
     supabase
       .from("student_fee_directory")
-      .select("total_payable, amount_paid, remaining_balance, payment_status, discount_type, discount_value, fee_structure_id, class_name, grade_name")
+      .select("total_payable, amount_paid, remaining_balance, payment_status, discount_type, discount_value, fee_structure_id, class_name, grade_name, section_name")
       .eq("school_id", user.schoolId),
     supabase
       .from("fee_payments")
@@ -713,7 +719,7 @@ export async function getFinanceDashboard(user: AppUser) {
   // Outstanding by Class
   const outstandingByClassMap = new Map<string, number>();
   accounts.forEach((acc) => {
-    const key = acc.class_name || "Unassigned";
+    const key = formatClassDisplayName(acc.grade_name, acc.class_name, acc.section_name) || "Unassigned";
     outstandingByClassMap.set(key, (outstandingByClassMap.get(key) || 0) + Number(acc.remaining_balance || 0));
   });
 

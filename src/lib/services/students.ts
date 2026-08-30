@@ -97,7 +97,7 @@ export async function getStudentRecord(
 
   let attendanceQuery = supabase
     .from("attendance_records")
-    .select("id,attendance_date,status,note,classes(name)")
+    .select("id,attendance_date,status,note,classes(name,grades(name),sections(name))")
     .eq("school_id", user.schoolId)
     .eq("student_id", id)
     .order("attendance_date", { ascending: false });

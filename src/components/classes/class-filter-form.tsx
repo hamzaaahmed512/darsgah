@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useRef, useTransition } from "react";
 import { Search } from "lucide-react";
-import { formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName } from "@/lib/utils";
 import { Select } from "@/components/ui/form-field";
 
 type Props = {
@@ -78,7 +78,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
         <option value="all">All Classes</option>
         {classes.map((cls) => (
           <option key={cls.id} value={cls.id}>
-            {cls.name} / {formatGradeSection(cls.grade_name, cls.section_name)}
+            {formatClassDisplayName(cls.grade_name, cls.name, cls.section_name)}
           </option>
         ))}
       </Select>

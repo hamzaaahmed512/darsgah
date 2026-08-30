@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrincipalExamApprovals, getWorkflowStatusFromExam } from "@/lib/services/marks";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { formatDisplayName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 import type { ResultApprovalStatus } from "@/types/database";
 import { redirect } from "next/navigation";
 
@@ -65,7 +66,7 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
                   <div>
                     <CardTitle>{exam?.title}</CardTitle>
                     <p className="mt-1 text-sm text-muted">
-                      {exam?.classes?.grades?.name} / {exam?.classes?.name} / {exam?.subjects?.name}
+                      {formatClassDisplayName(exam?.classes?.grades?.name, exam?.classes?.name, exam?.classes?.sections?.name)} / {exam?.subjects?.name}
                     </p>
                     <p className="mt-1 text-xs text-muted">
                       {formatExamType(exam?.exam_type)} / {exam?.term} / {exam?.exam_date}

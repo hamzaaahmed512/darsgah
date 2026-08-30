@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { Input, Select } from "@/components/ui/form-field";
+import { formatClassDisplayName } from "@/lib/utils";
 
 type ClassOption = {
   id: string;
@@ -80,7 +81,7 @@ export function StudentFilterForm({ classes, limitedView = false }: { classes: C
         <option value="all">All classes</option>
         {classes.map((item) => (
           <option key={item.id} value={item.id}>
-            {item.grade_name} - {item.name}
+            {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
           </option>
         ))}
       </Select>

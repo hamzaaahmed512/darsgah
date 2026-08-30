@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-field";
 import { RolesTab } from "@/components/settings/roles-tab";
 import { resolveNotificationPreferences } from "@/lib/notification-preferences";
+import { formatClassDisplayName } from "@/lib/utils";
 
 interface Props {
   user: any;
@@ -288,8 +289,7 @@ export function SettingsTabs({
                 <Select value={principalClassId} onChange={(e) => setPrincipalClassId(e.target.value)} disabled={!principalTeachingSettings.classes.length}>
                   {principalTeachingSettings.classes.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.grade_name} - {item.name}
-                      {item.section_name ? ` - ${item.section_name}` : ""}
+                      {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
                       {item.has_other_head_teacher ? " - replacing current head teacher" : ""}
                     </option>
                   ))}

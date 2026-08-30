@@ -11,6 +11,7 @@ import { formatExamType, getExamResultsForReviewByApprovalId } from "@/lib/servi
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { reviewExamApprovalAction } from "@/app/(app)/exam-approvals/actions";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
+import { formatClassDisplayName } from "@/lib/utils";
 
 export default async function ExamApprovalReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -114,7 +115,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
             <CardContent className="pt-4 space-y-4 text-sm">
               <div>
                 <p className="font-semibold text-ink">Class & Subject</p>
-                <p className="text-muted mt-1">{exam.classes?.grades?.name} {exam.classes?.name && `/ ${exam.classes.name}`} / {exam.subjects?.name}</p>
+                <p className="text-muted mt-1">{formatClassDisplayName(exam.classes?.grades?.name, exam.classes?.name, exam.classes?.sections?.name)} / {exam.subjects?.name}</p>
               </div>
               <div>
                 <p className="font-semibold text-ink">Type & Term</p>

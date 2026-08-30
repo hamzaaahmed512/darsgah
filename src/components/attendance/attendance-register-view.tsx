@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/form-field";
 import type { AttendanceStatus } from "@/types/database";
+import { formatClassDisplayName } from "@/lib/utils";
 
 const statusTone: Record<AttendanceStatus, "green" | "red" | "yellow" | "blue"> = {
   present: "green",
@@ -48,8 +49,7 @@ export function AttendanceRegisterView({
           <Select value={selectedClassId ?? ""} onChange={(event) => updateFilters(event.target.value, attendanceDate)} aria-label="Select class">
             {classes.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.grade_name} - {item.name}
-                {item.section_name ? ` - ${item.section_name}` : ""}
+                {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
               </option>
             ))}
           </Select>

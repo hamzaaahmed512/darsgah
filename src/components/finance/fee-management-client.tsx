@@ -13,7 +13,7 @@ import {
 } from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 
 interface FeeManagementClientProps {
   user: AppUser;
@@ -192,7 +192,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <option value="all">All Classes</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.grade_name} • {c.name}
+                  {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
                 </option>
               ))}
             </Select>

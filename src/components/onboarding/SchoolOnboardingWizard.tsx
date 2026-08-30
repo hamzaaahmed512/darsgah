@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
+import { formatClassDisplayName } from "@/lib/utils";
 import {
   completeOnboardingAction,
   onboardingGradeSetupAction,
@@ -263,8 +264,7 @@ export function SchoolOnboardingWizard({
                     >
                       {createdClasses.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.grade_name} - {item.name}
-                          {item.section_name ? ` - ${item.section_name}` : ""}
+                          {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
                         </option>
                       ))}
                     </select>

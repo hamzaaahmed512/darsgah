@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/form-field";
 import type { AttendanceStatus } from "@/types/database";
 import type { AttendanceSubmission } from "@/lib/validation/attendance";
+import { formatClassDisplayName } from "@/lib/utils";
 
 const statuses: AttendanceStatus[] = ["present", "absent", "late", "excused"];
 
@@ -84,8 +85,7 @@ export function AttendanceForm({
           <Select value={selectedClassId ?? ""} onChange={(event) => updateFilters(event.target.value, attendanceDate)} aria-label="Select class">
             {classes.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.grade_name} • {item.name}
-                {item.section_name ? ` • ${item.section_name}` : ""}
+                {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
               </option>
             ))}
           </Select>
@@ -102,7 +102,7 @@ export function AttendanceForm({
       <Card>
         <CardHeader>
           <div>
-            <CardTitle>{selectedClass ? selectedClass.name : "Class roster"}</CardTitle>
+            <CardTitle>{selectedClass ? formatClassDisplayName(selectedClass.grade_name, selectedClass.name, selectedClass.section_name) : "Class roster"}</CardTitle>
             <p className="mt-1 text-sm text-muted">{submitted ? "Attendance already marked for today." : "Default status is present. Update exceptions before saving."}</p>
           </div>
         </CardHeader>

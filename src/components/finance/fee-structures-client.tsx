@@ -14,7 +14,7 @@ import {
 } from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatPKR } from "@/lib/utils";
+import { formatClassDisplayName, formatPKR } from "@/lib/utils";
 
 type Props = {
   user: AppUser;
@@ -162,7 +162,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures }: Pro
                 {structures.map((struct) => (
                   <tr key={struct.id} className="border-t border-outline/60">
                     <td className="px-4 py-3 font-semibold text-primary">{struct.academic_years?.name}</td>
-                    <td className="px-4 py-3 font-semibold text-ink">{struct.classes?.grade_name} / {struct.classes?.name}</td>
+                    <td className="px-4 py-3 font-semibold text-ink">{formatClassDisplayName(struct.classes?.grade_name, struct.classes?.name, struct.classes?.section_name)}</td>
                     <td className="px-4 py-3">{formatPKR(Number(struct.tuition_fee || 0))}</td>
                     <td className="px-4 py-3">{formatPKR(Number(struct.admission_fee || 0))}</td>
                     <td className="px-4 py-3">{formatPKR(Number(struct.examination_fee || 0))}</td>
@@ -218,7 +218,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures }: Pro
                   </Field>
                   <Field label="Class">
                     <Select value={classId} onChange={(event) => setClassId(event.target.value)} disabled={!!editing || scope === "all"}>
-                      {classes.map((cls) => <option key={cls.id} value={cls.id}>{cls.grade_name} / {cls.name}</option>)}
+                      {classes.map((cls) => <option key={cls.id} value={cls.id}>{formatClassDisplayName(cls.grade_name, cls.name, cls.section_name)}</option>)}
                     </Select>
                   </Field>
                 </div>
