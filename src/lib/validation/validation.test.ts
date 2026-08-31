@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { ADMISSION_NUMBER_REGEX, formatAdmissionNumber, parseAdmissionNumber, sanitizeAdmissionNumberInput } from "@/lib/admission-number";
 import { attendanceSubmissionSchema } from "@/lib/validation/attendance";
+import { sanitizeEnglishNameInput, sanitizeUrduNameInput } from "@/lib/validation/names";
 import { profileFormSchema } from "@/lib/validation/profile";
-import { staffFormSchema } from "@/lib/validation/staff";
+import { otherStaffRecordSchema, staffFormSchema } from "@/lib/validation/staff";
 import { studentSchema } from "@/lib/validation/students";
 
 const student = {
@@ -77,6 +79,84 @@ describe("validation schemas", () => {
     if (!staffResult.success || !profileResult.success) return;
     expect(staffResult.data.email).toBe("jane.doe@school.edu");
     expect(profileResult.data.personalEmail).toBe("jane.personal@gmail.com");
+  });
+
+  it("rejects digits and symbols in english and urdu name fields", () => {
+    const studentResult = studentSchema.safeParse({
+      ...student,
+      admission_number: "2026-ABC",
+      name_en: "Alex123",
+      father_name_ur: "ابو@123"
+    });
+    const staffResult = staffFormSchema.safeParse({
+      full_name: "Jane#Doe",
+      email: "jane.doe@school.edu",
+      password: "secret123",
+      role: "teacher"
+    });
+    const profileResult = profileFormSchema.safeParse({
+      fullName: "Jane42",
+      phone: "",
+      personalEmail: "",
+      department: "",
+      jobTitle: "",
+      address: "",
+      emergencyContactName: "John@Home",
+      emergencyContactPhone: ""
+    });
+
+    expect(studentResult.success).toBe(false);
+    expect(staffResult.success).toBe(false);
+    expect(profileResult.success).toBe(false);
+  });
+
+  it("accepts yyyy-sequence admission numbers and rejects malformed values", () => {
+    expect(ADMISSION_NUMBER_REGEX.test("2026-12")).toBe(true);
+    expect(ADMISSION_NUMBER_REGEX.test("2026-0001")).toBe(true);
+    expect(ADMISSION_NUMBER_REGEX.test("26-12")).toBe(false);
+    expect(ADMISSION_NUMBER_REGEX.test("2026-AB12")).toBe(false);
+    expect(ADMISSION_NUMBER_REGEX.test("2026-0")).toBe(false);
+  });
+
+  it("normalizes manual admission number input to the current year and numeric sequence", () => {
+    expect(sanitizeAdmissionNumberInput("2026-12a@", 2026)).toBe("2026-12");
+    expect(sanitizeAdmissionNumberInput("12abc", 2026)).toBe("2026-12");
+    expect(sanitizeAdmissionNumberInput("", 2026)).toBe("");
+    expect(formatAdmissionNumber(2026, 14)).toBe("2026-14");
+    expect(parseAdmissionNumber("2026-14")).toEqual({ year: 2026, sequence: 14 });
+  });
+
+  it("accepts accented english names, urdu names, and sanitized other staff records", () => {
+    const studentResult = studentSchema.safeParse({
+      ...student,
+      name_en: "Mary-Jane D'Souza",
+      father_name_en: "Jose Alvarez",
+      name_ur: "مریم جین",
+      father_name_ur: "جان ڈو"
+    });
+    const staffResult = staffFormSchema.safeParse({
+      full_name: "Andre d'Almeida",
+      email: "andre@school.edu",
+      password: "secret123",
+      role: "teacher"
+    });
+    const otherStaffResult = otherStaffRecordSchema.safeParse({
+      fullName: "Jean-Luc Picard",
+      category: "office_assistant",
+      department: "Admin",
+      jobTitle: "Office Assistant",
+      phone: "",
+      monthlySalary: null
+    });
+
+    expect(studentResult.success).toBe(true);
+    expect(staffResult.success).toBe(true);
+    expect(otherStaffResult.success).toBe(true);
+  });
+
+  it("strips invalid characters from live name input sanitizers", () => {
+    expect(sanitizeEnglishNameInput("Mary123 @Jane!")).toBe("Mary Jane");
+    expect(sanitizeUrduNameInput("جان123@ ڈو!")).toBe("جان ڈو");
   });
 
   it("normalizes blank optional student fields to null", () => {

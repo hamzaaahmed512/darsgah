@@ -111,6 +111,7 @@ export type Student = {
   id: string;
   school_id: string;
   admission_number: string;
+  student_cnic?: string | null;
   first_name: string;
   last_name: string;
   preferred_name: string | null;

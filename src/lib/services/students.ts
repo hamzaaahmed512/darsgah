@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatAdmissionNumber, getCurrentAdmissionYear, parseAdmissionNumber } from "@/lib/admission-number";
 import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
@@ -13,6 +14,16 @@ export type StudentFilters = {
   classId?: string;
   page?: number;
 };
+
+export class StudentIdentifierValidationError extends Error {
+  fieldErrors: Record<string, string>;
+
+  constructor(fieldErrors: Record<string, string>) {
+    super(Object.values(fieldErrors)[0] ?? "Identifier validation failed.");
+    this.name = "StudentIdentifierValidationError";
+    this.fieldErrors = fieldErrors;
+  }
+}
 
 export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   const supabase = await createClient();
@@ -68,6 +79,182 @@ export async function getStudent(user: AppUser, id: string) {
   return { student: record.student, guardians: record.guardians, attendance: record.attendance };
 }
 
+export async function validateGuardianAndStudentIdentifiers(
+  user: AppUser,
+  payload: {
+    studentCnic?: string | null;
+    fatherCnic?: string | null;
+    fatherPhone?: string | null;
+    currentStudentId?: string;
+  }
+) {
+  const supabase = await createClient();
+  const errors: Record<string, string> = {};
+  let normalizedFatherPhone: string | null = null;
+
+  if (payload.fatherPhone) {
+    try {
+      normalizedFatherPhone = formatPakistaniPhoneForStorage(payload.fatherPhone);
+    } catch {
+      normalizedFatherPhone = null;
+    }
+  }
+
+  if (payload.studentCnic) {
+    let studentCnicQuery = supabase
+      .from("students")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("student_cnic", payload.studentCnic)
+      .limit(1);
+    if (payload.currentStudentId) {
+      studentCnicQuery = studentCnicQuery.neq("id", payload.currentStudentId);
+    }
+    const { data: existingStudentCnic, error: studentCnicError } = await studentCnicQuery.maybeSingle<{ id: string }>();
+    if (studentCnicError) throw new Error(studentCnicError.message);
+    if (existingStudentCnic) {
+      errors.student_cnic = "This Student CNIC / Form-B is already registered to another student.";
+    }
+  }
+
+  if (normalizedFatherPhone && payload.fatherCnic) {
+    let fatherPhoneQuery = supabase
+      .from("students")
+      .select("id, father_cnic")
+      .eq("school_id", user.schoolId)
+      .eq("father_phone", normalizedFatherPhone)
+      .limit(1);
+    if (payload.currentStudentId) {
+      fatherPhoneQuery = fatherPhoneQuery.neq("id", payload.currentStudentId);
+    }
+    const { data: existingPhoneRecord, error: fatherPhoneError } = await fatherPhoneQuery.maybeSingle<{ id: string; father_cnic: string | null }>();
+    if (fatherPhoneError) throw new Error(fatherPhoneError.message);
+    if (existingPhoneRecord && existingPhoneRecord.father_cnic !== payload.fatherCnic) {
+      errors.father_phone = "This phone number is already registered under a different guardian/CNIC.";
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+async function assertGuardianAndStudentIdentifiers(
+  user: AppUser,
+  payload: {
+    studentCnic?: string | null;
+    fatherCnic?: string | null;
+    fatherPhone?: string | null;
+    currentStudentId?: string;
+  }
+) {
+  const validation = await validateGuardianAndStudentIdentifiers(user, payload);
+  if (!validation.isValid) {
+    throw new StudentIdentifierValidationError(validation.errors);
+  }
+}
+
+async function upsertPrimaryGuardianForStudent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: AppUser,
+  values: {
+    studentId: string;
+    guardianName: string;
+    guardianRelationship: string;
+    guardianEmail: string | null;
+    guardianPhone: string;
+    guardianCnic: string;
+    emergencyContactName: string | null;
+    emergencyContactPhone: string | null;
+  }
+) {
+  const { data: existingGuardian, error: existingGuardianError } = await supabase
+    .from("guardians")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("cnic", values.guardianCnic)
+    .order("created_at")
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (existingGuardianError) throw new Error(existingGuardianError.message);
+
+  let guardianId = existingGuardian?.id ?? null;
+
+  if (guardianId) {
+    const { error: guardianUpdateError } = await supabase
+      .from("guardians")
+      .update({
+        full_name: values.guardianName,
+        relationship: values.guardianRelationship,
+        email: values.guardianEmail,
+        phone: values.guardianPhone,
+        cnic: values.guardianCnic,
+        emergency_contact_name: values.emergencyContactName,
+        emergency_contact_phone: values.emergencyContactPhone
+      })
+      .eq("school_id", user.schoolId)
+      .eq("id", guardianId);
+    if (guardianUpdateError) throw new Error(guardianUpdateError.message);
+  } else {
+    const { data: guardian, error: guardianInsertError } = await supabase
+      .from("guardians")
+      .insert({
+        school_id: user.schoolId,
+        full_name: values.guardianName,
+        relationship: values.guardianRelationship,
+        email: values.guardianEmail,
+        phone: values.guardianPhone,
+        cnic: values.guardianCnic,
+        emergency_contact_name: values.emergencyContactName,
+        emergency_contact_phone: values.emergencyContactPhone
+      })
+      .select("id")
+      .single();
+    if (guardianInsertError) throw new Error(guardianInsertError.message);
+    guardianId = guardian.id;
+  }
+
+  const { data: existingLinks, error: linksError } = await supabase
+    .from("student_guardians")
+    .select("id, guardian_id")
+    .eq("school_id", user.schoolId)
+    .eq("student_id", values.studentId);
+  if (linksError) throw new Error(linksError.message);
+
+  const currentLink = (existingLinks ?? []).find((link) => link.guardian_id === guardianId);
+
+  for (const link of existingLinks ?? []) {
+    if (link.guardian_id !== guardianId) {
+      const { error: unlinkError } = await supabase
+        .from("student_guardians")
+        .delete()
+        .eq("school_id", user.schoolId)
+        .eq("id", link.id);
+      if (unlinkError) throw new Error(unlinkError.message);
+    }
+  }
+
+  if (currentLink) {
+    const { error: linkUpdateError } = await supabase
+      .from("student_guardians")
+      .update({ is_primary: true })
+      .eq("school_id", user.schoolId)
+      .eq("id", currentLink.id);
+    if (linkUpdateError) throw new Error(linkUpdateError.message);
+  } else {
+    const { error: linkInsertError } = await supabase
+      .from("student_guardians")
+      .insert({
+        school_id: user.schoolId,
+        student_id: values.studentId,
+        guardian_id: guardianId,
+        is_primary: true
+      });
+    if (linkInsertError) throw new Error(linkInsertError.message);
+  }
+}
+
 /**
  * Loads the complete, tenant-scoped record used by the student profile.  RLS is
  * deliberately left in place for teacher/class access; this service never uses
@@ -107,7 +294,7 @@ export async function getStudentRecord(
 
   const studentFields: string = isTeacher
     ? `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
-    : `id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
+    : `id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, student_cnic, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
   let studentQuery = supabase
       .from("student_directory")
       .select(studentFields)
@@ -121,7 +308,7 @@ export async function getStudentRecord(
       ? Promise.resolve({ data: [], error: null })
       : supabase
       .from("student_guardian_details")
-      .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, emergency_contact_name, emergency_contact_phone")
+      .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, cnic, emergency_contact_name, emergency_contact_phone")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
       .order("is_primary", { ascending: false }),
@@ -189,6 +376,25 @@ function emptyStudentRecord() {
   };
 }
 
+export async function getNextAdmissionNumber(user: AppUser, year = getCurrentAdmissionYear()) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("students")
+    .select("admission_number")
+    .eq("school_id", user.schoolId)
+    .like("admission_number", `${year}-%`);
+
+  if (error) throw new Error(error.message);
+
+  const nextSequence = (data ?? []).reduce((max, row) => {
+    const parsed = parseAdmissionNumber(row.admission_number ?? "");
+    if (!parsed || parsed.year !== year) return max;
+    return Math.max(max, parsed.sequence);
+  }, 0) + 1;
+
+  return formatAdmissionNumber(year, nextSequence);
+}
+
 export async function createStudent(user: AppUser, values: StudentFormValues) {
   const parsed = studentSchema.parse(values);
   const supabase = await createClient();
@@ -197,73 +403,78 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
 
   const isStaff = user.role === "student_staff";
   const initialStatus = isStaff ? "pending_approval" : parsed.status;
-
-  const admissionNumber = parsed.admission_number || `ADM-${Date.now()}`;
   const phone = formatPakistaniPhoneForStorage(parsed.phone);
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
   const studentName = splitFullName(parsed.name_en);
+  await assertGuardianAndStudentIdentifiers(user, {
+    studentCnic: parsed.student_cnic,
+    fatherCnic: parsed.father_cnic,
+    fatherPhone
+  });
   if (studentMajorsSupported && parsed.class_id && parsed.major) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
   }
 
-  const { data: student, error } = await supabase
-    .from("students")
-    .insert({
-      school_id: user.schoolId,
-      admission_number: admissionNumber,
-      first_name: studentName.firstName,
-      last_name: studentName.lastName,
-      name_en: parsed.name_en,
-      name_ur: parsed.name_ur || null,
-      father_name_en: parsed.father_name_en || null,
-      father_name_ur: parsed.father_name_ur || null,
-      father_phone: fatherPhone,
-      father_cnic: parsed.father_cnic || null,
-      ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
-      photo_url: parsed.photo_url || null,
-      class_id: parsed.class_id || null,
-      ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
-      date_of_birth: parsed.date_of_birth || null,
-      gender: parsed.gender || null,
-      ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
-      email: parsed.email || null,
-      phone,
-      address: parsed.address || null,
-      admission_date: parsed.admission_date || new Date().toISOString().split("T")[0],
-      status: initialStatus
-    })
-    .select("id")
-    .single();
+  let admissionNumber = parsed.admission_number;
+  let student: { id: string } | null = null;
+  let error: { message: string; code?: string } | null = null;
 
-  if (error) throw new Error(error.message);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    admissionNumber = admissionNumber || await getNextAdmissionNumber(user);
 
-  let guardianId = null;
-
-  if (parsed.guardian_name || parsed.father_name_en) {
-    const { data: guardian, error: guardianError } = await supabase
-      .from("guardians")
+    const insertResult = await supabase
+      .from("students")
       .insert({
         school_id: user.schoolId,
-        full_name: parsed.guardian_name || parsed.father_name_en,
-        relationship: parsed.guardian_relationship || "Father",
-        email: parsed.guardian_email || null,
-        phone: guardianPhone,
-        emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: emergencyContactPhone
+        admission_number: admissionNumber,
+        student_cnic: parsed.student_cnic || null,
+        first_name: studentName.firstName,
+        last_name: studentName.lastName,
+        name_en: parsed.name_en,
+        name_ur: parsed.name_ur || null,
+        father_name_en: parsed.father_name_en || null,
+        father_name_ur: parsed.father_name_ur || null,
+        father_phone: fatherPhone,
+        father_cnic: parsed.father_cnic || null,
+        ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
+        photo_url: parsed.photo_url || null,
+        class_id: parsed.class_id || null,
+        ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
+        date_of_birth: parsed.date_of_birth || null,
+        gender: parsed.gender || null,
+        ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
+        email: parsed.email || null,
+        phone,
+        address: parsed.address || null,
+        admission_date: parsed.admission_date || new Date().toISOString().split("T")[0],
+        status: initialStatus
       })
       .select("id")
       .single();
 
-    if (guardianError) throw new Error(guardianError.message);
-    guardianId = guardian.id;
+    student = insertResult.data;
+    error = insertResult.error;
 
-    await supabase.from("student_guardians").insert({
-      school_id: user.schoolId,
-      student_id: student.id,
-      guardian_id: guardianId,
-      is_primary: true
+    if (!error) break;
+    if (parsed.admission_number || error.code !== "23505") break;
+    admissionNumber = null;
+  }
+
+  if (error) throw new Error(error.message);
+  if (!student) throw new Error("Failed to create student.");
+
+  if (parsed.guardian_name || parsed.father_name_en) {
+    await upsertPrimaryGuardianForStudent(supabase, user, {
+      studentId: student.id,
+      guardianName: parsed.guardian_name || parsed.father_name_en,
+      guardianRelationship: parsed.guardian_relationship || "Father",
+      guardianEmail: parsed.guardian_email || null,
+      guardianPhone: guardianPhone ?? fatherPhone ?? "",
+      guardianCnic: parsed.father_cnic,
+      emergencyContactName: parsed.emergency_contact_name || null,
+      emergencyContactPhone
     });
   }
 
@@ -295,7 +506,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
     });
     if (reqError) throw new Error(reqError.message);
     await logActivity(user, "admission_request_submitted", "approval_request", student.id, {
-      admission_number: parsed.admission_number,
+      admission_number: admissionNumber,
       name: formatDisplayName(parsed.name_en)
     });
     return student.id as string;
@@ -304,7 +515,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   if (!isStaff) {
     if (studentMajorsSupported && parsed.class_id && parsed.major) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, parsed.major);
     await logActivity(user, "student_created", "student", student.id, {
-      admission_number: parsed.admission_number,
+      admission_number: admissionNumber,
       name: formatDisplayName(parsed.name_en)
     });
   }
@@ -322,6 +533,12 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
   const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
   const studentName = splitFullName(parsed.name_en);
+  await assertGuardianAndStudentIdentifiers(user, {
+    studentCnic: parsed.student_cnic,
+    fatherCnic: parsed.father_cnic,
+    fatherPhone,
+    currentStudentId: id
+  });
   if (studentMajorsSupported && parsed.class_id && parsed.major) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
   }
@@ -329,6 +546,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
     .from("students")
     .update({
       admission_number: parsed.admission_number,
+      student_cnic: parsed.student_cnic || null,
       first_name: studentName.firstName,
       last_name: studentName.lastName,
       name_en: parsed.name_en,
@@ -355,53 +573,16 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
 
   if (error) throw new Error(error.message);
 
-  const { data: guardianLink, error: guardianFetchError } = await supabase
-    .from("student_guardians")
-    .select("guardian_id")
-    .eq("school_id", user.schoolId)
-    .eq("student_id", id)
-    .order("is_primary", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (guardianFetchError) throw new Error(guardianFetchError.message);
-
-  if (guardianLink?.guardian_id) {
-    const { error: guardianUpdateError } = await supabase
-      .from("guardians")
-      .update({
-        full_name: parsed.guardian_name || parsed.father_name_en,
-        relationship: parsed.guardian_relationship || "Father",
-        email: parsed.guardian_email || null,
-        phone: guardianPhone,
-        emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: emergencyContactPhone
-      })
-      .eq("school_id", user.schoolId)
-      .eq("id", guardianLink.guardian_id);
-
-    if (guardianUpdateError) throw new Error(guardianUpdateError.message);
-  } else {
-    const { data: guardian, error: guardianInsertError } = await supabase
-      .from("guardians")
-      .insert({
-        school_id: user.schoolId,
-        full_name: parsed.guardian_name || parsed.father_name_en,
-        relationship: parsed.guardian_relationship || "Father",
-        email: parsed.guardian_email || null,
-        phone: guardianPhone,
-        emergency_contact_name: parsed.emergency_contact_name || null,
-        emergency_contact_phone: emergencyContactPhone
-      })
-      .select("id")
-      .single();
-
-    if (guardianInsertError) throw new Error(guardianInsertError.message);
-    await supabase.from("student_guardians").insert({
-      school_id: user.schoolId,
-      student_id: id,
-      guardian_id: guardian.id,
-      is_primary: true
+  if (parsed.guardian_name || parsed.father_name_en) {
+    await upsertPrimaryGuardianForStudent(supabase, user, {
+      studentId: id,
+      guardianName: parsed.guardian_name || parsed.father_name_en,
+      guardianRelationship: parsed.guardian_relationship || "Father",
+      guardianEmail: parsed.guardian_email || null,
+      guardianPhone: guardianPhone ?? fatherPhone ?? "",
+      guardianCnic: parsed.father_cnic,
+      emergencyContactName: parsed.emergency_contact_name || null,
+      emergencyContactPhone
     });
   }
 
@@ -673,12 +854,16 @@ export async function importStudentsBulk(user: AppUser, records: any[]) {
     .eq("is_active", true)
     .maybeSingle();
 
+  let nextSequence = parseAdmissionNumber(await getNextAdmissionNumber(user))?.sequence ?? 1;
+  const currentYear = getCurrentAdmissionYear();
+
   const studentsToInsert = records.map(r => {
     const classId = r.class_name ? classMap.get(r.class_name.toLowerCase()) : null;
     const studentName = splitFullName(r.name_en);
+    const admissionNumber = r.admission_number || formatAdmissionNumber(currentYear, nextSequence++);
     return {
       school_id: user.schoolId,
-      admission_number: r.admission_number || `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      admission_number: admissionNumber,
       first_name: studentName.firstName || "Unknown",
       last_name: studentName.lastName,
       name_en: r.name_en || null,

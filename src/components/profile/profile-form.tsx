@@ -12,6 +12,7 @@ import type { ProfileDetails } from "@/lib/services/profile";
 import { initials } from "@/lib/utils";
 import { formatPakistaniPhone } from "@/lib/pakistan-format";
 import { normalizeEmail } from "@/lib/email";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 function displayValue(value: string | null | undefined, fallback = "Not set") {
   return value && value.trim().length ? value : fallback;
@@ -139,7 +140,15 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
         {editing ? (
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Full Name" error={errors.fullName?.message}>
-              <Input {...register("fullName")} placeholder="Jane Doe" />
+              <Input
+                {...register("fullName")}
+                onChange={(event) => {
+                  const sanitized = sanitizeEnglishNameInput(event.target.value);
+                  event.currentTarget.value = sanitized;
+                  setValue("fullName", sanitized, { shouldDirty: true, shouldValidate: true });
+                }}
+                placeholder="Jane Doe"
+              />
             </Field>
 
             <Field label="Phone" error={errors.phone?.message} hint="Enter 11 digits; formatting is added automatically (e.g. 0300-0000000)">
@@ -194,7 +203,15 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
             </div>
 
             <Field label="Emergency Contact Name" error={errors.emergencyContactName?.message}>
-              <Input {...register("emergencyContactName")} placeholder="Full name" />
+              <Input
+                {...register("emergencyContactName")}
+                onChange={(event) => {
+                  const sanitized = sanitizeEnglishNameInput(event.target.value);
+                  event.currentTarget.value = sanitized;
+                  setValue("emergencyContactName", sanitized, { shouldDirty: true, shouldValidate: true });
+                }}
+                placeholder="Full name"
+              />
             </Field>
             <Field label="Emergency Contact Phone" error={errors.emergencyContactPhone?.message}>
               <Input

@@ -16,6 +16,7 @@ import { RemoveAssignmentButton } from "@/components/classes/class-actions";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, X } from "lucide-react";
 import { formatDisplayName } from "@/lib/student-name";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 export function ClassFormModal({
   grades,
@@ -191,7 +192,15 @@ export function ClassFormModal({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="mb-1.5 block text-sm font-semibold text-ink">Class Name *</label>
-                      <Input {...register("name", { required: true })} placeholder="e.g. 10th Grade Math (A)" />
+                      <Input
+                        {...register("name", {
+                          required: true,
+                          onChange: (event) => {
+                            event.target.value = sanitizeEnglishNameInput(event.target.value).toUpperCase();
+                          }
+                        })}
+                        placeholder="e.g. GRADE 9 - A"
+                      />
                     </div>
 
                     <div>
@@ -205,7 +214,7 @@ export function ClassFormModal({
                       </div>
                       {creatingGrade ? (
                         <div className="rounded-md border border-outline/40 bg-surface-low p-2">
-                          <Input form="inline-grade-form" name="name" placeholder="e.g. Grade 1" required className="mb-2 h-8 text-sm" />
+                          <Input form="inline-grade-form" name="name" placeholder="e.g. Primary" required className="mb-2 h-8 text-sm" onChange={(event) => { event.currentTarget.value = sanitizeEnglishNameInput(event.currentTarget.value); }} />
                           <div className="flex gap-2">
                             <Button type="button" variant="secondary" size="sm" className="h-7 w-full text-xs" onClick={() => setCreatingGrade(false)}>Cancel</Button>
                             <Button type="submit" form="inline-grade-form" size="sm" className="h-7 w-full text-xs" disabled={inlinePending}>Save</Button>
@@ -234,7 +243,7 @@ export function ClassFormModal({
                       </div>
                       {creatingSection ? (
                         <div className="rounded-md border border-outline/40 bg-surface-low p-2">
-                          <Input form="inline-section-form" name="name" placeholder="e.g. A" required className="mb-2 h-8 text-sm" />
+                          <Input form="inline-section-form" name="name" placeholder="e.g. A" required className="mb-2 h-8 text-sm" onChange={(event) => { event.currentTarget.value = sanitizeEnglishNameInput(event.currentTarget.value).toUpperCase(); }} />
                           <div className="flex gap-2">
                             <Button type="button" variant="secondary" size="sm" className="h-7 w-full text-xs" onClick={() => setCreatingSection(false)}>Cancel</Button>
                             <Button type="submit" form="inline-section-form" size="sm" className="h-7 w-full text-xs" disabled={inlinePending}>Save</Button>

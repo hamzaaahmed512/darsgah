@@ -3,11 +3,36 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
-import { archiveStudent, createStudent, updateStudent, exportStudents, importStudentsBulk } from "@/lib/services/students";
+import {
+  archiveStudent,
+  createStudent,
+  exportStudents,
+  getNextAdmissionNumber,
+  importStudentsBulk,
+  StudentIdentifierValidationError,
+  updateStudent,
+  validateGuardianAndStudentIdentifiers
+} from "@/lib/services/students";
 import { reviewRequest } from "@/lib/services/approvals";
 import { reviewRequestSchema } from "@/lib/validation/approvals";
 import type { StudentFilters } from "@/lib/services/students";
 import type { StudentFormValues } from "@/lib/validation/students";
+
+export async function getNextAdmissionNumberAction() {
+  const user = await requireUser("students:create");
+  return { admissionNumber: await getNextAdmissionNumber(user) };
+}
+
+export async function validateStudentIdentifiersAction(values: {
+  studentCnic?: string | null;
+  fatherCnic?: string | null;
+  fatherPhone?: string | null;
+  currentStudentId?: string;
+}) {
+  const permission = values.currentStudentId ? "students:update" : "students:create";
+  const user = await requireUser(permission);
+  return validateGuardianAndStudentIdentifiers(user, values);
+}
 
 export async function createStudentAction(values: StudentFormValues) {
   let id: string;
@@ -15,6 +40,9 @@ export async function createStudentAction(values: StudentFormValues) {
     const user = await requireUser("students:create");
     id = await createStudent(user, values);
   } catch (error: any) {
+    if (error instanceof StudentIdentifierValidationError) {
+      return { error: error.message, fieldErrors: error.fieldErrors };
+    }
     return { error: error.message || "Failed to create student." };
   }
   revalidatePath("/students");
@@ -26,6 +54,9 @@ export async function updateStudentAction(id: string, values: StudentFormValues)
     const user = await requireUser("students:update");
     await updateStudent(user, id, values);
   } catch (error: any) {
+    if (error instanceof StudentIdentifierValidationError) {
+      return { error: error.message, fieldErrors: error.fieldErrors };
+    }
     return { error: error.message || "Failed to update student." };
   }
   revalidatePath("/students");

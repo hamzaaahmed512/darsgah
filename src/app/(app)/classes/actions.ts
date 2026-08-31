@@ -7,10 +7,11 @@ import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/t
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
 import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
+import { englishNameSchema } from "@/lib/validation/names";
 
 
 const classSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: englishNameSchema("Class name", 120),
   grade_id: z.string().uuid("Grade is required"),
   section_id: z.string().uuid().optional().or(z.literal("")),
   academic_year_id: z.string().uuid("Academic year is required"),
@@ -120,7 +121,7 @@ import { createAcademicYear } from "@/lib/services/settings";
 
 export async function createGradeAction(formData: FormData) {
   const user = await requireUser("classes:manage");
-  const name = z.string().min(1, "Name is required").parse(formData.get("name"));
+  const name = englishNameSchema("Grade name", 80).parse(formData.get("name"));
   const sort_order = parseInt(formData.get("sort_order") as string || "10", 10);
   
   const data = await createGrade(user, { name, sort_order });
@@ -131,7 +132,7 @@ export async function createGradeAction(formData: FormData) {
 
 export async function createSectionAction(formData: FormData) {
   const user = await requireUser("classes:manage");
-  const name = z.string().min(1, "Name is required").parse(formData.get("name"));
+  const name = englishNameSchema("Section name", 80).parse(formData.get("name"));
   
   const data = await createSection(user, { name });
   revalidatePath("/classes");
@@ -143,8 +144,8 @@ export async function createSectionClassAction(formData: FormData) {
   const user = await requireUser("classes:manage");
   await createSectionClass(user, {
     gradeId: z.string().uuid().parse(formData.get("grade_id")),
-    gradeName: z.string().min(1).parse(formData.get("grade_name")),
-    sectionName: z.string().min(1, "Section name is required").parse(formData.get("section_name")),
+    gradeName: englishNameSchema("Grade name", 80).parse(formData.get("grade_name")),
+    sectionName: englishNameSchema("Section name", 80).parse(formData.get("section_name")),
     room: String(formData.get("room") ?? "") || null
   });
   revalidatePath("/classes");

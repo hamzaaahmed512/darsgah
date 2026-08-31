@@ -1,14 +1,25 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { assignSubjectTeacher, createSubject, setStudentElectiveEnrollment, setStudentSubjectEnrollments } from "@/lib/services/academics";
+import { englishNameSchema } from "@/lib/validation/names";
 
 export async function createSubjectAction(formData: FormData) {
   const user = await requireUser("classes:manage");
-  await createSubject(user, {
-    name: String(formData.get("name") ?? ""),
-    code: String(formData.get("code") ?? ""),
+  const values = z.object({
+    name: englishNameSchema("Subject name", 120),
+    code: z.string().trim().max(40).optional().catch(""),
+    is_elective: z.boolean()
+  }).parse({
+    name: formData.get("name"),
+    code: formData.get("code") ?? "",
     is_elective: formData.get("is_elective") === "true"
+  });
+  await createSubject(user, {
+    name: values.name,
+    code: values.code,
+    is_elective: values.is_elective
   });
   revalidatePath("/subjects");
 }

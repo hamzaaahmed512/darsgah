@@ -10,6 +10,7 @@ import { createStaffAction } from "@/app/(app)/teachers/actions";
 import { Plus, X } from "lucide-react";
 import type { UserRole } from "@/types/database";
 import { normalizeEmail } from "@/lib/email";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
@@ -88,7 +89,15 @@ export function StaffFormModal({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-sm font-semibold text-ink">Full Name *</label>
-                  <Input {...register("full_name")} placeholder="Jane Doe" />
+                  <Input
+                    {...register("full_name")}
+                    onChange={(event) => {
+                      const sanitized = sanitizeEnglishNameInput(event.target.value);
+                      event.currentTarget.value = sanitized;
+                      setValue("full_name", sanitized, { shouldDirty: true, shouldValidate: true });
+                    }}
+                    placeholder="Jane Doe"
+                  />
                   {errors.full_name?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.full_name.message}</p> : null}
                 </div>
 

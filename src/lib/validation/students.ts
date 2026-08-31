@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { ADMISSION_NUMBER_REGEX } from "@/lib/admission-number";
 import { normalizeEmail } from "@/lib/email";
 import { formatCnic, isValidPakistaniPhone } from "@/lib/pakistan-format";
+import { englishNameSchema, urduNameSchema } from "@/lib/validation/names";
 
 const placeholderArtifacts = new Set([
   "-",
@@ -27,6 +29,28 @@ function cleanOptionalString(value: unknown) {
 }
 
 const optionalText = (max: number) => z.preprocess(cleanOptionalString, z.string().max(max).nullable().optional());
+const optionalAdmissionNumber = z.preprocess(
+  cleanOptionalString,
+  z
+    .string()
+    .regex(ADMISSION_NUMBER_REGEX, "Admission number must use the format YYYY-RR, for example 2026-12")
+    .nullable()
+    .optional()
+);
+const optionalCnic = (label: string) =>
+  z.preprocess(
+    cleanOptionalString,
+    z
+      .string()
+      .transform(formatCnic)
+      .pipe(z.string().regex(/^\d{5}-\d{7}-\d{1}$/, `Enter a valid 13-digit ${label}`))
+      .nullable()
+      .optional()
+  );
+const optionalEnglishName = (label: string, max: number) =>
+  z.preprocess(cleanOptionalString, englishNameSchema(label, max).nullable().optional());
+const optionalUrduName = (label: string, max: number) =>
+  z.preprocess(cleanOptionalString, urduNameSchema(label, max).nullable().optional());
 const optionalDate = z.preprocess(cleanOptionalString, z.string().date("Enter a valid date").nullable().optional());
 const optionalEmail = z.preprocess(
   cleanOptionalString,
@@ -46,9 +70,10 @@ const phone = z
   );
 
 export const studentSchema = z.object({
-  admission_number: optionalText(32), // We auto-generate if not supplied
-  name_en: z.string().trim().min(1, "Name (English) is required").max(80),
-  name_ur: optionalText(80),
+  admission_number: optionalAdmissionNumber,
+  student_cnic: optionalCnic("Student CNIC / Form-B"),
+  name_en: englishNameSchema("Name (English)", 80),
+  name_ur: optionalUrduName("Name (Urdu)", 80),
   first_name: optionalText(80), // for backwards compat
   last_name: optionalText(80), // for backwards compat
   date_of_birth: optionalDate,
@@ -64,8 +89,8 @@ export const studentSchema = z.object({
   major: optionalMajor,
   
   // Father details
-  father_name_en: z.string().trim().min(1, "Father's name is required").max(120),
-  father_name_ur: optionalText(120),
+  father_name_en: englishNameSchema("Father's name", 120),
+  father_name_ur: optionalUrduName("Father's name (Urdu)", 120),
   father_phone: z.string().trim().min(1, "Father's phone is required").refine(isValidPakistaniPhone, "Phone number must be exactly 11 digits, like 0300-0000000"),
   father_cnic: z.string()
     .trim()
@@ -73,11 +98,11 @@ export const studentSchema = z.object({
     .pipe(z.string().regex(/^\d{5}-\d{7}-\d{1}$/, "Enter a valid 13-digit CNIC")),
   father_alive: z.enum(["yes", "no"]).default("yes"),
     
-  guardian_name: optionalText(120),
+  guardian_name: optionalEnglishName("Guardian name", 120),
   guardian_relationship: optionalText(60),
   guardian_email: optionalEmail,
   guardian_phone: phone,
-  emergency_contact_name: optionalText(120),
+  emergency_contact_name: optionalEnglishName("Emergency contact name", 120),
   emergency_contact_phone: phone
 }).superRefine((values, ctx) => {
   if (values.father_alive !== "no") return;

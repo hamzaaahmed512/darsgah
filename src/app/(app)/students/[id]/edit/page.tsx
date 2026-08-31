@@ -35,12 +35,14 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
         }
       />
       <StudentForm
+        studentId={id}
         classes={academics.classes}
         combinations={combinations.customCombinations.map((combination) => ({ value: combination.value, label: combination.name, kind: "custom", classIds: combination.classIds, subjectIds: combination.subjectIds }))}
         onSubmit={submit}
         submitLabel="Save changes"
         initialValues={{
           admission_number: student.admission_number,
+          student_cnic: (student as any).student_cnic || "",
           first_name: student.first_name,
           last_name: student.last_name,
           name_en: (student as any).name_en || formatFullName(student.first_name, student.last_name),

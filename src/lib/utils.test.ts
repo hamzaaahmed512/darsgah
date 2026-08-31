@@ -19,25 +19,26 @@ describe("utilities", () => {
   });
 
   it("formats grade and section without duplicated labels", () => {
-    expect(formatGradeSection("Grade 9", "orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("Grade 9 orange", "orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("Grade 9", "Section Orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("Grade 9", "Grade 9 orange - orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("Grade 9", "orange - orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("Grade 9 - Grade 9", "Orange")).toBe("Grade 9 - Orange");
-    expect(formatGradeSection("9", "a")).toBe("Grade 9 - A");
-    expect(formatGradeSection("Grade 9", null)).toBe("Grade 9");
-    expect(formatGradeSection(null, "Orange")).toBe("Orange");
+    expect(formatGradeSection("Grade 9", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("Grade 9 orange", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("Grade 9", "Section Orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("Grade 9", "Grade 9 orange - orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("Grade 9", "orange - orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("Grade 9 - Grade 9", "Orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatGradeSection("9", "a")).toBe("GRADE 9 - A");
+    expect(formatGradeSection("Grade 9", null)).toBe("GRADE 9");
+    expect(formatGradeSection(null, "Orange")).toBe("ORANGE");
   });
 
   it("formats class labels without repeating grade and section", () => {
-    expect(formatClassDisplayName("Grade 9", "Grade 9 orange", "orange")).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "Grade 9 orange", null)).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "Grade 9 - Grade 9 orange - orange", "orange")).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "orange", "orange")).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "Grade 9", "orange")).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "Grade 9 - Orange", "orange")).toBe("Grade 9 - Orange");
-    expect(formatClassDisplayName("Grade 9", "Morning", "Orange")).toBe("Grade 9 - Orange - Morning");
-    expect(formatClassDisplayName("Grade 9", "Grade 9 - Orange - Morning", "Orange")).toBe("Grade 9 - Orange - Morning");
+    expect(formatClassDisplayName("Grade 9", "Grade 9 orange", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "Grade 9 orange", null)).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "Grade 9 - Grade 9 orange - orange", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "orange", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "Grade 9", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "Grade 9 - Orange", "orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "9A", "A")).toBe("GRADE 9 - A");
+    expect(formatClassDisplayName("Grade 9", "Morning", "Orange")).toBe("GRADE 9 - ORANGE");
+    expect(formatClassDisplayName("Grade 9", "Grade 9 - Orange - Morning", "Orange")).toBe("GRADE 9 - ORANGE");
   });
 });

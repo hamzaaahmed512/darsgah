@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { PakistaniPhoneInput } from "@/components/ui/pakistani-phone-input";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 export function OtherStaffFormModal() {
   const [open, setOpen] = useState(false);
@@ -66,7 +67,7 @@ export function OtherStaffFormModal() {
             </div>
             <form onSubmit={submit} className="grid gap-4 overflow-y-auto p-5">
               {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
-              <Field label="Full name"><Input required value={form.fullName} onChange={(event) => update("fullName", event.target.value)} /></Field>
+              <Field label="Full name"><Input required value={form.fullName} onChange={(event) => update("fullName", sanitizeEnglishNameInput(event.target.value))} /></Field>
               <Field label="Category">
                 <Select value={form.category} onChange={(event) => update("category", event.target.value as OtherStaffCategory)}>
                   {OTHER_STAFF_CATEGORIES.map((category) => <option key={category} value={category}>{OTHER_STAFF_CATEGORY_LABELS[category]}</option>)}

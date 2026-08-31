@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalizeOptionalEmail } from "@/lib/email";
 import { formatPakistaniPhoneForStorage, isValidPakistaniPhone } from "@/lib/pakistan-format";
+import { englishNameSchema } from "@/lib/validation/names";
 
 const optionalText = (max: number) =>
   z
@@ -10,6 +11,13 @@ const optionalText = (max: number) =>
     .optional()
     .nullable()
     .transform((value) => (value ? value : null));
+
+const optionalEnglishName = (label: string, max: number) =>
+  z
+    .preprocess(
+      (value) => typeof value === "string" ? value.trim() || null : value,
+      englishNameSchema(label, max).nullable().optional()
+    );
 
 const optionalEmail = z
   .preprocess(normalizeOptionalEmail, z.string().email("Enter a valid email address").nullable())
@@ -24,13 +32,13 @@ const pakistaniPhone = z
   .transform((v) => (v ? formatPakistaniPhoneForStorage(v) : null));
 
 export const profileFormSchema = z.object({
-  fullName: z.string().trim().min(2, "Name is required").max(100),
+  fullName: englishNameSchema("Full name", 100, 2),
   phone: pakistaniPhone,
   personalEmail: optionalEmail,
   department: optionalText(100),
   jobTitle: optionalText(100),
   address: optionalText(500),
-  emergencyContactName: optionalText(100),
+  emergencyContactName: optionalEnglishName("Emergency contact name", 100),
   emergencyContactPhone: pakistaniPhone
 });
 

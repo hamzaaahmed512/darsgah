@@ -4,7 +4,7 @@ import { logActivity } from "@/lib/services/activity";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import { isSubjectExcludedForMajor } from "@/lib/student-majors";
 import { formatDisplayName, formatStudentName } from "@/lib/student-name";
-import { formatClassDisplayName } from "@/lib/utils";
+import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
 import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
 
@@ -44,6 +44,20 @@ export async function getAcademicOptions(user: AppUser) {
       head_teacher_email: row.head_teacher?.email ?? null
     }))
   };
+}
+
+function normalizeSectionName(name: string) {
+  return name
+    .trim()
+    .replace(/^section\s+/i, "")
+    .replace(/^sec\s+/i, "")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+function buildCanonicalClassName(gradeName: string, sectionName?: string | null) {
+  const formatted = formatGradeSection(gradeName, sectionName ?? null);
+  return formatted || gradeName.trim().toUpperCase();
 }
 
 export async function getTeacherSubjectAssignments(user: AppUser) {
@@ -158,19 +172,33 @@ export async function createClass(user: AppUser, data: { name: string; grade_id:
   await assertHeadTeacher(user, data.head_teacher_id);
   const supabase = await createClient();
 
-  const { data: grade, error: gradeError } = await supabase
-    .from("grades")
-    .select("name")
-    .eq("school_id", user.schoolId)
-    .eq("id", data.grade_id)
-    .maybeSingle();
+  const [{ data: grade, error: gradeError }, { data: section, error: sectionError }] = await Promise.all([
+    supabase
+      .from("grades")
+      .select("name")
+      .eq("school_id", user.schoolId)
+      .eq("id", data.grade_id)
+      .maybeSingle(),
+    data.section_id
+      ? supabase
+          .from("sections")
+          .select("name")
+          .eq("school_id", user.schoolId)
+          .eq("id", data.section_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+  ]);
   if (gradeError) throw new Error(gradeError.message);
+  if (sectionError) throw new Error(sectionError.message);
+  if (!grade) throw new Error("Grade not found.");
+
+  const canonicalName = buildCanonicalClassName(grade.name, section?.name);
 
   const { data: createdClass, error } = await supabase
     .from("classes")
     .insert({
       school_id: user.schoolId,
-      name: data.name,
+      name: canonicalName,
       grade_id: data.grade_id,
       section_id: data.section_id || null,
       academic_year_id: data.academic_year_id,
@@ -192,10 +220,31 @@ export async function createClass(user: AppUser, data: { name: string; grade_id:
 export async function updateClass(user: AppUser, classId: string, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
   await assertHeadTeacher(user, data.head_teacher_id);
   const supabase = await createClient();
+  const [{ data: grade, error: gradeError }, { data: section, error: sectionError }] = await Promise.all([
+    supabase
+      .from("grades")
+      .select("name")
+      .eq("school_id", user.schoolId)
+      .eq("id", data.grade_id)
+      .maybeSingle(),
+    data.section_id
+      ? supabase
+          .from("sections")
+          .select("name")
+          .eq("school_id", user.schoolId)
+          .eq("id", data.section_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+  ]);
+  if (gradeError) throw new Error(gradeError.message);
+  if (sectionError) throw new Error(sectionError.message);
+  if (!grade) throw new Error("Grade not found.");
+
+  const canonicalName = buildCanonicalClassName(grade.name, section?.name);
   const { error } = await supabase
     .from("classes")
     .update({
-      name: data.name,
+      name: canonicalName,
       grade_id: data.grade_id,
       section_id: data.section_id || null,
       academic_year_id: data.academic_year_id,
@@ -889,11 +938,11 @@ export async function createGrade(user: AppUser, values: { name: string; sort_or
 
 export async function createSection(user: AppUser, values: { name: string }) {
   const supabase = await createClient();
-  const sectionName = values.name.trim().replace(/^section\s+/i, "");
+  const sectionName = normalizeSectionName(values.name);
   if (!sectionName) throw new Error("Section name is required.");
   const { data: existingSections, error: lookupError } = await supabase.from("sections").select("id,name").eq("school_id", user.schoolId);
   if (lookupError) throw new Error(lookupError.message);
-  const existing = (existingSections ?? []).find((section) => section.name.trim().replace(/^section\s+/i, "").toLocaleLowerCase() === sectionName.toLocaleLowerCase());
+  const existing = (existingSections ?? []).find((section) => normalizeSectionName(section.name) === sectionName);
   if (existing) return { id: existing.id };
   const { data, error } = await supabase
     .from("sections")
@@ -909,7 +958,7 @@ export async function createSectionClass(
   values: { gradeId: string; gradeName: string; sectionName: string; room?: string | null }
 ) {
   const supabase = await createClient();
-  const sectionName = values.sectionName.trim().replace(/^section\s+/i, "");
+  const sectionName = normalizeSectionName(values.sectionName);
   if (!sectionName) throw new Error("Section name is required.");
 
   const [{ data: grade, error: gradeError }, { data: activeYear, error: yearError }, { data: sections, error: sectionsError }] = await Promise.all([
@@ -923,7 +972,7 @@ export async function createSectionClass(
   if (!grade) throw new Error("Grade not found.");
   if (!activeYear) throw new Error("Create or activate an academic year first.");
 
-  let sectionId = (sections ?? []).find((section) => section.name.toLocaleLowerCase() === sectionName.toLocaleLowerCase())?.id;
+  let sectionId = (sections ?? []).find((section) => normalizeSectionName(section.name) === sectionName)?.id;
   if (!sectionId) sectionId = (await createSection(user, { name: sectionName })).id;
 
   const { data: existingClass, error: existingError } = await supabase
@@ -942,7 +991,7 @@ export async function createSectionClass(
     academic_year_id: activeYear.id,
     grade_id: grade.id,
     section_id: sectionId,
-    name: `${grade.name} ${sectionName}`,
+    name: buildCanonicalClassName(grade.name, sectionName),
     room: values.room?.trim() || null
   }).select("id").single();
   if (error) throw new Error(error.message);

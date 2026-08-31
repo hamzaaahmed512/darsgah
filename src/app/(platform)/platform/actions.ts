@@ -7,6 +7,7 @@ import { requirePlatformAdmin } from "@/lib/platform/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordPlatformAudit } from "@/lib/services/platform";
 import { normalizeEmail, normalizeOptionalEmail } from "@/lib/email";
+import { englishNameSchema } from "@/lib/validation/names";
 
 const createSchoolSchema = z.object({
   name: z.string().trim().min(2).max(120).transform((value) => value.toUpperCase()),
@@ -19,9 +20,12 @@ const createSchoolSchema = z.object({
     z.string().min(1, "Enter a URL slug.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Enter a valid URL slug.")
   ),
   timezone: z.string().trim().min(1),
-  contactName: z.string().trim().max(120).optional(),
+  contactName: z.preprocess(
+    (value) => typeof value === "string" ? value.trim() || undefined : value,
+    englishNameSchema("Contact name", 120).optional()
+  ),
   contactEmail: z.preprocess(normalizeOptionalEmail, z.string().email().nullable()),
-  principalName: z.string().trim().min(2).max(120),
+  principalName: englishNameSchema("Principal name", 120, 2),
   principalEmail: z.string().trim().toLowerCase().email().transform(normalizeEmail),
   temporaryPassword: z.string().min(12, "Temporary password must contain at least 12 characters."),
   platformStatus: z.enum(["trial", "active"]),
@@ -59,34 +63,77 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
     return { ok: false, error: error.message, errors: {} };
   }
 
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email: values.data.principalEmail,
-    password: values.data.temporaryPassword,
-    email_confirm: true,
-    user_metadata: { full_name: values.data.principalName }
-  });
-  if (authError || !authData.user) {
+  const { data: existingProfile, error: existingProfileError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", values.data.principalEmail)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (existingProfileError) {
     await admin.from("schools").delete().eq("id", data.id);
-    return { ok: false, error: authError?.message ?? "Unable to create the principal account.", errors: {} };
+    return { ok: false, error: existingProfileError.message, errors: {} };
   }
 
-  const { error: profileError } = await admin.from("profiles").upsert({
-    id: authData.user.id,
-    full_name: values.data.principalName,
-    email: values.data.principalEmail,
-    must_change_password: true
-  });
-  const { error: memberError } = profileError ? { error: null } : await admin.from("school_members").insert({
+  let principalUserId = existingProfile?.id ?? null;
+  let createdNewIdentity = false;
+
+  if (!principalUserId) {
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
+      email: values.data.principalEmail,
+      password: values.data.temporaryPassword,
+      email_confirm: true,
+      user_metadata: { full_name: values.data.principalName }
+    });
+    if (authError || !authData.user) {
+      await admin.from("schools").delete().eq("id", data.id);
+      return { ok: false, error: authError?.message ?? "Unable to create the principal account.", errors: {} };
+    }
+
+    const { error: profileError } = await admin.from("profiles").upsert({
+      id: authData.user.id,
+      full_name: values.data.principalName,
+      email: values.data.principalEmail,
+      must_change_password: true
+    });
+    if (profileError) {
+      await admin.auth.admin.deleteUser(authData.user.id);
+      await admin.from("schools").delete().eq("id", data.id);
+      return { ok: false, error: profileError.message, errors: {} };
+    }
+
+    principalUserId = authData.user.id;
+    createdNewIdentity = true;
+  }
+
+  const { data: existingMembership, error: existingMembershipError } = await admin
+    .from("school_members")
+    .select("id")
+    .eq("school_id", data.id)
+    .eq("user_id", principalUserId)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (existingMembershipError) {
+    if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
+    await admin.from("schools").delete().eq("id", data.id);
+    return { ok: false, error: existingMembershipError.message, errors: {} };
+  }
+  if (existingMembership) {
+    if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
+    await admin.from("schools").delete().eq("id", data.id);
+    return { ok: false, error: "That principal email is already assigned to this school.", errors: { principalEmail: ["Already assigned to this school"] } };
+  }
+
+  const { error: memberError } = await admin.from("school_members").insert({
     school_id: data.id,
-    user_id: authData.user.id,
+    user_id: principalUserId,
     role: "principal",
     status: "active",
     job_title: "Principal"
   });
-  if (profileError || memberError) {
-    await admin.auth.admin.deleteUser(authData.user.id);
+  if (memberError) {
+    if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
     await admin.from("schools").delete().eq("id", data.id);
-    return { ok: false, error: profileError?.message ?? memberError?.message ?? "Unable to provision the principal account.", errors: {} };
+    return { ok: false, error: memberError.message ?? "Unable to provision the principal account.", errors: {} };
   }
   await recordPlatformAudit(actor.id, data.id, "school.created", { name: values.data.name, plan: values.data.subscriptionPlan });
   revalidatePath("/platform", "layout");

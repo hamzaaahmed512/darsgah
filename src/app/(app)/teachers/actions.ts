@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { createStaffAccount, updateStaffStatus, assignTeacherToClass, setStaffSalary, StaffEmailAlreadyAssignedError } from "@/lib/services/teachers";
 import { createOtherStaffRecord, setOtherStaffSalary } from "@/lib/services/staff";
 import type { OtherStaffCategory } from "@/lib/constants/staff";
-import type { StaffFormValues } from "@/lib/validation/staff";
+import { otherStaffRecordSchema, type StaffFormValues } from "@/lib/validation/staff";
 
 type StaffActionResult =
   | { success: true; error: null; field?: never }
@@ -60,7 +60,13 @@ export async function createOtherStaffAction(values: {
   monthlySalary?: number | null;
 }) {
   const user = await requireUser("teachers:manage");
-  await createOtherStaffRecord(user, values);
+  const parsed = otherStaffRecordSchema.parse(values);
+  await createOtherStaffRecord(user, {
+    ...parsed,
+    department: parsed.department ?? undefined,
+    jobTitle: parsed.jobTitle ?? undefined,
+    phone: parsed.phone ?? undefined
+  });
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");
 }

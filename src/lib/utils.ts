@@ -211,6 +211,8 @@ export function formatClassDisplayName(
   const cleanClassName = className?.trim() ?? "";
   let cleanGrade = grade?.trim() ?? "";
   let cleanSection = section?.trim() ?? "";
+  const normalizedCompactGrade = cleanGrade.replace(/^Grade\s+/i, "").replace(/\s+/g, "").toUpperCase();
+  const normalizedCompactSection = cleanSection.replace(/\s+/g, "").toUpperCase();
 
   // If grade is missing, try to extract from className
   if (!cleanGrade && cleanClassName) {
@@ -224,44 +226,8 @@ export function formatClassDisplayName(
   }
 
   const gradeSection = formatGradeSection(cleanGrade, cleanSection);
+  if (gradeSection) return gradeSection;
   if (!cleanClassName) return gradeSection;
   if (!gradeSection) return cleanClassName.toUpperCase();
-
-  // Check if cleanClassName is redundant with grade and section
-  // Strip out grade, section, "grade", "section", numbers, delimiters from cleanClassName
-  let residual = cleanClassName;
-  if (cleanGrade) {
-    residual = residual.replace(new RegExp(escapeRegExp(cleanGrade), "gi"), "");
-  }
-  if (cleanSection) {
-    residual = residual.replace(new RegExp(escapeRegExp(cleanSection), "gi"), "");
-  }
-  residual = residual.replace(/\bgrade\b/gi, "").replace(/\bsection\b/gi, "");
-  residual = residual.replace(/[^a-zA-Z0-9]/g, "").trim();
-
-  // If nothing meaningful is left, className was just redundant repetition
-  if (!residual) {
-    return gradeSection;
-  }
-
-  if (cleanClassName.toLowerCase() === gradeSection.toLowerCase()) {
-    return gradeSection;
-  }
-
-  // Clean distinct class label
-  let distinctClassLabel = cleanClassName;
-  if (cleanGrade) {
-    distinctClassLabel = distinctClassLabel.replace(new RegExp(`\\b${escapeRegExp(cleanGrade)}\\b`, "gi"), "");
-  }
-  if (cleanSection) {
-    distinctClassLabel = distinctClassLabel.replace(new RegExp(`\\b${escapeRegExp(cleanSection)}\\b`, "gi"), "");
-  }
-  distinctClassLabel = distinctClassLabel.replace(/\bgrade\b/gi, "").replace(/\bsection\b/gi, "");
-  distinctClassLabel = distinctClassLabel.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "").trim();
-
-  if (!distinctClassLabel || distinctClassLabel.toLowerCase() === cleanSection.toLowerCase() || distinctClassLabel.toLowerCase() === cleanGrade.toLowerCase()) {
-    return gradeSection;
-  }
-
-  return `${gradeSection} - ${distinctClassLabel.toUpperCase()}`;
+  return cleanClassName.toUpperCase();
 }

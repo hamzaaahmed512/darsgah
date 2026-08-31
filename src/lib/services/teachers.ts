@@ -4,7 +4,7 @@ import type { AppUser, UserRole } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
 import { staffFormSchema, type StaffFormValues } from "@/lib/validation/staff";
 
-export const STAFF_EMAIL_ALREADY_ASSIGNED_MESSAGE = "This email address is already assigned to another staff member.";
+export const STAFF_EMAIL_ALREADY_ASSIGNED_MESSAGE = "This email address is already assigned to this school.";
 
 export class StaffEmailAlreadyAssignedError extends Error {
   field = "email" as const;
@@ -61,60 +61,76 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
 
   const { data: existingProfile, error: existingProfileError } = await adminClient
     .from("profiles")
-    .select("id")
+    .select("id, full_name")
     .eq("email", parsed.email)
-    .maybeSingle();
+    .limit(1)
+    .maybeSingle<{ id: string; full_name: string | null }>();
 
   if (existingProfileError) throw new Error(existingProfileError.message);
-  if (existingProfile) throw new StaffEmailAlreadyAssignedError();
+  if (existingProfile) {
+    const { data: existingMembership, error: existingMembershipError } = await adminClient
+      .from("school_members")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("user_id", existingProfile.id)
+      .limit(1)
+      .maybeSingle<{ id: string }>();
 
-  // 1. Create auth user via admin API
-  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-    email: parsed.email,
-    password: parsed.password,
-    email_confirm: true,
-  });
-
-  if (authError || !authData.user) {
-    if (isDuplicateEmailError(authError)) throw new StaffEmailAlreadyAssignedError();
-    throw new Error(authError?.message || "Failed to create auth user");
+    if (existingMembershipError) throw new Error(existingMembershipError.message);
+    if (existingMembership) throw new StaffEmailAlreadyAssignedError();
   }
 
-  // 2. Insert into profiles (will fail if trigger already did it, but let's do upsert or assume no trigger)
-  // Our schema doesn't have an auth trigger according to what we saw, but wait, usually auth.users creates profiles?
-  // Let's insert into profiles just in case. If it fails due to unique constraint, we can ignore or update.
-  const { error: profileError } = await adminClient
-    .from("profiles")
-    .upsert({
-      id: authData.user.id,
-      full_name: parsed.full_name,
+  let userId = existingProfile?.id ?? null;
+
+  if (!userId) {
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: parsed.email,
-      avatar_url: null,
-      must_change_password: true,
+      password: parsed.password,
+      email_confirm: true,
     });
 
-  if (profileError) {
-    if (isDuplicateEmailError(profileError)) throw new StaffEmailAlreadyAssignedError();
-    throw new Error(profileError.message);
+    if (authError || !authData.user) {
+      if (isDuplicateEmailError(authError)) throw new StaffEmailAlreadyAssignedError();
+      throw new Error(authError?.message || "Failed to create auth user");
+    }
+
+    const { error: profileError } = await adminClient
+      .from("profiles")
+      .upsert({
+        id: authData.user.id,
+        full_name: parsed.full_name,
+        email: parsed.email,
+        avatar_url: null,
+        must_change_password: true,
+      });
+
+    if (profileError) {
+      if (isDuplicateEmailError(profileError)) throw new StaffEmailAlreadyAssignedError();
+      throw new Error(profileError.message);
+    }
+
+    userId = authData.user.id;
   }
 
-  // 3. Insert into school_members
   const { error: memberError } = await adminClient
     .from("school_members")
     .insert({
       school_id: user.schoolId,
-      user_id: authData.user.id,
+      user_id: userId,
       role: parsed.role,
       department: parsed.department || null,
       job_title: parsed.job_title || null,
       status: "active"
     });
 
-  if (memberError) throw new Error(memberError.message);
+  if (memberError) {
+    if (memberError.code === "23505") throw new StaffEmailAlreadyAssignedError();
+    throw new Error(memberError.message);
+  }
 
   if (parsed.salary != null) {
     const { error: salaryError } = await adminClient.from("teacher_employment_details").upsert({
-      teacher_id: authData.user.id,
+      teacher_id: userId,
       school_id: user.schoolId,
       monthly_salary: parsed.salary,
       payment_method: "bank_transfer",
@@ -123,7 +139,10 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
     if (salaryError) throw new Error(salaryError.message);
   }
 
-  await logActivity(user, "staff_created", "school_member", authData.user.id, { role: parsed.role });
+  await logActivity(user, "staff_created", "school_member", userId, {
+    role: parsed.role,
+    reused_identity: Boolean(existingProfile)
+  });
 }
 
 export async function setStaffSalary(user: AppUser, staffId: string, salary: number) {

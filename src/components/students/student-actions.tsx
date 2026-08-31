@@ -56,8 +56,8 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
     // Generate an XLSX template with standard headers and sample data
     const headers = ["Admission Number", "First Name", "Last Name", "Grade", "Section", "Gender", "Date of Birth", "Guardian Name", "Contact Number"];
     const dummyData = [
-      ["ADM-2026-001", "Ali", "Khan", "Class 10", "A", "Male", "2010-05-14", "Ahmad Khan", "0300-1234567"],
-      ["ADM-2026-002", "Fatima", "Bibi", "Class 10", "A", "Female", "2010-08-22", "Omar Farooq", "0300-7654321"]
+      ["2026-1", "Ali", "Khan", "Class 10", "A", "Male", "2010-05-14", "Ahmad Khan", "0300-1234567"],
+      ["2026-2", "Fatima", "Bibi", "Class 10", "A", "Female", "2010-08-22", "Omar Farooq", "0300-7654321"]
     ];
     
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dummyData]);

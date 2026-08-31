@@ -5,6 +5,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { createSubjectAction } from "@/app/(app)/subjects/actions";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 export function SubjectCreateModal() {
   const [open, setOpen] = useState(false);
@@ -53,7 +54,7 @@ export function SubjectCreateModal() {
             <form onSubmit={handleSubmit} className="grid gap-4 p-6">
               {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
               <Field label="Name">
-                <Input name="name" required placeholder="Mathematics" />
+                <Input name="name" required placeholder="Mathematics" onChange={(event) => { event.currentTarget.value = sanitizeEnglishNameInput(event.currentTarget.value); }} />
               </Field>
               <Field label="Code">
                 <Input name="code" placeholder="MTH-101" />
