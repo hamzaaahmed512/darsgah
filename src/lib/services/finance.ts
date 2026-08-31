@@ -555,16 +555,35 @@ export async function getFinanceTransactions(user: AppUser, filters: {
 
 async function getLedgerDashboard(user: AppUser) {
   const supabase = await createClient();
-  const currentMonthStart = startOfMonth(new Date());
-  const previousMonthStart = startOfMonth(subMonths(new Date(), 1));
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now);
+  const previousMonthStart = startOfMonth(subMonths(now, 1));
   const monthStart = format(currentMonthStart, "yyyy-MM-dd");
   const previousMonthStartStr = format(previousMonthStart, "yyyy-MM-dd");
-  const [{ data: monthRows, error: monthError }, { data: recent, error: recentError }] = await Promise.all([
+  const currentYear = now.getFullYear();
+  const [{ data: monthRows, error: monthError }, { data: trendRows, error: trendError }, { data: recent, error: recentError }] = await Promise.all([
     supabase.from("finance_transactions").select("direction,amount,transaction_date,category").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", previousMonthStartStr),
+    supabase.from("finance_transactions").select("direction,amount,transaction_date,category").eq("school_id", user.schoolId).eq("is_voided", false).not("transaction_date", "is", null).order("transaction_date", { ascending: true }),
     supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
   ]);
-  if (monthError || recentError) return { monthlyIncome: 0, monthlyExpenses: 0, netCashFlow: 0, previousMonthlyIncome: 0, previousMonthlyExpenses: 0, previousNetCashFlow: 0, recentTransactions: [], incomeTrend: [], expenseDistribution: [] };
+  if (monthError || trendError || recentError) {
+    return {
+      monthlyIncome: 0,
+      monthlyExpenses: 0,
+      netCashFlow: 0,
+      previousMonthlyIncome: 0,
+      previousMonthlyExpenses: 0,
+      previousNetCashFlow: 0,
+      recentTransactions: [],
+      incomeTrend: [],
+      expenseDistribution: [],
+      incomeTrends: { monthly: [], yearly: [], lifetime: [] },
+      expenseTrends: { monthly: [], yearly: [], lifetime: [] },
+      expenseDistributions: { monthly: [], yearly: [], lifetime: [] }
+    };
+  }
   const rows = monthRows ?? [];
+  const allRows = trendRows ?? [];
   const currentRows = rows.filter((row) => (row.transaction_date ?? monthStart) >= monthStart);
   const previousRows = rows.filter((row) => {
     const transactionDate = row.transaction_date ?? previousMonthStartStr;
@@ -576,6 +595,28 @@ async function getLedgerDashboard(user: AppUser) {
   const previousMonthlyExpenses = previousRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
   const incomeByDate = new Map<string, number>();
   const expensesByCategory = new Map<string, number>();
+  const incomeMonthlyMap = new Map<string, number>();
+  const expenseMonthlyMap = new Map<string, number>();
+  const incomeYearlyMap = new Map<string, number>();
+  const expenseYearlyMap = new Map<string, number>();
+  const incomeLifetimeMap = new Map<string, number>();
+  const expenseLifetimeMap = new Map<string, number>();
+  const expenseMonthlyDistributionMap = new Map<string, number>();
+  const expenseYearlyDistributionMap = new Map<string, number>();
+  const expenseLifetimeDistributionMap = new Map<string, number>();
+
+  const currentMonthKey = monthStart.slice(0, 7);
+  for (let monthIndex = 0; monthIndex <= now.getMonth(); monthIndex += 1) {
+    const bucket = `${currentYear}-${String(monthIndex + 1).padStart(2, "0")}`;
+    incomeYearlyMap.set(bucket, 0);
+    expenseYearlyMap.set(bucket, 0);
+  }
+  const daysInCurrentMonth = new Date(currentYear, now.getMonth() + 1, 0).getDate();
+  for (let day = 1; day <= daysInCurrentMonth; day += 1) {
+    const bucket = `${currentMonthKey}-${String(day).padStart(2, "0")}`;
+    incomeMonthlyMap.set(bucket, 0);
+    expenseMonthlyMap.set(bucket, 0);
+  }
 
   currentRows.forEach((row) => {
     const amount = Number(row.amount ?? 0);
@@ -590,6 +631,48 @@ async function getLedgerDashboard(user: AppUser) {
     }
   });
 
+  allRows.forEach((row) => {
+    const date = row.transaction_date as string | null;
+    if (!date) return;
+    const amount = Number(row.amount ?? 0);
+    const year = date.slice(0, 4);
+    const monthKey = date.slice(0, 7);
+    const category = row.category as TransactionCategory | null;
+    const categoryLabel = category && category in TRANSACTION_CATEGORY_LABELS ? TRANSACTION_CATEGORY_LABELS[category] : "Other Expense";
+
+    if (row.direction === "income") {
+      if (year === String(currentYear)) {
+        incomeYearlyMap.set(monthKey, (incomeYearlyMap.get(monthKey) ?? 0) + amount);
+      }
+      incomeLifetimeMap.set(year, (incomeLifetimeMap.get(year) ?? 0) + amount);
+      if (monthKey === currentMonthKey) {
+        incomeMonthlyMap.set(date, (incomeMonthlyMap.get(date) ?? 0) + amount);
+      }
+    }
+
+    if (row.direction === "expense") {
+      if (year === String(currentYear)) {
+        expenseYearlyMap.set(monthKey, (expenseYearlyMap.get(monthKey) ?? 0) + amount);
+        expenseYearlyDistributionMap.set(categoryLabel, (expenseYearlyDistributionMap.get(categoryLabel) ?? 0) + amount);
+      }
+      expenseLifetimeMap.set(year, (expenseLifetimeMap.get(year) ?? 0) + amount);
+      expenseLifetimeDistributionMap.set(categoryLabel, (expenseLifetimeDistributionMap.get(categoryLabel) ?? 0) + amount);
+      if (monthKey === currentMonthKey) {
+        expenseMonthlyMap.set(date, (expenseMonthlyMap.get(date) ?? 0) + amount);
+        expenseMonthlyDistributionMap.set(categoryLabel, (expenseMonthlyDistributionMap.get(categoryLabel) ?? 0) + amount);
+      }
+    }
+  });
+
+  const toTrendRows = (entries: Map<string, number>) =>
+    Array.from(entries.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, amount]) => ({ label, amount }));
+  const toDistributionRows = (entries: Map<string, number>) =>
+    Array.from(entries.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
   return {
     monthlyIncome,
     monthlyExpenses,
@@ -603,6 +686,21 @@ async function getLedgerDashboard(user: AppUser) {
     expenseDistribution: Array.from(expensesByCategory.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value),
+    incomeTrends: {
+      monthly: toTrendRows(incomeMonthlyMap),
+      yearly: toTrendRows(incomeYearlyMap),
+      lifetime: toTrendRows(incomeLifetimeMap)
+    },
+    expenseTrends: {
+      monthly: toTrendRows(expenseMonthlyMap),
+      yearly: toTrendRows(expenseYearlyMap),
+      lifetime: toTrendRows(expenseLifetimeMap)
+    },
+    expenseDistributions: {
+      monthly: toDistributionRows(expenseMonthlyDistributionMap),
+      yearly: toDistributionRows(expenseYearlyDistributionMap),
+      lifetime: toDistributionRows(expenseLifetimeDistributionMap)
+    },
     recentTransactions: (recent ?? []).map((row: any) => ({ ...row, student_name: row.students ? formatFullName(row.students.first_name, row.students.last_name) : null, recorded_by_name: formatDisplayName(row.profiles?.full_name) || null }))
   };
 }

@@ -287,7 +287,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
               tone={stat.tone as keyof typeof statTones}
             />
           ))}
-        </div>
+      </div>
       </Card>
 
       <div className="mb-8 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
@@ -296,7 +296,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
             <CardTitle>Income Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyIncomeTrendChart data={data.incomeTrend} />
+            <LazyIncomeTrendChart datasets={data.incomeTrends} />
           </CardContent>
         </Card>
 
@@ -305,7 +305,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
             <CardTitle>Expense Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyExpenseDistributionChart data={data.expenseDistribution} />
+            <LazyExpenseDistributionChart datasets={data.expenseDistributions} />
           </CardContent>
         </Card>
       </div>

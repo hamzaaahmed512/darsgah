@@ -25,10 +25,10 @@ export function LazyOutstandingByClassChart({ data }: { data: Array<{ className:
   return <OutstandingByClassChartImpl data={data} />;
 }
 
-export function LazyIncomeTrendChart({ data }: { data: Array<{ date: string; amount: number }> }) {
-  return <IncomeTrendChartImpl data={data} />;
+export function LazyIncomeTrendChart({ datasets }: { datasets: { monthly: Array<{ label: string; amount: number }>; yearly: Array<{ label: string; amount: number }>; lifetime: Array<{ label: string; amount: number }> } }) {
+  return <IncomeTrendChartImpl datasets={datasets} />;
 }
 
-export function LazyExpenseDistributionChart({ data }: { data: Array<{ name: string; value: number }> }) {
-  return <ExpenseDistributionChartImpl data={data} />;
+export function LazyExpenseDistributionChart({ datasets }: { datasets: { monthly: Array<{ name: string; value: number }>; yearly: Array<{ name: string; value: number }>; lifetime: Array<{ name: string; value: number }> } }) {
+  return <ExpenseDistributionChartImpl datasets={datasets} />;
 }

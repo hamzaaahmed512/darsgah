@@ -141,9 +141,9 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       formats: ["CSV", "Print/PDF", "Screen"],
       ownerOnly: true,
       actions: [
-        { label: "Open", href: `/finance/fees?month=${month}`, kind: "open" },
-        { label: "CSV", href: `/finance/fees?month=${month}`, kind: "csv" },
-        { label: "Print/PDF", href: `/finance/fees?month=${month}`, kind: "print" }
+        { label: "Open", href: `/finance/challans?month=${month}`, kind: "open" },
+        { label: "CSV", href: `/finance/challans?month=${month}`, kind: "csv" },
+        { label: "Print/PDF", href: `/finance/challans?month=${month}`, kind: "print" }
       ]
     },
     {
@@ -154,8 +154,8 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       permission: "finance:view",
       formats: ["Print/PDF", "Screen"],
       actions: [
-        { label: "Open", href: `/finance/fees?month=${month}`, kind: "open" },
-        { label: "Print/PDF", href: `/finance/fees?month=${month}`, kind: "print" }
+        { label: "Open", href: `/finance/challans?month=${month}`, kind: "open" },
+        { label: "Print/PDF", href: `/finance/challans?month=${month}`, kind: "print" }
       ]
     },
     {

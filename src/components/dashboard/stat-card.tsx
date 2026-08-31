@@ -14,6 +14,7 @@ const toneClasses = {
 export function StatCard({
   label,
   value,
+  hint,
   icon: Icon,
   tone = "blue",
   trend,
@@ -40,6 +41,7 @@ export function StatCard({
           <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight text-ink">
             {value}
           </p>
+          {hint ? <p className="mt-2 text-sm font-medium leading-5 text-muted">{hint}</p> : null}
           {trend ? <p className={cn("mt-2 text-sm font-bold leading-5", trendClass)}>{trend}</p> : null}
         </div>
       </div>

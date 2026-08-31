@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowDownCircle, ArrowUpCircle, Search } from "lucide-react";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,9 +43,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
     {showTotals ? (
       <section className="mb-5 grid gap-4 sm:grid-cols-3">
-        <Summary label="Income" value={formatPKR(data.totals.income)} tone="income" />
-        <Summary label="Expenses" value={formatPKR(data.totals.expenses)} tone="expense" />
-        <Summary label="Net" value={formatPKR(data.totals.income - data.totals.expenses)} tone="net" />
+        <StatCard label="Income" value={formatPKR(data.totals.income)} hint="Transactions in selected range" icon={ArrowDownCircle} tone="green" />
+        <StatCard label="Expenses" value={formatPKR(data.totals.expenses)} hint="Transactions in selected range" icon={ArrowUpCircle} tone="red" />
+        <StatCard label="Net" value={formatPKR(data.totals.income - data.totals.expenses)} hint="Income minus expenses" icon={ArrowDownCircle} tone="blue" />
       </section>
     ) : null}
 
@@ -70,9 +71,4 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     </Card>
     {pageCount > 1 ? <nav className="mt-4 flex items-center gap-3 text-sm"><span className="text-muted">Page {data.page} of {pageCount}</span>{data.page > 1 ? <Link className="font-semibold text-primary" href={`/finance/transactions?${new URLSearchParams({ ...params, page: String(data.page - 1) })}`}>Previous</Link> : null}{data.page < pageCount ? <Link className="font-semibold text-primary" href={`/finance/transactions?${new URLSearchParams({ ...params, page: String(data.page + 1) })}`}>Next</Link> : null}</nav> : null}
   </>;
-}
-
-function Summary({ label, value, tone }: { label: string; value: string; tone: "income" | "expense" | "net" }) {
-  const Icon = tone === "expense" ? ArrowUpCircle : ArrowDownCircle;
-  return <Card className="p-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p><p className="mt-2 font-display text-2xl font-bold text-ink">{value}</p></div><Icon className={`h-6 w-6 ${tone === "expense" ? "text-danger" : "text-success"}`} /></div></Card>;
 }

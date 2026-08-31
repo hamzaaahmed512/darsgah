@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Search, Percent, X, Printer, Receipt, Wallet } from "lucide-react";
+import { Search, Percent, X, Printer, Receipt, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   const [session, setSession] = useState("all");
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [isCollectOpen, setIsCollectOpen] = useState(false);
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const [pending, startTransition] = useTransition();
@@ -93,6 +94,27 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
     }),
     { payable: 0, paid: 0, outstanding: 0 }
   );
+
+  function resetCollectForm() {
+    setAmount("");
+    setPaymentMethod("cash");
+    setTransactionNumber("");
+    setReferenceNumber("");
+    setRemarks("");
+    setFormError(null);
+  }
+
+  function handleOpenCollect(accountId: string) {
+    setSelectedAccountId(accountId);
+    resetCollectForm();
+    setIsCollectOpen(true);
+  }
+
+  function handleCloseCollect() {
+    setIsCollectOpen(false);
+    resetCollectForm();
+  }
+
   function handleOpenDiscount(acc: any) {
     setSelectedAccount(acc);
     setDiscountType(acc.discount_type);
@@ -151,10 +173,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
     startTransition(async () => {
       try {
         await recordPaymentAction(formData);
-        setAmount("");
-        setTransactionNumber("");
-        setReferenceNumber("");
-        setRemarks("");
+        handleCloseCollect();
         router.refresh();
       } catch (err: any) {
         setFormError(err.message || "Failed to record payment.");
@@ -165,85 +184,60 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   return (
     <>
       <div id="fee-management-report" className="pb-24">
-        <Card className="mb-6 p-4">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-outline/50 pb-4">
-            <div>
-              <p className="text-sm font-semibold text-ink">Fee ledger</p>
-              <p className="text-xs text-muted">Search, filter, collect payments, and apply discounts.</p>
-            </div>
-            {showReports ? (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => downloadReport(filtered)}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft"
-                >
-                  <Download className="h-4 w-4" /> Download Report
-                </button>
+        <Card className="overflow-hidden">
+          <div className="border-b border-outline/60 px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-ink">Student Fee Accounts</h2>
+                <p className="text-sm text-muted">Search, filter, collect payments, and apply discounts.</p>
               </div>
-            ) : null}
-          </div>
-          <div className="grid gap-4 md:grid-cols-5">
-            <div className="relative md:col-span-2">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" placeholder="Search student or admission..." />
             </div>
-            <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="all">All Classes</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
-                </option>
-              ))}
-            </Select>
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="all">All Statuses</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="partially_paid">Partially Paid</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-            </Select>
-            <Select value={session} onChange={(e) => setSession(e.target.value)}>
-              <option value="all">All Sessions</option>
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
+            <div className="mt-4 grid gap-4 md:grid-cols-5">
+              <div className="relative md:col-span-2">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" placeholder="Search student or admission..." />
+              </div>
+              <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
+                <option value="all">All Classes</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
+                  </option>
+                ))}
+              </Select>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Statuses</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partially_paid">Partially Paid</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </Select>
+              <Select value={session} onChange={(e) => setSession(e.target.value)}>
+                <option value="all">All Sessions</option>
+                {sessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink">
+              <input
+                type="checkbox"
+                checked={onlyDiscounted}
+                onChange={(e) => setOnlyDiscounted(e.target.checked)}
+                className="h-4 w-4 rounded border-outline text-primary focus:ring-0"
+              />
+              <span>Show discounted accounts only</span>
+            </label>
           </div>
-          <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink">
-            <input
-              type="checkbox"
-              checked={onlyDiscounted}
-              onChange={(e) => setOnlyDiscounted(e.target.checked)}
-              className="h-4 w-4 rounded border-outline text-primary focus:ring-0"
-            />
-            <span>Show discounted accounts only</span>
-          </label>
-        </Card>
 
-        {showReports ? (
-          <div className="mb-6 grid gap-4 sm:grid-cols-3">
-            <Card className="p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Expected Billing</p>
-              <p className="mt-1 font-display text-2xl font-bold text-ink">{formatPKR(totals.payable)}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Collected</p>
-              <p className="mt-1 font-display text-2xl font-bold text-success">{formatPKR(totals.paid)}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Outstanding</p>
-              <p className="mt-1 font-display text-2xl font-bold text-danger">{formatPKR(totals.outstanding)}</p>
-            </Card>
-          </div>
-        ) : null}
-
-        {!filtered.length ? (
-          <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-outline bg-white">
+          {!filtered.length ? (
+            <div className="p-5">
+              <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
+            </div>
+          ) : (
+          <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
                 <tr>
@@ -301,7 +295,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => setSelectedAccountId(acc.id)}
+                              onClick={() => handleOpenCollect(acc.id)}
                               className="inline-flex items-center gap-1 rounded bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary hover:brightness-95"
                             >
                               <Wallet className="h-3 w-3" /> Collect
@@ -322,56 +316,13 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               </tbody>
             </table>
           </div>
-        )}
+          )}
+        </Card>
 
-        {selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
-          <Card className="mt-6 p-5">
-            <h3 className="font-display text-lg font-bold text-ink">Record Payment — {selectedLedgerAccount.student_name}</h3>
-            <p className="mt-1 text-sm text-muted">
-              Remaining balance: {formatPKR(Number(selectedLedgerAccount.remaining_balance))}
-            </p>
-            <form onSubmit={handleRecordPayment} className="mt-4 grid gap-4 md:grid-cols-2">
-              {formError ? (
-                <div className="md:col-span-2 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{formError}</div>
-              ) : null}
-              <Field label="Amount">
-                <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-              </Field>
-              <Field label="Payment Method">
-                <Select value={paymentMethod} onChange={(e: any) => setPaymentMethod(e.target.value)}>
-                  <option value="cash">Cash</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="online_payment">Online Payment</option>
-                </Select>
-              </Field>
-              <Field label="Transaction Number">
-                <Input value={transactionNumber} onChange={(e) => setTransactionNumber(e.target.value)} />
-              </Field>
-              <Field label="Reference Number">
-                <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} />
-              </Field>
-              <div className="md:col-span-2">
-                <Field label="Remarks">
-                  <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-                </Field>
-              </div>
-              <div className="md:col-span-2 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:brightness-105 disabled:bg-outline"
-                >
-                  {pending ? "Recording..." : "Post Payment"}
-                </button>
-              </div>
-            </form>
-          </Card>
-        ) : null}
       </div>
 
       {showReports ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:pl-[280px]">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:left-[292px]">
           <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-3">
             <p className="text-sm text-muted">
               Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
@@ -384,6 +335,63 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <Printer className="h-4 w-4" /> Print Report
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {isCollectOpen && selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-2xl">
+            <div className="flex items-center justify-between border-b border-outline/40 p-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Record Payment</h3>
+                <p className="text-xs text-muted">{selectedLedgerAccount.student_name} • Remaining {formatPKR(Number(selectedLedgerAccount.remaining_balance))}</p>
+              </div>
+              <button onClick={handleCloseCollect} className="rounded p-1 text-muted hover:bg-surface-low">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleRecordPayment} className="p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {formError ? (
+                  <div className="md:col-span-2 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{formError}</div>
+                ) : null}
+                <Field label="Amount">
+                  <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                </Field>
+                <Field label="Payment Method">
+                  <Select value={paymentMethod} onChange={(e: any) => setPaymentMethod(e.target.value)}>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="online_payment">Online Payment</option>
+                  </Select>
+                </Field>
+                <Field label="Transaction Number">
+                  <Input value={transactionNumber} onChange={(e) => setTransactionNumber(e.target.value)} />
+                </Field>
+                <Field label="Reference Number">
+                  <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Remarks">
+                    <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2 border-t border-outline/40 pt-4">
+                <button type="button" onClick={handleCloseCollect} className="rounded-lg bg-surface-low px-4 py-2 text-sm font-semibold text-muted">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:brightness-105 disabled:bg-outline"
+                >
+                  {pending ? "Recording..." : "Post Payment"}
+                </button>
+              </div>
+            </form>
+          </Card>
         </div>
       ) : null}
 
@@ -495,28 +503,6 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       ) : null}
     </>
   );
-}
-
-function downloadReport(rows: any[]) {
-  const headers = ["Student", "Admission", "Class", "Payable", "Paid", "Remaining", "Status"];
-  const body = rows.map((row) => [
-    row.student_name,
-    row.admission_number,
-    formatGradeSection(row.grade_name, row.section_name),
-    row.total_payable,
-    row.amount_paid,
-    row.remaining_balance,
-    row.payment_status
-  ]);
-  const csv = [headers, ...body]
-    .map((line) => line.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(","))
-    .join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "fee-management-report.csv";
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function ReceiptLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

@@ -1,6 +1,6 @@
 import { BookOpenCheck, CalendarDays, GraduationCap, Layers3 } from "lucide-react";
-import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,10 +65,10 @@ export default async function AcademicsPage() {
         description="Academic years, grades, sections, subjects, classes, teacher assignments, and enrollments are normalized in Supabase."
       />
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Summary title="Academic years" value={academics.years.length} icon={<CalendarDays />} />
-        <Summary title="Grades" value={academics.grades.length} icon={<GraduationCap />} />
-        <Summary title="Sections" value={academics.sections.length} icon={<Layers3 />} />
-        <Summary title="Subjects" value={academics.subjects.length} icon={<BookOpenCheck />} />
+        <StatCard label="Academic years" value={academics.years.length} hint="Configured school sessions" icon={CalendarDays} tone="blue" />
+        <StatCard label="Grades" value={academics.grades.length} hint="Defined academic levels" icon={GraduationCap} tone="purple" />
+        <StatCard label="Sections" value={academics.sections.length} hint="Available section groups" icon={Layers3} tone="amber" />
+        <StatCard label="Subjects" value={academics.subjects.length} hint="Subject catalog entries" icon={BookOpenCheck} tone="green" />
       </section>
       <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>
@@ -120,19 +120,5 @@ export default async function AcademicsPage() {
         </Card>
       </section>
     </>
-  );
-}
-
-function Summary({ title, value, icon }: { title: string; value: number; icon: ReactNode }) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">{title}</p>
-          <p className="mt-2 font-display text-3xl font-semibold text-ink">{value}</p>
-        </div>
-        <div className="rounded-lg bg-primary-soft p-3 text-primary">{icon}</div>
-      </div>
-    </Card>
   );
 }

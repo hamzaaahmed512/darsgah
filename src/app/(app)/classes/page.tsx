@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import type { ReactNode } from "react";
 import { BookOpenCheck, CalendarDays, GraduationCap, Layers3 } from "lucide-react";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -62,10 +62,10 @@ export default async function ClassesPage({
       />
 
       <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard title="Academic years" value={academicData.years.length} icon={<CalendarDays className="h-5 w-5" />} />
-        <SummaryCard title="Grades" value={academicData.grades.length} icon={<GraduationCap className="h-5 w-5" />} />
-        <SummaryCard title="Sections" value={academicData.sections.length} icon={<Layers3 className="h-5 w-5" />} />
-        <SummaryCard title="Subjects" value={academicData.subjects.length} icon={<BookOpenCheck className="h-5 w-5" />} />
+        <StatCard label="Academic years" value={academicData.years.length} hint="Configured school sessions" icon={CalendarDays} tone="blue" />
+        <StatCard label="Grades" value={academicData.grades.length} hint="Defined academic levels" icon={GraduationCap} tone="purple" />
+        <StatCard label="Sections" value={academicData.sections.length} hint="Available section groups" icon={Layers3} tone="amber" />
+        <StatCard label="Subjects" value={academicData.subjects.length} hint="Subject catalog entries" icon={BookOpenCheck} tone="green" />
       </section>
 
       <Card className="mb-5 p-4">
@@ -95,19 +95,5 @@ export default async function ClassesPage({
         </div>
       )}
     </>
-  );
-}
-
-function SummaryCard({ title, value, icon }: { title: string; value: number; icon: ReactNode }) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">{title}</p>
-          <p className="mt-2 font-display text-3xl font-semibold text-ink">{value}</p>
-        </div>
-        <div className="rounded-lg bg-primary-soft p-3 text-primary">{icon}</div>
-      </div>
-    </Card>
   );
 }

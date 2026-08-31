@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { currentMonthKey, formatMonth, getPayrollEligibleStaff, getStaffPayRows } from "@/lib/services/payroll";
 import { hasPermission } from "@/lib/permissions";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StaffPayTable } from "@/components/payroll/staff-pay-table";
 import { AddAdjustmentDialog } from "@/components/payroll/add-adjustment-dialog";
 import { formatPKR } from "@/lib/utils";
@@ -27,13 +27,6 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
     paid: rows.filter((row) => row.status === "paid").length,
     unpaid: rows.filter((row) => row.status !== "paid").length
   };
-
-  const statCards = [
-    { label: "Employees", value: stats.employees.toString(), hint: "Active staff in payroll", icon: Users, color: "text-ink bg-surface-low" },
-    { label: "Total Staff Pay", value: formatPKR(stats.totalPayable), hint: `For ${formatMonth(month)}`, icon: Banknote, color: "text-primary bg-primary-soft" },
-    { label: "Paid", value: stats.paid.toString(), hint: "Marked paid this month", icon: CheckCircle, color: "text-success bg-success-soft" },
-    { label: "Unpaid", value: stats.unpaid.toString(), hint: "Pending payment", icon: Clock, color: "text-warning bg-warning-soft" }
-  ];
 
   return (
     <>
@@ -59,23 +52,10 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
       </form>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted">{stat.label}</span>
-                <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
-                  <Icon className="h-4 w-4" />
-                </span>
-              </CardHeader>
-              <CardContent>
-                <div className="font-display text-xl font-bold text-ink">{stat.value}</div>
-                <p className="mt-0.5 text-xs text-muted">{stat.hint}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <StatCard label="Employees" value={stats.employees.toString()} hint="Active staff in payroll" icon={Users} tone="slate" />
+        <StatCard label="Total Staff Pay" value={formatPKR(stats.totalPayable)} hint={`For ${formatMonth(month)}`} icon={Banknote} tone="blue" />
+        <StatCard label="Paid" value={stats.paid.toString()} hint="Marked paid this month" icon={CheckCircle} tone="green" />
+        <StatCard label="Unpaid" value={stats.unpaid.toString()} hint="Pending payment" icon={Clock} tone="amber" />
       </div>
 
       <StaffPayTable rows={rows} month={month} canManage={canManage} />

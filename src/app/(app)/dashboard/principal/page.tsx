@@ -89,7 +89,7 @@ export default async function PrincipalDashboardPage() {
             <CardTitle>Income Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyIncomeTrendChart data={finance.incomeTrend} />
+            <LazyIncomeTrendChart datasets={finance.incomeTrends} />
           </CardContent>
         </Card>
         <Card>
@@ -97,7 +97,7 @@ export default async function PrincipalDashboardPage() {
             <CardTitle>Expense Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyExpenseDistributionChart data={finance.expenseDistribution} />
+            <LazyExpenseDistributionChart datasets={finance.expenseDistributions} />
           </CardContent>
         </Card>
       </section>

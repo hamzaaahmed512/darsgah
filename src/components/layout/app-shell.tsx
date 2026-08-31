@@ -152,7 +152,7 @@ export function AppShell({
   }, []);
 
   const sidebar = (
-    <aside className="flex h-full w-[292px] flex-col bg-white">
+    <aside className="flex h-full min-h-0 w-[292px] flex-col bg-white">
       {/* Brand header */}
       <div className="flex min-h-[92px] items-center gap-3 border-b border-slate-200 px-7 py-5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white shadow-sm">
@@ -170,7 +170,7 @@ export function AppShell({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-5 scrollbar-thin">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5 scrollbar-thin">
         {groupedItems.map(({ section, items: sectionItems }, groupIndex) => (
           <div key={`${section}-${groupIndex}`} className={groupIndex > 0 ? "mt-6" : ""}>
             {/* Section label */}
@@ -282,11 +282,11 @@ export function AppShell({
     <div className="min-h-screen bg-background text-ink">
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
-      <div className="fixed inset-y-0 left-0 z-40 hidden w-[292px] bg-white shadow-[1px_0_0_rgba(226,232,240,0.95)] lg:block">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden bg-white shadow-[1px_0_0_rgba(226,232,240,0.95)] lg:block">{sidebar}</div>
       <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-full max-h-screen w-[292px] flex-col overflow-hidden bg-white shadow-lift transition duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-dvh w-[292px] flex-col overflow-hidden bg-white shadow-lift transition duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -296,7 +296,7 @@ export function AppShell({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {sidebar}
         </div>
       </div>
