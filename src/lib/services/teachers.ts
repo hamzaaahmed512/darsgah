@@ -59,10 +59,12 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
     throw new Error("You do not have permission to create that role.");
   }
 
+  const normalizedEmail = parsed.email.trim().toLowerCase();
+
   const { data: existingProfile, error: existingProfileError } = await adminClient
     .from("profiles")
     .select("id, full_name")
-    .eq("email", parsed.email)
+    .ilike("email", normalizedEmail)
     .limit(1)
     .maybeSingle<{ id: string; full_name: string | null }>();
 
@@ -84,32 +86,65 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
 
   if (!userId) {
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email: parsed.email,
+      email: normalizedEmail,
       password: parsed.password,
       email_confirm: true,
     });
 
     if (authError || !authData.user) {
-      if (isDuplicateEmailError(authError)) throw new StaffEmailAlreadyAssignedError();
-      throw new Error(authError?.message || "Failed to create auth user");
+      if (isDuplicateEmailError(authError)) {
+        const { data: altProfile } = await adminClient
+          .from("profiles")
+          .select("id")
+          .ilike("email", normalizedEmail)
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+
+        if (altProfile) {
+          const { data: altMembership } = await adminClient
+            .from("school_members")
+            .select("id")
+            .eq("school_id", user.schoolId)
+            .eq("user_id", altProfile.id)
+            .limit(1)
+            .maybeSingle<{ id: string }>();
+
+          if (altMembership) throw new StaffEmailAlreadyAssignedError();
+          userId = altProfile.id;
+        } else {
+          throw new StaffEmailAlreadyAssignedError();
+        }
+      } else {
+        throw new Error(authError?.message || "Failed to create auth user");
+      }
+    } else {
+      userId = authData.user.id;
     }
 
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .upsert({
-        id: authData.user.id,
-        full_name: parsed.full_name,
-        email: parsed.email,
-        avatar_url: null,
-        must_change_password: true,
-      });
+    if (userId && !existingProfile) {
+      const { error: profileError } = await adminClient
+        .from("profiles")
+        .upsert({
+          id: userId,
+          full_name: parsed.full_name,
+          email: normalizedEmail,
+          avatar_url: null,
+          must_change_password: true,
+        });
 
-    if (profileError) {
-      if (isDuplicateEmailError(profileError)) throw new StaffEmailAlreadyAssignedError();
-      throw new Error(profileError.message);
+      if (profileError && isDuplicateEmailError(profileError)) {
+        const { data: existingMembership } = await adminClient
+          .from("school_members")
+          .select("id")
+          .eq("school_id", user.schoolId)
+          .eq("user_id", userId)
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+        if (existingMembership) throw new StaffEmailAlreadyAssignedError();
+      } else if (profileError) {
+        throw new Error(profileError.message);
+      }
     }
-
-    userId = authData.user.id;
   }
 
   const { error: memberError } = await adminClient

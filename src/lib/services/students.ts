@@ -117,7 +117,7 @@ export async function validateGuardianAndStudentIdentifiers(
     }
   }
 
-  if (normalizedFatherPhone && payload.fatherCnic) {
+  if (normalizedFatherPhone) {
     let fatherPhoneQuery = supabase
       .from("students")
       .select("id, father_cnic")
@@ -129,8 +129,10 @@ export async function validateGuardianAndStudentIdentifiers(
     }
     const { data: existingPhoneRecord, error: fatherPhoneError } = await fatherPhoneQuery.maybeSingle<{ id: string; father_cnic: string | null }>();
     if (fatherPhoneError) throw new Error(fatherPhoneError.message);
-    if (existingPhoneRecord && existingPhoneRecord.father_cnic !== payload.fatherCnic) {
-      errors.father_phone = "This phone number is already registered under a different guardian/CNIC.";
+    if (existingPhoneRecord) {
+      if (!payload.fatherCnic || existingPhoneRecord.father_cnic !== payload.fatherCnic) {
+        errors.father_phone = "This phone number is already registered under a different guardian/CNIC.";
+      }
     }
   }
 

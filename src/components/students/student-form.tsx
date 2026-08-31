@@ -135,7 +135,7 @@ export function StudentForm({
     const formattedFatherCnic = formatCnic(fatherCnic);
     const formattedFatherPhone = formatPakistaniPhone(fatherPhone);
     const shouldValidateStudentCnic = formattedStudentCnic.length === 15;
-    const shouldValidateFatherPhone = formattedFatherCnic.length === 15 && formattedFatherPhone.length === 12;
+    const shouldValidateFatherPhone = formattedFatherPhone.length === 12;
 
     if (!shouldValidateStudentCnic && !shouldValidateFatherPhone) {
       clearErrors(["student_cnic", "father_phone"]);
@@ -146,7 +146,7 @@ export function StudentForm({
       try {
         const result = await validateStudentIdentifiersAction({
           studentCnic: shouldValidateStudentCnic ? formattedStudentCnic : null,
-          fatherCnic: shouldValidateFatherPhone ? formattedFatherCnic : null,
+          fatherCnic: formattedFatherCnic.length === 15 ? formattedFatherCnic : null,
           fatherPhone: shouldValidateFatherPhone ? formattedFatherPhone : null,
           currentStudentId: studentId
         });
@@ -182,9 +182,7 @@ export function StudentForm({
     }
   }
 
-  function handleAdmissionNumberChange(value: string) {
-    setValue("admission_number", sanitizeAdmissionNumberInput(value, currentAdmissionYear) as any, { shouldDirty: true, shouldValidate: true });
-  }
+
 
   function submit(values: StudentFormValues) {
     setServerError(null);
@@ -243,7 +241,11 @@ export function StudentForm({
             <Input
               {...register("admission_number")}
               value={admissionNumber}
-              onChange={(event) => handleAdmissionNumberChange(event.target.value)}
+              onChange={(event) => {
+                const sanitized = sanitizeAdmissionNumberInput(event.target.value, currentAdmissionYear);
+                event.currentTarget.value = sanitized;
+                setValue("admission_number", sanitized as any, { shouldDirty: true, shouldValidate: true });
+              }}
               autoComplete="off"
               inputMode="numeric"
               readOnly={isCreateMode && autoGenerateAdmissionNumber}

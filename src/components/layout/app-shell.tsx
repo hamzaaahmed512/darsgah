@@ -286,16 +286,19 @@ export function AppShell({
       <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[292px] transform bg-white shadow-lift transition duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-full max-h-screen w-[292px] flex-col overflow-hidden bg-white shadow-lift transition duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex justify-end p-3">
-          <button className="rounded-xl p-2 hover:bg-surface-low" onClick={() => setOpen(false)} aria-label="Close navigation">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Navigation</span>
+          <button className="rounded-xl p-2 text-slate-500 hover:bg-surface-low hover:text-slate-900" onClick={() => setOpen(false)} aria-label="Close navigation">
             <X className="h-5 w-5" />
           </button>
         </div>
-        {sidebar}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {sidebar}
+        </div>
       </div>
 
       <div className="lg:pl-[292px]">
