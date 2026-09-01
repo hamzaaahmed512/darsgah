@@ -1,25 +1,24 @@
-import { ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
 import { getStaff } from "@/lib/services/staff";
-import { getRolePermissions } from "@/lib/permissions";
 import { StaffFormModal } from "@/components/teachers/staff-form";
+import { createClient } from "@/lib/supabase/server";
+import { CreateRoleModal, DeleteUserButton, EditUserModal } from "@/components/admin/admin-role-modals";
 
 export default async function AdminPage() {
   const user = await requireUser("users:manage");
+  const supabase = await createClient();
   const members = (await getStaff(user)).filter((member: any) =>
     user.role === "principal" ? true : member.role !== "principal" && member.role !== "administrator"
   );
   const allowedRoles =
     user.role === "principal"
-      ? (["administrator", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
-      : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
-  const visibleRoleCards =
-    user.role === "principal"
-      ? (["administrator", "principal", "teacher", "head_teacher", "student_staff", "staff", "cashier"] as const)
-      : (["teacher", "head_teacher", "student_staff", "staff", "cashier"] as const);
+      ? (["administrator", "teacher", "staff", "student_staff", "cashier"] as const)
+      : (["teacher", "staff", "student_staff", "cashier"] as const);
+  const { data: customRolesData } = await supabase.from("custom_roles").select("*").eq("school_id", user.schoolId).order("name");
+  const customRoles = customRolesData ?? [];
 
   return (
     <>
@@ -27,9 +26,14 @@ export default async function AdminPage() {
         eyebrow="System"
         title="Administrator Console"
         description="Manage user membership, role policy, and school-level settings without exposing service-role credentials."
-        actions={<StaffFormModal allowedRoles={[...allowedRoles]} triggerLabel="Add User" />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" />
+            <CreateRoleModal currentUserRole={user.role} />
+          </div>
+        }
       />
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>User Accounts</CardTitle>
@@ -46,6 +50,7 @@ export default async function AdminPage() {
                     <th className="py-3 pr-4">Department</th>
                     <th className="py-3 pr-4">Phone</th>
                     <th className="py-3 pr-4">Status</th>
+                    <th className="py-3 pr-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -56,7 +61,7 @@ export default async function AdminPage() {
                         <p className="text-xs text-muted">{member.job_title ?? "No title"}</p>
                       </td>
                       <td className="py-3 pr-4">{member.email}</td>
-                      <td className="py-3 pr-4">{member.role.replace("_", " ")}</td>
+                      <td className="py-3 pr-4">{member.custom_role_name ?? member.role.replace("_", " ")}</td>
                       <td className="py-3 pr-4">{member.department ?? "Not set"}</td>
                       <td className="py-3 pr-4">{member.phone ?? "Not set"}</td>
                       <td className="py-3 pr-4">
@@ -65,25 +70,17 @@ export default async function AdminPage() {
                           {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                         </div>
                       </td>
+                      <td className="py-3 pr-4">
+                        <div className="flex justify-end gap-2">
+                          <EditUserModal currentUserRole={user.role} member={member} customRoles={customRoles} />
+                          <DeleteUserButton memberId={member.member_id} memberName={member.full_name} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Role Permissions</CardTitle>
-            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {visibleRoleCards.map((role) => (
-              <div key={role} className="rounded-lg bg-surface-low p-4">
-                <p className="font-semibold capitalize text-ink">{role.replace("_", " ")}</p>
-                <p className="mt-1 text-sm text-muted">{getRolePermissions(role).join(", ")}</p>
-              </div>
-            ))}
           </CardContent>
         </Card>
       </section>

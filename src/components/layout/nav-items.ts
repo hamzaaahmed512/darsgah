@@ -43,7 +43,7 @@ const coreNavItems: NavItem[] = [
   { href: "/finance/transactions", label: "Transactions", icon: Receipt, permission: "finance:view", section: "FINANCE" },
   { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view", section: "OPERATIONS" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
-  { href: "/admin", label: "Admin", icon: Shield, permission: "users:manage", section: "SYSTEM" },
+  { href: "/admin", label: "Admin Console", icon: Shield, permission: "users:manage", anyPermissions: ["settings:manage"], section: "SYSTEM" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage", section: "SYSTEM" }
 ];
 

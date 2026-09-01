@@ -9,7 +9,8 @@ import {
   deleteAcademicYear,
   updatePrincipalTeachingAssignment,
   updateMemberRole,
-  updateMemberStatus
+  updateMemberStatus,
+  deleteMember
 } from "@/lib/services/settings";
 import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -160,6 +161,8 @@ export async function updateMemberRoleAction(memberId: string, newRole: string) 
     const user = await requireUser("users:manage");
     await updateMemberRole(user, memberId, newRole);
     revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -171,6 +174,62 @@ export async function updateMemberStatusAction(memberId: string, newStatus: stri
     const user = await requireUser("users:manage");
     await updateMemberStatus(user, memberId, newStatus);
     revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function updateMemberRoleAssignmentAction(memberId: string, newRole: string, customRoleId: string | null) {
+  try {
+    const user = await requireUser("users:manage");
+    const adminClient = createAdminClient();
+
+    const { data: target, error: targetError } = await adminClient
+      .from("school_members")
+      .select("user_id,role")
+      .eq("school_id", user.schoolId)
+      .eq("id", memberId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) throw new Error("School member not found.");
+
+    let effectiveRole = newRole;
+
+    if (user.role === "administrator" && (target.user_id === user.id || target.role === "principal" || target.role === "administrator")) {
+      throw new Error("Only the principal can manage administrator and principal accounts.");
+    }
+
+    if (customRoleId) {
+      const { data: customRole, error: customRoleError } = await adminClient
+        .from("custom_roles")
+        .select("base_role")
+        .eq("school_id", user.schoolId)
+        .eq("id", customRoleId)
+        .maybeSingle();
+      if (customRoleError) throw customRoleError;
+      if (!customRole) throw new Error("Selected custom role could not be found.");
+      if (customRole.base_role === "principal") throw new Error("Principal-based custom roles cannot be assigned.");
+      if (user.role !== "principal" && customRole.base_role === "administrator") {
+        throw new Error("Only the principal can assign administrator-level custom roles.");
+      }
+      effectiveRole = customRole.base_role;
+    }
+
+    await updateMemberRole(user, memberId, effectiveRole);
+
+    const { error } = await adminClient
+      .from("school_members")
+      .update({ custom_role_id: customRoleId })
+      .eq("school_id", user.schoolId)
+      .eq("id", memberId);
+    if (error) throw error;
+
+    revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -206,6 +265,8 @@ export async function createCustomRoleAction(name: string, baseRole: string, per
     }
     
     revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };
@@ -264,6 +325,21 @@ export async function assignCustomRoleToUserAction(memberId: string, customRoleI
       .eq("id", memberId);
     if (error) throw error;
     revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function deleteMemberAction(memberId: string) {
+  try {
+    const user = await requireUser("users:manage");
+    await deleteMember(user, memberId);
+    revalidatePath("/settings");
+    revalidatePath("/admin");
+    revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
     return { error: err.message };

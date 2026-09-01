@@ -65,11 +65,11 @@ export default async function AdminDashboardPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary mb-3">
               <UserCog className="h-5 w-5" />
             </div>
-            <h3 className="font-display text-lg font-bold text-ink">Role Management</h3>
-            <p className="mt-1 text-sm text-muted">Manage accounts, change user roles, and edit profiles.</p>
+            <h3 className="font-display text-lg font-bold text-ink">Account Management</h3>
+            <p className="mt-1 text-sm text-muted">Manage accounts, create roles, and update user access.</p>
           </div>
-          <ButtonLink href="/settings?tab=roles" variant="secondary" className="w-full">
-            Manage Roles
+          <ButtonLink href="/admin" variant="secondary" className="w-full">
+            Open Console
           </ButtonLink>
         </div>
 

@@ -11,7 +11,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-field";
-import { RolesTab } from "@/components/settings/roles-tab";
 import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 import { formatClassDisplayName } from "@/lib/utils";
 
@@ -31,10 +30,6 @@ interface Props {
       has_other_head_teacher: boolean;
     }>;
   };
-  members: any[];
-  customRoles: any[];
-  rolePermissions: any[];
-  userOverrides: any[];
   initialTab?: string;
 }
 
@@ -43,22 +38,16 @@ export function SettingsTabs({
   schoolSettings,
   academicYears,
   principalTeachingSettings,
-  members,
-  customRoles,
-  rolePermissions,
-  userOverrides,
   initialTab = "notifications"
 }: Props) {
   const isAdmin = user.role === "administrator";
   const isPrincipal = user.role === "principal";
-  const canManageRoles = isPrincipal || isAdmin;
   const canManageAcademics = isPrincipal || isAdmin;
   const allowedTabs = new Set([
     "notifications",
     ...(isPrincipal ? ["teaching"] : []),
     ...(isPrincipal || isAdmin ? ["result-cards"] : []),
-    ...(canManageAcademics ? ["academics"] : []),
-    ...(canManageRoles ? ["roles"] : [])
+    ...(canManageAcademics ? ["academics"] : [])
   ]);
   const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
@@ -188,7 +177,7 @@ export function SettingsTabs({
           </button>
         ) : null}
 
-        {canManageAcademics || canManageRoles ? (
+        {canManageAcademics ? (
           <>
             <div className="my-2 h-px bg-outline/40" />
             <span className="mb-1 px-4 text-[10px] font-bold uppercase tracking-wider text-muted">
@@ -200,14 +189,6 @@ export function SettingsTabs({
                 className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
               >
                 Academic Sessions
-              </button>
-            ) : null}
-            {canManageRoles ? (
-              <button
-                onClick={() => selectTab("roles")}
-                className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "roles" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
-              >
-                Role Management
               </button>
             ) : null}
           </>
@@ -489,17 +470,6 @@ export function SettingsTabs({
               </table>
             </div>
           </div>
-        ) : null}
-
-
-        {activeTab === "roles" && canManageRoles ? (
-          <RolesTab
-            currentUserRole={user.role}
-            members={members}
-            customRoles={customRoles}
-            rolePermissions={rolePermissions}
-            userOverrides={userOverrides}
-          />
         ) : null}
       </div>
     </div>

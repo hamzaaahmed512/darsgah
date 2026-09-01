@@ -358,3 +358,41 @@ export async function updateMemberStatus(user: AppUser, memberId: string, newSta
 
   if (error) throw new Error(error.message);
 }
+
+export async function deleteMember(user: AppUser, memberId: string) {
+  if (!hasPermission(user.role, "users:manage")) {
+    throw new Error("Unauthorized to delete user accounts");
+  }
+  const adminClient = createAdminClient();
+  const target = await getSchoolMemberRecord(user, memberId);
+  assertCanManageProtectedMember(user, target);
+
+  const { error: clearHeadTeacherError } = await adminClient
+    .from("classes")
+    .update({ head_teacher_id: null })
+    .eq("school_id", user.schoolId)
+    .eq("head_teacher_id", target.user_id);
+  if (clearHeadTeacherError) throw new Error(clearHeadTeacherError.message);
+
+  const { error: assignmentsError } = await adminClient
+    .from("teacher_assignments")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("teacher_id", target.user_id);
+  if (assignmentsError) throw new Error(assignmentsError.message);
+
+  const { error: employmentError } = await adminClient
+    .from("teacher_employment_details")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("teacher_id", target.user_id);
+  if (employmentError) throw new Error(employmentError.message);
+
+  const { error } = await adminClient
+    .from("school_members")
+    .delete()
+    .eq("id", memberId)
+    .eq("school_id", user.schoolId);
+
+  if (error) throw new Error(error.message);
+}

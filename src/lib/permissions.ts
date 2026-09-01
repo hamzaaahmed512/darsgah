@@ -173,6 +173,9 @@ export function hasPermission(role: UserRole | undefined, permission: Permission
   if (permission === "settings:manage" && (role === "principal" || role === "administrator")) {
     return true;
   }
+  if (permission === "users:manage" && (role === "principal" || role === "administrator")) {
+    return true;
+  }
   // If we have a resolved permission list from the DB, use that
   if (userPermissions != null) return userPermissions.includes(permission);
   // Fall back to static lookup

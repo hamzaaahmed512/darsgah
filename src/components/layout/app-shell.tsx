@@ -54,6 +54,9 @@ export function AppShell({
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [navDate, setNavDate] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const sidebarNavRef = useRef<HTMLElement>(null);
+  const sidebarScrollTimeoutRef = useRef<number | null>(null);
+  const [sidebarScrolling, setSidebarScrolling] = useState(false);
   const items = getNavItems(user.role, { principalCanAccessAcademicControl }).filter((item) => {
     if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) {
       return false;
@@ -120,6 +123,30 @@ export function AppShell({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
+  useEffect(() => {
+    const navElement = sidebarNavRef.current;
+    if (!navElement) return;
+
+    function handleScroll() {
+      setSidebarScrolling(true);
+      if (sidebarScrollTimeoutRef.current != null) {
+        window.clearTimeout(sidebarScrollTimeoutRef.current);
+      }
+      sidebarScrollTimeoutRef.current = window.setTimeout(() => {
+        setSidebarScrolling(false);
+        sidebarScrollTimeoutRef.current = null;
+      }, 700);
+    }
+
+    navElement.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      navElement.removeEventListener("scroll", handleScroll);
+      if (sidebarScrollTimeoutRef.current != null) {
+        window.clearTimeout(sidebarScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -164,7 +191,7 @@ export function AppShell({
   const sidebar = (
     <aside className="flex h-full min-h-0 w-[292px] flex-col bg-white">
       {/* Brand header */}
-      <div className="flex min-h-[92px] items-center gap-3 border-b border-slate-200 px-7 py-5">
+      <div className="flex h-[92px] items-center gap-3 border-b border-slate-200 px-7 py-5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white shadow-sm">
           {branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -180,7 +207,13 @@ export function AppShell({
       </div>
 
       {/* Navigation */}
-      <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5 scrollbar-thin">
+      <nav
+        ref={sidebarNavRef}
+        className={cn(
+          "sidebar-scroll min-h-0 flex-1 overflow-y-auto px-4 py-5",
+          sidebarScrolling && "sidebar-scroll--active"
+        )}
+      >
         {groupedItems.map(({ section, items: sectionItems }, groupIndex) => (
           <div key={`${section}-${groupIndex}`} className={groupIndex > 0 ? "mt-6" : ""}>
             {/* Section label */}
@@ -292,7 +325,7 @@ export function AppShell({
     <div className="min-h-screen bg-background text-ink">
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
-      <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden bg-white shadow-[1px_0_0_rgba(226,232,240,0.95)] lg:block">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden border-r border-slate-200 bg-white lg:block">{sidebar}</div>
       <div
         className={cn(
           "fixed inset-0 z-50 h-dvh bg-black/50 backdrop-blur-[1px] transition-opacity duration-200 lg:hidden",
@@ -319,7 +352,8 @@ export function AppShell({
       </div>
 
       <div className="lg:pl-[292px]">
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:h-[92px] lg:px-10">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:relative lg:h-[92px] lg:px-10">
+          <div className="absolute inset-y-0 left-0 hidden w-px bg-slate-200 lg:block" aria-hidden="true" />
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />

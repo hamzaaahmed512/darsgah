@@ -24,7 +24,7 @@ const ROLE_LABELS: Record<string, string> = {
   student_staff: "Registrar / Student Staff",
   staff: "Staff",
   cashier: "Cashier",
-  head_teacher: "Head Teacher",
+  head_teacher: "Teacher",
   other: "Others"
 };
 
@@ -55,10 +55,10 @@ export default async function StaffPage({
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
-      ? (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
+      ? (["teacher", "staff", "student_staff", "cashier"] as const)
       : user.role === "principal"
-        ? (["administrator", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
-        : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
+        ? (["administrator", "teacher", "staff", "student_staff", "cashier"] as const)
+        : (["teacher", "staff", "student_staff", "cashier"] as const);
 
   return (
     <>

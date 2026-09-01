@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,10 @@ import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
   cashier: "Cashier",
-  head_teacher: "Head Teacher",
   principal: "Principal",
   staff: "Staff",
   teacher: "Teacher",
+  head_teacher: "Teacher",
   student_staff: "Student-management staff"
 };
 
@@ -31,6 +32,7 @@ export function StaffFormModal({
   customRoles?: Array<{ id: string; name: string; base_role: UserRole }>;
   triggerLabel?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +73,7 @@ export function StaffFormModal({
         reset();
         setSelectedRoleOption(roleOptions[0]?.value ?? `base:${allowedRoles[0] ?? "teacher"}`);
         setOpen(false);
+        router.refresh();
       } catch (err: any) {
         setError(err.message || "Failed to create account.");
       }

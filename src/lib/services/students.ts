@@ -655,7 +655,7 @@ export async function setStudentMajor(user: AppUser, values: { studentId: string
   const gradeName = (classRow as any).grades?.name ?? "";
   const normalizedMajor = normalizeStudentMajorValue(values.major);
   if (!canSelectStudentCombination(gradeName)) {
-    throw new Error("Combinations are only available for Grade 11 and Grade 12.");
+    throw new Error("Combinations are only available for Grades 9 to 12.");
   }
   if (normalizedMajor) await assertMajorAvailableForClass(supabase, user, values.classId, normalizedMajor, gradeName);
 

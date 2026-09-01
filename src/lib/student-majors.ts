@@ -48,18 +48,25 @@ export function gradeNumber(gradeName?: string | null) {
 
 export function canSelectStudentCombination(gradeName?: string | null) {
   const grade = gradeNumber(gradeName);
-  return grade === 11 || grade === 12;
+  return grade === 9 || grade === 10 || grade === 11 || grade === 12;
 }
 
 export function majorsForGrade(gradeName?: string | null): StudentMajor[] {
-  if (canSelectStudentCombination(gradeName)) return ["biology", "computer", "pre_engineering", "computer_economics", "computer_economics_stats"];
+  const grade = gradeNumber(gradeName);
+  if (grade === 9 || grade === 10) return ["biology", "computer"];
+  if (grade === 11 || grade === 12) return ["biology", "computer", "pre_engineering", "computer_economics", "computer_economics_stats"];
   return [];
 }
 
 export function defaultCombinationOptionsForGrade(gradeName?: string | null): StudentCombinationOption[] {
+  const grade = gradeNumber(gradeName);
   return majorsForGrade(gradeName).map((major) => ({
     value: major,
-    label: STUDENT_MAJOR_LABELS[major],
+    label: grade === 9 || grade === 10
+      ? major === "computer"
+        ? "Computer"
+        : "Biology"
+      : STUDENT_MAJOR_LABELS[major],
     kind: "default"
   }));
 }

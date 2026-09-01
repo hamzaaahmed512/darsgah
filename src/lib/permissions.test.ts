@@ -5,6 +5,8 @@ describe("role permissions", () => {
   it("allows administrators to manage users and settings", () => {
     expect(hasPermission("administrator", "users:manage")).toBe(true);
     expect(hasPermission("administrator", "settings:manage")).toBe(true);
+    expect(hasPermission("principal", "users:manage", [])).toBe(true);
+    expect(hasPermission("principal", "settings:manage", [])).toBe(true);
   });
 
   it("lets teachers view their own operational work without student management rights", () => {

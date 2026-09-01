@@ -892,6 +892,17 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
   if (subjectEnrollments.error) throw new Error(subjectEnrollments.error.message);
   if (approvedExams.error) throw new Error(approvedExams.error.message);
 
+  const gradeName = (classRow as any).grades?.name ?? "";
+  const combinationOptions = await getCombinationOptionsForClass(user, filters.classId, gradeName);
+  const studentIds = (students.data ?? [])
+    .map((row: any) => row.students?.id as string | undefined)
+    .filter(Boolean) as string[];
+  const studentRows = studentIds.length
+    ? await supabase.from("students").select("id,major").eq("school_id", user.schoolId).in("id", studentIds)
+    : { data: [], error: null as any };
+  if (studentRows.error) throw new Error(studentRows.error.message);
+  const majorsByStudentId = new Map((studentRows.data ?? []).map((row: any) => [row.id as string, row.major as string | null]));
+
   const marksByStudent = new Map<string, any[]>();
   for (const mark of marks.data ?? []) {
     const item: any = mark;
@@ -904,10 +915,37 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     const student = row.students;
     const marksForStudent = marksByStudent.get(student?.id) ?? [];
     const enrolledSubjects = (subjectEnrollments.data ?? []).filter((item: any) => item.student_id === student?.id);
-    const rows = enrolledSubjects.flatMap((enrollment: any) => (approvedExams.data ?? []).filter((exam: any) => exam.subject_id === enrollment.subject_id).map((exam: any) => {
+    const enrolledSubjectIds = new Set(enrolledSubjects.map((item: any) => item.subject_id as string));
+    const major = majorsByStudentId.get(student?.id ?? "") ?? null;
+    const rows = (approvedExams.data ?? []).filter((exam: any) => {
+      const enrolledSubject = enrolledSubjects.find((item: any) => item.subject_id === exam.subject_id);
+      if (enrolledSubject) return true;
+      const examSubjectName = Array.isArray(exam.subjects) ? exam.subjects[0]?.name ?? "" : exam.subjects?.name ?? "";
+      return isStudentEligibleForAssessmentSubject({
+        studentId: student?.id ?? "",
+        studentMajor: major,
+        subjectId: exam.subject_id,
+        subjectName: examSubjectName,
+        gradeName,
+        directStudentIds: enrolledSubjectIds,
+        combinationOptions
+      });
+    }).map((exam: any) => {
+      const enrollment = enrolledSubjects.find((item: any) => item.subject_id === exam.subject_id);
+      const enrollmentSubjectSource = (enrollment as any)?.subjects;
       const mark = marksForStudent.find((item: any) => item.exams?.id === exam.id);
-      return { subject_name: enrollment.subjects?.name, exam_title: exam.title, exam_type: exam.exam_type as ExamType, marks_obtained: mark ? Number(mark.marks_obtained) : null, max_marks: Number(exam.max_marks), grade: mark?.grade ?? "Pending", teacher_comment: mark?.teacher_comment ?? null };
-    }));
+      const examSubjectName = Array.isArray(exam.subjects) ? exam.subjects[0]?.name ?? "Subject" : exam.subjects?.name ?? "Subject";
+      const enrolledSubjectName = Array.isArray(enrollmentSubjectSource) ? enrollmentSubjectSource[0]?.name ?? null : enrollmentSubjectSource?.name ?? null;
+      return {
+        subject_name: enrolledSubjectName ?? examSubjectName,
+        exam_title: exam.title,
+        exam_type: exam.exam_type as ExamType,
+        marks_obtained: mark ? Number(mark.marks_obtained) : null,
+        max_marks: Number(exam.max_marks),
+        grade: mark?.grade ?? "Pending",
+        teacher_comment: mark?.teacher_comment ?? null
+      };
+    });
     const completedRows = rows.filter((item) => item.marks_obtained !== null);
     const totalObtained = completedRows.reduce((sum, item) => sum + Number(item.marks_obtained), 0);
     const totalMax = completedRows.reduce((sum, item) => sum + Number(item.max_marks ?? 0), 0);

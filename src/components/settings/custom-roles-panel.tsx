@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Edit, ShieldAlert, Trash2 } from "lucide-react";
 import {
   createCustomRoleAction,
@@ -34,6 +35,7 @@ export function CustomRolesPanel({
   rolePermissions: RolePermissionRecord[];
   title?: string;
 }) {
+  const router = useRouter();
   const canManageCustomRoles = currentUserRole === "principal";
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -47,10 +49,6 @@ export function CustomRolesPanel({
   const customRoleBaseOptions = canManageCustomRoles
     ? [
         { value: "teacher", label: "Teacher" },
-        { value: "head_teacher", label: "Head Teacher" },
-        { value: "student_staff", label: "Registrar (Student Staff)" },
-        { value: "staff", label: "Staff" },
-        { value: "cashier", label: "Cashier" },
         { value: "administrator", label: "Administrator" }
       ]
     : [];
@@ -64,6 +62,10 @@ export function CustomRolesPanel({
         setMessage({ type: "success", text: successMsg });
         setShowCreateRole(false);
         setEditingRoleKey(null);
+        setNewRoleName("");
+        setNewRoleBase("teacher");
+        setNewRolePerms([]);
+        router.refresh();
       }
     });
   };

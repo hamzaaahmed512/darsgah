@@ -8,6 +8,27 @@ export type SubjectDefault = {
 const CORE = (name: string): SubjectDefault => ({ name });
 const ELECTIVE = (name: string): SubjectDefault => ({ name, is_elective: true });
 
+const SCHOOL_DEFAULT_SUBJECT_CATALOG = [
+  "Urdu",
+  "English",
+  "Islamiat",
+  "Translation of the Holy Quran",
+  "Pak Studies",
+  "Social Studies",
+  "History",
+  "Geography",
+  "Mathematics",
+  "Computer",
+  "Urdu Grammar",
+  "English Grammar",
+  "Science",
+  "Biology",
+  "Chemistry",
+  "Physics",
+  "Economics",
+  "Statistics"
+] as const;
+
 /** Grade-level curriculum defaults used when classes are generated. */
 export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
   PG: [CORE("English"), CORE("Urdu"), CORE("Mathematics"), CORE("General Knowledge")],
@@ -94,18 +115,18 @@ export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
     CORE("Physics"),
     CORE("Chemistry"),
     ELECTIVE("Biology"),
-    ELECTIVE("Computer Science")
+    ELECTIVE("Computer")
   ],
   "Grade 10": [
     CORE("English"),
     CORE("Urdu"),
-    CORE("Pakistan Studies"),
+    CORE("Pak Studies"),
     CORE("Translation of the Holy Quran"),
     CORE("Mathematics"),
     CORE("Physics"),
     CORE("Chemistry"),
     ELECTIVE("Biology"),
-    ELECTIVE("Computer Science")
+    ELECTIVE("Computer")
   ],
   "Grade 11": [
     CORE("English Compulsory"),
@@ -143,6 +164,9 @@ export function getDefaultSubjectsForGrade(gradeName: string): SubjectDefault[] 
 
 export function getAllUniqueDefaultSubjectNames(): string[] {
   const names = new Set<string>();
+  for (const subjectName of SCHOOL_DEFAULT_SUBJECT_CATALOG) {
+    names.add(subjectName);
+  }
   for (const gradeName of DEFAULT_GRADE_NAMES) {
     for (const subject of getDefaultSubjectsForGrade(gradeName)) {
       names.add(subject.name);
