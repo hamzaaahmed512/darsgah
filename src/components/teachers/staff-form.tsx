@@ -88,9 +88,11 @@ export function StaffFormModal({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Full Name *</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Full Name<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
                   <Input
                     {...register("full_name")}
+                    required
+                    aria-required="true"
                     onChange={(event) => {
                       const sanitized = sanitizeEnglishNameInput(event.target.value);
                       event.currentTarget.value = sanitized;
@@ -102,21 +104,21 @@ export function StaffFormModal({
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Email Address *</label>
-                  <Input {...register("email")} type="email" placeholder="jane.doe@school.edu" onChange={(event) => setValue("email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} />
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Email Address<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
+                  <Input {...register("email")} required aria-required="true" type="email" placeholder="jane.doe@school.edu" onChange={(event) => setValue("email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} />
                   {errors.email?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.email.message}</p> : null}
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Temporary Password *</label>
-                  <Input {...register("password")} type="text" placeholder="Auto-generated or type a secure one..." />
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Temporary Password<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
+                  <Input {...register("password")} required aria-required="true" type="text" placeholder="Auto-generated or type a secure one..." />
                   {errors.password?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.password.message}</p> : null}
                   <p className="mt-1 text-xs text-muted">Share it privately. They must replace it before entering the app.</p>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Role *</label>
-                  <Select {...register("role")}>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Role<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
+                  <Select {...register("role")} required aria-required="true">
                     {allowedRoles.map((role) => (
                       <option key={role} value={role}>{roleLabels[role]}</option>
                     ))}

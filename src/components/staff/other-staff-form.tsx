@@ -68,7 +68,7 @@ export function OtherStaffFormModal() {
             <form onSubmit={submit} className="grid gap-4 overflow-y-auto p-5">
               {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
               <Field label="Full name"><Input required value={form.fullName} onChange={(event) => update("fullName", sanitizeEnglishNameInput(event.target.value))} /></Field>
-              <Field label="Category">
+              <Field label="Category" required>
                 <Select value={form.category} onChange={(event) => update("category", event.target.value as OtherStaffCategory)}>
                   {OTHER_STAFF_CATEGORIES.map((category) => <option key={category} value={category}>{OTHER_STAFF_CATEGORY_LABELS[category]}</option>)}
                 </Select>

@@ -191,21 +191,23 @@ export function ClassFormModal({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="mb-1.5 block text-sm font-semibold text-ink">Class Name *</label>
-                      <Input
-                        {...register("name", {
+                      <label className="mb-1.5 block text-sm font-semibold text-ink">Class Name<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
+                        <Input
+                          {...register("name", {
                           required: true,
                           onChange: (event) => {
                             event.target.value = sanitizeEnglishNameInput(event.target.value).toUpperCase();
                           }
-                        })}
+                          })}
+                          required
+                          aria-required="true"
                         placeholder="e.g. GRADE 9 - A"
                       />
                     </div>
 
                     <div>
                       <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-sm font-semibold text-ink">Grade *</label>
+                        <label className="text-sm font-semibold text-ink">Grade<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
                         {!creatingGrade && (
                           <button type="button" onClick={() => setCreatingGrade(true)} className="text-xs font-semibold text-primary hover:underline">
                             + Add
@@ -221,7 +223,7 @@ export function ClassFormModal({
                           </div>
                         </div>
                       ) : (
-                        <Select {...register("grade_id", { required: true })}>
+                        <Select {...register("grade_id", { required: true })} required aria-required="true">
                           <option value="" disabled={grades.length === 0}>
                             {grades.length === 0 ? "No grades found. Create one first." : "Select Grade"}
                           </option>
@@ -261,7 +263,7 @@ export function ClassFormModal({
 
                     <div className="sm:col-span-2">
                       <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-sm font-semibold text-ink">Academic Year *</label>
+                        <label className="text-sm font-semibold text-ink">Academic Year<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
                         {!creatingYear && (
                           <button type="button" onClick={() => setCreatingYear(true)} className="text-xs font-semibold text-primary hover:underline">
                             + Add
@@ -277,7 +279,7 @@ export function ClassFormModal({
                           </div>
                         </div>
                       ) : (
-                        <Select {...register("academic_year_id", { required: true })}>
+                        <Select {...register("academic_year_id", { required: true })} required aria-required="true">
                           <option value="" disabled={academicYears.length === 0}>
                             {academicYears.length === 0 ? "No active years found. Create one first." : "Select Year"}
                           </option>

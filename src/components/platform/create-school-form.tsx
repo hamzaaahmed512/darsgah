@@ -40,8 +40,8 @@ export function CreateSchoolForm() {
           <Field label="Principal email" name="principalEmail" type="email" placeholder="principal@school.edu" errors={state.errors?.principalEmail} />
           
           <label className="grid gap-2 text-xs font-bold text-ink sm:col-span-2">
-            Temporary password
-            <input className="platform-input" required minLength={12} name="temporaryPassword" type="password" autoComplete="new-password" placeholder="At least 12 characters" />
+            <span>Temporary password<span className="ml-0.5 text-danger" aria-hidden="true">*</span></span>
+            <input className="platform-input" required aria-required="true" minLength={12} name="temporaryPassword" type="password" autoComplete="new-password" placeholder="At least 12 characters" />
             <span className="font-normal text-muted">The principal must change this password on first sign-in.</span>
             {state.errors?.temporaryPassword && <span className="text-danger">{state.errors.temporaryPassword[0]}</span>}
           </label>
@@ -80,12 +80,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Field({ label, name, placeholder, type = "text", hint, errors }: { label: string; name: string; placeholder: string; type?: string; hint?: string; errors?: string[] }) {
+  const required = ["name", "slug", "principalName", "principalEmail"].includes(name);
   return (
     <label className="grid gap-2 text-xs font-bold text-ink">
-      {label}
+      <span>{label}{required ? <span className="ml-0.5 text-danger" aria-hidden="true">*</span> : null}</span>
       <input
         className="platform-input"
-        required={["name", "slug", "principalName", "principalEmail"].includes(name)}
+        required={required}
+        aria-required={required}
         name={name}
         type={type}
         placeholder={placeholder}

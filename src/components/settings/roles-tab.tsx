@@ -108,8 +108,8 @@ export function RolesTab({ members, customRoles, rolePermissions }: Props) {
           <form onSubmit={handleCreateRole} className="p-4 border-b border-outline/40 bg-surface-low/30">
             <div className="grid gap-3 sm:grid-cols-2 mb-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Role Name</label>
-                <input required value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full rounded border border-outline/60 px-3 py-1.5 text-sm" placeholder="e.g. Senior Teacher" />
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Role Name<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
+                <input required aria-required="true" value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full rounded border border-outline/60 px-3 py-1.5 text-sm" placeholder="e.g. Senior Teacher" />
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">Base Role (inherits permissions)</label>

@@ -234,12 +234,13 @@ export function SchoolProfileForm({
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Full School Name">
+          <Field label="Full School Name" required>
             {readOnly ? (
               lockedField(form.name)
             ) : (
               <Input
                 value={form.name}
+                required
                 onChange={(event) => updateField("name", event.target.value)}
                 placeholder="National Garrison Secondary School"
               />

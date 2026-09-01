@@ -88,7 +88,7 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-ink">
-                  Select Teacher <span className="text-danger">*</span>
+                  Select Teacher<span className="ml-0.5 text-danger" aria-hidden="true">*</span>
                 </label>
                 <div className="relative">
                   <button
@@ -158,11 +158,12 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-ink">
-                    Amount (PKR) <span className="text-danger">*</span>
+                    Amount (PKR)<span className="ml-0.5 text-danger" aria-hidden="true">*</span>
                   </label>
                   <input
                     type="number"
                     min="1"
+                    required
                     value={form.amount}
                     onChange={(e) => handleChange("amount", e.target.value)}
                     placeholder="5000"
@@ -172,10 +173,11 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-semibold text-ink">
-                  Reason <span className="text-danger">*</span>
+                  Reason<span className="ml-0.5 text-danger" aria-hidden="true">*</span>
                 </label>
                 <input
                   value={form.reason}
+                  required
                   onChange={(e) => handleChange("reason", e.target.value)}
                   placeholder="e.g. Performance bonus, Late attendance deduction"
                   className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"

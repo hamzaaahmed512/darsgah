@@ -1,21 +1,32 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { Children, cloneElement, forwardRef, isValidElement, type InputHTMLAttributes, type ReactElement, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export function Field({
   label,
   hint,
   error,
+  required,
   children
 }: {
   label: string;
   hint?: string;
   error?: string;
+  required?: boolean;
   children: ReactNode;
 }) {
+  const child = Children.count(children) === 1 && isValidElement(children) ? children as ReactElement<{ required?: boolean; "aria-required"?: boolean | "true" | "false" }> : null;
+  const isRequired = required ?? Boolean(child?.props.required || child?.props["aria-required"] === true || child?.props["aria-required"] === "true");
+  const control = child && isRequired && child.props["aria-required"] === undefined
+    ? cloneElement(child, { "aria-required": true })
+    : children;
+
   return (
     <label className="grid gap-2.5 text-sm font-semibold text-ink">
-      <span>{label}</span>
-      {children}
+      <span>
+        {label}
+        {isRequired ? <span className="ml-0.5 text-danger" aria-hidden="true">*</span> : null}
+      </span>
+      {control}
       {hint ? <span className="text-xs font-medium leading-5 text-muted">{hint}</span> : null}
       {error ? <span className="text-sm font-medium text-danger">{error}</span> : null}
     </label>

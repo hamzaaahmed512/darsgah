@@ -77,11 +77,11 @@ export function CreateAnnouncementDialog({
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:p-6">
           <div>
-            <label className="mb-1 block text-sm font-semibold text-ink">Title <span className="text-danger">*</span></label>
+            <label className="mb-1 block text-sm font-semibold text-ink">Title<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
             <input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Important Staff Meeting" className="w-full rounded-xl border border-outline px-4 py-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-ink">Description <span className="text-danger">*</span></label>
+            <label className="mb-1 block text-sm font-semibold text-ink">Description<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
             <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={3} placeholder="Provide full details of the announcement..." className="w-full resize-none rounded-xl border border-outline px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

@@ -139,7 +139,7 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
 
         {editing ? (
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Full Name" error={errors.fullName?.message}>
+            <Field label="Full Name" required error={errors.fullName?.message}>
               <Input
                 {...register("fullName")}
                 onChange={(event) => {

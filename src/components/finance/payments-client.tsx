@@ -268,7 +268,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                       )}
 
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label="Amount to Collect ($)">
+                        <Field label="Amount to Collect ($)" required>
                           <Input
                             type="number"
                             min="0.01"
@@ -280,7 +280,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                           />
                         </Field>
 
-                        <Field label="Payment Method">
+                        <Field label="Payment Method" required>
                           <Select
                             value={paymentMethod}
                             onChange={(e: any) => setPaymentMethod(e.target.value)}
@@ -431,7 +431,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                   Voiding this payment will subtract its amount from the student&apos;s paid total and restore their remaining balance. This action is irreversible.
                 </p>
 
-                <Field label="Reason for Voiding">
+                <Field label="Reason for Voiding" required>
                   <Textarea
                     value={voidReason}
                     onChange={(e) => setVoidReason(e.target.value)}

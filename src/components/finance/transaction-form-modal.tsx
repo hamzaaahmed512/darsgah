@@ -53,7 +53,7 @@ export function TransactionFormModal({ direction, students }: {
         </div>
         <form onSubmit={submit} className="grid gap-4 overflow-y-auto p-6 sm:grid-cols-2">
           {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger sm:col-span-2">{error}</div> : null}
-          <Field label="Type">
+          <Field label="Type" required>
             <Select name="category" required defaultValue={categories[0]}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>
           </Field>
           <Field label="Amount (PKR)"><Input name="amount" type="number" min="0.01" step="0.01" required /></Field>

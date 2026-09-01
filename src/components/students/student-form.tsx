@@ -281,19 +281,19 @@ export function StudentForm({
               autoComplete="off"
             />
           </Field>
-          <Field label="Name (English)" error={errors.name_en?.message}>
+          <Field label="Name (English)" required error={errors.name_en?.message}>
             <Input {...register("name_en")} value={watch("name_en") ?? ""} onChange={(event) => handleEnglishNameChange("name_en", event.target.value)} placeholder="e.g. John Doe" autoComplete="off" />
           </Field>
           <Field label="Name (Urdu)" error={errors.name_ur?.message}>
             <Input {...register("name_ur")} value={watch("name_ur") ?? ""} onChange={(event) => handleUrduNameChange("name_ur", event.target.value)} dir="rtl" placeholder="e.g. جان ڈو" autoComplete="off" />
           </Field>
-          <Field label="Gender" error={errors.gender?.message}>
+          <Field label="Gender" required error={errors.gender?.message}>
             <div className="flex gap-4 items-center h-10">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} /> Male</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} /> Female</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} required /> Male</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} required /> Female</label>
             </div>
           </Field>
-          <Field label="Religion" error={errors.religion?.message}>
+          <Field label="Religion" required error={errors.religion?.message}>
             <Select {...register("religion")}>
               <option value="">Select religion...</option>
               <option value="Islam">Islam</option>
@@ -345,22 +345,22 @@ export function StudentForm({
           <CardTitle>Father & Guardian Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Father's Name (English)" error={errors.father_name_en?.message}>
+          <Field label="Father's Name (English)" required error={errors.father_name_en?.message}>
             <Input {...register("father_name_en")} value={watch("father_name_en") ?? ""} onChange={(event) => handleEnglishNameChange("father_name_en", event.target.value)} autoComplete="new-password" />
           </Field>
           <Field label="Father's Name (Urdu)" error={errors.father_name_ur?.message}>
             <Input {...register("father_name_ur")} value={watch("father_name_ur") ?? ""} onChange={(event) => handleUrduNameChange("father_name_ur", event.target.value)} dir="rtl" autoComplete="off" />
           </Field>
-          <Field label="Father's Phone" error={errors.father_phone?.message}>
+          <Field label="Father's Phone" required error={errors.father_phone?.message}>
             <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
           </Field>
-          <Field label="Father's CNIC" error={errors.father_cnic?.message}>
+          <Field label="Father's CNIC" required error={errors.father_cnic?.message}>
             <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="0000012345678" inputMode="numeric" maxLength={15} autoComplete="new-password" />
           </Field>
-          <Field label="Father alive?" error={errors.father_alive?.message}>
+          <Field label="Father alive?" required error={errors.father_alive?.message}>
             <div className="flex gap-4 items-center h-10">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} /> Yes</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} /> No</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} required /> Yes</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} required /> No</label>
             </div>
           </Field>
           
@@ -368,16 +368,16 @@ export function StudentForm({
             <p className="text-sm font-semibold mb-3">{fatherAlive === "no" ? "Guardian Info" : "Guardian Info (Optional)"}</p>
           </div>
           
-          <Field label="Guardian name" error={errors.guardian_name?.message}>
+          <Field label="Guardian name" required={watch("father_alive") === "no"} error={errors.guardian_name?.message}>
             <Input {...register("guardian_name")} value={watch("guardian_name") ?? ""} onChange={(event) => handleEnglishNameChange("guardian_name", event.target.value)} autoComplete="new-password" />
           </Field>
-          <Field label="Relationship" error={errors.guardian_relationship?.message}>
+          <Field label="Relationship" required={watch("father_alive") === "no"} error={errors.guardian_relationship?.message}>
             <Input {...register("guardian_relationship")} autoComplete="off" />
           </Field>
           <Field label="Guardian email" error={errors.guardian_email?.message}>
             <Input type="email" {...register("guardian_email")} onChange={(event) => setValue("guardian_email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} autoComplete="new-password" />
           </Field>
-          <Field label="Guardian phone" error={errors.guardian_phone?.message}>
+          <Field label="Guardian phone" required={watch("father_alive") === "no"} error={errors.guardian_phone?.message}>
             <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
           </Field>
           <Field label="Emergency contact name" error={errors.emergency_contact_name?.message}>

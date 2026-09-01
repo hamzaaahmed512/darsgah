@@ -355,10 +355,10 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                 {formError ? (
                   <div className="md:col-span-2 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{formError}</div>
                 ) : null}
-                <Field label="Amount">
+                <Field label="Amount" required>
                   <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
                 </Field>
-                <Field label="Payment Method">
+                <Field label="Payment Method" required>
                   <Select value={paymentMethod} onChange={(e: any) => setPaymentMethod(e.target.value)}>
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
