@@ -76,7 +76,7 @@ export async function MarkAssessmentView({
           {!selectedExam ? (
             <EmptyState title="Assessment unavailable" description="Go back to the assessment list and choose an assessment assigned to you." />
           ) : !workspace.roster.length ? (
-            <EmptyState title="No students enrolled" description="Enroll students in this subject before entering marks." />
+            <EmptyState title="No eligible students" description="Assign active students to this class and subject combination before entering marks." />
           ) : (
             <form action={saveMarksAction} className="grid gap-4">
               <input type="hidden" name="exam_id" value={selectedExam.id} />

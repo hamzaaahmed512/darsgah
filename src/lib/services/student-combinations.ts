@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
 import { defaultCombinationOptionsForGrade, isDefaultStudentMajor, isSubjectExcludedForMajor, type StudentCombinationOption, type StudentMajor } from "@/lib/student-majors";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
@@ -239,6 +240,7 @@ export async function createStudentSubjectCombination(user: AppUser, values: { n
   if (classSubjectError) throw new Error(classSubjectError.message);
   if (classError) throw new Error(classError.message);
   if (subjectError) throw new Error(subjectError.message);
+  await syncStudentsForCombination(user, `custom:${combinationId}`, classIds, subjectIds);
 }
 
 export async function updateDefaultStudentSubjectCombination(
@@ -327,6 +329,7 @@ export async function updateDefaultStudentSubjectCombination(
   if (classSubjectError) throw new Error(classSubjectError.message);
   if (classError) throw new Error(classError.message);
   if (subjectError) throw new Error(subjectError.message);
+  await syncStudentsForCombination(user, values.combinationKey, classIds, subjectIds);
 }
 
 export async function updateStudentSubjectCombination(
@@ -395,6 +398,35 @@ export async function updateStudentSubjectCombination(
   if (classSubjectError) throw new Error(classSubjectError.message);
   if (classError) throw new Error(classError.message);
   if (subjectError) throw new Error(subjectError.message);
+  await syncStudentsForCombination(user, `custom:${combinationId}`, classIds, subjectIds);
+}
+
+async function syncStudentsForCombination(user: AppUser, combinationValue: string, classIds: string[], subjectIds: string[]) {
+  if (!classIds.length || !subjectIds.length) return;
+  const admin = createAdminClient();
+  const { data: enrollments, error: enrollmentError } = await admin
+    .from("enrollments")
+    .select("class_id,student_id,students!inner(id,major,status)")
+    .eq("school_id", user.schoolId)
+    .eq("status", "active")
+    .in("class_id", classIds)
+    .eq("students.major", combinationValue)
+    .eq("students.status", "active");
+  if (enrollmentError) throw new Error(enrollmentError.message);
+
+  const rows = (enrollments ?? []).flatMap((enrollment: any) => subjectIds.map((subjectId) => ({
+    school_id: user.schoolId,
+    class_id: enrollment.class_id,
+    student_id: enrollment.student_id,
+    subject_id: subjectId,
+    enrolled_by: user.id
+  })));
+  if (!rows.length) return;
+
+  const { error } = await admin.from("student_subject_enrollments").upsert(rows, {
+    onConflict: "school_id,student_id,subject_id,class_id"
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteStudentSubjectCombination(user: AppUser, combinationId: string) {

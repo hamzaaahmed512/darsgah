@@ -14,6 +14,8 @@ import type {
 import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type MarkEntryValues } from "@/lib/validation/marks";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
+import { getCombinationOptionsForClass } from "@/lib/services/student-combinations";
+import { isDefaultStudentMajor, isSubjectExcludedForMajor } from "@/lib/student-majors";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -155,6 +157,62 @@ async function getEditableExam(user: AppUser, examId: string) {
   return exam as any;
 }
 
+/**
+ * Resolve a subject roster from the source-of-truth class enrollment and the
+ * student's selected combination. Explicit subject rows remain supported, but
+ * are no longer the only way a student becomes eligible for marking.
+ */
+export async function getEligibleSubjectRoster(user: AppUser, classId: string, subjectId: string) {
+  const admin = createAdminClient();
+  const [classResult, subjectResult, enrollmentResult, directResult] = await Promise.all([
+    admin.from("classes").select("id,grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
+    admin.from("subjects").select("id,name,is_elective").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
+    admin.from("enrollments").select("student_id,students(id,first_name,last_name,admission_number,major,status)").eq("school_id", user.schoolId).eq("class_id", classId).eq("status", "active"),
+    admin.from("student_subject_enrollments").select("student_id").eq("school_id", user.schoolId).eq("class_id", classId).eq("subject_id", subjectId)
+  ]);
+
+  if (classResult.error) throw new Error(classResult.error.message);
+  if (subjectResult.error) throw new Error(subjectResult.error.message);
+  if (enrollmentResult.error) throw new Error(enrollmentResult.error.message);
+  if (directResult.error) throw new Error(directResult.error.message);
+  if (!classResult.data || !subjectResult.data) return [];
+
+  const gradeName = (classResult.data as any).grades?.name ?? "";
+  const subject = subjectResult.data as any;
+  const combinationOptions = await getCombinationOptionsForClass(user, classId, gradeName);
+  const combinationByValue = new Map(combinationOptions.map((option) => [option.value, option]));
+  const directStudentIds = new Set((directResult.data ?? []).map((row: any) => row.student_id as string));
+  const classStudents = (enrollmentResult.data ?? [])
+    .map((row: any) => row.students)
+    .filter((student: any) => student?.id && student.status === "active");
+
+  const eligible = classStudents.filter((student: any) => {
+    if (directStudentIds.has(student.id)) return true;
+    // A non-elective subject is core for the class, so incomplete legacy
+    // combination data must never remove an actively enrolled student.
+    if (!subject.is_elective) return true;
+    const combination = combinationByValue.get(student.major);
+    if (combination?.subjectIds?.includes(subjectId)) return true;
+    // Built-in combinations without a persisted override are defined by their
+    // exclusion rules rather than combination-subject join rows.
+    return isDefaultStudentMajor(student.major) && !isSubjectExcludedForMajor(gradeName, student.major, subject.name);
+  });
+
+  const missing = eligible.filter((student: any) => !directStudentIds.has(student.id));
+  if (missing.length) {
+    const { error } = await admin.from("student_subject_enrollments").upsert(
+      missing.map((student: any) => ({ school_id: user.schoolId, class_id: classId, subject_id: subjectId, student_id: student.id, enrolled_by: user.id })),
+      { onConflict: "school_id,student_id,subject_id,class_id" }
+    );
+    if (error) throw new Error(error.message);
+  }
+
+  return eligible.map((student: any) => ({
+    student_id: student.id as string,
+    students: student
+  }));
+}
+
 export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId?: string; subjectId?: string; examId?: string } = {}) {
   const canUseTeacherWorkspace =
     user.role === "teacher" ||
@@ -231,13 +289,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
 
   const [roster, marks, assessmentMarks] = selected
     ? await Promise.all([
-        supabase
-          .from("student_subject_enrollments")
-          .select("student_id,students(id,first_name,last_name,admission_number)")
-          .eq("school_id", user.schoolId)
-          .eq("class_id", selected.class_id)
-          .eq("subject_id", selected.subject_id)
-          .order("enrolled_at"),
+        getEligibleSubjectRoster(user, selected.class_id, selected.subject_id).then((data) => ({ data, error: null })),
         selectedExam
           ? readClient.from("marks").select("*").eq("school_id", user.schoolId).eq("exam_id", selectedExam.id)
           : Promise.resolve({ data: [], error: null }),
@@ -247,7 +299,6 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
       ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
-  if (roster.error) throw new Error(roster.error.message);
   if (marks.error) throw new Error(marks.error.message);
   if (assessmentMarks.error) throw new Error(assessmentMarks.error.message);
 
@@ -330,6 +381,7 @@ export async function createExam(user: AppUser, values: ExamFormValues) {
 
   if (isMissingCurrentExamWorkflow(error)) throw new Error(examWorkflowMigrationMessage());
   if (error) throw new Error(error.message);
+  await getEligibleSubjectRoster(user, parsed.class_id, parsed.subject_id);
   if (requiresApproval) {
     const { error: approvalError } = await writeClient.from("result_approvals").insert({
       school_id: user.schoolId,
@@ -350,15 +402,9 @@ export async function saveMarks(user: AppUser, values: MarkEntryValues) {
   const scale = await getGradeScale(user);
   const supabase = await createClient();
 
-  const { data: enrolled, error: enrolledError } = await supabase
-    .from("student_subject_enrollments")
-    .select("student_id")
-    .eq("school_id", user.schoolId)
-    .eq("class_id", exam.class_id)
-    .eq("subject_id", exam.subject_id)
-    .in("student_id", parsed.records.map((record) => record.student_id));
-  if (enrolledError) throw new Error(enrolledError.message);
-  if ((enrolled ?? []).length !== parsed.records.length) throw new Error("Marks can be saved only for students enrolled in this subject.");
+  const eligible = await getEligibleSubjectRoster(user, exam.class_id, exam.subject_id);
+  const eligibleIds = new Set(eligible.map((row) => row.student_id));
+  if (parsed.records.some((record) => !eligibleIds.has(record.student_id))) throw new Error("Marks can be saved only for students eligible for this subject.");
 
   for (const record of parsed.records) {
     if (record.marks_obtained > Number(exam.max_marks)) {
@@ -420,16 +466,10 @@ export async function submitExamForApproval(user: AppUser, examId: string) {
   const writeClient = user.role === "principal" ? createAdminClient() : supabase;
 
   const [roster, marks] = await Promise.all([
-    supabase
-      .from("student_subject_enrollments")
-      .select("student_id")
-      .eq("school_id", user.schoolId)
-      .eq("class_id", exam.class_id)
-      .eq("subject_id", exam.subject_id),
+    getEligibleSubjectRoster(user, exam.class_id, exam.subject_id).then((data) => ({ data, error: null })),
     supabase.from("marks").select("student_id").eq("school_id", user.schoolId).eq("exam_id", exam.id)
   ]);
 
-  if (roster.error) throw new Error(roster.error.message);
   if (marks.error) throw new Error(marks.error.message);
   const marked = new Set((marks.data ?? []).map((row: any) => row.student_id));
   const missing = (roster.data ?? []).filter((row: any) => !marked.has(row.student_id));
