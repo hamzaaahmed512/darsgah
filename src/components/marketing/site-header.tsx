@@ -34,8 +34,11 @@ export function SiteHeader() {
                 href={item.href}
                 key={item.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                  active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-low hover:text-ink"
+                  "relative inline-flex h-[72px] items-center px-3 text-sm font-semibold text-muted transition-[color,font-weight] duration-300 ease-out",
+                  "after:absolute after:bottom-[-1px] after:left-3 after:right-3 after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 after:ease-out after:content-['']",
+                  active
+                    ? "font-bold text-ink after:scale-x-100"
+                    : "hover:text-ink hover:after:scale-x-100"
                 )}
               >
                 {item.label}
@@ -44,10 +47,12 @@ export function SiteHeader() {
           })}
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href="/sign-in" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-ink hover:bg-surface-low">
-            Sign in
+          <Link href="/sign-in" className="relative inline-flex items-center px-4 py-2.5 text-sm font-semibold text-ink transition-[color,font-weight] duration-300 ease-out hover:font-bold hover:text-primary">
+            <span className="relative after:absolute after:bottom-[-3px] after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 after:ease-out after:content-[''] hover:after:scale-x-100">
+              Sign in
+            </span>
           </Link>
-          <Link href="/contact" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-button hover:bg-primary-ink">
+          <Link href="/contact" className="inline-flex items-center gap-2 rounded-none bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-button hover:bg-primary-ink">
             Book a demo <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
@@ -65,13 +70,13 @@ export function SiteHeader() {
         <div className="border-t border-outline bg-white px-4 pb-5 pt-3 lg:hidden">
           <nav className="mx-auto grid max-w-7xl gap-1" aria-label="Mobile navigation">
             {navigation.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-xl px-4 py-3 text-sm font-semibold text-muted hover:bg-surface-low hover:text-ink">
+              <Link key={item.href} href={item.href} className="px-4 py-3 text-sm font-semibold text-muted hover:text-ink">
                 {item.label}
               </Link>
             ))}
             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-outline pt-4">
               <Link href="/sign-in" className="rounded-xl border border-outline px-4 py-3 text-center text-sm font-semibold text-ink">Sign in</Link>
-              <Link href="/contact" className="rounded-xl bg-primary px-4 py-3 text-center text-sm font-semibold text-white">Book a demo</Link>
+              <Link href="/contact" className="rounded-none bg-primary px-4 py-3 text-center text-sm font-semibold text-white">Book a demo</Link>
             </div>
           </nav>
         </div>
