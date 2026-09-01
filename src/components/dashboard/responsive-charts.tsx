@@ -13,6 +13,7 @@ import {
   YAxis
 } from "recharts";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatCompactNumber } from "@/lib/utils";
 
 export function AttendanceTrendChart({ data }: { data: Array<{ date: string; attendance: number }> }) {
   if (!data.length) {
@@ -51,7 +52,7 @@ export function ClassDistributionChart({ data }: { data: Array<{ class_name: str
         <BarChart data={data} margin={{ top: 12, right: 8, left: -12, bottom: 18 }}>
           <CartesianGrid stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="class_name" tick={{ fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={54} />
-          <YAxis tick={{ fontSize: 12 }} width={36} allowDecimals={false} />
+          <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatCompactNumber(Number(value))} width={42} allowDecimals={false} />
           <Tooltip formatter={(value) => [value, "Students"]} />
           <Legend verticalAlign="top" height={24} />
           <Bar name="Students" dataKey="student_count" fill="#2563eb" radius={[8, 8, 0, 0]} maxBarSize={42} />

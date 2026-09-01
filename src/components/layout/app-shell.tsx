@@ -73,6 +73,16 @@ export function AppShell({
     setNavDate(formatNavDate(new Date()));
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   const prevPathnameRef = useRef(pathname);
 
   useEffect(() => {
@@ -283,10 +293,17 @@ export function AppShell({
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
       <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden bg-white shadow-[1px_0_0_rgba(226,232,240,0.95)] lg:block">{sidebar}</div>
-      <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-dvh w-[292px] flex-col overflow-hidden bg-white shadow-lift transition duration-200 lg:hidden",
+          "fixed inset-0 z-50 h-dvh bg-black/50 backdrop-blur-[1px] transition-opacity duration-200 lg:hidden",
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-[60] flex h-dvh w-[min(292px,calc(100vw-2rem))] flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -302,9 +319,9 @@ export function AppShell({
       </div>
 
       <div className="lg:pl-[292px]">
-        <header className="sticky top-0 z-30 flex min-h-[92px] items-center justify-between gap-3 bg-white px-4 shadow-[0_1px_0_rgba(226,232,240,0.95)] sm:px-6 lg:px-10">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:h-[92px] lg:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <button className="rounded-xl p-2 hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
+            <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />
             </button>
             <div className="hidden items-center gap-2 text-sm font-bold text-slate-900 sm:flex">
@@ -386,7 +403,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1520px] px-4 py-8 sm:px-6 lg:px-10">{children}</main>
+        <main className="mx-auto w-full max-w-[1520px] px-4 py-5 sm:px-6 sm:py-8 lg:px-10">{children}</main>
       </div>
     </div>
   );

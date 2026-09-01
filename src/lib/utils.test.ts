@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClassDisplayName, formatGradeSection, initials, toCsv } from "@/lib/utils";
+import { formatClassDisplayName, formatCompactNumber, formatCompactPKR, formatGradeSection, initials, toCsv } from "@/lib/utils";
 import { calculateGrade, percentage } from "@/lib/grades";
 
 describe("utilities", () => {
@@ -16,6 +16,15 @@ describe("utilities", () => {
     expect(percentage(45, 50)).toBe(90);
     expect(calculateGrade(45, 50)).toBe("A+");
     expect(calculateGrade(32, 50)).toBe("C");
+  });
+
+  it("formats compact chart values with readable suffixes", () => {
+    expect(formatCompactPKR(500)).toBe("Rs 500");
+    expect(formatCompactPKR(1_000)).toBe("Rs 1K");
+    expect(formatCompactPKR(140_000)).toBe("Rs 140K");
+    expect(formatCompactPKR(110_313_877)).toBe("Rs 110.3M");
+    expect(formatCompactPKR(2_500_000_000)).toBe("Rs 2.5B");
+    expect(formatCompactNumber(15_500)).toBe("15.5K");
   });
 
   it("formats grade and section without duplicated labels", () => {

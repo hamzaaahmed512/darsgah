@@ -291,7 +291,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
       </Card>
 
       <div className="mb-8 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Income Trend</CardTitle>
           </CardHeader>
@@ -300,7 +300,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Expense Distribution</CardTitle>
           </CardHeader>

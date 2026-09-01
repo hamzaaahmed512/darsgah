@@ -151,7 +151,7 @@ export function AnnouncementBell({
 
       <div
         className={cn(
-          "fixed inset-x-3 top-20 z-50 w-auto max-w-[calc(100vw-1.5rem)] rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:w-[360px]",
+          "fixed inset-x-3 top-[4.5rem] z-50 w-auto max-w-[calc(100vw-1.5rem)] rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:w-[360px]",
           open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
         )}
         role="dialog"

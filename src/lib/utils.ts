@@ -46,6 +46,30 @@ export function formatPKR(amount: number | null | undefined): string {
 }
 
 /**
+ * Compact a number for space-constrained chart labels.
+ * Tooltips and data tables should continue to use their full-value formatters.
+ */
+export function formatCompactNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "0";
+
+  const absoluteValue = Math.abs(value);
+  const units = [
+    { threshold: 1_000_000_000, suffix: "B" },
+    { threshold: 1_000_000, suffix: "M" },
+    { threshold: 1_000, suffix: "K" }
+  ];
+  const unit = units.find(({ threshold }) => absoluteValue >= threshold);
+
+  if (!unit) return new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(value);
+
+  return `${new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(value / unit.threshold)}${unit.suffix}`;
+}
+
+export function formatCompactPKR(amount: number | null | undefined): string {
+  return `Rs ${formatCompactNumber(amount)}`;
+}
+
+/**
  * Format a date string or Date object as "14 Jul 2026" (DD MMM YYYY) in PKT.
  */
 export function formatDatePK(value: string | Date | null | undefined): string {
@@ -211,8 +235,6 @@ export function formatClassDisplayName(
   const cleanClassName = className?.trim() ?? "";
   let cleanGrade = grade?.trim() ?? "";
   let cleanSection = section?.trim() ?? "";
-  const normalizedCompactGrade = cleanGrade.replace(/^Grade\s+/i, "").replace(/\s+/g, "").toUpperCase();
-  const normalizedCompactSection = cleanSection.replace(/\s+/g, "").toUpperCase();
 
   // If grade is missing, try to extract from className
   if (!cleanGrade && cleanClassName) {

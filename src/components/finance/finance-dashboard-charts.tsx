@@ -18,7 +18,7 @@ import {
   YAxis
 } from "recharts";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDatePK, formatPKR } from "@/lib/utils";
+import { formatCompactPKR, formatDatePK, formatPKR } from "@/lib/utils";
 
 const COLORS = ["#2563eb", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
 
@@ -64,7 +64,7 @@ export function OutstandingByClassChart({ data }: { data: Array<{ className: str
         <BarChart data={data} margin={{ top: 12, right: 8, left: -2, bottom: 18 }}>
           <CartesianGrid stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="className" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => formatPKR(Number(val))} width={78} />
+          <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => formatCompactPKR(Number(val))} width={64} />
           <Tooltip formatter={(value) => [formatPKR(Number(value)), "Outstanding"]} />
           <Bar name="Outstanding Balance" dataKey="amount" fill="#ef4444" radius={[8, 8, 0, 0]} maxBarSize={42} />
         </BarChart>
@@ -97,14 +97,12 @@ function formatTrendTooltipLabel(value: string, period: keyof TrendSeries) {
 }
 
 function TrendChart({
-  title,
   emptyTitle,
   emptyDescription,
   tooltipLabel,
   datasets,
   stroke
 }: {
-  title: string;
   emptyTitle: string;
   emptyDescription: string;
   tooltipLabel: string;
@@ -117,15 +115,14 @@ function TrendChart({
 
   return (
     <div className="w-full min-w-0">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-ink">{title}</p>
-        <div className="inline-flex rounded-lg border border-outline/60 bg-white p-1">
+      <div className="mb-4 flex justify-end">
+        <div className="inline-flex max-w-full rounded-lg border border-outline/60 bg-white p-1">
           {(["monthly", "yearly", "lifetime"] as const).map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setPeriod(item)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`rounded-md px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition sm:px-3 sm:text-xs ${
                 period === item ? "bg-primary text-white" : "text-muted hover:bg-surface-low hover:text-ink"
               }`}
             >
@@ -134,13 +131,13 @@ function TrendChart({
           ))}
         </div>
       </div>
-      <div className="h-[320px]">
+      <div className="h-[320px] w-full min-w-0 px-1 pb-1 sm:px-2">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 12, right: 18, left: 2, bottom: 18 }}>
+            <LineChart data={data} margin={{ top: 16, right: 12, left: 4, bottom: 24 }}>
               <CartesianGrid stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} tickFormatter={(value) => formatTrendLabel(String(value), period)} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => formatPKR(Number(val))} width={78} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => formatCompactPKR(Number(val))} width={64} />
               <Tooltip labelFormatter={(label) => formatTrendTooltipLabel(String(label), period)} formatter={(value) => [formatPKR(Number(value)), tooltipLabel]} />
               <Line type="monotone" dataKey="amount" stroke={stroke} strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "#ffffff" }} activeDot={{ r: 6 }} />
             </LineChart>
@@ -160,7 +157,6 @@ function TrendChart({
 export function IncomeTrendChart({ datasets }: { datasets: TrendSeries }) {
   return (
     <TrendChart
-      title="Income Trend"
       emptyTitle="No income trend yet"
       emptyDescription="Income trend will show when income is recorded for the selected period."
       tooltipLabel="Income"
@@ -188,9 +184,8 @@ export function ExpenseDistributionChart({ datasets }: { datasets: DistributionS
 
   return (
     <div className="w-full min-w-0">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-ink">Expense Distribution</p>
-        <div className="inline-flex rounded-lg border border-outline/60 bg-white p-1">
+      <div className="mb-4 flex justify-end">
+        <div className="inline-flex max-w-full rounded-lg border border-outline/60 bg-white p-1">
           {(["monthly", "yearly", "lifetime"] as const).map((item) => (
             <button
               key={item}
@@ -199,7 +194,7 @@ export function ExpenseDistributionChart({ datasets }: { datasets: DistributionS
                 setPeriod(item);
                 setActiveIndex(undefined);
               }}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`rounded-md px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition sm:px-3 sm:text-xs ${
                 period === item ? "bg-primary text-white" : "text-muted hover:bg-surface-low hover:text-ink"
               }`}
             >
@@ -208,7 +203,7 @@ export function ExpenseDistributionChart({ datasets }: { datasets: DistributionS
           ))}
         </div>
       </div>
-      <div className="h-[320px]">
+      <div className="h-[320px] w-full min-w-0 px-1 pb-1 sm:px-2">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -217,7 +212,7 @@ export function ExpenseDistributionChart({ datasets }: { datasets: DistributionS
                   {activeItem ? activeItem.name : "Total Expense"}
                 </tspan>
                 <tspan x="50%" dy="1.35em" className="text-base font-bold">
-                  {formatPKR(activeItem ? activeItem.value : totalExpense)}
+                  {formatCompactPKR(activeItem ? activeItem.value : totalExpense)}
                 </tspan>
                 {activePercent !== null ? (
                   <tspan x="50%" dy="1.35em" className="fill-muted text-xs font-semibold">
