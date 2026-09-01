@@ -16,6 +16,7 @@ export default async function SettingsPage({
 }) {
   const params = await searchParams;
   const user = await requireUser("settings:manage");
+  const canManageRoles = user.role === "administrator" || user.role === "principal";
 
   const supabase = await createClient();
 
@@ -23,10 +24,10 @@ export default async function SettingsPage({
     getSchoolSettings(user),
     getAcademicYears(user),
     user.role === "principal" ? getPrincipalTeachingSettings(user) : Promise.resolve({ classes: [], assignedClassId: null }),
-    user.role === "administrator" ? getSchoolMembers(user) : Promise.resolve([]),
-    user.role === "administrator" ? supabase.from("custom_roles").select("*").eq("school_id", user.schoolId).order("name") : Promise.resolve({ data: [] }),
-    user.role === "administrator" ? supabase.from("role_permissions").select("*").eq("school_id", user.schoolId) : Promise.resolve({ data: [] }),
-    user.role === "administrator" ? supabase.from("user_permission_overrides").select("*").eq("school_id", user.schoolId) : Promise.resolve({ data: [] })
+    canManageRoles ? getSchoolMembers(user) : Promise.resolve([]),
+    canManageRoles ? supabase.from("custom_roles").select("*").eq("school_id", user.schoolId).order("name") : Promise.resolve({ data: [] }),
+    canManageRoles ? supabase.from("role_permissions").select("*").eq("school_id", user.schoolId) : Promise.resolve({ data: [] }),
+    canManageRoles ? supabase.from("user_permission_overrides").select("*").eq("school_id", user.schoolId) : Promise.resolve({ data: [] })
   ]);
 
   const customRoles = customRolesRes.data ?? [];

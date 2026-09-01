@@ -51,7 +51,15 @@ export function SettingsTabs({
 }: Props) {
   const isAdmin = user.role === "administrator";
   const isPrincipal = user.role === "principal";
-  const allowedTabs = new Set(["notifications", ...(isPrincipal ? ["teaching", "result-cards"] : []), ...(isAdmin ? ["academics", "roles", "result-cards"] : [])]);
+  const canManageRoles = isPrincipal || isAdmin;
+  const canManageAcademics = isPrincipal || isAdmin;
+  const allowedTabs = new Set([
+    "notifications",
+    ...(isPrincipal ? ["teaching"] : []),
+    ...(isPrincipal || isAdmin ? ["result-cards"] : []),
+    ...(canManageAcademics ? ["academics"] : []),
+    ...(canManageRoles ? ["roles"] : [])
+  ]);
   const startingTab = allowedTabs.has(initialTab) ? initialTab : "notifications";
   const [activeTab, setActiveTab] = useState(startingTab);
   const [isPending, startTransition] = useTransition();
@@ -180,24 +188,28 @@ export function SettingsTabs({
           </button>
         ) : null}
 
-        {isAdmin ? (
+        {canManageAcademics || canManageRoles ? (
           <>
             <div className="my-2 h-px bg-outline/40" />
             <span className="mb-1 px-4 text-[10px] font-bold uppercase tracking-wider text-muted">
-              Admin Only
+              Management
             </span>
-            <button
-              onClick={() => selectTab("academics")}
-              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
-            >
-              Academic Sessions
-            </button>
-            <button
-              onClick={() => selectTab("roles")}
-              className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "roles" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
-            >
-              Role Management
-            </button>
+            {canManageAcademics ? (
+              <button
+                onClick={() => selectTab("academics")}
+                className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "academics" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+              >
+                Academic Sessions
+              </button>
+            ) : null}
+            {canManageRoles ? (
+              <button
+                onClick={() => selectTab("roles")}
+                className={`w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition ${activeTab === "roles" ? "bg-primary text-white" : "text-muted hover:bg-surface-low"}`}
+              >
+                Role Management
+              </button>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -385,7 +397,7 @@ export function SettingsTabs({
           </form>
         ) : null}
 
-        {activeTab === "academics" && isAdmin ? (
+        {activeTab === "academics" && canManageAcademics ? (
           <div className="space-y-6">
             <h3 className="font-display text-xl font-bold text-ink">Academic Sessions</h3>
 
@@ -480,8 +492,9 @@ export function SettingsTabs({
         ) : null}
 
 
-        {activeTab === "roles" && isAdmin ? (
+        {activeTab === "roles" && canManageRoles ? (
           <RolesTab
+            currentUserRole={user.role}
             members={members}
             customRoles={customRoles}
             rolePermissions={rolePermissions}

@@ -180,6 +180,8 @@ export async function updateMemberStatusAction(memberId: string, newStatus: stri
 export async function createCustomRoleAction(name: string, baseRole: string, permissions: string[]) {
   try {
     const user = await requireUser("settings:manage");
+    if (user.role !== "principal") throw new Error("Only the principal can create custom roles.");
+    if (baseRole === "principal") throw new Error("Principal-based custom roles are not allowed. Use an administrator-based role for vice-principal style access.");
     const adminClient = createAdminClient();
     
     // Create the custom role
@@ -213,6 +215,7 @@ export async function createCustomRoleAction(name: string, baseRole: string, per
 export async function deleteCustomRoleAction(id: string) {
   try {
     const user = await requireUser("settings:manage");
+    if (user.role !== "principal") throw new Error("Only the principal can delete custom roles.");
     const adminClient = createAdminClient();
     const { error } = await adminClient.from("custom_roles").delete().eq("school_id", user.schoolId).eq("id", id);
     if (error) throw error;
@@ -227,6 +230,33 @@ export async function assignCustomRoleToUserAction(memberId: string, customRoleI
   try {
     const user = await requireUser("users:manage");
     const adminClient = createAdminClient();
+    const { data: target, error: targetError } = await adminClient
+      .from("school_members")
+      .select("user_id,role")
+      .eq("school_id", user.schoolId)
+      .eq("id", memberId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) throw new Error("School member not found.");
+    if (user.role === "administrator" && (target.user_id === user.id || target.role === "principal" || target.role === "administrator")) {
+      throw new Error("Only the principal can manage administrator and principal accounts.");
+    }
+    if (customRoleId) {
+      const { data: customRole, error: customRoleError } = await adminClient
+        .from("custom_roles")
+        .select("base_role")
+        .eq("school_id", user.schoolId)
+        .eq("id", customRoleId)
+        .maybeSingle();
+      if (customRoleError) throw customRoleError;
+      if (!customRole) throw new Error("Selected custom role could not be found.");
+      if (customRole.base_role === "principal") {
+        throw new Error("Principal-based custom roles cannot be assigned.");
+      }
+      if (user.role !== "principal" && customRole.base_role === "administrator") {
+        throw new Error("Only the principal can assign administrator-level custom roles.");
+      }
+    }
     const { error } = await adminClient
       .from("school_members")
       .update({ custom_role_id: customRoleId })
@@ -243,6 +273,7 @@ export async function assignCustomRoleToUserAction(memberId: string, customRoleI
 export async function updateRolePermissionsAction(roleKey: string, permissions: string[]) {
   try {
     const user = await requireUser("settings:manage");
+    if (user.role !== "principal") throw new Error("Only the principal can update custom role permissions.");
     const adminClient = createAdminClient();
     
     // Delete all current role permissions for this roleKey

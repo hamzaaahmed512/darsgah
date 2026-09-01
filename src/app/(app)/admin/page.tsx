@@ -9,7 +9,17 @@ import { StaffFormModal } from "@/components/teachers/staff-form";
 
 export default async function AdminPage() {
   const user = await requireUser("users:manage");
-  const members = await getStaff(user);
+  const members = (await getStaff(user)).filter((member: any) =>
+    user.role === "principal" ? true : member.role !== "principal" && member.role !== "administrator"
+  );
+  const allowedRoles =
+    user.role === "principal"
+      ? (["administrator", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
+      : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
+  const visibleRoleCards =
+    user.role === "principal"
+      ? (["administrator", "principal", "teacher", "head_teacher", "student_staff", "staff", "cashier"] as const)
+      : (["teacher", "head_teacher", "student_staff", "staff", "cashier"] as const);
 
   return (
     <>
@@ -17,7 +27,7 @@ export default async function AdminPage() {
         eyebrow="System"
         title="Administrator Console"
         description="Manage user membership, role policy, and school-level settings without exposing service-role credentials."
-        actions={<StaffFormModal allowedRoles={["administrator", "principal", "teacher", "student_staff"]} triggerLabel="Add User" />}
+        actions={<StaffFormModal allowedRoles={[...allowedRoles]} triggerLabel="Add User" />}
       />
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
@@ -68,7 +78,7 @@ export default async function AdminPage() {
             <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {(["administrator", "principal", "teacher", "student_staff"] as const).map((role) => (
+            {visibleRoleCards.map((role) => (
               <div key={role} className="rounded-lg bg-surface-low p-4">
                 <p className="font-semibold capitalize text-ink">{role.replace("_", " ")}</p>
                 <p className="mt-1 text-sm text-muted">{getRolePermissions(role).join(", ")}</p>

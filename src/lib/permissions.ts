@@ -60,6 +60,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "reports:view",
     "activity:view",
     "settings:manage",
+    "users:manage",
     "approvals:view",
     "approvals:review",
     "teachers:manage",

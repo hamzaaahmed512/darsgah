@@ -66,7 +66,7 @@ export async function MarkAssessmentView({
             <CardTitle>{selectedExam ? "Student Marks" : "Assessment Not Found"}</CardTitle>
             <p className="mt-1 text-sm text-muted">
               {selectedExam
-                ? `${selectedExam.term} / ${selectedExam.exam_date} / ${Number(selectedExam.max_marks)} marks`
+                ? `${selectedExam.term} / ${selectedExam.exam_date} / ${Number(selectedExam.max_marks)} marks / ${workspace.roster.length} eligible students`
                 : "The assessment may not belong to your assigned class and subject."}
             </p>
           </div>

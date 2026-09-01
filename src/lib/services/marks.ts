@@ -15,7 +15,7 @@ import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, typ
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 import { getCombinationOptionsForClass } from "@/lib/services/student-combinations";
-import { isDefaultStudentMajor, isSubjectExcludedForMajor } from "@/lib/student-majors";
+import { isSubjectExcludedForMajor, type StudentCombinationOption } from "@/lib/student-majors";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -159,9 +159,33 @@ async function getEditableExam(user: AppUser, examId: string) {
 
 /**
  * Resolve a subject roster from the source-of-truth class enrollment and the
- * student's selected combination. Explicit subject rows remain supported, but
- * are no longer the only way a student becomes eligible for marking.
+ * student's selected combination. Explicit subject rows remain supported as a
+ * direct enrollment override, but the roster is still filtered against the
+ * actual subject eligibility for the student's combination.
  */
+function isStudentEligibleForAssessmentSubject(values: {
+  studentId: string;
+  studentMajor: string | null | undefined;
+  subjectId: string;
+  subjectName: string;
+  gradeName: string;
+  directStudentIds: Set<string>;
+  combinationOptions: StudentCombinationOption[];
+}) {
+  const { studentId, studentMajor, subjectId, subjectName, gradeName, directStudentIds, combinationOptions } = values;
+  if (directStudentIds.has(studentId)) return true;
+
+  const customCombination = combinationOptions.find((option) => option.kind === "custom" && option.value === studentMajor);
+  if (customCombination) return customCombination.subjectIds?.includes(subjectId) ?? false;
+
+  const defaultCombination = combinationOptions.find(
+    (option) => option.kind === "default" && option.value === studentMajor && option.subjectIds?.length
+  );
+  if (defaultCombination) return defaultCombination.subjectIds?.includes(subjectId) ?? false;
+
+  return !isSubjectExcludedForMajor(gradeName, studentMajor, subjectName);
+}
+
 export async function getEligibleSubjectRoster(user: AppUser, classId: string, subjectId: string) {
   const admin = createAdminClient();
   const [classResult, subjectResult, enrollmentResult, directResult] = await Promise.all([
@@ -187,15 +211,15 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
     .filter((student: any) => student?.id && student.status === "active");
 
   const eligible = classStudents.filter((student: any) => {
-    if (directStudentIds.has(student.id)) return true;
-    // A non-elective subject is core for the class, so incomplete legacy
-    // combination data must never remove an actively enrolled student.
-    if (!subject.is_elective) return true;
-    const combination = combinationByValue.get(student.major);
-    if (combination?.subjectIds?.includes(subjectId)) return true;
-    // Built-in combinations without a persisted override are defined by their
-    // exclusion rules rather than combination-subject join rows.
-    return isDefaultStudentMajor(student.major) && !isSubjectExcludedForMajor(gradeName, student.major, subject.name);
+    return isStudentEligibleForAssessmentSubject({
+      studentId: student.id as string,
+      studentMajor: student.major,
+      subjectId,
+      subjectName: subject.name,
+      gradeName,
+      directStudentIds,
+      combinationOptions
+    });
   });
 
   const missing = eligible.filter((student: any) => !directStudentIds.has(student.id));
@@ -302,8 +326,14 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
   if (marks.error) throw new Error(marks.error.message);
   if (assessmentMarks.error) throw new Error(assessmentMarks.error.message);
 
-  const markMap = new Map((marks.data ?? []).map((mark: any) => [mark.student_id, mark]));
+  const eligibleStudentIds = new Set((roster.data ?? []).map((row: any) => row.student_id as string));
+  const markMap = new Map(
+    (marks.data ?? [])
+      .filter((mark: any) => eligibleStudentIds.has(mark.student_id))
+      .map((mark: any) => [mark.student_id, mark])
+  );
   const markCounts = (assessmentMarks.data ?? []).reduce<Record<string, number>>((counts, mark: any) => {
+    if (!eligibleStudentIds.has(mark.student_id)) return counts;
     counts[mark.exam_id] = (counts[mark.exam_id] ?? 0) + 1;
     return counts;
   }, {});

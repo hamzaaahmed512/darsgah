@@ -5,8 +5,45 @@ import { hasPermission } from "@/lib/permissions";
 import { sortClassesNaturally } from "@/lib/class-sort";
 import { formatDisplayName } from "@/lib/student-name";
 
+const ADMIN_RESTRICTED_MEMBER_ROLES = new Set(["principal", "administrator"]);
+const PRINCIPAL_ONLY_ROLE_TARGETS = new Set(["principal", "administrator"]);
+
 function isOutdatedHeadTeacherGuard(error: { message?: string } | null) {
   return Boolean(error?.message?.includes("Head teacher must be an active teacher in this school."));
+}
+
+async function getSchoolMemberRecord(user: AppUser, memberId: string) {
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient
+    .from("school_members")
+    .select("id,user_id,role")
+    .eq("school_id", user.schoolId)
+    .eq("id", memberId)
+    .maybeSingle<{ id: string; user_id: string; role: string }>();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("School member not found.");
+  return data;
+}
+
+function assertCanManageProtectedMember(
+  user: AppUser,
+  target: { user_id: string; role: string },
+  requestedRole?: string
+) {
+  if (requestedRole === "principal") {
+    throw new Error("Principal role changes are not supported here. Each school can have only one principal.");
+  }
+
+  if (user.role !== "administrator") return;
+
+  if (
+    target.user_id === user.id ||
+    ADMIN_RESTRICTED_MEMBER_ROLES.has(target.role) ||
+    (requestedRole != null && PRINCIPAL_ONLY_ROLE_TARGETS.has(requestedRole))
+  ) {
+    throw new Error("Only the principal can manage administrator and principal accounts.");
+  }
 }
 
 async function loadSchoolProfile(user: AppUser) {
@@ -252,28 +289,36 @@ export async function getSchoolMembers(user: AppUser) {
   }
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("school_members")
     .select(`
       id,
+      user_id,
       role,
       status,
       department,
       job_title,
+      custom_role_id,
       profiles!school_members_user_id_fkey(id, full_name, email, avatar_url)
     `)
-    .eq("school_id", user.schoolId)
-    .order("role");
+    .eq("school_id", user.schoolId);
+
+  if (user.role === "administrator") {
+    query = query.not("role", "in", "(principal,administrator)");
+  }
+
+  const { data, error } = await query.order("role");
 
   if (error) throw new Error(error.message);
 
   return (data || []).map((row: any) => ({
     memberId: row.id,
-    userId: row.profiles?.id,
+    userId: row.user_id ?? row.profiles?.id,
     fullName: formatDisplayName(row.profiles?.full_name) || "—",
     email: row.profiles?.email ?? "—",
     avatarUrl: row.profiles?.avatar_url,
     role: row.role,
+    customRoleId: row.custom_role_id ?? null,
     status: row.status,
     department: row.department,
     jobTitle: row.job_title
@@ -285,6 +330,8 @@ export async function updateMemberRole(user: AppUser, memberId: string, newRole:
     throw new Error("Unauthorized to modify user roles");
   }
   const adminClient = createAdminClient();
+  const target = await getSchoolMemberRecord(user, memberId);
+  assertCanManageProtectedMember(user, target, newRole);
 
   const { error } = await adminClient
     .from("school_members")
@@ -300,6 +347,8 @@ export async function updateMemberStatus(user: AppUser, memberId: string, newSta
     throw new Error("Unauthorized to modify user status");
   }
   const adminClient = createAdminClient();
+  const target = await getSchoolMemberRecord(user, memberId);
+  assertCanManageProtectedMember(user, target);
 
   const { error } = await adminClient
     .from("school_members")

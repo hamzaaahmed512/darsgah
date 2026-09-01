@@ -16,8 +16,8 @@ export class StaffEmailAlreadyAssignedError extends Error {
 }
 
 const creatableRoles: Record<UserRole, UserRole[]> = {
-  administrator: ["administrator", "principal", "teacher", "head_teacher", "staff", "student_staff", "cashier"],
-  principal: ["teacher", "head_teacher", "staff", "student_staff", "cashier"],
+  administrator: ["teacher", "head_teacher", "staff", "student_staff", "cashier"],
+  principal: ["administrator", "teacher", "head_teacher", "staff", "student_staff", "cashier"],
   teacher: [],
   student_staff: [],
   cashier: [],
@@ -54,8 +54,23 @@ function isDuplicateEmailError(error: unknown) {
 export async function createStaffAccount(user: AppUser, values: StaffFormValues) {
   const parsed = staffFormSchema.parse(values);
   const adminClient = createAdminClient();
+  const customRole = parsed.custom_role_id
+    ? await adminClient
+        .from("custom_roles")
+        .select("id,name,base_role")
+        .eq("school_id", user.schoolId)
+        .eq("id", parsed.custom_role_id)
+        .maybeSingle<{ id: string; name: string; base_role: UserRole }>()
+    : { data: null, error: null };
+  if (customRole.error) throw new Error(customRole.error.message);
+  if (parsed.custom_role_id && !customRole.data) throw new Error("Selected custom role could not be found.");
 
-  if (!(creatableRoles[user.role] ?? []).includes(parsed.role)) {
+  const effectiveRole = customRole.data?.base_role ?? parsed.role;
+  if (effectiveRole === "principal") {
+    throw new Error("Principal accounts cannot be created from this screen. Each school can have only one principal.");
+  }
+
+  if (!(creatableRoles[user.role] ?? []).includes(effectiveRole)) {
     throw new Error("You do not have permission to create that role.");
   }
 
@@ -152,7 +167,8 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
     .insert({
       school_id: user.schoolId,
       user_id: userId,
-      role: parsed.role,
+      role: effectiveRole,
+      custom_role_id: customRole.data?.id ?? null,
       department: parsed.department || null,
       job_title: parsed.job_title || null,
       status: "active"
@@ -175,7 +191,8 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
   }
 
   await logActivity(user, "staff_created", "school_member", userId, {
-    role: parsed.role,
+    role: effectiveRole,
+    custom_role_id: customRole.data?.id ?? null,
     reused_identity: Boolean(existingProfile)
   });
 }

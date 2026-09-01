@@ -24,19 +24,35 @@ const roleLabels: Record<UserRole, string> = {
 
 export function StaffFormModal({
   allowedRoles = ["teacher", "student_staff"],
+  customRoles = [],
   triggerLabel = "Add User"
 }: {
   allowedRoles?: UserRole[];
+  customRoles?: Array<{ id: string; name: string; base_role: UserRole }>;
   triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const standardRoleOptions = allowedRoles.map((role) => ({ value: `base:${role}`, label: roleLabels[role], role, customRoleId: "" }));
+  const customRoleOptions = customRoles
+    .filter((role) => allowedRoles.includes(role.base_role) && role.base_role !== "principal")
+    .map((role) => ({ value: `custom:${role.id}`, label: role.name, role: role.base_role, customRoleId: role.id }));
+  const roleOptions = [...standardRoleOptions, ...customRoleOptions];
+  const [selectedRoleOption, setSelectedRoleOption] = useState(roleOptions[0]?.value ?? `base:${allowedRoles[0] ?? "teacher"}`);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, setError: setFieldError, clearErrors } = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
-    defaultValues: { role: allowedRoles[0] ?? "teacher" }
+    defaultValues: { role: allowedRoles[0] ?? "teacher", custom_role_id: undefined }
   });
+
+  function handleRoleChange(value: string) {
+    setSelectedRoleOption(value);
+    const option = roleOptions.find((item) => item.value === value);
+    if (!option) return;
+    setValue("role", option.role, { shouldDirty: true, shouldValidate: true });
+    setValue("custom_role_id", option.customRoleId || undefined, { shouldDirty: true, shouldValidate: true });
+  }
 
   const onSubmit = (data: StaffFormValues) => {
     setError(null);
@@ -53,6 +69,7 @@ export function StaffFormModal({
           return;
         }
         reset();
+        setSelectedRoleOption(roleOptions[0]?.value ?? `base:${allowedRoles[0] ?? "teacher"}`);
         setOpen(false);
       } catch (err: any) {
         setError(err.message || "Failed to create account.");
@@ -118,12 +135,23 @@ export function StaffFormModal({
 
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-ink">Role<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
-                  <Select {...register("role")} required aria-required="true">
-                    {allowedRoles.map((role) => (
-                      <option key={role} value={role}>{roleLabels[role]}</option>
+                  <input type="hidden" {...register("role")} />
+                  <input type="hidden" {...register("custom_role_id")} />
+                  <Select value={selectedRoleOption} onChange={(event) => handleRoleChange(event.target.value)} required aria-required="true">
+                    {standardRoleOptions.map((role) => (
+                      <option key={role.value} value={role.value}>{role.label}</option>
                     ))}
+                    {customRoleOptions.length ? <optgroup label="Custom roles">
+                      {customRoleOptions.map((role) => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
+                    </optgroup> : null}
                   </Select>
+                  {customRoleOptions.length ? (
+                    <p className="mt-1 text-xs text-muted">Custom roles inherit their selected base role and apply the attached permissions.</p>
+                  ) : null}
                   {errors.role?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.role.message}</p> : null}
+                  {errors.custom_role_id?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.custom_role_id.message}</p> : null}
                 </div>
 
                 <div>

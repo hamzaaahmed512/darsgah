@@ -55,8 +55,10 @@ export default async function StaffPage({
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
-      ? (["administrator", "principal", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
-      : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
+      ? (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
+      : user.role === "principal"
+        ? (["administrator", "teacher", "head_teacher", "staff", "student_staff", "cashier"] as const)
+        : (["teacher", "head_teacher", "staff", "student_staff", "cashier"] as const);
 
   return (
     <>
