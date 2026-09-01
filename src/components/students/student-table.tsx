@@ -75,15 +75,14 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
                 <td className="px-4 py-4 font-semibold">{student.admission_number}</td>
                 <td className="px-4 py-4 text-muted capitalize">{student.gender || "-"}</td>
                 {!limitedView ? <td className="px-4 py-4">
-                  <details className="group relative">
-                    <summary className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-low list-none [&::-webkit-details-marker]:hidden">
-                      Actions
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-outline/40 bg-white p-1 shadow-soft">
-                      <Link data-navigation-progress="immediate" href={`/students/${student.id}`} prefetch={false} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">View Profile</Link>
-                      <Link data-navigation-progress="immediate" href={`/students/${student.id}?edit=true`} prefetch={false} className="block rounded px-2 py-1.5 text-xs text-ink hover:bg-surface-low">Edit Details</Link>
-                    </div>
-                  </details>
+                  <Link
+                    data-navigation-progress="immediate"
+                    href={`/students/${student.id}`}
+                    prefetch={false}
+                    className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary-soft px-3 text-xs font-semibold text-primary ring-1 ring-primary/10 hover:bg-primary hover:text-white"
+                  >
+                    View Profile
+                  </Link>
                 </td> : null}
               </tr>
             ))}
