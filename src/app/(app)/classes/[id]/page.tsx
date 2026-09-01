@@ -12,21 +12,23 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
-import { getAcademicOptions, getClassStudentRoster, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
-import { getStaff } from "@/lib/services/staff";
+import { getAcademicOptions, getAssignableHeadTeachers, getClassStudentRoster, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
 import { isCustomStudentMajor, isSubjectExcludedForMajor, studentMajorLabel } from "@/lib/student-majors";
 import { formatGradeSection } from "@/lib/utils";
 
 export default async function ManageSectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser("classes:manage");
-  const [academicData, classDetails, subjectsByClass, allStaff, rosterData] = await Promise.all([
-    getAcademicOptions(user), getClassTeachersAndAttendance(user), getClassSubjectsMap(user), getStaff(user), getClassStudentRoster(user, id)
+  const [academicData, classDetails, subjectsByClass, headTeacherOptions, rosterData] = await Promise.all([
+    getAcademicOptions(user), getClassTeachersAndAttendance(user), getClassSubjectsMap(user), getAssignableHeadTeachers(user), getClassStudentRoster(user, id)
   ]);
   const cls = academicData.classes.find((item) => item.id === id);
   if (!cls) notFound();
-  const teachers = allStaff.filter((member: any) => member.role === "teacher" || member.role === "head_teacher");
+  const teachers = headTeacherOptions;
   const assignedTeachers = classDetails.teachersByClass[id] ?? [];
+  const headTeacherAssignment = cls.head_teacher_id
+    ? assignedTeachers.find((teacher: any) => teacher.teacher_id === cls.head_teacher_id) ?? null
+    : null;
   const classSubjects = subjectsByClass[id] ?? [];
   const faculty = assignedTeachers.filter((teacher: any) => teacher.teacher_id !== cls.head_teacher_id);
 
@@ -46,7 +48,17 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Faculty ({faculty.length + (cls.head_teacher_id ? 1 : 0)})</CardTitle></CardHeader>
         <CardContent className="grid gap-2">
-          {cls.head_teacher_id ? <div className="flex items-center justify-between rounded-xl bg-primary-soft px-4 py-3"><span className="font-semibold text-ink">{cls.head_teacher_name}</span><Badge tone="blue">Head Teacher</Badge></div> : null}
+          {cls.head_teacher_id ? (
+            <div className="flex items-start justify-between gap-3 rounded-xl bg-primary-soft px-4 py-3">
+              <div>
+                <p className="font-semibold text-ink">{cls.head_teacher_name}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {headTeacherAssignment?.subject_names?.join(", ") || "No subject assigned"}
+                </p>
+              </div>
+              <Badge tone="blue">Head Teacher</Badge>
+            </div>
+          ) : null}
           {faculty.map((teacher: any) => <div key={teacher.teacher_id} className="flex items-start justify-between gap-3 rounded-xl bg-surface-low px-4 py-3"><div><p className="font-semibold text-ink">{teacher.teacher_name}</p><p className="mt-1 text-xs text-muted">{teacher.subject_names.join(", ") || "No subject assigned"}</p></div><Badge tone="gray">Teacher</Badge></div>)}
           {!cls.head_teacher_id && !faculty.length ? <EmptyState title="No faculty assigned" description="Assign a head teacher or subject teacher above." className="min-h-32" /> : null}
         </CardContent>

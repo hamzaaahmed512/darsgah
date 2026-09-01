@@ -7,6 +7,27 @@ import { formatDisplayName, formatStudentName } from "@/lib/student-name";
 import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
 import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
+const SUBJECT_ASSIGNABLE_MEMBER_ROLES = ["teacher", "head_teacher", "principal", "administrator"] as const;
+const HEAD_TEACHER_MEMBER_ROLES = ["teacher", "head_teacher", "principal", "administrator"] as const;
+
+async function assertSubjectAssignableTeacher(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: AppUser,
+  teacherId: string
+) {
+  const { data, error } = await supabase
+    .from("school_members")
+    .select("role")
+    .eq("school_id", user.schoolId)
+    .eq("user_id", teacherId)
+    .in("role", [...SUBJECT_ASSIGNABLE_MEMBER_ROLES])
+    .eq("status", "active")
+    .maybeSingle<{ role: string }>();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Teacher assignment is allowed only for active teaching or academic-control staff.");
+}
+
 
 export async function getAcademicOptions(user: AppUser) {
   const supabase = await createClient();
@@ -44,6 +65,27 @@ export async function getAcademicOptions(user: AppUser) {
       head_teacher_email: row.head_teacher?.email ?? null
     }))
   };
+}
+
+export async function getAssignableHeadTeachers(user: AppUser) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("school_members")
+    .select("user_id,role,profiles(full_name,email)")
+    .eq("school_id", user.schoolId)
+    .in("role", [...HEAD_TEACHER_MEMBER_ROLES])
+    .eq("status", "active")
+    .order("role")
+    .order("user_id");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: any) => ({
+    user_id: row.user_id as string,
+    role: row.role as string,
+    full_name: formatDisplayName(row.profiles?.full_name) || "Unknown",
+    email: row.profiles?.email ?? null
+  }));
 }
 
 function normalizeSectionName(name: string) {
@@ -160,12 +202,12 @@ async function assertHeadTeacher(user: AppUser, teacherId: string | null | undef
     .select("id")
     .eq("school_id", user.schoolId)
     .eq("user_id", teacherId)
-    .in("role", ["teacher", "head_teacher", "principal"])
+    .in("role", [...HEAD_TEACHER_MEMBER_ROLES])
     .eq("status", "active")
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Head teacher must be an active teacher or principal in this school.");
+  if (!data) throw new Error("Head teacher must be an active teacher, head teacher, principal, or administrator in this school.");
 }
 
 export async function createClass(user: AppUser, data: { name: string; grade_id: string; section_id?: string | null; academic_year_id: string; room?: string | null; head_teacher_id?: string | null }) {
@@ -387,7 +429,12 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
   const supabase = await createClient();
   const [options, teachers] = await Promise.all([
     getAcademicOptions(user),
-    supabase.from("school_members").select("user_id,profiles(full_name)").eq("school_id", user.schoolId).in("role", ["teacher", "head_teacher"]).eq("status", "active")
+    supabase
+      .from("school_members")
+      .select("user_id,role,profiles(full_name)")
+      .eq("school_id", user.schoolId)
+      .in("role", [...SUBJECT_ASSIGNABLE_MEMBER_ROLES])
+      .eq("status", "active")
   ]);
   const selectedClassId = classId ?? options.classes[0]?.id;
   const selectedClass = options.classes.find((item) => item.id === selectedClassId);
@@ -477,7 +524,7 @@ export async function getSubjectManagement(user: AppUser, classId?: string, subj
     ...options,
     catalogSubjects: options.subjects,
     subjects: availableSubjects,
-    teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: formatDisplayName(row.profiles?.full_name) || "Unknown" })),
+    teachers: (teachers.data ?? []).map((row: any) => ({ id: row.user_id, name: formatDisplayName(row.profiles?.full_name) || "Unknown", role: row.role })),
     selectedClassId,
     selectedSubjectId,
     selectedSubject,
@@ -781,6 +828,7 @@ async function getStudentMajors(supabase: Awaited<ReturnType<typeof createClient
 
 export async function assignSubjectTeacher(user: AppUser, values: { classId: string; subjectId: string; teacherId: string }) {
   const supabase = await createClient();
+  await assertSubjectAssignableTeacher(supabase, user, values.teacherId);
   const { data: existing, error: lookupError } = await supabase.from("teacher_assignments").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", values.subjectId).maybeSingle();
   if (lookupError) throw new Error(lookupError.message);
   const { error } = existing
@@ -878,6 +926,7 @@ export async function assignTeacherWithSubjects(
   values: { classId: string; teacherId: string; subjectIds: string[] }
 ) {
   const supabase = await createClient();
+  await assertSubjectAssignableTeacher(supabase, user, values.teacherId);
   const uniqueSubjectIds = [...new Set(values.subjectIds.filter(Boolean))];
 
   if (!uniqueSubjectIds.length) {

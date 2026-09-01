@@ -101,9 +101,7 @@ export const studentSchema = z.object({
   guardian_name: optionalEnglishName("Guardian name", 120),
   guardian_relationship: optionalText(60),
   guardian_email: optionalEmail,
-  guardian_phone: phone,
-  emergency_contact_name: optionalEnglishName("Emergency contact name", 120),
-  emergency_contact_phone: phone
+  guardian_phone: phone
 }).superRefine((values, ctx) => {
   if (values.father_alive !== "no") return;
   if (!values.guardian_name?.trim()) {

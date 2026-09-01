@@ -72,7 +72,7 @@ function BioTab({ student, guardians, limitedView }: Props) {
     <DetailCard title="Personal & academic" icon={<FileText className="h-5 w-5" />}>
       <DetailsGrid items={[
         ["Gender", student.gender], ["Date of birth", limitedView ? "Restricted" : student.date_of_birth],
-        ["Religion", limitedView ? "Restricted" : student.religion], ["Preferred name", student.preferred_name],
+        ["Religion", limitedView ? "Restricted" : student.religion],
         ["Admission date", student.admission_date], ["Class assignment", classAssignment],
         ...(!limitedView ? [["Father alive", student.father_alive === false ? "No" : "Yes"]] : [])
       ]} />
@@ -80,12 +80,11 @@ function BioTab({ student, guardians, limitedView }: Props) {
     {!limitedView ? <DetailCard title="Contact details" icon={<Phone className="h-5 w-5" />}>
       <DetailsGrid items={[["Phone", student.phone], ["Email", student.email], ["Home / permanent address", student.address]]} />
     </DetailCard> : null}
-    {!limitedView ? <Card className="lg:col-span-2"><CardHeader className="border-b border-outline/70"><div><CardTitle>Guardians & emergency contact</CardTitle><p className="mt-1 text-sm text-muted">Primary family and emergency contact information.</p></div></CardHeader><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+    {!limitedView ? <Card className="lg:col-span-2"><CardHeader className="border-b border-outline/70"><div><CardTitle>Guardians</CardTitle><p className="mt-1 text-sm text-muted">Primary family contact information.</p></div></CardHeader><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
       {guardians.length ? guardians.map((guardian) => <div key={guardian.guardian_id} className="rounded-2xl border border-outline bg-surface-low p-5">
         <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-ink">{formatDisplayName(guardian.full_name)}</p><p className="text-sm text-muted">{guardian.relationship || "Guardian"}</p></div>{guardian.is_primary ? <Badge tone="blue">Primary</Badge> : null}</div>
         <div className="mt-4 space-y-2 text-sm text-muted"><p className="flex items-center gap-2"><Phone className="h-4 w-4" />{guardian.phone || "Not recorded"}</p><p className="flex items-center gap-2"><Mail className="h-4 w-4" />{guardian.email || "Not recorded"}</p></div>
-        <div className="mt-4 border-t border-outline pt-4"><p className="text-xs font-bold uppercase tracking-wide text-muted">Emergency contact</p><p className="mt-2 font-medium text-ink">{formatDisplayName(guardian.emergency_contact_name) || "Not recorded"}</p><p className="mt-1 text-sm text-muted">{guardian.emergency_contact_phone || "No phone recorded"}</p></div>
-      </div>) : <EmptyState title="No guardian recorded" description="Guardian and emergency contact details will appear here." className="min-h-44 md:col-span-2" />}
+      </div>) : <EmptyState title="No guardian recorded" description="Guardian details will appear here." className="min-h-44 md:col-span-2" />}
     </CardContent></Card> : null}
   </div>;
 }

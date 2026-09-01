@@ -18,11 +18,27 @@ export type StudentCombinationOption = {
 };
 
 export const STUDENT_MAJOR_LABELS: Record<StudentMajor, string> = {
-  computer: "Computer",
-  biology: "Biology",
+  computer: "ICS with Physics",
+  biology: "Pre-Medical",
   pre_engineering: "Pre-Engineering",
-  computer_economics: "Computer with Economics",
-  computer_economics_stats: "Computer with Economics and Stats"
+  computer_economics: "ICS with Economics",
+  computer_economics_stats: "ICS with Economics and Stats"
+};
+
+const LEGACY_STUDENT_MAJOR_ALIASES: Record<string, StudentMajor> = {
+  biology: "biology",
+  "pre-medical": "biology",
+  computer: "computer",
+  "ics with physics": "computer",
+  pre_engineering: "pre_engineering",
+  "pre engineering": "pre_engineering",
+  "pre-engineering": "pre_engineering",
+  computer_economics: "computer_economics",
+  "computer with economics": "computer_economics",
+  "ics with economics": "computer_economics",
+  computer_economics_stats: "computer_economics_stats",
+  "computer with economics and stats": "computer_economics_stats",
+  "ics with economics and stats": "computer_economics_stats"
 };
 
 export function gradeNumber(gradeName?: string | null) {
@@ -30,10 +46,13 @@ export function gradeNumber(gradeName?: string | null) {
   return match ? Number(match[1]) : null;
 }
 
-export function majorsForGrade(gradeName?: string | null): StudentMajor[] {
+export function canSelectStudentCombination(gradeName?: string | null) {
   const grade = gradeNumber(gradeName);
-  if (grade === 9 || grade === 10) return ["computer", "biology"];
-  if (grade === 11 || grade === 12) return ["biology", "computer", "pre_engineering", "computer_economics", "computer_economics_stats"];
+  return grade === 11 || grade === 12;
+}
+
+export function majorsForGrade(gradeName?: string | null): StudentMajor[] {
+  if (canSelectStudentCombination(gradeName)) return ["biology", "computer", "pre_engineering", "computer_economics", "computer_economics_stats"];
   return [];
 }
 
@@ -49,6 +68,15 @@ export function isDefaultStudentMajor(value: string | null | undefined): value i
   return STUDENT_MAJORS.includes(value as StudentMajor);
 }
 
+export function normalizeStudentMajorValue(value: string | null | undefined): MajorValue | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (isCustomStudentMajor(trimmed)) return trimmed;
+  if (isDefaultStudentMajor(trimmed)) return trimmed;
+  return LEGACY_STUDENT_MAJOR_ALIASES[trimmed.toLocaleLowerCase()] ?? null;
+}
+
 export function isCustomStudentMajor(value: string | null | undefined): value is `custom:${string}` {
   return Boolean(value?.startsWith("custom:"));
 }
@@ -58,10 +86,11 @@ export function customCombinationId(value: string | null | undefined) {
 }
 
 export function studentMajorLabel(value: string | null | undefined, options: StudentCombinationOption[] = []) {
-  if (!value) return "";
-  const option = options.find((item) => item.value === value);
+  const normalizedValue = normalizeStudentMajorValue(value);
+  if (!normalizedValue) return "";
+  const option = options.find((item) => item.value === normalizedValue);
   if (option) return option.label;
-  if (isDefaultStudentMajor(value)) return STUDENT_MAJOR_LABELS[value];
+  if (isDefaultStudentMajor(normalizedValue)) return STUDENT_MAJOR_LABELS[normalizedValue];
   return "Custom combination";
 }
 

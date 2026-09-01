@@ -4,7 +4,7 @@ import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
 import { getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
-import { isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, type MajorValue } from "@/lib/student-majors";
+import { canSelectStudentCombination, isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, normalizeStudentMajorValue, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { formatDisplayName, splitFullName } from "@/lib/student-name";
 
@@ -44,8 +44,8 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   const directoryFields: string = isTeacher
-    ? "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, photo_url"
-    : "id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url";
+    ? "id, first_name, last_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, photo_url"
+    : "id, first_name, last_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url";
 
   let query = supabase
     .from("student_directory")
@@ -167,8 +167,6 @@ async function upsertPrimaryGuardianForStudent(
     guardianEmail: string | null;
     guardianPhone: string;
     guardianCnic: string;
-    emergencyContactName: string | null;
-    emergencyContactPhone: string | null;
   }
 ) {
   const { data: existingGuardian, error: existingGuardianError } = await supabase
@@ -191,9 +189,7 @@ async function upsertPrimaryGuardianForStudent(
         relationship: values.guardianRelationship,
         email: values.guardianEmail,
         phone: values.guardianPhone,
-        cnic: values.guardianCnic,
-        emergency_contact_name: values.emergencyContactName,
-        emergency_contact_phone: values.emergencyContactPhone
+        cnic: values.guardianCnic
       })
       .eq("school_id", user.schoolId)
       .eq("id", guardianId);
@@ -207,9 +203,7 @@ async function upsertPrimaryGuardianForStudent(
         relationship: values.guardianRelationship,
         email: values.guardianEmail,
         phone: values.guardianPhone,
-        cnic: values.guardianCnic,
-        emergency_contact_name: values.emergencyContactName,
-        emergency_contact_phone: values.emergencyContactPhone
+        cnic: values.guardianCnic
       })
       .select("id")
       .single();
@@ -295,8 +289,8 @@ export async function getStudentRecord(
   if (filters.attendanceTo) attendanceQuery = attendanceQuery.lte("attendance_date", filters.attendanceTo);
 
   const studentFields: string = isTeacher
-    ? `id, first_name, last_name, preferred_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
-    : `id, first_name, last_name, preferred_name, name_en, name_ur, admission_number, student_cnic, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
+    ? `id, first_name, last_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
+    : `id, first_name, last_name, name_en, name_ur, admission_number, student_cnic, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
   let studentQuery = supabase
       .from("student_directory")
       .select(studentFields)
@@ -310,7 +304,7 @@ export async function getStudentRecord(
       ? Promise.resolve({ data: [], error: null })
       : supabase
       .from("student_guardian_details")
-      .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, cnic, emergency_contact_name, emergency_contact_phone")
+      .select("student_id, guardian_id, is_primary, full_name, relationship, email, phone, cnic")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
       .order("is_primary", { ascending: false }),
@@ -408,15 +402,15 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   const phone = formatPakistaniPhoneForStorage(parsed.phone);
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
-  const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
   const studentName = splitFullName(parsed.name_en);
+  const normalizedMajor = await resolveStudentMajorForPersistence(supabase, user, parsed.class_id, parsed.major, null);
   await assertGuardianAndStudentIdentifiers(user, {
     studentCnic: parsed.student_cnic,
     fatherCnic: parsed.father_cnic,
     fatherPhone
   });
-  if (studentMajorsSupported && parsed.class_id && parsed.major) {
-    await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
+  if (studentMajorsSupported && parsed.class_id && normalizedMajor) {
+    await assertMajorAvailableForClass(supabase, user, parsed.class_id, normalizedMajor);
   }
 
   let admissionNumber = parsed.admission_number;
@@ -443,7 +437,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
         ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
         photo_url: parsed.photo_url || null,
         class_id: parsed.class_id || null,
-        ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
+        ...(studentMajorsSupported ? { major: normalizedMajor || null } : {}),
         date_of_birth: parsed.date_of_birth || null,
         gender: parsed.gender || null,
         ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
@@ -474,9 +468,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
       guardianRelationship: parsed.guardian_relationship || "Father",
       guardianEmail: parsed.guardian_email || null,
       guardianPhone: guardianPhone ?? fatherPhone ?? "",
-      guardianCnic: parsed.father_cnic,
-      emergencyContactName: parsed.emergency_contact_name || null,
-      emergencyContactPhone
+      guardianCnic: parsed.father_cnic
     });
   }
 
@@ -515,7 +507,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
   }
 
   if (!isStaff) {
-    if (studentMajorsSupported && parsed.class_id && parsed.major) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, parsed.major);
+    if (studentMajorsSupported && parsed.class_id && normalizedMajor) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, normalizedMajor);
     await logActivity(user, "student_created", "student", student.id, {
       admission_number: admissionNumber,
       name: formatDisplayName(parsed.name_en)
@@ -533,16 +525,16 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   const phone = formatPakistaniPhoneForStorage(parsed.phone);
   const fatherPhone = formatPakistaniPhoneForStorage(parsed.father_phone);
   const guardianPhone = formatPakistaniPhoneForStorage(parsed.guardian_phone) ?? fatherPhone;
-  const emergencyContactPhone = formatPakistaniPhoneForStorage(parsed.emergency_contact_phone);
   const studentName = splitFullName(parsed.name_en);
+  const normalizedMajor = await resolveStudentMajorForPersistence(supabase, user, parsed.class_id, parsed.major, id);
   await assertGuardianAndStudentIdentifiers(user, {
     studentCnic: parsed.student_cnic,
     fatherCnic: parsed.father_cnic,
     fatherPhone,
     currentStudentId: id
   });
-  if (studentMajorsSupported && parsed.class_id && parsed.major) {
-    await assertMajorAvailableForClass(supabase, user, parsed.class_id, parsed.major);
+  if (studentMajorsSupported && parsed.class_id && normalizedMajor) {
+    await assertMajorAvailableForClass(supabase, user, parsed.class_id, normalizedMajor);
   }
   const { error } = await supabase
     .from("students")
@@ -560,7 +552,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
       photo_url: parsed.photo_url || null,
       class_id: parsed.class_id || null,
-      ...(studentMajorsSupported ? { major: parsed.major || null } : {}),
+      ...(studentMajorsSupported ? { major: normalizedMajor || null } : {}),
       date_of_birth: parsed.date_of_birth || null,
       gender: parsed.gender || null,
       ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
@@ -582,9 +574,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       guardianRelationship: parsed.guardian_relationship || "Father",
       guardianEmail: parsed.guardian_email || null,
       guardianPhone: guardianPhone ?? fatherPhone ?? "",
-      guardianCnic: parsed.father_cnic,
-      emergencyContactName: parsed.emergency_contact_name || null,
-      emergencyContactPhone
+      guardianCnic: parsed.father_cnic
     });
   }
 
@@ -621,7 +611,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       );
 
     if (enrollError) throw new Error(enrollError.message);
-    if (studentMajorsSupported && parsed.major) await removeExcludedStudentSubjects(user, id, parsed.class_id, parsed.major);
+    if (studentMajorsSupported && normalizedMajor) await removeExcludedStudentSubjects(user, id, parsed.class_id, normalizedMajor);
   } else {
     // No class selected — withdraw any active enrollments
     await supabase
@@ -663,12 +653,43 @@ export async function setStudentMajor(user: AppUser, values: { studentId: string
   if (enrollmentError) throw new Error(enrollmentError.message);
   if (!classRow || !enrollment) throw new Error("The student is not actively enrolled in this section.");
   const gradeName = (classRow as any).grades?.name ?? "";
-  if (values.major) await assertMajorAvailableForClass(supabase, user, values.classId, values.major, gradeName);
+  const normalizedMajor = normalizeStudentMajorValue(values.major);
+  if (!canSelectStudentCombination(gradeName)) {
+    throw new Error("Combinations are only available for Grade 11 and Grade 12.");
+  }
+  if (normalizedMajor) await assertMajorAvailableForClass(supabase, user, values.classId, normalizedMajor, gradeName);
 
-  const { error } = await supabase.from("students").update({ major: values.major }).eq("school_id", user.schoolId).eq("id", values.studentId);
+  const { error } = await supabase.from("students").update({ major: normalizedMajor }).eq("school_id", user.schoolId).eq("id", values.studentId);
   if (error) throw new Error(error.message);
-  if (values.major) await removeExcludedStudentSubjects(user, values.studentId, values.classId, values.major);
-  await logActivity(user, "student_major_updated", "student", values.studentId, { class_id: values.classId, major: values.major });
+  if (normalizedMajor) await removeExcludedStudentSubjects(user, values.studentId, values.classId, normalizedMajor);
+  await logActivity(user, "student_major_updated", "student", values.studentId, { class_id: values.classId, major: normalizedMajor });
+}
+
+async function resolveStudentMajorForPersistence(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: AppUser,
+  classId: string | null | undefined,
+  major: string | null | undefined,
+  currentStudentId: string | null
+) {
+  const normalizedMajor = normalizeStudentMajorValue(major);
+  if (!normalizedMajor || !classId) return normalizedMajor;
+
+  const { data: classRow, error } = await supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();
+  if (error) throw new Error(error.message);
+  const gradeName = (classRow as any)?.grades?.name ?? "";
+
+  if (canSelectStudentCombination(gradeName)) return normalizedMajor;
+  if (!currentStudentId) return null;
+
+  const { data: existingStudent, error: existingStudentError } = await supabase
+    .from("students")
+    .select("major")
+    .eq("school_id", user.schoolId)
+    .eq("id", currentStudentId)
+    .maybeSingle<{ major: string | null }>();
+  if (existingStudentError) throw new Error(existingStudentError.message);
+  return existingStudent?.major ?? null;
 }
 
 async function assertMajorAvailableForClass(

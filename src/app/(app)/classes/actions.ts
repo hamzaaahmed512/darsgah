@@ -7,11 +7,11 @@ import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/t
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
 import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
-import { englishNameSchema } from "@/lib/validation/names";
+import { classNameSchema, englishNameSchema } from "@/lib/validation/names";
 
 
 const classSchema = z.object({
-  name: englishNameSchema("Class name", 120),
+  name: classNameSchema("Class name", 120),
   grade_id: z.string().uuid("Grade is required"),
   section_id: z.string().uuid().optional().or(z.literal("")),
   academic_year_id: z.string().uuid("Academic year is required"),

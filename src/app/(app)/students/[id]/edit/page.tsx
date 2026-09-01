@@ -66,9 +66,7 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
           guardian_name: formatDisplayName(guardian?.full_name),
           guardian_relationship: guardian?.relationship ?? "",
           guardian_email: guardian?.email ?? "",
-          guardian_phone: guardian?.phone ?? "",
-          emergency_contact_name: formatDisplayName(guardian?.emergency_contact_name) || formatDisplayName(guardian?.full_name),
-          emergency_contact_phone: guardian?.emergency_contact_phone ?? guardian?.phone ?? ""
+          guardian_phone: guardian?.phone ?? ""
         }}
       />
     </>

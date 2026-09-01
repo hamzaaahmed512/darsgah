@@ -11,7 +11,6 @@ const student = {
   first_name: "Alex",
   last_name: "Rivera",
   name_en: "Alex Rivera",
-  preferred_name: "",
   date_of_birth: "2010-04-14",
   gender: "male",
   religion: "Islam",
@@ -28,9 +27,7 @@ const student = {
   guardian_name: "Maria Rivera",
   guardian_relationship: "Mother",
   guardian_email: "maria@example.com",
-  guardian_phone: "0301-9876543",
-  emergency_contact_name: "Juan Rivera",
-  emergency_contact_phone: "0302-9876544"
+  guardian_phone: "0301-9876543"
 };
 
 describe("validation schemas", () => {
@@ -173,9 +170,7 @@ describe("validation schemas", () => {
       guardian_name: "Guardian",
       guardian_relationship: "",
       guardian_email: "",
-      guardian_phone: "",
-      emergency_contact_name: "Emergency Contact",
-      emergency_contact_phone: ""
+      guardian_phone: ""
     });
 
     expect(result.success).toBe(true);
@@ -192,8 +187,6 @@ describe("validation schemas", () => {
     expect(result.data.guardian_relationship).toBeNull();
     expect(result.data.guardian_email).toBeNull();
     expect(result.data.guardian_phone).toBeNull();
-    expect(result.data.emergency_contact_name).toBeNull();
-    expect(result.data.emergency_contact_phone).toBeNull();
   });
 
   it("prevents empty attendance submissions", () => {

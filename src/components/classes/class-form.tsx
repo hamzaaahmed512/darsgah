@@ -16,7 +16,7 @@ import { RemoveAssignmentButton } from "@/components/classes/class-actions";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, X } from "lucide-react";
 import { formatDisplayName } from "@/lib/student-name";
-import { sanitizeEnglishNameInput } from "@/lib/validation/names";
+import { sanitizeClassNameInput, sanitizeEnglishNameInput } from "@/lib/validation/names";
 
 export function ClassFormModal({
   grades,
@@ -196,7 +196,7 @@ export function ClassFormModal({
                           {...register("name", {
                           required: true,
                           onChange: (event) => {
-                            event.target.value = sanitizeEnglishNameInput(event.target.value).toUpperCase();
+                            event.target.value = sanitizeClassNameInput(event.target.value).toUpperCase();
                           }
                           })}
                           required

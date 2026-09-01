@@ -11,12 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentAdmissionYear, sanitizeAdmissionNumberInput } from "@/lib/admission-number";
 import { sanitizeStudentFormValues, studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
-import { defaultCombinationOptionsForGrade, type StudentCombinationOption } from "@/lib/student-majors";
+import { canSelectStudentCombination, defaultCombinationOptionsForGrade, normalizeStudentMajorValue, type StudentCombinationOption } from "@/lib/student-majors";
 import { normalizeEmail } from "@/lib/email";
 import { formatClassDisplayName } from "@/lib/utils";
 import { sanitizeEnglishNameInput, sanitizeUrduNameInput } from "@/lib/validation/names";
 
-type EnglishNameField = "name_en" | "father_name_en" | "guardian_name" | "emergency_contact_name";
+type EnglishNameField = "name_en" | "father_name_en" | "guardian_name";
 type UrduNameField = "name_ur" | "father_name_ur";
 
 export function StudentForm({
@@ -67,13 +67,12 @@ export function StudentForm({
     guardian_relationship: "",
     guardian_email: "",
     guardian_phone: "",
-    emergency_contact_name: "",
-    emergency_contact_phone: "",
     ...initialValues
   } as any;
   const defaultValues = Object.fromEntries(
     Object.entries(emptyValues).map(([key, value]) => [key, value == null ? "" : value])
   ) as any;
+  defaultValues.major = normalizeStudentMajorValue(defaultValues.major) ?? defaultValues.major ?? "";
   const {
     register,
     handleSubmit,
@@ -88,11 +87,14 @@ export function StudentForm({
     defaultValues
   });
   const selectedClass = classes.find((item) => item.id === watch("class_id"));
+  const canSelectCombination = canSelectStudentCombination(selectedClass?.grade_name);
   const majorOptions = useMemo(() => selectedClass
-    ? [
+    ? canSelectStudentCombination(selectedClass.grade_name)
+      ? [
         ...defaultCombinationOptionsForGrade(selectedClass.grade_name),
         ...combinations.filter((combination) => combination.classIds?.includes(selectedClass.id))
       ]
+      : []
     : [], [combinations, selectedClass]);
   const fatherAlive = watch("father_alive");
   const admissionNumber = watch("admission_number") ?? "";
@@ -101,10 +103,15 @@ export function StudentForm({
   const fatherPhone = watch("father_phone") ?? "";
   useEffect(() => {
     const currentMajor = watch("major");
-    if (currentMajor && !majorOptions.some((option) => option.value === currentMajor)) {
+    const normalizedMajor = normalizeStudentMajorValue(currentMajor);
+    if (currentMajor && normalizedMajor && currentMajor !== normalizedMajor) {
+      setValue("major", normalizedMajor as any, { shouldDirty: false, shouldValidate: false });
+      return;
+    }
+    if (canSelectCombination && normalizedMajor && !majorOptions.some((option) => option.value === normalizedMajor)) {
       setValue("major", null, { shouldDirty: true });
     }
-  }, [majorOptions, setValue, watch]);
+  }, [canSelectCombination, majorOptions, setValue, watch]);
 
   useEffect(() => {
     if (!isCreateMode || !autoGenerateAdmissionNumber) return;
@@ -326,7 +333,7 @@ export function StudentForm({
               ))}
             </Select>
           </Field>
-          {majorOptions.length ? (
+          {canSelectCombination && majorOptions.length ? (
             <Field label="Combination / major" error={errors.major?.message}>
               <Select {...register("major")}>
                 <option value="">Select combination...</option>
@@ -379,12 +386,6 @@ export function StudentForm({
           </Field>
           <Field label="Guardian phone" required={watch("father_alive") === "no"} error={errors.guardian_phone?.message}>
             <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
-          </Field>
-          <Field label="Emergency contact name" error={errors.emergency_contact_name?.message}>
-            <Input {...register("emergency_contact_name")} value={watch("emergency_contact_name") ?? ""} onChange={(event) => handleEnglishNameChange("emergency_contact_name", event.target.value)} autoComplete="new-password" />
-          </Field>
-          <Field label="Emergency phone" error={errors.emergency_contact_phone?.message}>
-            <Input {...register("emergency_contact_phone")} value={formatPakistaniPhone(watch("emergency_contact_phone"))} onChange={(event) => setValue("emergency_contact_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
           </Field>
         </CardContent>
       </Card>

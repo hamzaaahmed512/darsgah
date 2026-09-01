@@ -114,7 +114,6 @@ export type Student = {
   student_cnic?: string | null;
   first_name: string;
   last_name: string;
-  preferred_name: string | null;
   date_of_birth: string;
   gender: string | null;
   email: string | null;
