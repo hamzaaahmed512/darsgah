@@ -362,6 +362,14 @@ export async function updateStudentSubjectCombination(
   if (subjectsError) throw new Error(subjectsError.message);
   if ((subjects ?? []).length !== subjectIds.length) throw new Error("One or more selected subjects could not be found.");
 
+  const { data: previousClassLinks, error: previousClassError } = await supabase
+    .from("student_subject_combination_classes")
+    .select("class_id")
+    .eq("school_id", user.schoolId)
+    .eq("combination_id", combinationId);
+  if (previousClassError) throw new Error(previousClassError.message);
+  const previousClassIds = (previousClassLinks ?? []).map((item: any) => item.class_id as string);
+
   const { error: updateError } = await supabase
     .from("student_subject_combinations")
     .update({ name })
@@ -398,11 +406,13 @@ export async function updateStudentSubjectCombination(
   if (classSubjectError) throw new Error(classSubjectError.message);
   if (classError) throw new Error(classError.message);
   if (subjectError) throw new Error(subjectError.message);
+  const removedClassIds = previousClassIds.filter((classId) => !classIds.includes(classId));
+  if (removedClassIds.length) await syncStudentsForCombination(user, `custom:${combinationId}`, removedClassIds, []);
   await syncStudentsForCombination(user, `custom:${combinationId}`, classIds, subjectIds);
 }
 
 async function syncStudentsForCombination(user: AppUser, combinationValue: string, classIds: string[], subjectIds: string[]) {
-  if (!classIds.length || !subjectIds.length) return;
+  if (!classIds.length) return;
   const admin = createAdminClient();
   const { data: enrollments, error: enrollmentError } = await admin
     .from("enrollments")
@@ -414,10 +424,24 @@ async function syncStudentsForCombination(user: AppUser, combinationValue: strin
     .eq("students.status", "active");
   if (enrollmentError) throw new Error(enrollmentError.message);
 
-  const rows = (enrollments ?? []).flatMap((enrollment: any) => subjectIds.map((subjectId) => ({
+  const enrolledStudents = (enrollments ?? []).map((enrollment: any) => ({ classId: enrollment.class_id as string, studentId: enrollment.student_id as string }));
+  const studentIds = [...new Set(enrolledStudents.map((item) => item.studentId))];
+  if (studentIds.length) {
+    let staleQuery = admin
+      .from("student_subject_enrollments")
+      .delete()
+      .eq("school_id", user.schoolId)
+      .in("class_id", classIds)
+      .in("student_id", studentIds);
+    if (subjectIds.length) staleQuery = staleQuery.not("subject_id", "in", `(${subjectIds.join(",")})`);
+    const { error: staleError } = await staleQuery;
+    if (staleError) throw new Error(staleError.message);
+  }
+
+  const rows = enrolledStudents.flatMap((enrollment) => subjectIds.map((subjectId) => ({
     school_id: user.schoolId,
-    class_id: enrollment.class_id,
-    student_id: enrollment.student_id,
+    class_id: enrollment.classId,
+    student_id: enrollment.studentId,
     subject_id: subjectId,
     enrolled_by: user.id
   })));

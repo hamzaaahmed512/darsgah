@@ -163,7 +163,7 @@ async function getEditableExam(user: AppUser, examId: string) {
  * direct enrollment override, but the roster is still filtered against the
  * actual subject eligibility for the student's combination.
  */
-function isStudentEligibleForAssessmentSubject(values: {
+export function isStudentEligibleForAssessmentSubject(values: {
   studentId: string;
   studentMajor: string | null | undefined;
   subjectId: string;
@@ -173,8 +173,6 @@ function isStudentEligibleForAssessmentSubject(values: {
   combinationOptions: StudentCombinationOption[];
 }) {
   const { studentId, studentMajor, subjectId, subjectName, gradeName, directStudentIds, combinationOptions } = values;
-  if (directStudentIds.has(studentId)) return true;
-
   const customCombination = combinationOptions.find((option) => option.kind === "custom" && option.value === studentMajor);
   if (customCombination) return customCombination.subjectIds?.includes(subjectId) ?? false;
 
@@ -183,6 +181,10 @@ function isStudentEligibleForAssessmentSubject(values: {
   );
   if (defaultCombination) return defaultCombination.subjectIds?.includes(subjectId) ?? false;
 
+  // Explicit enrollment is only a fallback for students without a configured
+  // major. Once a major exists, its live mapping is authoritative so stale
+  // enrollment rows cannot leak students into teacher rosters or result cards.
+  if (!studentMajor && directStudentIds.has(studentId)) return true;
   return !isSubjectExcludedForMajor(gradeName, studentMajor, subjectName);
 }
 
@@ -204,7 +206,6 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
   const gradeName = (classResult.data as any).grades?.name ?? "";
   const subject = subjectResult.data as any;
   const combinationOptions = await getCombinationOptionsForClass(user, classId, gradeName);
-  const combinationByValue = new Map(combinationOptions.map((option) => [option.value, option]));
   const directStudentIds = new Set((directResult.data ?? []).map((row: any) => row.student_id as string));
   const classStudents = (enrollmentResult.data ?? [])
     .map((row: any) => row.students)
