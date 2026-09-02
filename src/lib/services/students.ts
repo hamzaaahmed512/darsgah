@@ -13,6 +13,7 @@ export type StudentFilters = {
   status?: string;
   classId?: string;
   page?: number;
+  pageSize?: number;
 };
 
 export class StudentIdentifierValidationError extends Error {
@@ -40,7 +41,8 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
     headClassIds = (data ?? []).map((row) => row.id);
   }
   const page = Math.max(filters.page ?? 1, 1);
-  const pageSize = 12;
+  const requestedPageSize = Number(filters.pageSize ?? 10);
+  const pageSize = [10, 25, 50].includes(requestedPageSize) ? requestedPageSize : 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   const directoryFields: string = isTeacher

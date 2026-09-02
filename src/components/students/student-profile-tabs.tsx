@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { CalendarDays, Download, FileText, Mail, MapPin, Phone, TrendingUp, WalletCards } from "lucide-react";
+import { CalendarDays, Download, Mail, MapPin, Phone, TrendingUp, UserRound, UsersRound, WalletCards } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -45,12 +45,12 @@ export function StudentProfileTabs(props: Props) {
   }
 
   return (
-    <section className="mt-6">
+    <section className="mt-7">
       <div className="scrollbar-thin overflow-x-auto border-b border-outline" role="tablist" aria-label="Student profile sections">
         <div className="flex min-w-max gap-1">
           {availableTabs.map((tab) => (
             <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} onClick={() => selectTab(tab.id)}
-              className={cn("relative min-h-12 whitespace-nowrap rounded-t-xl px-4 text-sm font-semibold text-muted hover:bg-surface-low hover:text-ink", activeTab === tab.id && "bg-primary-soft text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary")}>
+              className={cn("relative min-h-12 whitespace-nowrap px-4 text-sm font-semibold text-muted hover:text-ink", activeTab === tab.id && "text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary")}>
               {tab.label}
             </button>
           ))}
@@ -69,7 +69,7 @@ export function StudentProfileTabs(props: Props) {
 function BioTab({ student, guardians, limitedView }: Props) {
   const classAssignment = formatGradeSection(student.grade_name, student.section_name) || student.class_name || "Unassigned";
   return <div className="grid gap-5 lg:grid-cols-2">
-    <DetailCard title="Personal & academic" icon={<FileText className="h-5 w-5" />}>
+    <DetailCard title="Personal & academic" icon={<UserRound className="h-5 w-5" />}>
       <DetailsGrid items={[
         ["Gender", student.gender], ["Date of birth", limitedView ? "Restricted" : student.date_of_birth],
         ["Religion", limitedView ? "Restricted" : student.religion],
@@ -80,10 +80,10 @@ function BioTab({ student, guardians, limitedView }: Props) {
     {!limitedView ? <DetailCard title="Contact details" icon={<Phone className="h-5 w-5" />}>
       <DetailsGrid items={[["Phone", student.phone], ["Email", student.email], ["Home / permanent address", student.address]]} />
     </DetailCard> : null}
-    {!limitedView ? <Card className="lg:col-span-2"><CardHeader className="border-b border-outline/70"><div><CardTitle>Guardians</CardTitle><p className="mt-1 text-sm text-muted">Primary family contact information.</p></div></CardHeader><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
-      {guardians.length ? guardians.map((guardian) => <div key={guardian.guardian_id} className="rounded-2xl border border-outline bg-surface-low p-5">
-        <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-ink">{formatDisplayName(guardian.full_name)}</p><p className="text-sm text-muted">{guardian.relationship || "Guardian"}</p></div>{guardian.is_primary ? <Badge tone="blue">Primary</Badge> : null}</div>
-        <div className="mt-4 space-y-2 text-sm text-muted"><p className="flex items-center gap-2"><Phone className="h-4 w-4" />{guardian.phone || "Not recorded"}</p><p className="flex items-center gap-2"><Mail className="h-4 w-4" />{guardian.email || "Not recorded"}</p></div>
+    {!limitedView ? <Card className="lg:col-span-2"><CardHeader className="border-b-0 pb-2"><div><CardTitle className="flex items-center gap-3"><span className="rounded-lg bg-primary-soft p-2 text-primary"><UsersRound className="h-5 w-5" /></span>Guardians</CardTitle><p className="ml-12 mt-1 text-sm text-muted">Primary family contact information.</p></div></CardHeader><CardContent className="grid gap-4 pt-2 md:grid-cols-2">
+      {guardians.length ? guardians.map((guardian) => <div key={guardian.guardian_id} className="flex flex-col gap-4 rounded-2xl border border-outline bg-surface-low p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-36 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-50 font-bold text-primary">{formatDisplayName(guardian.full_name).charAt(0).toUpperCase()}</span><div><p className="font-semibold text-ink">{formatDisplayName(guardian.full_name)}</p><p className="text-sm text-muted">{guardian.relationship || "Guardian"}</p></div></div>
+        <div className="flex flex-1 flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted"><p className="flex items-center gap-2"><Phone className="h-4 w-4" />{guardian.phone || "Not recorded"}</p><p className="flex items-center gap-2"><Mail className="h-4 w-4" />{guardian.email || "Not recorded"}</p></div>{guardian.is_primary ? <Badge tone="blue">Primary</Badge> : null}
       </div>) : <EmptyState title="No guardian recorded" description="Guardian details will appear here." className="min-h-44 md:col-span-2" />}
     </CardContent></Card> : null}
   </div>;
@@ -131,7 +131,7 @@ function FeesTab({ rows }: { rows: any[] }) {
     <DataCard title="Fee & challan history"><HistoryTable headers={["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status","Actions"]} rows={filtered.map((r)=>[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>,<div key="a" className="flex min-w-max gap-2"><Link href="/finance/challans" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"><Download className="h-3.5 w-3.5"/>View / PDF</Link>{r.outstanding>0?<Link href="/finance/fees" className="font-semibold text-success hover:underline">Mark as paid</Link>:null}</div>])} empty="No fee challans match these filters." /></DataCard></div>;
 }
 
-function DetailCard({title,icon,children}:{title:string;icon:React.ReactNode;children:React.ReactNode}){return <Card><CardHeader className="border-b border-outline/70"><div className="flex items-center gap-3"><span className="rounded-xl bg-primary-soft p-2 text-primary">{icon}</span><CardTitle>{title}</CardTitle></div></CardHeader><CardContent className="pt-6">{children}</CardContent></Card>}
+function DetailCard({title,icon,children}:{title:string;icon:React.ReactNode;children:React.ReactNode}){return <Card><CardHeader className="border-b border-outline/70 p-5"><div className="flex items-center gap-3"><span className="rounded-lg bg-primary-soft p-2 text-primary">{icon}</span><CardTitle className="text-lg">{title}</CardTitle></div></CardHeader><CardContent className="p-5 pt-5">{children}</CardContent></Card>}
 function DetailsGrid({items}:{items:any[][]}){return <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2">{items.map(([label,value])=><div key={label} className={label.includes("address")?"sm:col-span-2":""}><dt className="text-xs font-bold uppercase tracking-wide text-muted">{label}</dt><dd className="mt-1.5 flex items-start gap-2 font-medium text-ink">{label.includes("address")?<MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted"/>:null}{value||"Not recorded"}</dd></div>)}</dl>}
 function FilterCard({children}:{children:React.ReactNode}){return <div className="flex flex-col gap-3 rounded-[18px] border border-outline bg-surface-low p-4 sm:flex-row sm:flex-wrap sm:items-end">{children}</div>}
 function Select({label,value,onChange,options}:{label:string;value:string;onChange:(v:string)=>void;options:string[][]}){return <label className="grid min-w-44 flex-1 gap-1.5 text-xs font-bold uppercase tracking-wide text-muted">{label}<select value={value} onChange={(e)=>onChange(e.target.value)} className="min-h-10 rounded-xl border border-outline bg-white px-3 text-sm font-medium normal-case tracking-normal text-ink"><>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</></select></label>}

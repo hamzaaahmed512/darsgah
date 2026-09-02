@@ -3,6 +3,8 @@ import { formatGradeSection } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatStudentName } from "@/lib/student-name";
+import { ArrowUpDown } from "lucide-react";
+import { StudentPagination } from "@/components/students/student-pagination";
 
 const statusTone = {
   active: "green",
@@ -14,7 +16,15 @@ const statusTone = {
   pending_cancellation: "yellow"
 } as const;
 
-export function StudentTable({ rows, limitedView = false }: { rows: any[]; limitedView?: boolean }) {
+export function StudentTable({
+  rows,
+  limitedView = false,
+  pagination
+}: {
+  rows: any[];
+  limitedView?: boolean;
+  pagination?: { count: number; page: number; pageSize: number };
+}) {
   if (!rows.length) {
     return (
       <EmptyState 
@@ -35,12 +45,14 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
         <table className="min-w-full text-left text-sm">
           <thead className="bg-white font-label text-xs uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              <th className="px-6 py-5">Student</th>
-              {!limitedView ? <th className="px-6 py-5">Father&apos;s Name</th> : null}
-              <th className="px-6 py-5">Class</th>
-              <th className="px-6 py-5">Admission No.</th>
-              <th className="px-6 py-5">Gender</th>
-              {!limitedView ? <th className="px-6 py-5">Action</th> : null}
+              <th className="px-6 py-4">
+                <span className="inline-flex items-center gap-2">Student <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" /></span>
+              </th>
+              {!limitedView ? <th className="px-6 py-4">Father&apos;s Name</th> : null}
+              <th className="px-6 py-4">Class</th>
+              <th className="px-6 py-4">Admission No.</th>
+              <th className="px-6 py-4">Gender</th>
+              {!limitedView ? <th className="px-6 py-4">Action</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -119,6 +131,7 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
           </Link>
         ))}
       </div>
+      {pagination ? <StudentPagination {...pagination} /> : null}
     </div>
   );
 }

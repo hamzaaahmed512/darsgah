@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   const canReviewStudentRequests = hasPermission(user.role, "approvals:review", user.permissions);
   const [students, academics, pendingRequests, combinations] = await Promise.all([
-    getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1) }),
+    getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1), pageSize: Number(params.pageSize ?? 10) }),
     isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user),
     canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([]),
     getSubjectCombinationCatalog(user).catch(() => ({ customCombinations: [] }))
@@ -82,17 +81,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         </Card>
       ) : null}
 
-      <StudentTable rows={students.rows} limitedView={isTeacher} />
-      <p className="mt-4 text-sm text-slate-500">
-        Showing {students.rows.length} of {students.count} students.
-      </p>
-      {students.count > students.pageSize ? (
-        <nav className="mt-3 flex items-center gap-3 text-sm" aria-label="Student pages">
-          {students.page > 1 ? <Link href={`/students?${new URLSearchParams({ ...params, page: String(students.page - 1) })}`} className="font-semibold text-primary hover:underline">Previous</Link> : <span className="text-muted">Previous</span>}
-          <span className="text-muted">Page {students.page} of {Math.ceil(students.count / students.pageSize)}</span>
-          {students.page * students.pageSize < students.count ? <Link href={`/students?${new URLSearchParams({ ...params, page: String(students.page + 1) })}`} className="font-semibold text-primary hover:underline">Next</Link> : <span className="text-muted">Next</span>}
-        </nav>
-      ) : null}
+      <StudentTable
+        rows={students.rows}
+        limitedView={isTeacher}
+        pagination={{ count: students.count, page: students.page, pageSize: students.pageSize }}
+      />
     </>
   );
 }

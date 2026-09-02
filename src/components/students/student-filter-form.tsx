@@ -63,28 +63,16 @@ export function StudentFilterForm({ classes, limitedView = false }: { classes: C
 
   return (
     <div className={`grid gap-4 ${limitedView ? "md:grid-cols-[minmax(0,1fr)_260px]" : "md:grid-cols-[minmax(0,1.55fr)_320px_320px]"}`}>
-      <div className="relative">
+      <div className="relative self-end">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input ref={searchRef} defaultValue={currentQ} className="min-h-14 rounded-2xl border-slate-200 pl-12 text-base shadow-none" placeholder="Search by name, admission no. or father's name..." />
       </div>
-      {!limitedView ? <Select value={currentStatus} onChange={(event) => pushFilters({ status: event.target.value })} aria-label="Student status" className="min-h-14 rounded-2xl border-slate-200 text-base shadow-none">
-        <option value="all">All statuses</option>
-        <option value="active">Active</option>
-        <option value="pending_approval">Pending approval</option>
-        <option value="pending_cancellation">Pending cancellation</option>
-        <option value="graduated">Graduated</option>
-        <option value="transferred">Transferred</option>
-        <option value="cancelled">Cancelled</option>
-        <option value="archived">Archived</option>
-      </Select> : null}
-      <Select value={currentClassId} onChange={(event) => pushFilters({ classId: event.target.value })} aria-label="Student class" className="min-h-14 rounded-2xl border-slate-200 text-base shadow-none">
-        <option value="all">All classes</option>
-        {classes.map((item) => (
-          <option key={item.id} value={item.id}>
-            {formatClassDisplayName(item.grade_name, item.name, item.section_name)}
-          </option>
-        ))}
-      </Select>
+      {!limitedView ? <label className="grid gap-1 text-sm font-semibold text-slate-600"><span>Status</span><Select value={currentStatus} onChange={(event) => pushFilters({ status: event.target.value })} aria-label="Student status" className="min-h-14 rounded-xl border-slate-200 text-base shadow-none">
+          <option value="all">All statuses</option><option value="active">Active</option><option value="pending_approval">Pending approval</option><option value="pending_cancellation">Pending cancellation</option><option value="graduated">Graduated</option><option value="transferred">Transferred</option><option value="cancelled">Cancelled</option><option value="archived">Archived</option>
+        </Select></label> : null}
+      <label className="grid gap-1 text-sm font-semibold text-slate-600"><span>Class</span><Select value={currentClassId} onChange={(event) => pushFilters({ classId: event.target.value })} aria-label="Student class" className="min-h-14 rounded-xl border-slate-200 text-base shadow-none">
+          <option value="all">All classes</option>{classes.map((item) => <option key={item.id} value={item.id}>{formatClassDisplayName(item.grade_name, item.name, item.section_name)}</option>)}
+        </Select></label>
     </div>
   );
 }
