@@ -17,11 +17,14 @@ function getAssessmentRedirectBase(referer: string | null) {
 
 export async function createExamAction(formData: FormData) {
   const user = await requireUser("academics:view");
+  const examType = String(formData.get("exam_type") ?? "");
+  const rawMonth = formData.get("month");
+  const month = examType === "monthly" && rawMonth ? Number(rawMonth) : null;
   await createExam(user, {
     class_id: String(formData.get("class_id") ?? ""),
     subject_id: String(formData.get("subject_id") ?? ""),
-    exam_type: formData.get("exam_type") as any,
-    month: formData.get("month") ? Number(formData.get("month")) : null,
+    exam_type: examType as any,
+    month,
     title: String(formData.get("title") ?? ""),
     term: String(formData.get("term") ?? ""),
     exam_date: String(formData.get("exam_date") ?? ""),

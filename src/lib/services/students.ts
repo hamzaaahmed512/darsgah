@@ -786,17 +786,6 @@ async function removeExcludedStudentSubjects(user: AppUser, studentId: string, c
     const { error } = await supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("student_id", studentId).eq("class_id", classId).in("subject_id", excludedIds);
     if (error) throw new Error(error.message);
   }
-
-  if (major === "computer_economics_stats") {
-    const statistics = (links ?? []).find((row: any) => (row.subjects?.name ?? "").trim().toLocaleLowerCase() === "statistics");
-    if (statistics) {
-      const { data: assignment } = await supabase.from("teacher_assignments").select("id").eq("school_id", user.schoolId).eq("class_id", classId).eq("subject_id", statistics.subject_id).maybeSingle();
-      if (assignment) {
-        const { error } = await supabase.from("student_subject_enrollments").upsert({ school_id: user.schoolId, student_id: studentId, class_id: classId, subject_id: statistics.subject_id, enrolled_by: user.id }, { onConflict: "school_id,student_id,subject_id,class_id" });
-        if (error) throw new Error(error.message);
-      }
-    }
-  }
 }
 
 export async function archiveStudent(user: AppUser, id: string) {
