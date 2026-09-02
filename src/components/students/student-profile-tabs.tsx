@@ -24,10 +24,10 @@ type Props = {
 
 const money = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
 const tabs: { id: Tab; label: string }[] = [
-  { id: "bio", label: "👤 Bio Data" },
-  { id: "attendance", label: "📅 Attendance" },
-  { id: "marks", label: "📝 Marks & Exam History" },
-  { id: "fees", label: "💳 Fee & Challan History" }
+  { id: "bio", label: "Bio Data" },
+  { id: "attendance", label: "Attendance" },
+  { id: "marks", label: "Marks & Exam History" },
+  { id: "fees", label: "Fee & Challan History" }
 ];
 
 export function StudentProfileTabs(props: Props) {

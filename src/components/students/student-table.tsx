@@ -30,56 +30,56 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
   }
 
   return (
-    <div className="card-surface overflow-hidden rounded-[18px]">
+    <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
       <div className="hidden overflow-x-auto lg:block">
         <table className="min-w-full text-left text-sm">
-          <thead className="font-label text-xs uppercase tracking-wide text-muted">
+          <thead className="bg-white font-label text-xs uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              <th className="px-4 py-3">Name</th>
-              {!limitedView ? <th className="px-4 py-3">Father&apos;s Name</th> : null}
-              <th className="px-4 py-3">Class</th>
-              <th className="px-4 py-3">Admission No.</th>
-              <th className="px-4 py-3">Gender</th>
-              {!limitedView ? <th className="px-4 py-3">Actions</th> : null}
+              <th className="px-6 py-5">Student</th>
+              {!limitedView ? <th className="px-6 py-5">Father&apos;s Name</th> : null}
+              <th className="px-6 py-5">Class</th>
+              <th className="px-6 py-5">Admission No.</th>
+              <th className="px-6 py-5">Gender</th>
+              {!limitedView ? <th className="px-6 py-5">Action</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.map((student) => (
-              <tr key={student.id} className="border-t border-outline hover:bg-surface-low">
-                <td className="px-4 py-4">
+              <tr key={student.id} className="border-t border-slate-200/80 transition hover:bg-slate-50/70">
+                <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
                     {student.photo_url ? (
-                      <img src={student.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                      <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-surface-low border border-outline/50 flex items-center justify-center text-xs font-semibold text-muted">
-                        {student.name_en ? student.name_en[0] : student.first_name?.[0]}
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-primary">
+                        {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <Link href={`/students/${student.id}`} prefetch={false} className="font-semibold text-primary hover:text-primary-ink">
+                    <div className="min-w-0">
+                      <Link href={`/students/${student.id}`} prefetch={false} className="font-semibold text-slate-900 hover:text-primary">
                         {formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}
                       </Link>
                       {student.name_ur && <p className="text-xs text-muted" dir="rtl">{student.name_ur}</p>}
                     </div>
                   </div>
                 </td>
-                {!limitedView ? <td className="px-4 py-4">
-                  <div className="text-muted">{student.father_name_en || student.guardian_name || "-"}</div>
-                  {student.father_phone && <div className="text-xs text-muted/70">{student.father_phone}</div>}
+                {!limitedView ? <td className="px-6 py-5">
+                  <div className="text-sm font-medium text-slate-600">{student.father_name_en || student.guardian_name || "-"}</div>
+                  {student.father_phone && <div className="text-xs text-slate-400">{student.father_phone}</div>}
                 </td> : null}
-                <td className="px-4 py-4">
-                  <div className="text-sm font-medium text-ink">
+                <td className="px-6 py-5">
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
                     {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
-                  </div>
+                  </span>
                 </td>
-                <td className="px-4 py-4 font-semibold">{student.admission_number}</td>
-                <td className="px-4 py-4 text-muted capitalize">{student.gender || "-"}</td>
-                {!limitedView ? <td className="px-4 py-4">
+                <td className="px-6 py-5 font-semibold text-slate-900">{student.admission_number}</td>
+                <td className="px-6 py-5 text-slate-600 capitalize">{student.gender || "-"}</td>
+                {!limitedView ? <td className="px-6 py-5">
                   <Link
                     data-navigation-progress="immediate"
                     href={`/students/${student.id}`}
                     prefetch={false}
-                    className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary-soft px-3 text-xs font-semibold text-primary ring-1 ring-primary/10 hover:bg-primary hover:text-white"
+                    className="inline-flex min-h-9 items-center justify-center rounded-lg px-2 text-sm font-semibold text-primary hover:text-primary-ink"
                   >
                     View Profile
                   </Link>
@@ -89,30 +89,33 @@ export function StudentTable({ rows, limitedView = false }: { rows: any[]; limit
           </tbody>
         </table>
       </div>
-      <div className="grid gap-3 p-3 lg:hidden">
+      <div className="grid gap-3 p-4 lg:hidden">
         {rows.map((student) => (
-          <Link key={student.id} href={`/students/${student.id}`} prefetch={false} className="rounded-2xl bg-surface-low p-4 ring-1 ring-outline/70 transition hover:bg-primary-soft">
+          <Link key={student.id} href={`/students/${student.id}`} prefetch={false} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-primary/20 hover:bg-slate-50">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 {student.photo_url ? (
                   <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
-                  <div className="h-10 w-10 rounded-full bg-white border border-outline/50 flex items-center justify-center text-sm font-bold text-muted">
-                    {student.name_en ? student.name_en[0] : student.first_name?.[0]}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-primary">
+                    {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <p className="font-semibold text-ink">
+                  <p className="font-semibold text-slate-900">
                     {formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}
                   </p>
-                  <p className="text-xs text-muted">{student.admission_number}</p>
+                  <p className="text-xs text-slate-500">{student.admission_number}</p>
                 </div>
               </div>
               <Badge tone={statusTone[student.status as keyof typeof statusTone] ?? "gray"}>{student.status}</Badge>
             </div>
-            <p className="mt-3 text-sm text-muted">
-              {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
-            </p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
+              </span>
+              <span className="text-sm font-semibold text-primary">View Profile</span>
+            </div>
           </Link>
         ))}
       </div>

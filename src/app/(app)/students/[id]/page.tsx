@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarCheck2, GraduationCap, Pencil, WalletCards } from "lucide-react";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/ui/confirm-button";
 import { StudentProfileTabs } from "@/components/students/student-profile-tabs";
@@ -38,16 +38,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       </>} />
 
       <section className={`grid gap-4 ${canViewFinance ? "md:grid-cols-3" : "md:grid-cols-2"}`} aria-label="Student summary">
-        <SummaryCard icon={<CalendarCheck2 className="h-5 w-5" />} title="Attendance rate" value={summaries.attendance.rate === null ? "No data" : `${Math.round(summaries.attendance.rate)}%`} detail={`${summaries.attendance.present} present or late of ${summaries.attendance.total} recorded days`} tone="blue" />
-        <SummaryCard icon={<GraduationCap className="h-5 w-5" />} title="Exam performance" value={summaries.exams.average === null ? "No data" : `${Math.round(summaries.exams.average)}%`} detail={`${summaries.exams.total} subject result${summaries.exams.total === 1 ? "" : "s"} recorded`} tone="green" />
-        {canViewFinance ? <SummaryCard icon={<WalletCards className="h-5 w-5" />} title="Fee status" value={money.format(summaries.fees.outstanding)} detail={`${unpaidCount} unpaid challan${unpaidCount === 1 ? "" : "s"}`} tone="red" /> : null}
+        <StatCard icon={CalendarCheck2} label="Attendance rate" value={summaries.attendance.rate === null ? "No data" : `${Math.round(summaries.attendance.rate)}%`} tone="blue" trend={`${summaries.attendance.present} present or late of ${summaries.attendance.total} recorded days`} />
+        <StatCard icon={GraduationCap} label="Exam performance" value={summaries.exams.average === null ? "No data" : `${Math.round(summaries.exams.average)}%`} tone="green" trend={`${summaries.exams.total} subject result${summaries.exams.total === 1 ? "" : "s"} recorded`} />
+        {canViewFinance ? <StatCard icon={WalletCards} label="Fee status" value={money.format(summaries.fees.outstanding)} tone="red" trend={`${unpaidCount} unpaid challan${unpaidCount === 1 ? "" : "s"}`} /> : null}
       </section>
     </div>
     <StudentProfileTabs student={student} guardians={guardians} attendance={attendance} marks={marks} challans={challans} limitedView={limitedView} canViewFinance={canViewFinance} />
   </>;
-}
-
-function SummaryCard({ icon, title, value, detail, tone }: { icon: React.ReactNode; title: string; value: string; detail: string; tone: "blue" | "green" | "red" }) {
-  const styles = { blue: "bg-primary-soft text-primary", green: "bg-success-soft text-success", red: "bg-danger-soft text-danger" };
-  return <Card><CardContent className="flex items-start gap-4 p-5"><span className={`rounded-xl p-2.5 ${styles[tone]}`}>{icon}</span><div className="min-w-0"><p className="font-label text-xs font-bold uppercase tracking-wide text-muted">{title}</p><p className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">{value}</p><p className="mt-1 text-sm leading-5 text-muted">{detail}</p></div></CardContent></Card>;
 }

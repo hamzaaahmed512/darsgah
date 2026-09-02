@@ -2,24 +2,66 @@ import { requireUser } from "@/lib/auth/session";
 import { getDailyOperationsCenter, getDashboardData } from "@/lib/services/dashboard";
 import { getFinanceDashboard } from "@/lib/services/finance";
 import { getApprovalRequests } from "@/lib/services/approvals";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/dashboard/stat-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { LazyClassDistributionChart } from "@/components/dashboard/lazy-responsive-charts";
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components/finance/lazy-finance-dashboard-charts";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
-import { formatPKR } from "@/lib/utils";
+import { formatCompactPKR, formatPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
 
-function percentDelta(current: number, previous: number, lowerIsBetter = false): { text: string; tone: "positive" | "negative" | "neutral" } {
-  if (previous === 0 && current === 0) return { text: "No change vs last month", tone: "neutral" as const };
-  if (previous === 0) return { text: "New activity this month", tone: lowerIsBetter ? "negative" as const : "positive" as const };
-  const change = ((current - previous) / Math.abs(previous)) * 100;
-  const tone: "positive" | "negative" | "neutral" = change === 0 ? "neutral" : lowerIsBetter ? (change < 0 ? "positive" : "negative") : (change > 0 ? "positive" : "negative");
-  const arrow = change >= 0 ? "Up" : "Down";
-  return { text: `${arrow} ${Math.abs(change).toFixed(1)}% vs last month`, tone };
+const statTones = {
+  green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+  red: "bg-red-50 text-red-600 ring-red-100",
+  blue: "bg-blue-50 text-blue-600 ring-blue-100",
+  purple: "bg-purple-50 text-purple-600 ring-purple-100",
+  amber: "bg-amber-50 text-amber-600 ring-amber-100",
+  slate: "bg-slate-50 text-slate-600 ring-slate-100"
+} as const;
+
+function OverviewFinanceStatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  trend,
+  trendTone = "neutral"
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tone: keyof typeof statTones;
+  trend?: string;
+  trendTone?: "positive" | "negative" | "neutral";
+}) {
+  const trendClass = trendTone === "positive" ? "text-emerald-600" : trendTone === "negative" ? "text-red-600" : "text-slate-500";
+
+  return (
+    <Card className="h-full p-5 shadow-sm sm:p-6">
+      <div className="flex h-full items-start gap-5">
+        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-1 sm:h-16 sm:w-16 ${statTones[tone]}`}>
+          <Icon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
+          <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.55rem,2vw,1.875rem)] font-bold leading-none tracking-tight text-ink">{value}</p>
+          {trend ? <p className={`mt-3 text-sm font-bold ${trendClass}`}>{trend}</p> : null}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function formatFinanceAmount(amount: number) {
+  return Math.abs(amount) >= 1_000_000 ? formatCompactPKR(amount) : formatPKR(amount);
+}
+
+function contributionText(current: number, lifetime: number) {
+  if (lifetime <= 0 || current <= 0) return "Yearly share: 0%";
+  return `Yearly share: ${((current / lifetime) * 100).toFixed(1)}%`;
 }
 
 export default async function PrincipalDashboardPage() {
@@ -36,10 +78,9 @@ export default async function PrincipalDashboardPage() {
   ]);
 
   const pendingAdmissionsCount = studentRequests.filter((request) => request.request_type === "admission").length;
-  const incomeDelta = percentDelta(finance.monthlyIncome, finance.previousMonthlyIncome);
-  const expensesDelta = percentDelta(finance.monthlyExpenses, finance.previousMonthlyExpenses, true);
-  const netDelta = percentDelta(finance.netCashFlow, finance.previousNetCashFlow);
-
+  const incomeContribution = contributionText(finance.yearlyIncome, finance.lifetimeIncome);
+  const expenseContribution = contributionText(finance.yearlyExpenses, finance.lifetimeExpenses);
+  const profitContribution = contributionText(finance.yearlyProfit, finance.lifetimeProfit);
   return (
     <>
       <DashboardHeader
@@ -76,11 +117,11 @@ export default async function PrincipalDashboardPage() {
 
       {/* Stats Grid */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" trend={`${dashboard.recentAdmissions.length} recent admission${dashboard.recentAdmissions.length === 1 ? "" : "s"}`} trendTone={dashboard.recentAdmissions.length > 0 ? "positive" : "neutral"} />
-        <StatCard label="Teachers" value={dashboard.totalTeachers.toLocaleString()} icon={Users} tone="purple" trend="Current faculty count" />
-        <StatCard label="Monthly income" value={formatPKR(finance.monthlyIncome)} icon={ArrowDownCircle} tone="green" trend={incomeDelta.text} trendTone={incomeDelta.tone} />
-        <StatCard label="Monthly expenses" value={formatPKR(finance.monthlyExpenses)} icon={ArrowUpCircle} tone="red" trend={expensesDelta.text} trendTone={expensesDelta.tone} />
-        <StatCard label="Profits" value={formatPKR(finance.netCashFlow)} icon={Wallet} tone={finance.netCashFlow >= 0 ? "green" : "red"} trend={netDelta.text} trendTone={netDelta.tone} />
+        <OverviewFinanceStatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" trend={`${dashboard.recentAdmissions.length} new admission${dashboard.recentAdmissions.length === 1 ? "" : "s"}`} trendTone={dashboard.recentAdmissions.length > 0 ? "positive" : "neutral"} />
+        <OverviewFinanceStatCard label="Staff" value={dashboard.totalStaff.toLocaleString()} icon={Users} tone="purple" trend={`${dashboard.totalTeachers.toLocaleString()} teacher${dashboard.totalTeachers === 1 ? "" : "s"}`} />
+        <OverviewFinanceStatCard label="Total income" value={formatFinanceAmount(finance.lifetimeIncome)} icon={ArrowDownCircle} tone="green" trend={incomeContribution} trendTone="positive" />
+        <OverviewFinanceStatCard label="Total expenses" value={formatFinanceAmount(finance.lifetimeExpenses)} icon={ArrowUpCircle} tone="red" trend={expenseContribution} trendTone="positive" />
+        <OverviewFinanceStatCard label="Total profit" value={formatFinanceAmount(finance.lifetimeProfit)} icon={Wallet} tone={finance.lifetimeProfit >= 0 ? "green" : "red"} trend={profitContribution} trendTone="positive" />
       </section>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -101,15 +101,20 @@ function TrendChart({
   emptyDescription,
   tooltipLabel,
   datasets,
-  stroke
+  stroke,
+  initialPeriod = "yearly"
 }: {
   emptyTitle: string;
   emptyDescription: string;
   tooltipLabel: string;
   datasets: TrendSeries;
   stroke: string;
+  initialPeriod?: keyof TrendSeries;
 }) {
-  const [period, setPeriod] = useState<keyof TrendSeries>("yearly");
+  const [period, setPeriod] = useState<keyof TrendSeries>(initialPeriod);
+  useEffect(() => {
+    setPeriod(initialPeriod);
+  }, [initialPeriod]);
   const data = datasets[period];
   const hasData = data.length > 0 && data.some((item) => item.amount > 0);
 
@@ -154,7 +159,7 @@ function TrendChart({
   );
 }
 
-export function IncomeTrendChart({ datasets }: { datasets: TrendSeries }) {
+export function IncomeTrendChart({ datasets, initialPeriod }: { datasets: TrendSeries; initialPeriod?: keyof TrendSeries }) {
   return (
     <TrendChart
       emptyTitle="No income trend yet"
@@ -162,6 +167,7 @@ export function IncomeTrendChart({ datasets }: { datasets: TrendSeries }) {
       tooltipLabel="Income"
       datasets={datasets}
       stroke="#2563eb"
+      initialPeriod={initialPeriod}
     />
   );
 }
@@ -173,10 +179,14 @@ type DistributionSeries = {
   lifetime: DistributionPoint[];
 };
 
-export function ExpenseDistributionChart({ datasets }: { datasets: DistributionSeries }) {
-  const [period, setPeriod] = useState<keyof DistributionSeries>("yearly");
+export function ExpenseDistributionChart({ datasets, initialPeriod = "yearly" }: { datasets: DistributionSeries; initialPeriod?: keyof DistributionSeries }) {
+  const [period, setPeriod] = useState<keyof DistributionSeries>(initialPeriod);
   const data = datasets[period];
   const [activeIndex, setActiveIndex] = useState<number | undefined>();
+  useEffect(() => {
+    setPeriod(initialPeriod);
+    setActiveIndex(undefined);
+  }, [initialPeriod]);
   const totalExpense = data.reduce((sum, item) => sum + Number(item.value), 0);
   const activeItem = activeIndex === undefined ? null : data[activeIndex];
   const activePercent = activeItem && totalExpense > 0 ? (activeItem.value / totalExpense) * 100 : null;

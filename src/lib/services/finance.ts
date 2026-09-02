@@ -561,9 +561,13 @@ async function getLedgerDashboard(user: AppUser) {
   const monthStart = format(currentMonthStart, "yyyy-MM-dd");
   const previousMonthStartStr = format(previousMonthStart, "yyyy-MM-dd");
   const currentYear = now.getFullYear();
+  const currentYearStart = `${currentYear}-01-01`;
+  const previousYear = currentYear - 1;
+  const previousYearStart = `${previousYear}-01-01`;
+  const previousYearEnd = `${previousYear}-12-31`;
   const [{ data: monthRows, error: monthError }, { data: trendRows, error: trendError }, { data: recent, error: recentError }] = await Promise.all([
-    supabase.from("finance_transactions").select("direction,amount,transaction_date,category").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", previousMonthStartStr),
-    supabase.from("finance_transactions").select("direction,amount,transaction_date,category").eq("school_id", user.schoolId).eq("is_voided", false).not("transaction_date", "is", null).order("transaction_date", { ascending: true }),
+    supabase.from("finance_transactions").select("direction,amount,transaction_date,category,payment_method,source").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", previousMonthStartStr),
+    supabase.from("finance_transactions").select("direction,amount,transaction_date,category,payment_method,source").eq("school_id", user.schoolId).eq("is_voided", false).not("transaction_date", "is", null).order("transaction_date", { ascending: true }),
     supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
   ]);
   if (monthError || trendError || recentError) {
@@ -571,9 +575,24 @@ async function getLedgerDashboard(user: AppUser) {
       monthlyIncome: 0,
       monthlyExpenses: 0,
       netCashFlow: 0,
+      yearlyIncome: 0,
+      yearlyExpenses: 0,
+      yearlyProfit: 0,
+      lifetimeIncome: 0,
+      lifetimeExpenses: 0,
+      lifetimeProfit: 0,
+      totalCash: 0,
+      periodTotals: {
+        month: { income: 0, expenses: 0, profit: 0 },
+        year: { income: 0, expenses: 0, profit: 0 },
+        lifetime: { income: 0, expenses: 0, profit: 0 }
+      },
       previousMonthlyIncome: 0,
       previousMonthlyExpenses: 0,
       previousNetCashFlow: 0,
+      previousYearlyIncome: 0,
+      previousYearlyExpenses: 0,
+      previousYearlyProfit: 0,
       recentTransactions: [],
       incomeTrend: [],
       expenseDistribution: [],
@@ -589,10 +608,28 @@ async function getLedgerDashboard(user: AppUser) {
     const transactionDate = row.transaction_date ?? previousMonthStartStr;
     return transactionDate >= previousMonthStartStr && transactionDate < monthStart;
   });
+  const yearRows = allRows.filter((row) => {
+    const transactionDate = row.transaction_date ?? currentYearStart;
+    return transactionDate >= currentYearStart;
+  });
+  const previousYearRows = allRows.filter((row) => {
+    const transactionDate = row.transaction_date ?? previousYearStart;
+    return transactionDate >= previousYearStart && transactionDate <= previousYearEnd;
+  });
   const monthlyIncome = currentRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
   const monthlyExpenses = currentRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const yearlyIncome = yearRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const yearlyExpenses = yearRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const previousYearlyIncome = previousYearRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const previousYearlyExpenses = previousYearRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const lifetimeIncome = allRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const lifetimeExpenses = allRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
   const previousMonthlyIncome = previousRows.filter((row) => row.direction === "income").reduce((sum, row) => sum + Number(row.amount), 0);
   const previousMonthlyExpenses = previousRows.filter((row) => row.direction === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const isManualCashRow = (row: any) => row.source === "manual" && row.payment_method === "cash";
+  const monthlyCash = currentRows.reduce((sum, row) => isManualCashRow(row) ? sum + (row.direction === "income" ? Number(row.amount) : -Number(row.amount)) : sum, 0);
+  const yearlyCash = yearRows.reduce((sum, row) => isManualCashRow(row) ? sum + (row.direction === "income" ? Number(row.amount) : -Number(row.amount)) : sum, 0);
+  const totalCash = allRows.reduce((sum, row) => isManualCashRow(row) ? sum + (row.direction === "income" ? Number(row.amount) : -Number(row.amount)) : sum, 0);
   const incomeByDate = new Map<string, number>();
   const expensesByCategory = new Map<string, number>();
   const incomeMonthlyMap = new Map<string, number>();
@@ -677,9 +714,29 @@ async function getLedgerDashboard(user: AppUser) {
     monthlyIncome,
     monthlyExpenses,
     netCashFlow: monthlyIncome - monthlyExpenses,
+    yearlyIncome,
+    yearlyExpenses,
+    yearlyProfit: yearlyIncome - yearlyExpenses,
+    lifetimeIncome,
+    lifetimeExpenses,
+    lifetimeProfit: lifetimeIncome - lifetimeExpenses,
+    totalCash,
+    cashBalances: {
+      month: monthlyCash,
+      year: yearlyCash,
+      lifetime: totalCash
+    },
+    periodTotals: {
+      month: { income: monthlyIncome, expenses: monthlyExpenses, profit: monthlyIncome - monthlyExpenses },
+      year: { income: yearlyIncome, expenses: yearlyExpenses, profit: yearlyIncome - yearlyExpenses },
+      lifetime: { income: lifetimeIncome, expenses: lifetimeExpenses, profit: lifetimeIncome - lifetimeExpenses }
+    },
     previousMonthlyIncome,
     previousMonthlyExpenses,
     previousNetCashFlow: previousMonthlyIncome - previousMonthlyExpenses,
+    previousYearlyIncome,
+    previousYearlyExpenses,
+    previousYearlyProfit: previousYearlyIncome - previousYearlyExpenses,
     incomeTrend: Array.from(incomeByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, amount]) => ({ date, amount })),

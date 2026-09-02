@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, Upload, FileSpreadsheet, FileText } from "lucide-react";
+import { ChevronDown, Download, FileSpreadsheet, FileText, Upload } from "lucide-react";
 import { exportStudentsAction } from "@/app/(app)/students/actions";
 import type { StudentFilters } from "@/lib/services/students";
 import { StudentImportModal } from "./student-import-modal";
@@ -74,39 +74,47 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={handleTemplate}
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-ink hover:bg-outline/20"
-        >
-          <Download className="h-4 w-4" /> Template
-        </button>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-ink hover:bg-outline/20"
-        >
-          <Upload className="h-4 w-4" /> Import Students
-        </button>
-
-        <button
-          onClick={() => handleExport("csv")}
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-ink hover:bg-outline/20 disabled:opacity-50"
-        >
-          <FileText className="h-4 w-4" /> Export CSV
-        </button>
-
-        <button
-          onClick={() => handleExport("excel")}
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-ink hover:bg-outline/20 disabled:opacity-50"
-        >
-          <FileSpreadsheet className="h-4 w-4" /> Export Excel
-        </button>
-      </div>
+      <details className="group relative">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-outline/80 bg-white px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-surface-low">
+          <Download className="h-4 w-4" />
+          Import & Export
+          <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" />
+        </summary>
+        <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-56 rounded-2xl border border-outline/70 bg-white p-2 shadow-lift">
+          <button
+            onClick={handleTemplate}
+            type="button"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low"
+          >
+            <Download className="h-4 w-4 text-muted" />
+            Download template
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            type="button"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low"
+          >
+            <Upload className="h-4 w-4 text-muted" />
+            Import students
+          </button>
+          <button
+            onClick={() => handleExport("csv")}
+            disabled={isPending}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low disabled:opacity-50"
+          >
+            <FileText className="h-4 w-4 text-muted" />
+            Export CSV
+          </button>
+          <button
+            onClick={() => handleExport("excel")}
+            disabled={isPending}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low disabled:opacity-50"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-muted" />
+            Export Excel
+          </button>
+        </div>
+      </details>
       
       <StudentImportModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>

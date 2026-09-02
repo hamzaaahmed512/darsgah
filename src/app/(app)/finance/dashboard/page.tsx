@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/form-field";
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart, LazyOutstandingByClassChart } from "@/components/finance/lazy-finance-dashboard-charts";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Percent, ClipboardList, AlertCircle, Banknote, LucideIcon, Search } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Banknote, LucideIcon, Search } from "lucide-react";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
-import { formatDatePK, formatPKR } from "@/lib/utils";
+import { formatCompactPKR, formatDatePK, formatPKR } from "@/lib/utils";
 import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
 import { hasPermission } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -62,37 +62,49 @@ function FinanceStatCard({
   );
 }
 
-function CompactFinanceMetric({
-  label,
-  value,
-  icon: Icon,
-  tone
-}: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  tone: keyof typeof statTones;
-}) {
-  return (
-    <div className="flex items-center gap-4 border-slate-200 px-5 py-4 xl:border-r xl:last:border-r-0">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1 ${statTones[tone]}`}>
-        <Icon className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
-        <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.25rem,1.4vw,1.5rem)] font-bold leading-none tracking-tight text-ink">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function percentDelta(current: number, previous: number, lowerIsBetter = false): { text: string; tone: "positive" | "negative" | "neutral" } {
-  if (previous === 0 && current === 0) return { text: "No change vs last month", tone: "neutral" as const };
-  if (previous === 0) return { text: "New activity this month", tone: lowerIsBetter ? "negative" as const : "positive" as const };
+function percentDelta(
+  current: number,
+  previous: number,
+  lowerIsBetter = false,
+  comparisonLabel = "last month",
+  newActivityLabel = "this month"
+): { text: string; tone: "positive" | "negative" | "neutral" } {
+  if (previous === 0 && current === 0) return { text: `No change vs ${comparisonLabel}`, tone: "neutral" as const };
+  if (previous === 0) return { text: `New activity ${newActivityLabel}`, tone: lowerIsBetter ? "negative" as const : "positive" as const };
   const change = ((current - previous) / Math.abs(previous)) * 100;
   const tone: "positive" | "negative" | "neutral" = change === 0 ? "neutral" : lowerIsBetter ? (change < 0 ? "positive" : "negative") : (change > 0 ? "positive" : "negative");
   const arrow = change >= 0 ? "Up" : "Down";
-  return { text: `${arrow} ${Math.abs(change).toFixed(1)}% vs last month`, tone };
+  return { text: `${arrow} ${Math.abs(change).toFixed(1)}% vs ${comparisonLabel}`, tone };
+}
+
+function formatFinanceAmount(amount: number) {
+  return Math.abs(amount) >= 1_000_000 ? formatCompactPKR(amount) : formatPKR(amount);
+}
+
+function formatMargin(value: number) {
+  return `${value.toFixed(1)}%`;
+}
+
+function contributionText(current: number, lifetime: number, label: string) {
+  if (lifetime <= 0 || current <= 0) return `Yearly share: 0%`;
+  return `Yearly share: ${((current / lifetime) * 100).toFixed(1)}%`;
+}
+
+function buildDashboardHref(params: Record<string, string | undefined>, view: "month" | "year" | "lifetime") {
+  const nextParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (!value || key === "view") continue;
+    nextParams.set(key, value);
+  }
+  nextParams.set("view", view);
+  const query = nextParams.toString();
+  return query ? `/finance/dashboard?${query}` : "/finance/dashboard";
+}
+
+function chartPeriodForView(view: "month" | "year" | "lifetime"): "monthly" | "yearly" | "lifetime" {
+  if (view === "month") return "monthly";
+  if (view === "year") return "yearly";
+  return "lifetime";
 }
 
 export default async function FinanceDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -100,6 +112,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
   const user = await requireUser("finance:view");
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
   const canViewReports = canViewFinancialReports(user.role);
+  const summaryView = (["month", "year", "lifetime"].includes(params.view ?? "") ? params.view : "month") as "month" | "year" | "lifetime";
   let students: Array<{ id: string; name: string; admissionNumber: string }> = [];
   if (canManage) {
     const supabase = await createClient();
@@ -178,78 +191,60 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
   const incomeDelta = percentDelta(data.monthlyIncome, data.previousMonthlyIncome);
   const expensesDelta = percentDelta(data.monthlyExpenses, data.previousMonthlyExpenses, true);
   const netDelta = percentDelta(data.netCashFlow, data.previousNetCashFlow);
+  const yearlyIncomeDelta = percentDelta(data.yearlyIncome, data.previousYearlyIncome, false, "previous year", "this year");
+  const yearlyExpensesDelta = percentDelta(data.yearlyExpenses, data.previousYearlyExpenses, true, "previous year", "this year");
+  const yearlyProfitDelta = percentDelta(data.yearlyProfit, data.previousYearlyProfit, false, "previous year", "this year");
+  const selectedTotals = data.periodTotals?.[summaryView] ?? data.periodTotals.month;
+  const initialChartPeriod = chartPeriodForView(summaryView);
+  const currentMargin = selectedTotals.income > 0 ? (selectedTotals.profit / selectedTotals.income) * 100 : 0;
+  const previousMarginBase = summaryView === "month"
+    ? data.previousMonthlyIncome
+    : summaryView === "year"
+      ? data.previousYearlyIncome
+      : 0;
+  const previousMarginProfit = summaryView === "month"
+    ? data.previousNetCashFlow
+    : summaryView === "year"
+      ? data.previousYearlyProfit
+      : 0;
+  const previousMargin = previousMarginBase > 0 ? (previousMarginProfit / previousMarginBase) * 100 : 0;
+  const marginDelta = percentDelta(currentMargin, previousMargin);
+  const lifetimeIncomeContribution = contributionText(data.yearlyIncome, data.lifetimeIncome, "income");
+  const lifetimeExpenseContribution = contributionText(data.yearlyExpenses, data.lifetimeExpenses, "expenses");
+  const lifetimeProfitContribution = contributionText(data.yearlyProfit, data.lifetimeProfit, "profit");
 
   const mainStats = [
     {
-      label: "Monthly Income",
-      value: formatPKR(data.monthlyIncome),
+      label: summaryView === "month" ? "Monthly Income" : summaryView === "year" ? "Yearly Income" : "Total Income",
+      value: formatFinanceAmount(selectedTotals.income),
       icon: ArrowDownCircle,
       tone: "green",
-      trend: incomeDelta.text,
-      trendTone: incomeDelta.tone
+      trend: summaryView === "month" ? incomeDelta.text : summaryView === "year" ? yearlyIncomeDelta.text : lifetimeIncomeContribution,
+      trendTone: summaryView === "month" ? incomeDelta.tone : summaryView === "year" ? yearlyIncomeDelta.tone : "positive"
     },
     {
-      label: "Monthly Expenses",
-      value: formatPKR(data.monthlyExpenses),
+      label: summaryView === "month" ? "Monthly Expenses" : summaryView === "year" ? "Yearly Expenses" : "Total Expenses",
+      value: formatFinanceAmount(selectedTotals.expenses),
       icon: ArrowUpCircle,
       tone: "red",
-      trend: expensesDelta.text,
-      trendTone: expensesDelta.tone
+      trend: summaryView === "month" ? expensesDelta.text : summaryView === "year" ? yearlyExpensesDelta.text : lifetimeExpenseContribution,
+      trendTone: summaryView === "month" ? expensesDelta.tone : summaryView === "year" ? yearlyExpensesDelta.tone : "positive"
     },
     {
-      label: "Profits",
-      value: formatPKR(data.netCashFlow),
+      label: summaryView === "month" ? "Monthly Profit" : summaryView === "year" ? "Yearly Profit" : "Total Profit",
+      value: formatFinanceAmount(selectedTotals.profit),
       icon: Wallet,
-      tone: data.netCashFlow >= 0 ? "blue" : "red",
-      trend: netDelta.text,
-      trendTone: netDelta.tone
+      tone: selectedTotals.profit >= 0 ? "blue" : "red",
+      trend: summaryView === "month" ? netDelta.text : summaryView === "year" ? yearlyProfitDelta.text : lifetimeProfitContribution,
+      trendTone: summaryView === "month" ? netDelta.tone : summaryView === "year" ? yearlyProfitDelta.tone : "positive"
     },
     {
-      label: "Outstanding Fees",
-      value: formatPKR(data.totalOutstanding),
+      label: summaryView === "month" ? "Net Margin" : summaryView === "year" ? "Net Margin" : "Net Margin",
+      value: formatMargin(currentMargin),
       icon: Banknote,
-      tone: "purple",
-      trend: `${data.pendingPayments} pending account${data.pendingPayments === 1 ? "" : "s"}`,
-      trendTone: data.pendingPayments > 0 ? "negative" : "positive"
-    }
-  ];
-
-  const secondaryStats = [
-    {
-      label: "Collected Fees",
-      value: formatPKR(data.totalCollected),
-      icon: Wallet,
-      tone: "blue"
-    },
-    {
-      label: "Today's Collection",
-      value: formatPKR(data.todayCollection),
-      icon: AlertCircle,
-      tone: "amber"
-    },
-    {
-      label: "Monthly Collection",
-      value: formatPKR(data.monthlyCollection),
-      icon: Wallet,
-      tone: "green"
-    },
-    {
-      label: "Total Discounts",
-      value: formatPKR(data.totalDiscounts),
-      icon: Percent,
-      tone: "amber"
-    },
-    {
-      label: "Overdue Accounts",
-      value: data.overduePayments.toString(),
-      icon: AlertCircle,
-      tone: "red"
-    },
-    {
-      label: "Pending Accounts",
-      value: data.pendingPayments.toString(),
-      icon: ClipboardList,
-      tone: "blue"
+      tone: currentMargin >= 0 ? "purple" : "red",
+      trend: summaryView === "lifetime" ? "Profit as a share of income" : marginDelta.text,
+      trendTone: summaryView === "lifetime" ? "neutral" : marginDelta.tone
     }
   ];
 
@@ -258,9 +253,29 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
       <PageHeader
         eyebrow="Finance"
         title="Financial Dashboard"
-        description="Monitor expected tuition, collected amounts, outstanding balances, daily activity, and discounts."
+        description="Track school finances by month, year, and lifetime from one ledger."
         actions={canManage ? <><TransactionFormModal direction="income" students={students} /><TransactionFormModal direction="expense" students={students} /></> : null}
       />
+
+      <div className="mb-5 flex justify-start">
+        <div className="inline-flex max-w-full rounded-xl border border-outline/60 bg-white p-1">
+          {([
+            { value: "month", label: "Monthly" },
+            { value: "year", label: "Yearly" },
+            { value: "lifetime", label: "Lifetime" }
+          ] as const).map((option) => (
+            <Link
+              key={option.value}
+              href={buildDashboardHref(params, option.value)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                summaryView === option.value ? "bg-primary text-white" : "text-muted hover:bg-surface-low hover:text-ink"
+              }`}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <div className="mb-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
         {mainStats.map((stat) => (
@@ -276,27 +291,13 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
         ))}
       </div>
 
-      <Card className="mb-8 overflow-hidden">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {secondaryStats.map((stat) => (
-            <CompactFinanceMetric
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              icon={stat.icon}
-              tone={stat.tone as keyof typeof statTones}
-            />
-          ))}
-      </div>
-      </Card>
-
       <div className="mb-8 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Income Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyIncomeTrendChart datasets={data.incomeTrends} />
+            <LazyIncomeTrendChart datasets={data.incomeTrends} initialPeriod={initialChartPeriod} />
           </CardContent>
         </Card>
 
@@ -305,7 +306,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
             <CardTitle>Expense Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyExpenseDistributionChart datasets={data.expenseDistributions} />
+            <LazyExpenseDistributionChart datasets={data.expenseDistributions} initialPeriod={initialChartPeriod} />
           </CardContent>
         </Card>
       </div>

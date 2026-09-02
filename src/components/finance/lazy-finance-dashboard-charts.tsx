@@ -25,10 +25,22 @@ export function LazyOutstandingByClassChart({ data }: { data: Array<{ className:
   return <OutstandingByClassChartImpl data={data} />;
 }
 
-export function LazyIncomeTrendChart({ datasets }: { datasets: { monthly: Array<{ label: string; amount: number }>; yearly: Array<{ label: string; amount: number }>; lifetime: Array<{ label: string; amount: number }> } }) {
-  return <IncomeTrendChartImpl datasets={datasets} />;
+export function LazyIncomeTrendChart({
+  datasets,
+  initialPeriod
+}: {
+  datasets: { monthly: Array<{ label: string; amount: number }>; yearly: Array<{ label: string; amount: number }>; lifetime: Array<{ label: string; amount: number }> };
+  initialPeriod?: "monthly" | "yearly" | "lifetime";
+}) {
+  return <IncomeTrendChartImpl datasets={datasets} initialPeriod={initialPeriod} />;
 }
 
-export function LazyExpenseDistributionChart({ datasets }: { datasets: { monthly: Array<{ name: string; value: number }>; yearly: Array<{ name: string; value: number }>; lifetime: Array<{ name: string; value: number }> } }) {
-  return <ExpenseDistributionChartImpl datasets={datasets} />;
+export function LazyExpenseDistributionChart({
+  datasets,
+  initialPeriod
+}: {
+  datasets: { monthly: Array<{ name: string; value: number }>; yearly: Array<{ name: string; value: number }>; lifetime: Array<{ name: string; value: number }> };
+  initialPeriod?: "monthly" | "yearly" | "lifetime";
+}) {
+  return <ExpenseDistributionChartImpl datasets={datasets} initialPeriod={initialPeriod} />;
 }
