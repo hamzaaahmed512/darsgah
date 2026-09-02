@@ -381,7 +381,11 @@ export async function getTeacherResultHistory(user: AppUser) {
 }
 
 export async function createExam(user: AppUser, values: ExamFormValues) {
-  const parsed = examSchema.parse(values);
+  const normalizedValues = {
+    ...values,
+    month: values.exam_type === "monthly" ? (values.month ?? null) : null
+  };
+  const parsed = examSchema.parse(normalizedValues);
   await assertTeacherCanUseSubject(user, parsed.class_id, parsed.subject_id);
   const supabase = await createClient();
   const requiresApproval = requiresApprovalForExamType(parsed.exam_type);

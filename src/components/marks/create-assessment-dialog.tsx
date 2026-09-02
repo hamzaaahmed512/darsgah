@@ -23,6 +23,7 @@ export function CreateAssessmentDialog({
   examTypes: ExamTypeOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const [examType, setExamType] = useState<string>("quiz");
 
   return (
     <>
@@ -47,7 +48,11 @@ export function CreateAssessmentDialog({
               <input type="hidden" name="class_id" value={classId} />
               <input type="hidden" name="subject_id" value={subjectId} />
               <Field label="Assessment type">
-                <Select name="exam_type" defaultValue="quiz">
+                <Select
+                  name="exam_type"
+                  value={examType}
+                  onChange={(e) => setExamType(e.target.value)}
+                >
                   <optgroup label="Regular assessments">
                     {examTypes
                       .filter((type) => type.group === "regular")
@@ -68,16 +73,17 @@ export function CreateAssessmentDialog({
                   </optgroup>
                 </Select>
               </Field>
-              <Field label="Month">
-                <Select name="month" defaultValue="">
-                  <option value="">Not applicable</option>
-                  {Array.from({ length: 12 }, (_, index) => (
-                    <option key={index + 1} value={index + 1}>
-                      {new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, index, 1))}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              {examType === "monthly" ? (
+                <Field label="Month">
+                  <Select name="month" defaultValue={new Date().getMonth() + 1} required>
+                    {Array.from({ length: 12 }, (_, index) => (
+                      <option key={index + 1} value={index + 1}>
+                        {new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, index, 1))}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : null}
               <Field label="Title">
                 <Input name="title" placeholder="Quiz 1, August Monthly, 1st Term..." required />
               </Field>

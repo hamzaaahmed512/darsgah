@@ -5,7 +5,8 @@ import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constant
 describe("student major subject rules", () => {
   it("offers grade-appropriate combinations from Grade 9 to Grade 12", () => {
     expect(majorsForGrade("Grade 9")).toEqual(["biology", "computer"]);
-    expect(majorsForGrade("Grade 12")).toContain("computer_economics_stats");
+    expect(majorsForGrade("Grade 11")).toEqual(["biology", "computer", "pre_engineering"]);
+    expect(majorsForGrade("Grade 12")).toEqual(["biology", "computer", "pre_engineering"]);
     expect(majorsForGrade("Grade 8")).toEqual([]);
     expect(canSelectStudentCombination("Grade 9")).toBe(true);
     expect(canSelectStudentCombination("Grade 11")).toBe(true);
@@ -44,10 +45,12 @@ describe("student major subject rules", () => {
 
   it("applies Grade 11 and 12 study-group rules", () => {
     expect(isSubjectExcludedForMajor("Grade 11", "computer", "Chemistry")).toBe(true);
+    expect(isSubjectExcludedForMajor("Grade 11", "computer", "Biology")).toBe(true);
+    expect(isSubjectExcludedForMajor("Grade 11", "computer", "Physics")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 11", "computer", "Statistics")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 11", "pre_engineering", "Biology")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 12", "biology", "Mathematics")).toBe(true);
-    expect(isSubjectExcludedForMajor("Grade 12", "computer_economics_stats", "Physics")).toBe(true);
-    expect(isSubjectExcludedForMajor("Grade 12", "computer_economics_stats", "Statistics")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 12", "biology", "Physics")).toBe(false);
   });
 
   it("supports custom combinations as major options", () => {
@@ -57,15 +60,20 @@ describe("student major subject rules", () => {
       { value: "biology", label: "Biology", kind: "default" },
       { value: "computer", label: "Computer", kind: "default" }
     ]);
+    expect(defaultCombinationOptionsForGrade("Grade 11")).toEqual([
+      { value: "biology", label: "Pre-Medical", kind: "default" },
+      { value: "computer", label: "ICS with Physics", kind: "default" },
+      { value: "pre_engineering", label: "Pre-Engineering", kind: "default" }
+    ]);
     expect(isCustomStudentMajor(custom.value)).toBe(true);
     expect(studentMajorLabel(custom.value, [custom])).toBe("Arts with Computer");
     expect(isSubjectExcludedForMajor("Grade 10", custom.value, "Biology")).toBe(false);
   });
 
-  it("maps legacy labels to the new canonical majors", () => {
+  it("maps legacy labels to the canonical majors", () => {
     expect(normalizeStudentMajorValue("Biology")).toBe("biology");
-    expect(normalizeStudentMajorValue("Computer with Economics")).toBe("computer_economics");
     expect(studentMajorLabel("Computer")).toBe("ICS with Physics");
     expect(studentMajorLabel("biology")).toBe("Pre-Medical");
+    expect(studentMajorLabel("pre_engineering")).toBe("Pre-Engineering");
   });
 });
