@@ -49,19 +49,20 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
   return (
     <>
       <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" disabled={pending} onClick={() => review("approved")}>
+        <Button type="button" size="sm" variant="secondary" disabled={pending} onClick={() => review("approved")} className="min-h-10 rounded-xl border-primary/50 px-4 text-primary hover:bg-primary-soft">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           {pending && !rejecting ? "Approving…" : "Approve"}
         </Button>
         <Button
           type="button"
-          variant="danger"
+          variant="secondary"
           size="sm"
           disabled={pending}
           onClick={() => {
             setError("");
             setRejecting(true);
           }}
+          className="min-h-10 rounded-xl border-danger/40 px-4 text-danger hover:bg-danger-soft"
         >
           <XCircle className="h-4 w-4" aria-hidden="true" />
           Reject

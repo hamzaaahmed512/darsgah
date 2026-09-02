@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRange } from "lucide-react";
+import { CalendarDays, CalendarRange, Filter } from "lucide-react";
 import { Input, Select } from "@/components/ui/form-field";
 
 type LeavePeriodFiltersProps = {
@@ -16,31 +16,51 @@ export function LeavePeriodFilters({ mode, from, to, action = "/leave" }: LeaveP
   }
 
   return (
-    <div className="mb-6 grid gap-3 rounded-2xl border border-outline/60 bg-surface-low/70 p-3 shadow-sm md:grid-cols-[220px_1px_minmax(0,420px)] md:items-end md:gap-4">
-      <form action={action} className="relative">
-        <Select name="range" value={mode === "custom" ? "" : mode} onChange={submit} className="h-11 bg-white font-semibold">
-          <option value="" disabled>Period</option>
-          <option value="month">Monthly</option>
-          <option value="year">Yearly</option>
-          <option value="lifetime">Lifetime</option>
-        </Select>
-      </form>
+    <div className="mb-6 rounded-[24px] border border-outline/60 bg-slate-50/65 p-4">
+      <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_auto] xl:items-end">
+        <form action={action} className="relative">
+          <Select name="range" value={mode === "custom" ? "" : mode} onChange={submit} className="h-12 rounded-2xl border-outline/70 bg-white font-semibold shadow-none">
+            <option value="" disabled>Period</option>
+            <option value="month">Monthly</option>
+            <option value="year">Yearly</option>
+            <option value="lifetime">Lifetime</option>
+          </Select>
+        </form>
 
-      <div className="hidden h-11 bg-outline/60 md:block" aria-hidden="true" />
+        <form action={action} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <input type="hidden" name="range" value="custom" />
+          <label className="grid gap-2">
+            <span className="sr-only">From date</span>
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+              <Input name="from" type="date" defaultValue={from} onChange={submit} aria-label="From date" className="h-12 rounded-2xl border-outline/70 bg-white pl-11 shadow-none" />
+            </div>
+          </label>
+          <div className="hidden items-center justify-center text-sm font-bold uppercase tracking-wide text-muted sm:flex">
+            to
+          </div>
+          <label className="grid gap-2">
+            <span className="sr-only">To date</span>
+            <div className="relative">
+              <CalendarRange className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+              <Input name="to" type="date" defaultValue={to} onChange={submit} aria-label="To date" className="h-12 rounded-2xl border-outline/70 bg-white pl-11 shadow-none" />
+            </div>
+          </label>
+        </form>
 
-      <form action={action} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <input type="hidden" name="range" value="custom" />
-        <CalendarRange className="hidden h-4 w-4 text-primary sm:block" aria-hidden="true" />
-        <label className="contents">
-          <span className="sr-only">From date</span>
-          <Input name="from" type="date" defaultValue={from} onChange={submit} aria-label="From date" className="h-11 bg-white" />
-        </label>
-        <span className="text-xs font-bold uppercase tracking-wide text-muted">to</span>
-        <label className="contents">
-          <span className="sr-only">To date</span>
-          <Input name="to" type="date" defaultValue={to} onChange={submit} aria-label="To date" className="h-11 bg-white" />
-        </label>
-      </form>
+        <form action={action} className="xl:justify-self-end">
+          <input type="hidden" name="range" value="custom" />
+          <input type="hidden" name="from" value={from} />
+          <input type="hidden" name="to" value={to} />
+          <button
+            type="submit"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-white shadow-button hover:bg-primary-ink xl:w-auto"
+          >
+            <Filter className="h-4 w-4" aria-hidden="true" />
+            Filter
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

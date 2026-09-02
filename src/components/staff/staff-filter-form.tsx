@@ -46,7 +46,7 @@ export function StaffFilterForm({ customRoles = [] }: Props) {
     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+          className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
           aria-hidden="true"
         />
         <Input
@@ -54,11 +54,16 @@ export function StaffFilterForm({ customRoles = [] }: Props) {
           name="q"
           defaultValue={currentQ}
           onChange={handleSearchChange}
-          className="pl-9"
+          className="h-14 rounded-2xl border-outline/70 bg-white pl-12 text-base shadow-none"
           placeholder="Search staff by name, email, or department"
         />
       </div>
-      <Select name="role" defaultValue={currentRole} onChange={handleRoleChange}>
+      <Select
+        name="role"
+        defaultValue={currentRole}
+        onChange={handleRoleChange}
+        className="h-14 rounded-2xl border-outline/70 bg-white text-base shadow-none"
+      >
         <option value="all">All roles</option>
         <option value="administrator">Administrators</option>
         <option value="principal">Principals</option>

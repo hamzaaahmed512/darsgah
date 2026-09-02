@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getLeaveRequestsForReview, getMyLeaveCenter } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
 import { submitLeaveAction } from "@/app/(app)/leave/actions";
+import { CalendarRange, Download, FileText } from "lucide-react";
 
 const statusTone = {
   pending: "yellow",
@@ -68,59 +69,105 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       />
 
       {canReviewLeaves ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Staff Leave Requests</CardTitle>
+        <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <CardHeader className="gap-4 border-b border-outline/50 pb-5">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                <CalendarRange className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-[1.8rem]">Staff Leave Requests</CardTitle>
+                <p className="mt-1 text-base text-muted">View, filter and manage leave requests.</p>
+              </div>
+            </div>
+            <Button type="button" variant="secondary" className="rounded-2xl px-4" disabled>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Export
+            </Button>
           </CardHeader>
           <CardContent>
             <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
             {!reviewLeaves.length ? (
               <EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-hidden rounded-[24px] border border-outline/50">
+                <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="font-label text-xs uppercase tracking-wide text-muted">
+                  <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                     <tr>
-                      <th className="py-3 pr-4">Staff</th>
-                      <th className="py-3 pr-4">Type</th>
-                      <th className="py-3 pr-4">Dates</th>
-                      <th className="py-3 pr-4">Reason</th>
-                      <th className="py-3 pr-4">Status</th>
-                      <th className="py-3 pr-4 text-right">Decision</th>
+                      <th className="px-5 py-4">Staff</th>
+                      <th className="px-5 py-4">Type</th>
+                      <th className="px-5 py-4">Dates</th>
+                      <th className="px-5 py-4">Reason</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4 text-right">Decision</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reviewLeaves.map((leave) => (
-                      <tr key={leave.id} className="border-t border-outline/60 align-top">
-                        <td className="py-3 pr-4">
-                          <p className="font-semibold text-ink">{(leave as any).applicant_name ?? "Employee"}</p>
+                      <tr key={leave.id} className="border-t border-outline/50 align-top">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses((leave as any).applicant_name ?? "Employee")}`}>
+                              {getInitials((leave as any).applicant_name ?? "Employee")}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-ink">{(leave as any).applicant_name ?? "Employee"}</p>
+                              <p className="mt-0.5 text-xs text-muted">Leave request</p>
+                            </div>
+                          </div>
                         </td>
-                        <td className="py-3 pr-4 font-semibold capitalize">{leave.leave_type.replace("_", " ")}</td>
-                        <td className="py-3 pr-4 text-muted">{leave.start_date} to {leave.end_date}</td>
-                        <td className="max-w-sm py-3 pr-4 text-muted">{leave.reason}</td>
-                        <td className="py-3 pr-4">
+                        <td className="px-5 py-4 font-semibold capitalize">{leave.leave_type.replace("_", " ")}</td>
+                        <td className="px-5 py-4 text-muted">{leave.start_date} to {leave.end_date}</td>
+                        <td className="max-w-sm px-5 py-4 text-muted">{leave.reason}</td>
+                        <td className="px-5 py-4">
                           <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
                           {leave.principal_remarks ? <p className="mt-1 text-xs text-muted">{leave.principal_remarks}</p> : null}
                         </td>
-                        <td className="py-3 pr-4">
+                        <td className="px-5 py-4">
                           {leave.status === "pending" ? (
                             <LeaveReviewActions leaveId={leave.id} />
                           ) : (
-                            <p className="text-right text-xs font-semibold text-muted">Reviewed by {(leave as any).reviewed_by_name ?? "reviewer"}</p>
+                            <p className="text-right text-xs font-semibold leading-5 text-muted">
+                              Reviewed by <span className="text-ink">{(leave as any).reviewed_by_name ?? "reviewer"}</span>
+                            </p>
                           )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-outline/50 px-5 py-4 text-sm text-muted">
+                  <p>Showing 1 to {reviewLeaves.length} of {reviewLeaves.length} requests</p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
+                      ‹
+                    </button>
+                    <button type="button" className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary-soft px-3 font-semibold text-primary">
+                      1
+                    </button>
+                    <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
+                      ›
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>My Leave History</CardTitle>
+        <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <CardHeader className="gap-4 border-b border-outline/50 pb-5">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                <FileText className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-[1.8rem]">My Leave History</CardTitle>
+                <p className="mt-1 text-base text-muted">Review your submitted leave requests and their latest status.</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
@@ -129,29 +176,31 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             ) : !leaves.length ? (
               <EmptyState title="No leave requests yet" description="Submitted leave requests will appear here with their latest status." />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-hidden rounded-[24px] border border-outline/50">
+                <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="font-label text-xs uppercase tracking-wide text-muted">
+                  <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                     <tr>
-                      <th className="py-3 pr-4">Type</th>
-                      <th className="py-3 pr-4">Dates</th>
-                      <th className="py-3 pr-4">Status</th>
-                      <th className="py-3 pr-4">Remarks</th>
+                      <th className="px-5 py-4">Type</th>
+                      <th className="px-5 py-4">Dates</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leaves.map((leave) => (
-                      <tr key={leave.id} className="border-t border-outline/60">
-                        <td className="py-3 pr-4 font-semibold capitalize">{leave.leave_type.replace("_", " ")}</td>
-                        <td className="py-3 pr-4 text-muted">{leave.start_date} to {leave.end_date}</td>
-                        <td className="py-3 pr-4">
+                      <tr key={leave.id} className="border-t border-outline/50">
+                        <td className="px-5 py-4 font-semibold capitalize">{leave.leave_type.replace("_", " ")}</td>
+                        <td className="px-5 py-4 text-muted">{leave.start_date} to {leave.end_date}</td>
+                        <td className="px-5 py-4">
                           <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
                         </td>
-                        <td className="py-3 pr-4 text-muted">{leave.principal_remarks || "No remarks"}</td>
+                        <td className="px-5 py-4 text-muted">{leave.principal_remarks || "No remarks"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </CardContent>
@@ -159,6 +208,26 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       )}
     </>
   );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function getAvatarToneClasses(name: string) {
+  const tones = [
+    "border-blue-100 bg-blue-50 text-blue-600",
+    "border-emerald-100 bg-emerald-50 text-emerald-600",
+    "border-violet-100 bg-violet-50 text-violet-600",
+    "border-amber-100 bg-amber-50 text-amber-600"
+  ];
+  const hash = [...name].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return tones[hash % tones.length];
 }
 
 function LeaveRequestForm({ migrationRequired }: { migrationRequired: boolean }) {
