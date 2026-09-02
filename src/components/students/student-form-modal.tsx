@@ -13,6 +13,9 @@ type ClassOption = {
   name: string;
   grade_name: string;
   section_name: string | null;
+  major_count?: number;
+  default_major?: string | null;
+  allowed_majors?: string[];
 };
 
 const StudentForm = dynamic(

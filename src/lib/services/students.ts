@@ -675,11 +675,16 @@ async function resolveStudentMajorForPersistence(
   currentStudentId: string | null
 ) {
   const normalizedMajor = normalizeStudentMajorValue(major);
-  if (!normalizedMajor || !classId) return normalizedMajor;
+  if (!classId) return normalizedMajor;
 
-  const { data: classRow, error } = await supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();
+  const { data: classRow, error } = await supabase.from("classes").select("major_count,default_major,grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();
   if (error) throw new Error(error.message);
   const gradeName = (classRow as any)?.grades?.name ?? "";
+  const configuredCount = Number((classRow as any)?.major_count ?? 0);
+  const configuredDefault = normalizeStudentMajorValue((classRow as any)?.default_major);
+  if (configuredCount === 1 && configuredDefault) return configuredDefault;
+  if (configuredCount > 1 && !normalizedMajor) throw new Error("Select a major offered by this class.");
+  if (!normalizedMajor) return null;
 
   if (canSelectStudentCombination(gradeName)) return normalizedMajor;
   if (!currentStudentId) return null;
@@ -701,6 +706,15 @@ async function assertMajorAvailableForClass(
   major: string,
   knownGradeName?: string
 ) {
+  const { data: configuredRows, error: configuredError } = await supabase
+    .from("class_allowed_majors")
+    .select("major_key")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", classId);
+  if (configuredError) throw new Error(configuredError.message);
+  if ((configuredRows ?? []).length && !(configuredRows ?? []).some((row: any) => row.major_key === major)) {
+    throw new Error("That major is not offered in the selected class.");
+  }
   let gradeName = knownGradeName;
   if (!gradeName) {
     const { data: classRow, error } = await supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle();

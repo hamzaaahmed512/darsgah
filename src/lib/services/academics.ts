@@ -38,7 +38,7 @@ export async function getAcademicOptions(user: AppUser) {
     supabase.from("subjects").select("*").eq("school_id", user.schoolId).order("name"),
     supabase
       .from("classes")
-      .select("id,name,room,grade_id,section_id,academic_year_id,head_teacher_id,grades(name),sections(name),academic_years(name),head_teacher:profiles!classes_head_teacher_id_fkey(full_name,email)")
+      .select("id,name,room,grade_id,section_id,academic_year_id,head_teacher_id,major_count,default_major,class_allowed_majors(major_key),grades(name),sections(name),academic_years(name),head_teacher:profiles!classes_head_teacher_id_fkey(full_name,email)")
       .eq("school_id", user.schoolId)
       .order("name")
   ]);
@@ -63,8 +63,71 @@ export async function getAcademicOptions(user: AppUser) {
       head_teacher_id: row.head_teacher_id,
       head_teacher_name: formatDisplayName(row.head_teacher?.full_name) || null,
       head_teacher_email: row.head_teacher?.email ?? null
+      ,major_count: row.major_count ?? 0
+      ,default_major: row.default_major ?? null
+      ,allowed_majors: (row.class_allowed_majors ?? []).map((item: any) => item.major_key as string)
     }))
   };
+}
+
+export async function configureClassMajors(user: AppUser, classId: string, allowedMajors: string[]) {
+  const supabase = await createClient();
+  const normalized = [...new Set(allowedMajors.map((value) => value.trim()).filter(Boolean))];
+  const { data: cls, error: classError } = await supabase
+    .from("classes")
+    .select("id,grades(name)")
+    .eq("school_id", user.schoolId)
+    .eq("id", classId)
+    .maybeSingle();
+  if (classError) throw new Error(classError.message);
+  if (!cls) throw new Error("Class not found.");
+
+  const available = await getCombinationOptionsForClass(user, classId, (cls as any).grades?.name ?? "");
+  const availableKeys = new Set(available.map((option) => option.value));
+  if (normalized.some((major) => !availableKeys.has(major as any))) {
+    throw new Error("One or more selected majors are not available for this class.");
+  }
+
+  const defaultMajor = normalized.length === 1 ? normalized[0] : null;
+  const { error: updateError } = await supabase
+    .from("classes")
+    .update({ major_count: normalized.length, default_major: defaultMajor })
+    .eq("school_id", user.schoolId)
+    .eq("id", classId);
+  if (updateError) throw new Error(updateError.message);
+
+  const { error: deleteError } = await supabase.from("class_allowed_majors").delete().eq("school_id", user.schoolId).eq("class_id", classId);
+  if (deleteError) throw new Error(deleteError.message);
+  if (normalized.length) {
+    const { error: insertError } = await supabase.from("class_allowed_majors").insert(
+      normalized.map((major) => ({ school_id: user.schoolId, class_id: classId, major_key: major }))
+    );
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  if (defaultMajor) {
+    const { error: studentsError } = await supabase
+      .from("students")
+      .update({ major: defaultMajor })
+      .eq("school_id", user.schoolId)
+      .eq("class_id", classId)
+      .in("status", ["active", "pending_approval"]);
+    if (studentsError) throw new Error(studentsError.message);
+  } else if (normalized.length > 1) {
+    const { data: classStudents, error: studentsLookupError } = await supabase
+      .from("students")
+      .select("id,major")
+      .eq("school_id", user.schoolId)
+      .eq("class_id", classId);
+    if (studentsLookupError) throw new Error(studentsLookupError.message);
+    const invalidIds = (classStudents ?? []).filter((student: any) => student.major && !normalized.includes(student.major)).map((student: any) => student.id);
+    if (invalidIds.length) {
+      const { error: clearError } = await supabase.from("students").update({ major: null }).eq("school_id", user.schoolId).in("id", invalidIds);
+      if (clearError) throw new Error(clearError.message);
+    }
+  }
+
+  await logActivity(user, "class_major_configuration_updated", "class", classId, { allowed_majors: normalized, default_major: defaultMajor });
 }
 
 export async function getAssignableHeadTeachers(user: AppUser) {
@@ -1004,7 +1067,7 @@ export async function createSection(user: AppUser, values: { name: string }) {
 
 export async function createSectionClass(
   user: AppUser,
-  values: { gradeId: string; gradeName: string; sectionName: string; room?: string | null }
+  values: { gradeId: string; gradeName: string; sectionName: string; room?: string | null; allowedMajors?: string[] }
 ) {
   const supabase = await createClient();
   const sectionName = normalizeSectionName(values.sectionName);
@@ -1045,5 +1108,6 @@ export async function createSectionClass(
   }).select("id").single();
   if (error) throw new Error(error.message);
   await seedDefaultSubjectsForClass(user, created.id, grade.name);
+  if (values.allowedMajors?.length) await configureClassMajors(user, created.id, values.allowedMajors);
   return created;
 }

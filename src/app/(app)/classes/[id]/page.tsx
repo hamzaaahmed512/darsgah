@@ -6,6 +6,7 @@ import { ClassSubjectManager } from "@/components/classes/ClassSubjectManager";
 import { TeacherAssignmentModal } from "@/components/classes/TeacherAssignmentModal";
 import { DeleteClassButton } from "@/components/classes/class-actions";
 import { StudentMajorSelect } from "@/components/classes/student-major-select";
+import { ClassMajorConfiguration } from "@/components/classes/class-major-configuration";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -44,6 +45,11 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
       </>}
     />
 
+    <Card className="mb-6">
+      <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" /> Academic major setup</CardTitle><Badge tone={(cls.major_count ?? 0) === 1 ? "green" : (cls.major_count ?? 0) > 1 ? "blue" : "gray"}>{cls.major_count ?? 0} configured</Badge></CardHeader>
+      <CardContent><ClassMajorConfiguration classId={cls.id} options={rosterData.combinationOptions} initialAllowed={cls.allowed_majors ?? []} /></CardContent>
+    </Card>
+
     <section className="mb-6 grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Faculty ({faculty.length + (cls.head_teacher_id ? 1 : 0)})</CardTitle></CardHeader>
@@ -71,7 +77,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
             const major = student.major as string | null;
             return <div key={student.id} className="flex flex-col items-start justify-between gap-3 rounded-xl bg-surface-low px-4 py-3 sm:flex-row sm:items-center">
               <Link href={`/students/${student.id}`} prefetch={false} className="min-w-0 hover:text-primary"><p className="truncate font-semibold">{student.name}</p><p className="mt-1 text-xs text-muted">Admission: {student.admission_number ?? "—"}</p></Link>
-              <StudentMajorSelect studentId={student.id} classId={cls.id} gradeName={cls.grade_name} currentMajor={major} options={rosterData.combinationOptions} />
+              <StudentMajorSelect studentId={student.id} classId={cls.id} gradeName={cls.grade_name} currentMajor={major} options={rosterData.combinationOptions.filter((option: any) => !(cls.allowed_majors ?? []).length || (cls.allowed_majors ?? []).includes(option.value))} />
             </div>;
           })}
           {!rosterData.roster.length ? <EmptyState title="No active students" description="Add students from Student Management." className="min-h-32" /> : null}

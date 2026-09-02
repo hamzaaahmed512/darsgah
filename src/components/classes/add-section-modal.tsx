@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
 import { formatGradeSection } from "@/lib/utils";
+import { defaultCombinationOptionsForGrade } from "@/lib/student-majors";
 
 export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; gradeName: string }) {
   const router = useRouter();
@@ -15,6 +16,7 @@ export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; grade
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const majorOptions = defaultCombinationOptionsForGrade(gradeName);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +48,7 @@ export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; grade
           {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
           <Field label="Section name"><Input name="section_name" required placeholder="e.g. A or Orange" /></Field>
           <Field label="Room (optional)"><Input name="room" placeholder="e.g. 204" /></Field>
+          {majorOptions.length ? <div><p className="text-sm font-semibold text-ink">Majors offered</p><p className="mt-1 text-xs text-muted">Choose one for automatic assignment or multiple for manual student selection.</p><div className="mt-3 grid gap-2">{majorOptions.map((option) => <label key={option.value} className="flex items-center gap-3 rounded-xl border border-outline p-3 text-sm font-semibold"><input type="checkbox" name="allowed_major" value={option.value} className="h-4 w-4 accent-primary" />{option.label}</label>)}</div></div> : null}
           <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Creating..." : "Create section"}</Button></div>
         </form>
       </div>

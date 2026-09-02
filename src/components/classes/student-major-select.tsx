@@ -18,6 +18,7 @@ export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor
   const { pushToast } = useToast();
   const canSelectCombination = canSelectStudentCombination(gradeName);
   const options = canSelectCombination ? (providedOptions?.length ? providedOptions : defaultCombinationOptionsForGrade(gradeName)) : [];
+  const automatic = providedOptions?.length === 1;
   const [value, setValue] = useState(normalizeStudentMajorValue(currentMajor) ?? currentMajor ?? "");
   const [pending, startTransition] = useTransition();
   if (!options.length) return null;
@@ -41,8 +42,8 @@ export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor
     });
   }
 
-  return <Select value={value} onChange={(event) => change(event.target.value)} disabled={pending} className="h-9 min-w-52 text-xs">
-    <option value="">Select combination...</option>
+  return <Select value={value} onChange={(event) => change(event.target.value)} disabled={pending || automatic} className="h-9 min-w-52 text-xs">
+    {!automatic ? <option value="">Select combination...</option> : null}
     {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
   </Select>;
 }

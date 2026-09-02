@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster, createSectionClass, linkExistingClassSubject } from "@/lib/services/academics";
+import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster, createSectionClass, linkExistingClassSubject, configureClassMajors } from "@/lib/services/academics";
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
@@ -146,7 +146,8 @@ export async function createSectionClassAction(formData: FormData) {
     gradeId: z.string().uuid().parse(formData.get("grade_id")),
     gradeName: englishNameSchema("Grade name", 80).parse(formData.get("grade_name")),
     sectionName: englishNameSchema("Section name", 80).parse(formData.get("section_name")),
-    room: String(formData.get("room") ?? "") || null
+    room: String(formData.get("room") ?? "") || null,
+    allowedMajors: formData.getAll("allowed_major").map(String).filter(Boolean)
   });
   revalidatePath("/classes");
 }
@@ -162,6 +163,16 @@ export async function setStudentMajorAction(formData: FormData) {
   });
   revalidatePath("/classes");
   revalidatePath("/subjects");
+}
+
+export async function configureClassMajorsAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  const classId = z.string().uuid().parse(formData.get("class_id"));
+  const allowedMajors = formData.getAll("allowed_major").map(String).filter(Boolean);
+  await configureClassMajors(user, classId, allowedMajors);
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/students");
 }
 
 export async function createStudentSubjectCombinationAction(formData: FormData) {

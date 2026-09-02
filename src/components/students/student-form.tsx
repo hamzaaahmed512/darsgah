@@ -28,7 +28,7 @@ export function StudentForm({
   studentId
 }: {
   initialValues?: Partial<StudentFormValues>;
-  classes: Array<{ id: string; name: string; grade_name: string; section_name: string | null }>;
+  classes: Array<{ id: string; name: string; grade_name: string; section_name: string | null; major_count?: number; default_major?: string | null; allowed_majors?: string[] }>;
   combinations?: StudentCombinationOption[];
   onSubmit: (values: StudentFormValues) => Promise<void | { error?: string; fieldErrors?: Record<string, string> }>;
   submitLabel: string;
@@ -93,7 +93,7 @@ export function StudentForm({
       ? [
         ...defaultCombinationOptionsForGrade(selectedClass.grade_name),
         ...combinations.filter((combination) => combination.classIds?.includes(selectedClass.id))
-      ]
+      ].filter((option) => !selectedClass.allowed_majors?.length || selectedClass.allowed_majors.includes(option.value))
       : []
     : [], [combinations, selectedClass]);
   const fatherAlive = watch("father_alive");
@@ -112,6 +112,12 @@ export function StudentForm({
       setValue("major", null, { shouldDirty: true });
     }
   }, [canSelectCombination, majorOptions, setValue, watch]);
+
+  useEffect(() => {
+    if (selectedClass?.major_count === 1 && selectedClass.default_major) {
+      setValue("major", selectedClass.default_major as any, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [selectedClass?.default_major, selectedClass?.major_count, setValue]);
 
   useEffect(() => {
     if (!isCreateMode || !autoGenerateAdmissionNumber) return;
@@ -335,8 +341,8 @@ export function StudentForm({
           </Field>
           {canSelectCombination && majorOptions.length ? (
             <Field label="Combination / major" error={errors.major?.message}>
-              <Select {...register("major")}>
-                <option value="">Select combination...</option>
+              <Select {...register("major")} required={(selectedClass?.major_count ?? 0) > 1} disabled={selectedClass?.major_count === 1}>
+                <option value="">{selectedClass?.major_count === 1 ? "Assigned automatically" : "Select combination..."}</option>
                 {majorOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
             </Field>
