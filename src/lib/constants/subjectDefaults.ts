@@ -181,5 +181,28 @@ export function isHighSchoolGrade(gradeName: string) {
 
 export function canonicalSubjectName(name: string) {
   const normalized = name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-  return normalized === "computer science" ? "computer" : normalized;
+  if (normalized === "computer science" || normalized === "computer studies") {
+    return "computer";
+  }
+  if (
+    normalized === "pak study" ||
+    normalized === "pak studies" ||
+    normalized === "pakistan studies" ||
+    normalized === "pakistan study" ||
+    normalized === "pakistan studies compulsory" ||
+    normalized === "pak studies compulsory"
+  ) {
+    return "pak studies";
+  }
+  if (
+    normalized === "islamiat" ||
+    normalized === "islamiyat" ||
+    normalized === "islamic education" ||
+    normalized === "islamic studies" ||
+    normalized === "islamiat compulsory" ||
+    normalized === "islamiyat compulsory"
+  ) {
+    return "islamiat";
+  }
+  return normalized;
 }

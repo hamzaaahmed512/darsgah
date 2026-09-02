@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canSelectStudentCombination, defaultCombinationOptionsForGrade, isCustomStudentMajor, isSubjectExcludedForMajor, majorsForGrade, normalizeStudentMajorValue, studentMajorLabel } from "@/lib/student-majors";
+import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 
 describe("student major subject rules", () => {
   it("offers grade-appropriate combinations from Grade 9 to Grade 12", () => {
@@ -15,6 +16,30 @@ describe("student major subject rules", () => {
     expect(isSubjectExcludedForMajor("Grade 9", "computer", "BIOLOGY")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 10", "biology", "Computer Science")).toBe(true);
     expect(isSubjectExcludedForMajor("Grade 10", "biology", "Physics")).toBe(false);
+  });
+
+  it("includes Pak Studies / Pak Study by default in Grade 10 without exclusions", () => {
+    const grade10Defaults = getDefaultSubjectsForGrade("Grade 10").map((s) => s.name);
+    expect(grade10Defaults).toContain("Pak Studies");
+    expect(isSubjectExcludedForMajor("Grade 10", "computer", "Pak Studies")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 10", "biology", "Pak Studies")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 10", "computer", "Pak Study")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 10", "biology", "Pak Study")).toBe(false);
+  });
+
+  it("includes Islamiat by default in Grade 9 without exclusions", () => {
+    const grade9Defaults = getDefaultSubjectsForGrade("Grade 9").map((s) => s.name);
+    expect(grade9Defaults).toContain("Islamiat");
+    expect(isSubjectExcludedForMajor("Grade 9", "computer", "Islamiat")).toBe(false);
+    expect(isSubjectExcludedForMajor("Grade 9", "biology", "Islamiat")).toBe(false);
+  });
+
+  it("normalizes Pak Study and Islamiat aliases in canonicalSubjectName to prevent duplicates", () => {
+    expect(canonicalSubjectName("Pak Study")).toBe("pak studies");
+    expect(canonicalSubjectName("Pak Studies")).toBe("pak studies");
+    expect(canonicalSubjectName("Pakistan Studies")).toBe("pak studies");
+    expect(canonicalSubjectName("Islamiyat")).toBe("islamiat");
+    expect(canonicalSubjectName("Islamiat")).toBe("islamiat");
   });
 
   it("applies Grade 11 and 12 study-group rules", () => {
