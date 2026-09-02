@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function StaffFormModal({
   triggerLabel?: string;
 }) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +49,11 @@ export function StaffFormModal({
     resolver: zodResolver(staffFormSchema),
     defaultValues: { role: allowedRoles[0] ?? "teacher", custom_role_id: undefined }
   });
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   function handleRoleChange(value: string) {
     setSelectedRoleOption(value);
@@ -82,24 +89,24 @@ export function StaffFormModal({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="flex items-center gap-2">
+      <Button onClick={() => setOpen(true)} className="flex w-full items-center gap-2 sm:w-auto">
         <Plus className="h-4 w-4" /> {triggerLabel}
       </Button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-outline/40 px-6 py-4">
-              <div>
+      {mounted ? createPortal(open ? (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full max-w-lg flex-col overflow-hidden rounded-t-[20px] bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-xl font-display font-bold">Create User Account</h2>
-                <p className="mt-1 text-sm text-muted">The user will change their temporary password on first login.</p>
+                <p className="mt-1 break-words text-sm leading-5 text-muted">The user will change their temporary password on first login.</p>
               </div>
               <button onClick={() => setOpen(false)} className="text-muted hover:text-ink">
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
               {error && (
                 <div className="mb-4 rounded-md bg-danger-soft p-3 text-sm font-semibold text-danger">
                   {error}
@@ -176,7 +183,7 @@ export function StaffFormModal({
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-end gap-3">
+              <div className="sticky bottom-0 -mx-4 mt-8 flex flex-col-reverse gap-2 border-t border-outline bg-white px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:p-0">
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
                   Cancel
                 </Button>
@@ -187,7 +194,7 @@ export function StaffFormModal({
             </form>
           </div>
         </div>
-      )}
+      ) : null, document.body) : null}
     </>
   );
 }

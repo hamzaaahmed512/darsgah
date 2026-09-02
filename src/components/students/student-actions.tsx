@@ -74,13 +74,13 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
 
   return (
     <>
-      <details className="group relative">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-outline/80 bg-white px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-surface-low">
+      <details className="group relative w-full min-w-0 sm:w-auto">
+        <summary className="flex min-h-11 w-full cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-outline/80 bg-white px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-surface-low sm:w-auto">
           <Download className="h-4 w-4" />
           Import & Export
           <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" />
         </summary>
-        <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-56 rounded-2xl border border-outline/70 bg-white p-2 shadow-lift">
+        <div className="absolute left-0 right-auto top-[calc(100%+8px)] z-30 w-full min-w-0 rounded-2xl border border-outline/70 bg-white p-2 shadow-lift sm:left-auto sm:right-0 sm:w-56">
           <button
             onClick={handleTemplate}
             type="button"

@@ -25,7 +25,7 @@ export function StudentPagination({ count, page, pageSize }: { count: number; pa
   return (
     <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-3.5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
       <p>Showing {first} to {last} of {count} students</p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <button type="button" onClick={() => navigate(page - 1)} disabled={page <= 1} aria-label="Previous page" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
         {visiblePages.map((item, index) => (
           <span key={item} className="contents">
@@ -34,7 +34,7 @@ export function StudentPagination({ count, page, pageSize }: { count: number; pa
           </span>
         ))}
         <button type="button" onClick={() => navigate(page + 1)} disabled={page >= pageCount} aria-label="Next page" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-        <select value={pageSize} onChange={(event) => navigate(1, Number(event.target.value))} aria-label="Students per page" className="ml-2 h-9 rounded-lg border border-slate-200 bg-white px-3 font-semibold text-slate-700">
+        <select value={pageSize} onChange={(event) => navigate(1, Number(event.target.value))} aria-label="Students per page" className="h-9 max-w-full rounded-lg border border-slate-200 bg-white px-2 font-semibold text-slate-700 sm:ml-2 sm:px-3">
           <option value={10}>10 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>
         </select>
       </div>

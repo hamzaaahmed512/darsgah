@@ -27,7 +27,7 @@ export default async function AdminPage() {
         title="Administrator Console"
         description="Manage user membership, role policy, and school-level settings without exposing service-role credentials."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" />
             <CreateRoleModal currentUserRole={user.role} />
           </div>

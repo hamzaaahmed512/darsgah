@@ -30,7 +30,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const pendingStudentRequests = pendingRequests.filter((request) => request.request_type === "admission" || request.request_type === "cancellation");
 
   return (
-    <>
+    <div className="min-w-0 max-w-full overflow-x-clip">
       <PageHeader
         eyebrow="People"
         title={
@@ -38,7 +38,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
         description={isTeacher ? "View the students enrolled in your assigned head class." : "Search, filter, profile, archive, and manage students within the current school tenant."}
         actions={
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             {hasPermission(user.role, "students:create", user.permissions) ? (
               <StudentActions filters={{ q: params.q, status: params.status ?? "active", classId: params.classId }} />
             ) : null}
@@ -60,7 +60,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         <span>{students.count} students enrolled</span>
       </div>
 
-      <Card className="mb-5 rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+      <Card className="mb-5 min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
         <Suspense>
           <StudentFilterForm classes={academics.classes} limitedView={isTeacher} />
         </Suspense>
@@ -86,6 +86,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         limitedView={isTeacher}
         pagination={{ count: students.count, page: students.page, pageSize: students.pageSize }}
       />
-    </>
+    </div>
   );
 }

@@ -48,7 +48,7 @@ export function StudentFormModal({
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" onClick={() => setOpen(true)} className="w-full sm:w-auto">
         <Plus className="h-4 w-4" />
         {triggerLabel}
       </Button>

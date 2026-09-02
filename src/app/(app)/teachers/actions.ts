@@ -17,6 +17,7 @@ export async function createStaffAction(values: StaffFormValues): Promise<StaffA
     await createStaffAccount(user, values);
     revalidatePath("/teachers");
     revalidatePath("/staff");
+    revalidatePath("/admin");
     return { success: true, error: null };
   } catch (error) {
     if (error instanceof StaffEmailAlreadyAssignedError) {

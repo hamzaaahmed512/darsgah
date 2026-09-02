@@ -151,14 +151,14 @@ export function AnnouncementBell({
 
       <div
         className={cn(
-          "fixed inset-x-3 top-[4.5rem] z-50 w-auto max-w-[calc(100vw-1.5rem)] rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:w-[360px]",
+          "fixed inset-x-3 bottom-3 top-[4.5rem] z-50 flex max-h-[calc(100dvh-5.25rem)] w-auto max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:block sm:max-h-none sm:w-[360px] sm:overflow-visible",
           open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
         )}
         role="dialog"
         aria-label="Announcements panel"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-outline px-4 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-outline px-4 py-4">
           <div>
             <p className="font-semibold text-ink">Notifications</p>
             {unreadCount > 0 && (
@@ -179,7 +179,7 @@ export function AnnouncementBell({
         </div>
 
         {/* Body */}
-        <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto sm:max-h-[400px]">
+        <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto sm:max-h-[400px]">
           {loading ? (
             <div className="py-10 text-center text-sm text-muted">Loading…</div>
           ) : loadError ? (
@@ -278,7 +278,7 @@ export function AnnouncementBell({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-outline px-4 py-3">
+        <div className="shrink-0 border-t border-outline bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:py-3">
           {canManage ? (
             <CreateAnnouncementDialog
               triggerLabel="Make Announcement"

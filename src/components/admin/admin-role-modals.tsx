@@ -53,20 +53,20 @@ function ModalShell({
   size?: "md" | "lg";
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 p-3 backdrop-blur-sm sm:p-4">
-      <div className={`flex max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden rounded-[20px] bg-white shadow-lift ring-1 ring-outline sm:max-h-[calc(100dvh-2rem)] ${size === "md" ? "max-w-lg" : "max-w-4xl"}`}>
-        <div className="border-b border-outline px-4 py-4 sm:px-6 sm:py-5">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className={`flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full flex-col overflow-hidden rounded-t-[20px] bg-white shadow-lift ring-1 ring-outline sm:max-h-[calc(100dvh-2rem)] sm:rounded-[20px] ${size === "md" ? "max-w-lg" : "max-w-4xl"}`}>
+        <div className="shrink-0 border-b border-outline px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0 flex-1">
               <h2 className="font-display text-xl font-bold text-ink">{title}</h2>
-              <p className="text-sm text-muted">{subtitle}</p>
+              <p className="mt-1 break-words text-sm leading-5 text-muted">{subtitle}</p>
             </div>
             <button type="button" onClick={onClose} className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink" aria-label="Close">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
-        <div className="overflow-y-auto p-4 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
           <div>
             {children}
           </div>
@@ -164,7 +164,7 @@ export function CreateRoleModal({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline bg-white px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:p-0">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
                 Cancel
               </Button>
@@ -178,7 +178,7 @@ export function CreateRoleModal({
 
   return (
     <>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+      <Button type="button" variant="secondary" onClick={() => setOpen(true)} className="w-full sm:w-auto">
         <Plus className="h-4 w-4" /> {triggerLabel}
       </Button>
       {mounted ? createPortal(modal, document.body) : null}
