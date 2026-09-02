@@ -46,7 +46,7 @@ export function StudentProfileTabs(props: Props) {
 
   return (
     <section className="mt-7">
-      <div className="scrollbar-thin overflow-x-auto border-b border-outline" role="tablist" aria-label="Student profile sections">
+      <div className="scrollbar-none overflow-x-auto border-b border-outline" role="tablist" aria-label="Student profile sections">
         <div className="flex min-w-max gap-1">
           {availableTabs.map((tab) => (
             <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} onClick={() => selectTab(tab.id)}

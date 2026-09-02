@@ -54,6 +54,15 @@ textarea {
   border-radius: 999px;
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 .sidebar-scroll {
   scrollbar-width: none;
 }
