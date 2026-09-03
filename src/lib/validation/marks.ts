@@ -33,7 +33,26 @@ export const examinationTypeLabels: Record<ExaminationExamType, string> = {
   third_term: "3rd Term"
 };
 
+// ─── Explicit output type ─────────────────────────────────────────────────────
+// Defined explicitly rather than inferred from the transform to give TypeScript
+// a concrete, non-union shape to work with in the service layer.
+
+export interface ParsedExamValues {
+  assessment_category: "general" | "examination";
+  class_id: string;
+  subject_id: string;
+  exam_type: string;
+  title: string;
+  term: string;
+  month: number | null;
+  exam_date: string;
+  max_marks: number;
+}
+
 // ─── Discriminated Union Schema ───────────────────────────────────────────────
+// NOTE: z.discriminatedUnion members must be plain ZodObject — not ZodEffects.
+// Month validation therefore lives in the outer .superRefine(), not inside
+// the examinationSchema branch.
 
 const generalAssessmentSchema = z.object({
   assessment_category: z.literal("general"),
@@ -61,7 +80,10 @@ const examinationSchema = z.object({
   title: z.string().trim().max(120).default(""),
   /** Hidden from UI — sent as empty string to satisfy DB column. */
   term: z.string().trim().max(80).default(""),
-  /** Always null — month selector is removed from the UI. */
+  /**
+   * Required when exam_type is "monthly"; null for all other examination types.
+   * Collected from the UI Month dropdown only when Monthly Test is selected.
+   */
   month: z.coerce.number().int().min(1).max(12).optional().nullable(),
   exam_date: z.string().date(),
   max_marks: z.coerce.number().positive("Max marks must be greater than zero").max(1000)
@@ -69,16 +91,27 @@ const examinationSchema = z.object({
 
 export const examSchema = z
   .discriminatedUnion("assessment_category", [generalAssessmentSchema, examinationSchema])
-  .transform((value) => {
+  // Month validation runs here — AFTER discriminatedUnion (which requires bare ZodObjects).
+  .superRefine((value, ctx) => {
+    if (value.assessment_category === "examination" && value.exam_type === "monthly" && !value.month) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["month"],
+        message: "Please select a month for the monthly test."
+      });
+    }
+  })
+  .transform((value): ParsedExamValues => {
     if (value.assessment_category === "examination") {
-      // Auto-derive title from the selected exam type label
       return {
         ...value,
-        title: examinationTypeLabels[value.exam_type] ?? String(value.exam_type),
-        month: null
+        // Auto-derive title from the selected exam type label
+        title: examinationTypeLabels[value.exam_type as ExaminationExamType] ?? String(value.exam_type),
+        // Preserve month for monthly exams; null for all other examination types
+        month: value.exam_type === "monthly" ? (value.month ?? null) : null
       };
     }
-    // General assessment: clear month (not collected from UI)
+    // General assessment: month is never collected from the UI
     return { ...value, month: null };
   });
 
@@ -103,5 +136,4 @@ export const approvalDecisionSchema = z.object({
 });
 
 export type ExamFormValues = z.input<typeof examSchema>;
-export type ParsedExamValues = z.output<typeof examSchema>;
 export type MarkEntryValues = z.infer<typeof markEntrySchema>;

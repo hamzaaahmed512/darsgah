@@ -22,15 +22,19 @@ export async function createExamAction(formData: FormData) {
   let payload: Record<string, unknown>;
 
   if (assessmentCategory === "examination") {
+    const examType = String(formData.get("exam_type") ?? "");
+    // Month is only collected from the UI when exam_type is "monthly"
+    const rawMonth = formData.get("month");
+    const month = examType === "monthly" && rawMonth ? Number(rawMonth) : null;
     // Examination: user selects exam_type; title is auto-derived by the schema transform
     payload = {
       assessment_category: "examination",
       class_id: String(formData.get("class_id") ?? ""),
       subject_id: String(formData.get("subject_id") ?? ""),
-      exam_type: String(formData.get("exam_type") ?? ""),
+      exam_type: examType,
       title: "", // auto-derived by examSchema transform
       term: "",
-      month: null,
+      month,
       exam_date: String(formData.get("exam_date") ?? ""),
       max_marks: Number(formData.get("max_marks") ?? 0)
     };

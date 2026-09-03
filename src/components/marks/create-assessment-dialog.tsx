@@ -26,6 +26,21 @@ const EXAMINATION_TYPE_OPTIONS: { value: ExaminationExamType; label: string }[] 
   Object.entries(examinationTypeLabels) as [ExaminationExamType, string][]
 ).map(([value, label]) => ({ value, label }));
 
+const MONTH_OPTIONS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" }
+];
+
 export function CreateAssessmentDialog({
   classId,
   subjectId
@@ -35,8 +50,54 @@ export function CreateAssessmentDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<AssessmentCategory>("general");
+  const [examinationType, setExaminationType] = useState<ExaminationExamType>("monthly");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [monthError, setMonthError] = useState(false);
 
   const isGeneral = category === "general";
+  const isMonthlyTest = !isGeneral && examinationType === "monthly";
+
+  function handleCategoryChange(next: AssessmentCategory) {
+    setCategory(next);
+    // Reset month-related state when switching away from examination
+    if (next !== "examination") {
+      setSelectedMonth("");
+      setMonthError(false);
+    }
+  }
+
+  function handleExaminationTypeChange(next: ExaminationExamType) {
+    setExaminationType(next);
+    // Clear month selection when switching away from Monthly Test
+    if (next !== "monthly") {
+      setSelectedMonth("");
+      setMonthError(false);
+    }
+  }
+
+  function handleMonthChange(value: string) {
+    setSelectedMonth(value);
+    if (value) setMonthError(false);
+  }
+
+  function handleClose() {
+    setOpen(false);
+    // Reset all dynamic state on close
+    setCategory("general");
+    setExaminationType("monthly");
+    setSelectedMonth("");
+    setMonthError(false);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Client-side guard: Month is required for Monthly Test
+    if (isMonthlyTest && !selectedMonth) {
+      e.preventDefault();
+      setMonthError(true);
+      return;
+    }
+    setMonthError(false);
+  }
 
   return (
     <>
@@ -56,7 +117,7 @@ export function CreateAssessmentDialog({
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
                 className="rounded-lg p-2 text-muted hover:bg-surface-low hover:text-ink"
                 aria-label="Close"
               >
@@ -64,7 +125,7 @@ export function CreateAssessmentDialog({
               </button>
             </div>
 
-            <form action={createExamAction} className="grid gap-4 p-5">
+            <form action={createExamAction} onSubmit={handleSubmit} className="grid gap-4 p-5">
               {/* Hidden identifiers */}
               <input type="hidden" name="class_id" value={classId} />
               <input type="hidden" name="subject_id" value={subjectId} />
@@ -89,7 +150,7 @@ export function CreateAssessmentDialog({
                         name="_ui_category"
                         value={option.value}
                         checked={checked}
-                        onChange={() => setCategory(option.value)}
+                        onChange={() => handleCategoryChange(option.value)}
                         className="sr-only"
                       />
                       <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
@@ -119,7 +180,12 @@ export function CreateAssessmentDialog({
               {/* ── Examination: Examination Type dropdown ── */}
               {!isGeneral && (
                 <Field label="Examination type">
-                  <Select name="exam_type" defaultValue="monthly" required>
+                  <Select
+                    name="exam_type"
+                    value={examinationType}
+                    onChange={(e) => handleExaminationTypeChange(e.target.value as ExaminationExamType)}
+                    required
+                  >
                     {EXAMINATION_TYPE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
@@ -127,6 +193,35 @@ export function CreateAssessmentDialog({
                     ))}
                   </Select>
                 </Field>
+              )}
+
+              {/* ── Monthly Test: Month dropdown ── */}
+              {isMonthlyTest && (
+                <div className="grid gap-1">
+                  <Field label="Month *">
+                    <Select
+                      name="month"
+                      value={selectedMonth}
+                      onChange={(e) => handleMonthChange(e.target.value)}
+                      aria-describedby={monthError ? "month-error" : undefined}
+                      aria-invalid={monthError}
+                    >
+                      <option value="" disabled>
+                        Select month…
+                      </option>
+                      {MONTH_OPTIONS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  {monthError && (
+                    <p id="month-error" className="text-xs font-medium text-red-600" role="alert">
+                      Please select a month for the monthly test.
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* ── Shared: Date + Max Marks ── */}
@@ -153,7 +248,7 @@ export function CreateAssessmentDialog({
 
               {/* ── Actions ── */}
               <div className="flex justify-end gap-2 pt-1">
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                <Button type="button" variant="secondary" onClick={handleClose}>
                   Cancel
                 </Button>
                 <Button type="submit">Create</Button>
