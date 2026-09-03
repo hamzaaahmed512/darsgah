@@ -1,27 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { createExam, saveMarks, submitExamForApproval } from "@/lib/services/marks";
 
-function getAssessmentRedirectBase(referer: string | null) {
-  if (!referer) return "/academics/exams-setup";
-  try {
-    return new URL(referer).pathname.startsWith("/admin/academic-control") ? "/admin/academic-control" : "/academics/exams-setup";
-  } catch {
-    return "/academics/exams-setup";
-  }
-}
-
 export async function createExamAction(formData: FormData) {
-  const user = await requireUser("academics:view");
-  const assessmentCategory = String(formData.get("assessment_category") ?? "general");
+  try {
+    const user = await requireUser("academics:view");
+    const assessmentCategory = String(formData.get("assessment_category") ?? "general");
 
-  let payload: Record<string, unknown>;
+    let payload: Record<string, unknown>;
 
-  if (assessmentCategory === "examination") {
+    if (assessmentCategory === "examination") {
     const examType = String(formData.get("exam_type") ?? "");
     // Month is only collected from the UI when exam_type is "monthly"
     const rawMonth = formData.get("month");
@@ -38,7 +28,7 @@ export async function createExamAction(formData: FormData) {
       exam_date: String(formData.get("exam_date") ?? ""),
       max_marks: Number(formData.get("max_marks") ?? 0)
     };
-  } else {
+    } else {
     // General Assessment: user provides a free-form title; exam_type fixed to "quiz"
     payload = {
       assessment_category: "general",
@@ -51,17 +41,18 @@ export async function createExamAction(formData: FormData) {
       exam_date: String(formData.get("exam_date") ?? ""),
       max_marks: Number(formData.get("max_marks") ?? 0)
     };
+    }
+
+    await createExam(user, payload as any);
+
+    revalidatePath("/marks");
+    revalidatePath("/academics/exams-setup");
+    revalidatePath("/admin/academic-control");
+    revalidatePath("/results");
+    return { success: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Assessment could not be created." };
   }
-
-  await createExam(user, payload as any);
-
-  revalidatePath("/marks");
-  revalidatePath("/academics/exams-setup");
-  revalidatePath("/admin/academic-control");
-  revalidatePath("/results");
-  const headerStore = await headers();
-  const redirectBase = getAssessmentRedirectBase(headerStore.get("referer"));
-  redirect(`${redirectBase}?classId=${formData.get("class_id")}&subjectId=${formData.get("subject_id")}`);
 }
 
 export async function saveMarksAction(formData: FormData) {

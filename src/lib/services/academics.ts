@@ -35,7 +35,9 @@ export async function getAcademicOptions(user: AppUser) {
     supabase.from("academic_years").select("*").eq("school_id", user.schoolId).order("starts_on", { ascending: false }),
     supabase.from("grades").select("*").eq("school_id", user.schoolId).order("sort_order"),
     supabase.from("sections").select("*").eq("school_id", user.schoolId).order("name"),
-    supabase.from("subjects").select("*").eq("school_id", user.schoolId).is("archived_at", null).order("name"),
+    // Filter archived subjects in memory so this read remains compatible while
+    // the archived_at migration is rolling out across environments.
+    supabase.from("subjects").select("*").eq("school_id", user.schoolId).order("name"),
     supabase
       .from("classes")
       .select("id,name,room,grade_id,section_id,academic_year_id,head_teacher_id,major_count,default_major,class_allowed_majors(major_key),grades(name),sections(name),academic_years(name),head_teacher:profiles!classes_head_teacher_id_fkey(full_name,email)")
@@ -43,7 +45,8 @@ export async function getAcademicOptions(user: AppUser) {
       .order("name")
   ]);
 
-  const subjectCatalog = [...new Map((subjects.data ?? []).map((subject) => [canonicalSubjectName(subject.name), subject])).values()];
+  const activeSubjects = (subjects.data ?? []).filter((subject: any) => !subject.archived_at);
+  const subjectCatalog = [...new Map(activeSubjects.map((subject) => [canonicalSubjectName(subject.name), subject])).values()];
 
   return {
     years: years.data ?? [],

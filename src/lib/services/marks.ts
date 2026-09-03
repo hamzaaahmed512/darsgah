@@ -101,6 +101,9 @@ async function getGradeScale(user: AppUser): Promise<GradeScale[]> {
     .order("sort_order");
 
   if (isMissingCurrentExamWorkflow(error)) throw new Error(examWorkflowMigrationMessage());
+  if (error?.code === "23505" && (error.message.includes("exams_school_natural_key_idx") || error.message.includes("duplicate key"))) {
+    throw new Error("This assessment already exists for the selected class, subject, type, date, and title. Open the existing assessment instead.");
+  }
   if (error) throw new Error(error.message);
   return data?.length ? data.map((row: any) => ({ ...row, min_percentage: Number(row.min_percentage), max_percentage: Number(row.max_percentage) })) : defaultGradeScale;
 }
@@ -193,7 +196,10 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
   const admin = createAdminClient();
   const [classResult, subjectResult, enrollmentResult, directResult] = await Promise.all([
     admin.from("classes").select("id,grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
-    admin.from("subjects").select("id,name,is_elective").eq("school_id", user.schoolId).eq("id", subjectId).is("archived_at", null).maybeSingle(),
+    // Select the complete row and inspect archived_at in memory. This keeps the
+    // assessment page available during deployments where the migration has not
+    // reached the database yet.
+    admin.from("subjects").select("*").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
     admin.from("enrollments").select("student_id,students(id,first_name,last_name,admission_number,major,status)").eq("school_id", user.schoolId).eq("class_id", classId).eq("status", "active"),
     admin.from("student_subject_enrollments").select("student_id").eq("school_id", user.schoolId).eq("class_id", classId).eq("subject_id", subjectId)
   ]);
@@ -202,7 +208,7 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
   if (subjectResult.error) throw new Error(subjectResult.error.message);
   if (enrollmentResult.error) throw new Error(enrollmentResult.error.message);
   if (directResult.error) throw new Error(directResult.error.message);
-  if (!classResult.data || !subjectResult.data) return [];
+  if (!classResult.data || !subjectResult.data || (subjectResult.data as any).archived_at) return [];
 
   const gradeName = (classResult.data as any).grades?.name ?? "";
   const subject = subjectResult.data as any;

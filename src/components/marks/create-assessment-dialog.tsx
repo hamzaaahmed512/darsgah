@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ClipboardList, Plus, X } from "lucide-react";
 import { createExamAction } from "@/app/(app)/marks/actions";
 import { examinationTypeLabels, type ExaminationExamType } from "@/lib/validation/marks";
@@ -53,6 +54,9 @@ export function CreateAssessmentDialog({
   const [examinationType, setExaminationType] = useState<ExaminationExamType>("monthly");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [monthError, setMonthError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const isGeneral = category === "general";
   const isMonthlyTest = !isGeneral && examinationType === "monthly";
@@ -87,6 +91,7 @@ export function CreateAssessmentDialog({
     setExaminationType("monthly");
     setSelectedMonth("");
     setMonthError(false);
+    setError(null);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -97,6 +102,18 @@ export function CreateAssessmentDialog({
       return;
     }
     setMonthError(false);
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await createExamAction(formData);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      handleClose();
+      router.refresh();
+    });
   }
 
   return (
@@ -125,7 +142,8 @@ export function CreateAssessmentDialog({
               </button>
             </div>
 
-            <form action={createExamAction} onSubmit={handleSubmit} className="grid gap-4 p-5">
+            <form onSubmit={handleSubmit} className="grid gap-4 p-5">
+              {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
               {/* Hidden identifiers */}
               <input type="hidden" name="class_id" value={classId} />
               <input type="hidden" name="subject_id" value={subjectId} />
@@ -248,10 +266,10 @@ export function CreateAssessmentDialog({
 
               {/* ── Actions ── */}
               <div className="flex justify-end gap-2 pt-1">
-                <Button type="button" variant="secondary" onClick={handleClose}>
+                <Button type="button" variant="secondary" onClick={handleClose} disabled={pending}>
                   Cancel
                 </Button>
-                <Button type="submit">Create</Button>
+                <Button type="submit" disabled={pending}>{pending ? "Creating…" : "Create"}</Button>
               </div>
             </form>
           </div>
