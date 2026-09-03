@@ -16,6 +16,7 @@ import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 import { getCombinationOptionsForClass } from "@/lib/services/student-combinations";
 import { isSubjectExcludedForMajor, type StudentCombinationOption } from "@/lib/student-majors";
+import { hasPermission } from "@/lib/permissions";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -615,7 +616,7 @@ export async function reviewExamApproval(user: AppUser, approvalId: string, deci
 }
 
 export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; examType?: ExamType; month?: number } = {}) {
-  if (user.role !== "student_staff") throw new Error("Only the Registrar can generate result cards.");
+  if (!hasPermission(user.role, "results:generate", user.permissions)) throw new Error("You do not have permission to generate result cards.");
   const supabase = await createClient();
   const examType = requiredResultExamTypes.includes(filters.examType as ExamType) ? filters.examType as ExamType : "monthly";
   const month = examType === "monthly" ? filters.month ?? new Date().getMonth() + 1 : undefined;
@@ -769,6 +770,9 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
     return {
       complete: false,
       missing: [examWorkflowMigrationMessage()],
+      approvedCount: 0,
+      totalSubjects: 0,
+      status: "pending" as const,
       examType,
       month,
       students: (students.data ?? [])
@@ -791,6 +795,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
   }
 
   const approvedSubjects = new Set((exams.data ?? []).map((exam: any) => exam.subject_id));
+  const approvedAssignedCount = [...subjectMap.keys()].filter((subjectId) => approvedSubjects.has(subjectId)).length;
   const missing: string[] = [];
   for (const [subjectId, subjectName] of subjectMap.entries()) {
     if (!approvedSubjects.has(subjectId)) missing.push(`${subjectName} ${formatExamType(examType)}`);
@@ -799,6 +804,9 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
   return {
     complete: subjectMap.size > 0 && missing.length === 0,
     missing,
+    approvedCount: approvedAssignedCount,
+    totalSubjects: subjectMap.size,
+    status: approvedAssignedCount === 0 ? "pending" as const : missing.length === 0 ? "complete" as const : "partial" as const,
     examType,
     month,
     students: (students.data ?? [])
@@ -812,7 +820,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
 }
 
 export async function getPrintableResultCards(user: AppUser, filters: { classId: string; examType: ExamType; month?: number; studentId?: string }) {
-  if (user.role !== "student_staff") throw new Error("Only the registrar can print official result cards.");
+  if (!hasPermission(user.role, "results:generate", user.permissions)) throw new Error("You do not have permission to generate result cards.");
   if (!requiredResultExamTypes.includes(filters.examType)) throw new Error("Result cards are limited to the four approved exam types.");
   if (filters.examType === "monthly" && (!filters.month || filters.month < 1 || filters.month > 12)) throw new Error("Choose a valid month.");
   const supabase = await createClient();
@@ -842,8 +850,6 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
   };
   const branding = { logoUrl: typeof schoolSettings.schoolLogoUrl === "string" ? schoolSettings.schoolLogoUrl : "" };
 
-  if (!readiness.complete) return { complete: false, missing: readiness.missing, classRow, cards: [], template, branding };
-
   let studentsQuery = supabase
     .from("enrollments")
     .select("students(id,first_name,last_name,admission_number)")
@@ -865,7 +871,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     .eq("exams.approval_status", "approved")
     .order("student_id");
   let examsQuery = supabase.from("exams")
-    .select("id,subject_id,title,exam_type,month,max_marks")
+    .select("id,subject_id,title,exam_type,month,max_marks,subjects(name)")
     .eq("school_id", user.schoolId)
     .eq("class_id", filters.classId)
     .eq("exam_type", filters.examType)
@@ -960,9 +966,19 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
       totalObtained,
       totalMax,
       percentage: percentage(totalObtained, totalMax),
-      overallGrade: calculateGrade(totalObtained, totalMax)
+      overallGrade: totalMax > 0 ? calculateGrade(totalObtained, totalMax) : "Pending"
     };
   });
 
-  return { complete: true, missing: [], classRow, cards, template, branding };
+  return {
+    complete: readiness.complete,
+    missing: readiness.missing,
+    approvedCount: readiness.approvedCount ?? 0,
+    totalSubjects: readiness.totalSubjects ?? 0,
+    status: readiness.status ?? "pending",
+    classRow,
+    cards,
+    template,
+    branding
+  };
 }

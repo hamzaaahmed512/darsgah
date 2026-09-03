@@ -34,10 +34,11 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const status = (params.status as ResultWorkflowStatus | "all" | undefined) ?? "all";
   const view = params.view ?? (user.role === "student_staff" ? "cards" : "management");
   const canViewOwnClassResults = user.role === "principal" && await principalCanAccessAcademicControl(user);
+  const canGenerateCards = hasPermission(user.role, "results:generate", user.permissions);
 
   const [results, cardsWorkspace] = await Promise.all([
     getResultsManagementWorkspace(user, { classId: params.classId, term: params.term, status }),
-    user.role === "student_staff" && hasPermission(user.role, "results:generate", user.permissions)
+    canGenerateCards
       ? getResultCardsWorkspace(user, {
           classId: params.classId,
           examType: params.examType as any,
@@ -47,7 +48,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   ]);
 
   const pendingCount = results.filter((row) => row.workflowStatus === "pending_approval").length;
-  const showCards = user.role === "student_staff" || view === "cards";
+  const showCards = canGenerateCards && (user.role === "student_staff" || view === "cards");
 
   return (
     <>
@@ -77,7 +78,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         </div>
       ) : null}
 
-      {user.role === "student_staff" ? (
+      {canGenerateCards ? (
         <div className="mb-5 flex flex-wrap gap-2">
           <Link
             href="/results?view=management"
@@ -105,7 +106,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         </Card>
       ) : null}
 
-      {!showCards || user.role !== "student_staff" ? (
+      {!showCards ? (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>{user.role === "teacher" ? "Uploaded Results" : user.role === "principal" ? "Major Examination Review" : "Result Register"}</CardTitle>

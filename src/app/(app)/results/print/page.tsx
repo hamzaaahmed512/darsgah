@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrintableResultCards } from "@/lib/services/marks";
 import type { ExamType } from "@/types/database";
 import { formatClassDisplayName } from "@/lib/utils";
+import { PrintButton } from "@/app/(app)/results/print/print-button";
 
 export default async function PrintableResultsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -21,17 +22,18 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
           <h1 className="font-display text-3xl font-bold">Printable Result Cards</h1>
           <p className="text-sm text-muted">Use the browser print dialog for paper output or choose Save as PDF.</p>
         </div>
-        <div className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white print:hidden">
-          Print / Save PDF
-        </div>
+        <PrintButton />
       </div>
 
       {!result.complete ? (
-        <div className="rounded-lg bg-warning-soft p-4 font-semibold text-warning">
-          Result cards are not ready. Missing: {result.missing.join(", ")}
+        <div className="rounded-lg bg-warning-soft p-4 text-sm font-semibold text-warning print:hidden">
+          {result.status === "pending"
+            ? "No subject results have been approved yet. These cards contain no finalized subject results."
+            : `${result.missing.length} subject${result.missing.length === 1 ? " is" : "s are"} still missing or pending approval: ${result.missing.join(", ")}`}
         </div>
-      ) : (
-        result.cards.map((card) => (
+      ) : null}
+
+      {result.cards.map((card) => (
           <article
             key={card.student.id}
             className={`relative break-after-page rounded-xl border border-outline/50 ${template.layout === "compact" ? "p-4" : "p-6"} print:rounded-none print:border-0`}
@@ -110,8 +112,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
             ) : null}
             <p className="mt-8 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Powered by getdarsgah.com</p>
           </article>
-        ))
-      )}
+      ))}
     </div>
   );
 }

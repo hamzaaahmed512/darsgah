@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import {
   Activity,
   Banknote,
@@ -22,6 +23,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission, type Permission } from "@/lib/permissions";
 import { currentMonthKey } from "@/lib/services/payroll";
+import { cn } from "@/lib/utils";
 
 type ReportAction = {
   label: string;
@@ -245,11 +247,14 @@ function canSeeReport(user: Awaited<ReturnType<typeof requireUser>>, report: Rep
   return true;
 }
 
-export default async function ReportsPage() {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ area?: string }> }) {
   const user = await requireUser("reports:view");
+  const params = await searchParams;
   const month = currentMonthKey();
   const reports = reportCatalog(month, todayKey()).filter((report) => canSeeReport(user, report));
   const areas = Array.from(new Set(reports.map((report) => report.area)));
+  const selectedArea = areas.includes(params.area ?? "") ? params.area! : "all";
+  const visibleReports = selectedArea === "all" ? reports : reports.filter((report) => report.area === selectedArea);
 
   return (
     <>
@@ -259,60 +264,61 @@ export default async function ReportsPage() {
         description="Generate quick reports from one place without loading large registers into this page."
       />
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {areas.map((area) => (
-          <Badge key={area} tone="blue">{area}</Badge>
-        ))}
+      <div className="scrollbar-none -mx-4 mb-5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" aria-label="Report categories">
+        <nav className="flex min-w-max gap-2" aria-label="Filter reports by category">
+          {["all", ...areas].map((area) => {
+            const active = selectedArea === area;
+            const label = area === "all" ? "All reports" : area;
+            return <Link
+              key={area}
+              href={area === "all" ? "/reports" : `/reports?area=${encodeURIComponent(area)}`}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "inline-flex min-h-10 items-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition",
+                active ? "border-primary bg-primary text-white shadow-sm" : "border-outline bg-white text-muted hover:border-primary/40 hover:text-primary"
+              )}
+            >{label}</Link>;
+          })}
+        </nav>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="hidden grid-cols-[minmax(260px,1.35fr)_180px_190px_260px] gap-4 border-b border-outline/70 bg-surface-low px-5 py-3 font-label text-xs uppercase tracking-wide text-muted lg:grid">
-          <span>Report</span>
-          <span>Area</span>
-          <span>Formats</span>
-          <span className="text-right">Actions</span>
-        </div>
-        <div className="divide-y divide-outline/70">
-          {reports.map((report) => (
-            <ReportRow key={report.title} report={report} />
-          ))}
-        </div>
-      </Card>
+      <p className="mb-4 text-sm font-medium text-muted">Showing {visibleReports.length} report{visibleReports.length === 1 ? "" : "s"}</p>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-live="polite">
+        {visibleReports.map((report) => <ReportCard key={report.title} report={report} />)}
+      </section>
     </>
   );
 }
 
-function ReportRow({ report }: { report: ReportItem }) {
+function ReportCard({ report }: { report: ReportItem }) {
   const Icon = report.icon;
   return (
-    <div className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(260px,1.35fr)_180px_190px_260px] lg:items-center">
-      <div className="flex min-w-0 gap-4">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+    <Card className="flex min-w-0 flex-col overflow-hidden p-5 sm:p-6">
+      <div className="flex min-w-0 items-start gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-base font-bold text-ink">{report.title}</h2>
-          <p className="mt-1 text-sm leading-5 text-muted">{report.description}</p>
+        <div className="min-w-0 flex-1">
+          <Badge>{report.area}</Badge>
+          <h2 className="mt-3 break-words font-display text-lg font-bold leading-snug text-ink">{report.title}</h2>
         </div>
       </div>
-      <div>
-        <Badge>{report.area}</Badge>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
+      <p className="mt-4 flex-1 text-sm leading-6 text-muted">{report.description}</p>
+      <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Available formats">
         {report.formats.map((format) => (
           <span key={format} className="rounded-md bg-surface-low px-2 py-1 text-xs font-semibold text-muted ring-1 ring-outline/60">
             {format}
           </span>
         ))}
       </div>
-      <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
+      <div className="mt-5 grid gap-2 border-t border-outline/60 pt-4 min-[420px]:flex min-[420px]:flex-wrap">
         {report.actions.map((action) => (
-          <ButtonLink key={`${report.title}-${action.label}`} href={action.href} variant={action.kind === "open" ? "secondary" : "primary"} size="sm" target={action.external ? "_blank" : undefined}>
+          <ButtonLink key={`${report.title}-${action.label}`} href={action.href} variant={action.kind === "open" ? "secondary" : "primary"} size="sm" target={action.external ? "_blank" : undefined} className="w-full justify-center min-[420px]:w-auto">
             {action.kind === "csv" ? <Download className="h-4 w-4" aria-hidden="true" /> : action.kind === "print" ? <Printer className="h-4 w-4" aria-hidden="true" /> : <ExternalLink className="h-4 w-4" aria-hidden="true" />}
             {action.label}
           </ButtonLink>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

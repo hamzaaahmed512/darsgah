@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser, UserRole } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
 import { staffFormSchema, type StaffFormValues } from "@/lib/validation/staff";
+import { hasPermission } from "@/lib/permissions";
 
 export const STAFF_EMAIL_ALREADY_ASSIGNED_MESSAGE = "This email address is already assigned to this school.";
 
@@ -198,7 +199,7 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
 }
 
 export async function setStaffSalary(user: AppUser, staffId: string, salary: number) {
-  if (user.role !== "administrator" && user.role !== "principal") throw new Error("Only administrators and principals can set salaries.");
+  if (!hasPermission(user.role, "payroll:manage", user.permissions)) throw new Error("You do not have permission to manage payroll.");
   const parsedSalary = staffFormSchema.pick({ salary: true }).parse({ salary }).salary;
   const supabase = await createClient();
   const { error } = await supabase.from("teacher_employment_details").upsert({

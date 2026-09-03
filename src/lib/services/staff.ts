@@ -4,6 +4,9 @@ import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { logActivity } from "@/lib/services/activity";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { formatDisplayName } from "@/lib/student-name";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { hasPermission } from "@/lib/permissions";
+import { staffProfileUpdateSchema, type StaffProfileUpdateValues } from "@/lib/validation/staff";
 
 function isMissingOtherStaffTable(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.other_staff_records");
@@ -86,6 +89,40 @@ export async function getStaffProfile(user: AppUser, staffId: string) {
   };
 }
 
+export async function updateStaffProfile(user: AppUser, staffId: string, values: StaffProfileUpdateValues) {
+  if (!hasPermission(user.role, "staff:manage", user.permissions)) throw new Error("You do not have permission to edit staff profiles.");
+  const parsed = staffProfileUpdateSchema.parse(values);
+  const admin = createAdminClient();
+  const { data: target, error: targetError } = await admin
+    .from("school_members")
+    .select("id,role")
+    .eq("school_id", user.schoolId)
+    .eq("user_id", staffId)
+    .maybeSingle();
+  if (targetError) throw new Error(targetError.message);
+  if (!target) throw new Error("Staff member not found.");
+  if (user.role === "principal" && target.role === "administrator") {
+    throw new Error("Principals cannot edit administrator profiles.");
+  }
+
+  const [{ error: profileError }, { error: memberError }] = await Promise.all([
+    admin.from("profiles").update({
+      full_name: parsed.fullName,
+      phone: formatPakistaniPhoneForStorage(parsed.phone),
+      personal_email: parsed.personalEmail || null
+    }).eq("id", staffId),
+    admin.from("school_members").update({
+      department: parsed.department || null,
+      job_title: parsed.jobTitle || null
+    }).eq("school_id", user.schoolId).eq("user_id", staffId)
+  ]);
+  if (profileError) throw new Error(profileError.message);
+  if (memberError) throw new Error(memberError.message);
+  await logActivity(user, "staff_profile_updated", "school_member", target.id, {
+    fields: ["full_name", "phone", "personal_email", "department", "job_title"]
+  });
+}
+
 export async function createOtherStaffRecord(user: AppUser, values: {
   fullName: string;
   category: OtherStaffCategory;
@@ -120,7 +157,7 @@ export async function createOtherStaffRecord(user: AppUser, values: {
 }
 
 export async function setOtherStaffSalary(user: AppUser, staffId: string, salary: number) {
-  if (!canManageOtherStaff(user)) throw new Error("Only administrators and principals can set salaries.");
+  if (!hasPermission(user.role, "payroll:manage", user.permissions)) throw new Error("You do not have permission to manage payroll.");
   if (!Number.isFinite(salary) || salary < 0) throw new Error("Salary must be zero or greater.");
   const supabase = await createClient();
   const { error } = await supabase

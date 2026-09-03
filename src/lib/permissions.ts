@@ -54,6 +54,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "students:archive",
     "attendance:view",
     "staff:view",
+    "staff:manage",
     "academics:view",
     "marks:approve",
     "results:view",
@@ -174,6 +175,9 @@ export function hasPermission(role: UserRole | undefined, permission: Permission
     return true;
   }
   if (permission === "users:manage" && (role === "principal" || role === "administrator")) {
+    return true;
+  }
+  if (permission === "staff:manage" && (role === "principal" || role === "administrator")) {
     return true;
   }
   // If we have a resolved permission list from the DB, use that

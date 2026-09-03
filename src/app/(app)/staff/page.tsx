@@ -11,9 +11,7 @@ import { hasPermission } from "@/lib/permissions";
 import { StaffFormModal } from "@/components/teachers/staff-form";
 import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
-import { StaffSalaryForm } from "@/components/staff/staff-salary-form";
 import { OtherStaffFormModal } from "@/components/staff/other-staff-form";
-import { OtherStaffSalaryForm } from "@/components/staff/other-staff-salary-form";
 import { ButtonLink } from "@/components/ui/button";
 import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 
@@ -49,9 +47,6 @@ export default async function StaffPage({
     .order("name");
 
   const staff = await getStaff(user, params.role ?? "all", params.q ?? "");
-  const canManageSalary = user.role === "administrator" || user.role === "principal";
-  const { data: salaryRows } = canManageSalary ? await supabase.from("teacher_employment_details").select("teacher_id,monthly_salary").eq("school_id", user.schoolId) : { data: [] };
-  const salaryByStaff = new Map((salaryRows ?? []).map((row: any) => [row.teacher_id, Number(row.monthly_salary)]));
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
@@ -152,17 +147,6 @@ export default async function StaffPage({
                     </p>
                   </div>
                 </div>
-                {canManageSalary && member.is_record_only ? (
-                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                    <p className="mb-4 font-label text-xs font-bold uppercase tracking-wide text-muted">Monthly Salary</p>
-                    <OtherStaffSalaryForm staffId={member.member_id} initialSalary={member.monthly_salary} />
-                  </div>
-                ) : canManageSalary ? (
-                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                    <p className="mb-4 font-label text-xs font-bold uppercase tracking-wide text-muted">Monthly Salary</p>
-                    <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} />
-                  </div>
-                ) : null}
                 {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm" className="min-w-[152px] justify-center rounded-2xl">View full profile</ButtonLink></div> : null}
               </div>
             </details>

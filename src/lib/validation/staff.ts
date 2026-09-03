@@ -28,4 +28,16 @@ export const otherStaffRecordSchema = z.object({
   monthlySalary: z.number().finite().nonnegative().optional().nullable()
 });
 
+export const staffProfileUpdateSchema = z.object({
+  fullName: englishNameSchema("Full name", 100, 2),
+  phone: z.string().trim().max(40).optional().nullable(),
+  personalEmail: z.preprocess(
+    (value) => value === "" || value == null ? null : value,
+    z.string().trim().toLowerCase().email("Enter a valid personal email").nullable()
+  ),
+  department: z.string().trim().max(100).optional().nullable(),
+  jobTitle: z.string().trim().max(100).optional().nullable()
+});
+
 export type StaffFormValues = z.infer<typeof staffFormSchema>;
+export type StaffProfileUpdateValues = z.infer<typeof staffProfileUpdateSchema>;

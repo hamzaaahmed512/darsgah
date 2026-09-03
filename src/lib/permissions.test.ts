@@ -9,6 +9,12 @@ describe("role permissions", () => {
     expect(hasPermission("principal", "settings:manage", [])).toBe(true);
   });
 
+  it("allows principals to edit staff profiles", () => {
+    expect(hasPermission("principal", "staff:manage")).toBe(true);
+    expect(hasPermission("principal", "staff:manage", [])).toBe(true);
+    expect(hasPermission("teacher", "staff:manage")).toBe(false);
+  });
+
   it("lets teachers view their own operational work without student management rights", () => {
     expect(hasPermission("teacher", "students:create")).toBe(false);
     expect(hasPermission("teacher", "students:archive")).toBe(false);

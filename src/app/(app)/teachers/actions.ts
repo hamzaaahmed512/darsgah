@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { createStaffAccount, updateStaffStatus, assignTeacherToClass, setStaffSalary, StaffEmailAlreadyAssignedError } from "@/lib/services/teachers";
-import { createOtherStaffRecord, setOtherStaffSalary } from "@/lib/services/staff";
+import { createOtherStaffRecord, setOtherStaffSalary, updateStaffProfile } from "@/lib/services/staff";
 import type { OtherStaffCategory } from "@/lib/constants/staff";
 import { otherStaffRecordSchema, type StaffFormValues } from "@/lib/validation/staff";
+import type { StaffProfileUpdateValues } from "@/lib/validation/staff";
 
 type StaffActionResult =
   | { success: true; error: null; field?: never }
@@ -45,8 +46,20 @@ export async function updateStatusAction(memberId: string, status: "active" | "d
   revalidatePath("/staff");
 }
 
+export async function updateStaffProfileAction(staffId: string, values: StaffProfileUpdateValues) {
+  try {
+    const user = await requireUser("staff:manage");
+    await updateStaffProfile(user, staffId, values);
+    revalidatePath("/staff");
+    revalidatePath(`/staff/${staffId}`);
+    return { success: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Staff profile could not be updated." };
+  }
+}
+
 export async function setStaffSalaryAction(staffId: string, salary: number) {
-  const user = await requireUser("teachers:manage");
+  const user = await requireUser("payroll:manage");
   await setStaffSalary(user, staffId, salary);
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");
@@ -73,7 +86,7 @@ export async function createOtherStaffAction(values: {
 }
 
 export async function setOtherStaffSalaryAction(staffId: string, salary: number) {
-  const user = await requireUser("teachers:manage");
+  const user = await requireUser("payroll:manage");
   await setOtherStaffSalary(user, staffId, salary);
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");

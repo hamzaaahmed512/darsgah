@@ -1,9 +1,8 @@
-import { Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Select } from "@/components/ui/form-field";
+import { ResultCardDownloadButton } from "@/app/(app)/results/_components/result-card-download-button";
 import { formatExamType, requiredResultExamTypes } from "@/lib/services/marks";
 import { formatClassDisplayName } from "@/lib/utils";
 
@@ -15,6 +14,9 @@ type ResultCardsWorkspace = {
   readiness: {
     complete: boolean;
     missing: string[];
+    approvedCount: number;
+    totalSubjects: number;
+    status: "complete" | "partial" | "pending";
     examType: string;
     month?: number;
     students: Array<{ id: string; name: string; admission_number: string }>;
@@ -23,11 +25,13 @@ type ResultCardsWorkspace = {
 
 export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspace }) {
   const selectedClass = workspace.classes.find((item) => item.id === workspace.selectedClassId);
-  const ready = workspace.readiness?.complete;
+  const printHref = `/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}`;
 
   if (!workspace.selectedClassId || !workspace.readiness) {
     return <EmptyState title="No classes available" description="Create classes and enroll students before generating result cards." />;
   }
+  const readiness = workspace.readiness;
+  const ready = readiness.complete;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -42,35 +46,28 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
                 : ""}
             </p>
           </div>
-          {ready ? (
-            <ButtonLink href={`/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}`} target="_blank">
-              <Printer className="h-4 w-4" /> Print / PDF All
-            </ButtonLink>
-          ) : null}
+          <ResultCardDownloadButton href={printHref} label="Print / PDF All" status={readiness.status} approvedCount={readiness.approvedCount} totalSubjects={readiness.totalSubjects} missing={readiness.missing} />
         </CardHeader>
         <CardContent>
-          {ready ? (
-            <div className="grid gap-2">
-              {workspace.readiness.students.map((student) => (
+          <div className="grid gap-2">
+              {readiness.students.map((student) => (
                 <div key={student.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3">
                   <div>
                     <p className="font-semibold text-ink">{student.name}</p>
                     <p className="text-xs text-muted">{student.admission_number}</p>
                   </div>
-                  <ButtonLink
-                    href={`/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}&studentId=${student.id}`}
-                    target="_blank"
+                  <ResultCardDownloadButton
+                    href={`${printHref}&studentId=${student.id}`}
+                    label="Print / PDF Individual"
+                    status={readiness.status}
+                    approvedCount={readiness.approvedCount}
+                    totalSubjects={readiness.totalSubjects}
+                    missing={readiness.missing}
                     variant="secondary"
-                    size="sm"
-                  >
-                    Print / PDF Individual
-                  </ButtonLink>
+                  />
                 </div>
               ))}
-            </div>
-          ) : (
-            <EmptyState title="Results are not ready" description="The Registrar can print result cards after every required major examination is approved." />
-          )}
+          </div>
         </CardContent>
       </Card>
 
@@ -82,13 +79,13 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
         <CardContent>
           {ready ? (
             <p className="rounded-lg bg-success-soft p-3 text-sm font-semibold text-success">
-              All required major examinations are approved. Result cards are unlocked.
+              All required major examinations are approved. Result cards are finalized.
             </p>
           ) : (
             <div className="grid gap-2">
               <p className="text-sm font-semibold text-ink">Missing approved results</p>
-              {workspace.readiness.missing.length ? (
-                workspace.readiness.missing.map((item) => (
+              {readiness.missing.length ? (
+                readiness.missing.map((item) => (
                   <div key={item} className="rounded-lg bg-warning-soft px-3 py-2 text-sm font-semibold text-warning">
                     {item}
                   </div>
