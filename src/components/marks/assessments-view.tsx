@@ -8,21 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
-import { formatExamType, getTeacherMarksWorkspace, majorAssessmentTypes, regularAssessmentTypes } from "@/lib/services/marks";
-import type { ExamType } from "@/types/database";
-
-const examTypes: Array<{ value: ExamType; label: string; group: "regular" | "major" }> = [
-  ...regularAssessmentTypes.map((value) => ({
-    value,
-    label: formatExamType(value),
-    group: "regular" as const
-  })),
-  ...majorAssessmentTypes.map((value) => ({
-    value,
-    label: formatExamType(value),
-    group: "major" as const
-  }))
-];
+import { formatExamType, getTeacherMarksWorkspace } from "@/lib/services/marks";
 
 const rangeFilters = [
   { value: "all", label: "All" },
@@ -84,7 +70,7 @@ export async function AssessmentsView({
         description="Create assessments for your assigned classes, then open each assessment for marking."
         actions={
           workspace.selected ? (
-            <CreateAssessmentDialog classId={workspace.selected.class_id} subjectId={workspace.selected.subject_id} examTypes={examTypes} />
+            <CreateAssessmentDialog classId={workspace.selected.class_id} subjectId={workspace.selected.subject_id} />
           ) : null
         }
       />

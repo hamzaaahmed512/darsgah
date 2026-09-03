@@ -17,19 +17,39 @@ function getAssessmentRedirectBase(referer: string | null) {
 
 export async function createExamAction(formData: FormData) {
   const user = await requireUser("academics:view");
-  const examType = String(formData.get("exam_type") ?? "");
-  const rawMonth = formData.get("month");
-  const month = examType === "monthly" && rawMonth ? Number(rawMonth) : null;
-  await createExam(user, {
-    class_id: String(formData.get("class_id") ?? ""),
-    subject_id: String(formData.get("subject_id") ?? ""),
-    exam_type: examType as any,
-    month,
-    title: String(formData.get("title") ?? ""),
-    term: String(formData.get("term") ?? ""),
-    exam_date: String(formData.get("exam_date") ?? ""),
-    max_marks: Number(formData.get("max_marks") ?? 0)
-  });
+  const assessmentCategory = String(formData.get("assessment_category") ?? "general");
+
+  let payload: Record<string, unknown>;
+
+  if (assessmentCategory === "examination") {
+    // Examination: user selects exam_type; title is auto-derived by the schema transform
+    payload = {
+      assessment_category: "examination",
+      class_id: String(formData.get("class_id") ?? ""),
+      subject_id: String(formData.get("subject_id") ?? ""),
+      exam_type: String(formData.get("exam_type") ?? ""),
+      title: "", // auto-derived by examSchema transform
+      term: "",
+      month: null,
+      exam_date: String(formData.get("exam_date") ?? ""),
+      max_marks: Number(formData.get("max_marks") ?? 0)
+    };
+  } else {
+    // General Assessment: user provides a free-form title; exam_type fixed to "quiz"
+    payload = {
+      assessment_category: "general",
+      class_id: String(formData.get("class_id") ?? ""),
+      subject_id: String(formData.get("subject_id") ?? ""),
+      exam_type: "quiz",
+      title: String(formData.get("title") ?? ""),
+      term: "",
+      month: null,
+      exam_date: String(formData.get("exam_date") ?? ""),
+      max_marks: Number(formData.get("max_marks") ?? 0)
+    };
+  }
+
+  await createExam(user, payload as any);
 
   revalidatePath("/marks");
   revalidatePath("/academics/exams-setup");

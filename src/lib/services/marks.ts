@@ -11,7 +11,7 @@ import type {
   ResultApprovalStatus,
   ResultWorkflowStatus
 } from "@/types/database";
-import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type MarkEntryValues } from "@/lib/validation/marks";
+import { examSchema, markEntrySchema, specialExamTypes, type ExamFormValues, type ParsedExamValues, type MarkEntryValues } from "@/lib/validation/marks";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 import { getCombinationOptionsForClass } from "@/lib/services/student-combinations";
@@ -382,15 +382,11 @@ export async function getTeacherResultHistory(user: AppUser) {
 }
 
 export async function createExam(user: AppUser, values: ExamFormValues) {
-  const normalizedValues = {
-    ...values,
-    month: values.exam_type === "monthly" ? (values.month ?? null) : null
-  };
-  const parsed = examSchema.parse(normalizedValues);
+  const parsed: ParsedExamValues = examSchema.parse(values);
   await assertTeacherCanUseSubject(user, parsed.class_id, parsed.subject_id);
   const supabase = await createClient();
-  const requiresApproval = requiresApprovalForExamType(parsed.exam_type);
-  const assessmentCategory = getAssessmentCategory(parsed.exam_type, requiresApproval);
+  const requiresApproval = requiresApprovalForExamType(parsed.exam_type as any);
+  const assessmentCategory = getAssessmentCategory(parsed.exam_type as any, requiresApproval);
   const initialStatus: ExamStatus = requiresApproval ? "pending_approval" : "draft";
   const queuedAt = new Date().toISOString();
   const writeClient = user.role === "principal" ? createAdminClient() : supabase;

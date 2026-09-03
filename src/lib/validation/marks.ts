@@ -17,43 +17,72 @@ export const examTypeSchema = z.enum([
   "pre_board",
   "annual_exam"
 ]);
+
+/** Exam types that require principal approval and appear in result workflows. */
 export const specialExamTypes = ["monthly", "first_term", "second_term", "third_term"] as const;
 
-export const examSchema = z.object({
+/** The four exam types selectable when "Examination" category is chosen in the UI. */
+export const examinationExamTypes = ["monthly", "first_term", "second_term", "third_term"] as const;
+export type ExaminationExamType = (typeof examinationExamTypes)[number];
+
+/** Human-readable labels for Examination exam types — also used as auto-derived title. */
+export const examinationTypeLabels: Record<ExaminationExamType, string> = {
+  monthly: "Monthly Test",
+  first_term: "1st Term",
+  second_term: "2nd Term",
+  third_term: "3rd Term"
+};
+
+// ─── Discriminated Union Schema ───────────────────────────────────────────────
+
+const generalAssessmentSchema = z.object({
+  assessment_category: z.literal("general"),
   class_id: z.string().uuid(),
   subject_id: z.string().uuid(),
-  exam_type: examTypeSchema,
-  month: z.coerce.number().int().min(1).max(12).optional().nullable(),
+  /** Free-form title provided by the user (e.g. "Quiz 1", "Assignment"). */
   title: z.string().trim().min(2, "Title is required").max(120),
-  term: z.string().trim().min(2, "Term is required").max(80),
+  /** Fixed to "quiz" for general assessments; stored in DB but not shown to user. */
+  exam_type: z.literal("quiz").default("quiz"),
+  /** Hidden from UI — sent as empty string to satisfy DB column. */
+  term: z.string().trim().max(80).default(""),
+  /** Always null for general assessments. */
+  month: z.coerce.number().int().min(1).max(12).optional().nullable(),
   exam_date: z.string().date(),
   max_marks: z.coerce.number().positive("Max marks must be greater than zero").max(1000)
-}).superRefine((value, context) => {
-  if (value.exam_type === "monthly" && !value.month) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["month"], message: "Select a month for a Monthly exam" });
-  }
-  if (value.exam_type !== "monthly" && value.month) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["month"], message: "Month is only valid for Monthly exams" });
-  }
-
-  const normalizedTitle = value.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const titleExamType = /\b(1st|first) term\b/.test(normalizedTitle)
-    ? "first_term"
-    : /\b(2nd|second) term\b/.test(normalizedTitle)
-      ? "second_term"
-      : /\b(3rd|third) term\b/.test(normalizedTitle)
-        ? "third_term"
-        : null;
-
-  if (titleExamType && value.exam_type !== titleExamType) {
-    const expectedLabel = titleExamType === "first_term" ? "First Term" : titleExamType === "second_term" ? "Second Term" : "Third Term";
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["exam_type"],
-      message: `Assessment type must be ${expectedLabel} because the title is \"${value.title}\".`
-    });
-  }
 });
+
+const examinationSchema = z.object({
+  assessment_category: z.literal("examination"),
+  class_id: z.string().uuid(),
+  subject_id: z.string().uuid(),
+  /** Explicitly selected by the user from the 4 examination types. */
+  exam_type: z.enum(examinationExamTypes, { required_error: "Examination type is required" }),
+  /** Auto-derived from exam_type label; not collected from the UI. */
+  title: z.string().trim().max(120).default(""),
+  /** Hidden from UI — sent as empty string to satisfy DB column. */
+  term: z.string().trim().max(80).default(""),
+  /** Always null — month selector is removed from the UI. */
+  month: z.coerce.number().int().min(1).max(12).optional().nullable(),
+  exam_date: z.string().date(),
+  max_marks: z.coerce.number().positive("Max marks must be greater than zero").max(1000)
+});
+
+export const examSchema = z
+  .discriminatedUnion("assessment_category", [generalAssessmentSchema, examinationSchema])
+  .transform((value) => {
+    if (value.assessment_category === "examination") {
+      // Auto-derive title from the selected exam type label
+      return {
+        ...value,
+        title: examinationTypeLabels[value.exam_type] ?? String(value.exam_type),
+        month: null
+      };
+    }
+    // General assessment: clear month (not collected from UI)
+    return { ...value, month: null };
+  });
+
+// ─── Mark Entry & Approval ────────────────────────────────────────────────────
 
 export const markEntrySchema = z.object({
   exam_id: z.string().uuid(),
@@ -73,5 +102,6 @@ export const approvalDecisionSchema = z.object({
   principal_comment: z.string().trim().max(500).optional().nullable()
 });
 
-export type ExamFormValues = z.infer<typeof examSchema>;
+export type ExamFormValues = z.input<typeof examSchema>;
+export type ParsedExamValues = z.output<typeof examSchema>;
 export type MarkEntryValues = z.infer<typeof markEntrySchema>;
