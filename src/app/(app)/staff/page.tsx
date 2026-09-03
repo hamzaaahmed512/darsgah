@@ -41,7 +41,7 @@ export default async function StaffPage({
   const supabase = await createClient();
   const { data: customRoles } = await supabase
     .from("custom_roles")
-    .select("id,name")
+    .select("id,name,base_role")
     .eq("school_id", user.schoolId)
     .order("name");
 

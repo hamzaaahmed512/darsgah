@@ -89,10 +89,11 @@ export function SubjectCombinationEditModal({
 
   function handleDelete() {
     if (!combination.id || isDefaultCombination) return;
+    const combinationId = combination.id;
     if (!confirm("Are you sure you want to delete this combination?")) return;
     startTransition(async () => {
       try {
-        await deleteStudentSubjectCombinationAction(combination.id);
+        await deleteStudentSubjectCombinationAction(combinationId);
         pushToast("Combination deleted.", "success");
         handleClose();
         router.refresh();
