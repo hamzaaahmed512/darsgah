@@ -18,7 +18,7 @@ const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string 
   { value: "draft", label: "Draft" },
   { value: "pending_approval", label: "Pending Approval" },
   { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" }
+  { value: "rejected", label: "Returned" }
 ];
 
 function roleDescription(role: UserRole) {

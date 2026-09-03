@@ -78,8 +78,8 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
       {exam.rejection_reason ? (
         <Card className="mb-6 border-danger/30">
           <CardHeader>
-            <CardTitle>Rejection Reason</CardTitle>
-            <Badge tone="red">Rejected</Badge>
+          <CardTitle>Return instructions</CardTitle>
+            <Badge tone="yellow">Returned</Badge>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-ink">{exam.rejection_reason}</p>
@@ -146,11 +146,11 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
 
       {user.role === "teacher" && exam.workflowStatus === "rejected" ? (
         <p className="mt-4 text-sm text-muted">
-          This result was rejected. You can edit marks from the{" "}
+          This result was returned by the Principal. You can correct the marks from the{" "}
           <Link href={`/marks?classId=${exam.class_id}&subjectId=${exam.subject_id}&examId=${exam.id}`} className="font-semibold text-primary">
             Marks Entry
           </Link>{" "}
-          page and resubmit for approval.
+          page and resubmit it for approval.
         </p>
       ) : null}
     </>

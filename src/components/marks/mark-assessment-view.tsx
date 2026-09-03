@@ -88,7 +88,7 @@ export async function MarkAssessmentView({
               ) : null}
               {selectedExam.status === "rejected" && selectedExam.rejection_reason ? (
                 <div className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
-                  <p className="font-semibold">Principal feedback</p>
+                  <p className="font-semibold">Returned by Principal — corrections required</p>
                   <p className="mt-1">{selectedExam.rejection_reason}</p>
                 </div>
               ) : null}
@@ -152,7 +152,7 @@ export async function MarkAssessmentView({
             <form action={submitExamForApprovalAction} className="mt-3 flex justify-end">
               <input type="hidden" name="exam_id" value={selectedExam.id} />
               <Button type="submit">
-                <Send className="h-4 w-4" /> Resubmit for Approval
+                <Send className="h-4 w-4" /> Resubmit corrected result
               </Button>
             </form>
           ) : null}

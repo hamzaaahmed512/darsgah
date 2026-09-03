@@ -61,7 +61,7 @@ export function formatWorkflowStatus(status: ResultWorkflowStatus) {
     uploaded: "Uploaded",
     pending_approval: "Pending Approval",
     approved: "Approved",
-    rejected: "Rejected"
+    rejected: "Returned"
   };
   return labels[status] ?? status;
 }
@@ -609,16 +609,18 @@ export async function getExamResultsForReviewByApprovalId(user: AppUser, approva
   };
 }
 
-export async function reviewExamApproval(user: AppUser, approvalId: string, decision: "approved" | "rejected", principalComment?: string | null) {
+export async function reviewExamApproval(user: AppUser, approvalId: string, decision: "approved" | "returned", principalComment?: string | null) {
   if (user.role !== "principal") throw new Error("Only the principal can approve or reject results.");
+  if (decision === "returned" && !principalComment?.trim()) throw new Error("Explain what the teacher needs to correct before returning the result.");
   const supabase = await createClient();
+  const databaseDecision = decision === "returned" ? "rejected" : "approved";
   const { error } = await supabase.rpc("review_special_exam", {
     p_approval_id: approvalId,
-    p_decision: decision,
+    p_decision: databaseDecision,
     p_comment: principalComment || null
   });
   if (error) throw new Error(error.message);
-  await logActivity(user, `exam_${decision}`, "result_approval", approvalId, { principal_comment: principalComment || null });
+  await logActivity(user, decision === "returned" ? "exam_returned_to_teacher" : "exam_approved", "result_approval", approvalId, { principal_comment: principalComment || null });
 }
 
 export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; examType?: ExamType; month?: number } = {}) {

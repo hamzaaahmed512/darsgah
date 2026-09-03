@@ -34,7 +34,7 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
       <PageHeader
         eyebrow="Principal review"
         title="Exam Result Approvals"
-        description="Approve finalized special exam result sets or reject them with a comment so teachers can correct marks."
+        description="Approve finalized special exam results or return them with correction instructions for the teacher."
         actions={
           <Link href="/results" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
             Open Results Dashboard
@@ -49,7 +49,7 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
             href={`/exam-approvals?status=${item}`}
             className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${status === item ? "bg-primary text-white" : "bg-white text-muted hover:bg-surface-low"}`}
           >
-            {item}
+            {item === "rejected" ? "returned" : item}
           </a>
         ))}
       </div>

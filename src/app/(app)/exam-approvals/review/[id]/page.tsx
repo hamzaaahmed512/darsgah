@@ -158,22 +158,24 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
             </CardHeader>
             <CardContent className="pt-4">
               {isPending ? (
-                <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid gap-4">
-                  <Textarea name="principal_comment" placeholder="Optional Principal comment" className="min-h-[100px]" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button type="submit" name="decision" value="rejected" variant="secondary" className="text-danger hover:bg-danger-soft border border-danger/20 w-full">
-                      <XCircle className="h-4 w-4 mr-2" /> Reject
+                <div className="grid gap-4">
+                  <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid gap-3">
+                    <Textarea name="principal_comment" placeholder="Correction instructions" className="min-h-[100px]" required />
+                    <Button type="submit" name="decision" value="returned" variant="secondary" className="w-full border border-warning/20 text-warning hover:bg-warning-soft">
+                      <XCircle className="mr-2 h-4 w-4" /> Return to teacher
                     </Button>
+                  </form>
+                  <form action={reviewExamApprovalAction.bind(null, approval.id)}>
                     <Button type="submit" name="decision" value="approved" className="bg-success text-white hover:bg-success/90 w-full">
                       <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
                     </Button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               ) : (
                 <div className="space-y-4 text-sm">
                   <div className={`flex items-center gap-2 font-semibold p-3 rounded-lg ${approval.status === "approved" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
                     {approval.status === "approved" ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                    This result set was {approval.status}.
+                    This result set was {approval.status === "rejected" ? "returned to the teacher" : "approved"}.
                   </div>
                   <div>
                     <p className="font-semibold text-ink">Comment provided:</p>
