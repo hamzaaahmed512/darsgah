@@ -624,6 +624,21 @@ export async function reviewExamApproval(user: AppUser, approvalId: string, deci
   await logActivity(user, decision === "returned" ? "exam_returned_to_teacher" : "exam_approved", "result_approval", approvalId, { principal_comment: principalComment || null });
 }
 
+export async function returnApprovedExam(user: AppUser, examId: string, reason: string) {
+  if (user.role !== "principal" && user.role !== "administrator") {
+    throw new Error("Only a Principal or Administrator can return approved results.");
+  }
+  const comment = reason.trim();
+  if (!comment) throw new Error("A reason is required when returning an approved result.");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("return_approved_exam", { p_exam_id: examId, p_comment: comment });
+  if (error?.code === "PGRST202" || error?.message?.includes("return_approved_exam")) {
+    throw new Error("Apply the latest database migration before returning an approved result.");
+  }
+  if (error) throw new Error(error.message);
+  await logActivity(user, "approved_exam_returned_to_teacher", "exam", examId, { reason: comment });
+}
+
 export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; examType?: ExamType; month?: number } = {}) {
   if (!hasPermission(user.role, "results:generate", user.permissions)) throw new Error("You do not have permission to generate result cards.");
   const supabase = await createClient();
@@ -684,6 +699,7 @@ export async function getResultsManagementWorkspace(
       uploadedByTeacherName: formatDisplayName(row.uploaded_by_teacher_name) || formatDisplayName(row.creator?.full_name) || "Teacher",
       canApprove: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canReject: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
+      canReturn: filters.scope !== "teacher" && (user.role === "principal" || user.role === "administrator") && row.requires_approval && workflowStatus === "approved",
       canPrint:
         user.role === "student_staff" &&
         row.requires_approval &&
@@ -738,6 +754,7 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
     })),
     canApprove: user.role === "principal" && exam.requires_approval && workflowStatus === "pending_approval",
     canReject: user.role === "principal" && exam.requires_approval && workflowStatus === "pending_approval",
+    canReturn: (user.role === "principal" || user.role === "administrator") && exam.requires_approval && workflowStatus === "approved",
     canPrint:
       user.role === "student_staff" &&
       exam.requires_approval &&

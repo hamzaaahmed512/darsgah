@@ -25,8 +25,8 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       return [];
     })
   ]);
-  const unreadLeaveRejections = announcements.filter(
-    (announcement) => announcement.title === "Leave request rejected" && !announcement.is_read
+  const unreadAttentionAnnouncements = announcements.filter(
+    (announcement) => ["Leave request rejected", "Result returned for revision"].includes(announcement.title) && !announcement.is_read
   );
   const canAccessAcademicControl = user.role === "principal"
     ? await principalCanAccessAcademicControl(user).catch((error) => {
@@ -48,7 +48,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           }}
           sidebarBadges={notificationSummary.sidebarBadges}
           initialWorkflowNotifications={notificationSummary.notifications}
-          initialLeaveRejections={unreadLeaveRejections}
+          initialAttentionAnnouncements={unreadAttentionAnnouncements}
           principalCanAccessAcademicControl={canAccessAcademicControl}
         >
           {children}

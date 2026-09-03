@@ -1,5 +1,6 @@
 import { Eye, Printer } from "lucide-react";
 import { ApprovalActions } from "@/app/(app)/results/_components/approval-actions";
+import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
 import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
 import { ButtonLink } from "@/components/ui/button";
 import { formatExamType } from "@/lib/services/marks";
@@ -21,6 +22,7 @@ type ResultRow = {
   approvalId: string | null;
   canApprove: boolean;
   canReject: boolean;
+  canReturn: boolean;
   canPrint: boolean;
   classes?: { name?: string; grades?: { name?: string }; sections?: { name?: string } };
   subjects?: { name?: string };
@@ -108,6 +110,7 @@ export function ResultsTable({
                         Print disabled
                       </span>
                     ) : null}
+                    {row.canReturn ? <ReturnApprovedResult examId={row.id} compact /> : null}
                   </div>
                   {inlineApproval && row.canApprove && row.approvalId ? (
                     <ApprovalActions approvalId={row.approvalId} />

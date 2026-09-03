@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultsForReviewByApprovalId } from "@/lib/services/marks";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { reviewExamApprovalAction } from "@/app/(app)/exam-approvals/actions";
+import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 
@@ -183,6 +184,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                       {approval.principal_comment || "No comment provided."}
                     </p>
                   </div>
+                  {approval.status === "approved" ? <ReturnApprovedResult examId={exam.id} /> : null}
                 </div>
               )}
             </CardContent>

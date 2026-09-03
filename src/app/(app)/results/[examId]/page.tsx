@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Printer } from "lucide-react";
 import { ApprovalActions } from "@/app/(app)/results/_components/approval-actions";
+import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
 import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,18 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
           </CardHeader>
           <CardContent>
             <ApprovalActions approvalId={detail.approval.id} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {detail.canReturn ? (
+        <Card className="mb-6 border-warning/30">
+          <CardHeader>
+            <CardTitle>Approved Result Controls</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <p className="max-w-2xl text-sm text-muted">Return this result if the teacher needs to correct marks or other details. A reason is required.</p>
+            <ReturnApprovedResult examId={exam.id} />
           </CardContent>
         </Card>
       ) : null}
