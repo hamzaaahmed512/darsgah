@@ -25,4 +25,10 @@ describe("exam workflow validation", () => {
     expect(examSchema.safeParse({ ...base, exam_type: "first_term", month: 8 }).success).toBe(false);
     expect(examSchema.safeParse({ ...base, exam_type: "first_term" }).success).toBe(true);
   });
+
+  it("rejects a major examination title that contradicts its selected type", () => {
+    const mismatch = examSchema.safeParse({ ...base, title: "2nd Term", exam_type: "first_term" });
+    expect(mismatch.success).toBe(false);
+    expect(examSchema.safeParse({ ...base, title: "2nd Term", exam_type: "second_term" }).success).toBe(true);
+  });
 });

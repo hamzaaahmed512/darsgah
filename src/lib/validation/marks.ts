@@ -35,6 +35,24 @@ export const examSchema = z.object({
   if (value.exam_type !== "monthly" && value.month) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["month"], message: "Month is only valid for Monthly exams" });
   }
+
+  const normalizedTitle = value.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const titleExamType = /\b(1st|first) term\b/.test(normalizedTitle)
+    ? "first_term"
+    : /\b(2nd|second) term\b/.test(normalizedTitle)
+      ? "second_term"
+      : /\b(3rd|third) term\b/.test(normalizedTitle)
+        ? "third_term"
+        : null;
+
+  if (titleExamType && value.exam_type !== titleExamType) {
+    const expectedLabel = titleExamType === "first_term" ? "First Term" : titleExamType === "second_term" ? "Second Term" : "Third Term";
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["exam_type"],
+      message: `Assessment type must be ${expectedLabel} because the title is \"${value.title}\".`
+    });
+  }
 });
 
 export const markEntrySchema = z.object({
