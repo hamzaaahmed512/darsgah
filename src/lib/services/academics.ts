@@ -1111,3 +1111,39 @@ export async function createSectionClass(
   if (values.allowedMajors?.length) await configureClassMajors(user, created.id, values.allowedMajors);
   return created;
 }
+
+export async function checkSubjectInCombinations(user: AppUser, subjectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("student_subject_combination_subjects")
+    .select("student_subject_combinations(name)")
+    .eq("school_id", user.schoolId)
+    .eq("subject_id", subjectId);
+
+  if (error) throw new Error(error.message);
+
+  const combinationNames = (data ?? [])
+    .map((row: any) => row.student_subject_combinations?.name)
+    .filter(Boolean);
+  
+  return [...new Set(combinationNames)] as string[];
+}
+
+export async function deleteSubject(user: AppUser, subjectId: string) {
+  const supabase = await createClient();
+  
+  await Promise.all([
+    supabase.from("student_subject_combination_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
+    supabase.from("class_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
+    supabase.from("teacher_assignments").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
+    supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId)
+  ]);
+
+  const { error } = await supabase
+    .from("subjects")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("id", subjectId);
+
+  if (error) throw new Error(error.message);
+}

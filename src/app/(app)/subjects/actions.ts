@@ -46,3 +46,19 @@ export async function setStudentElectiveEnrollmentAction(formData: FormData) {
   revalidatePath("/marks");
   revalidatePath("/results");
 }
+
+export async function checkSubjectDeletionAction(subjectId: string) {
+  const user = await requireUser("classes:manage");
+  // We need to import checkSubjectInCombinations from academics
+  const { checkSubjectInCombinations } = await import("@/lib/services/academics");
+  return await checkSubjectInCombinations(user, subjectId);
+}
+
+export async function deleteSubjectAction(subjectId: string) {
+  const user = await requireUser("classes:manage");
+  // We need to import deleteSubject from academics
+  const { deleteSubject } = await import("@/lib/services/academics");
+  await deleteSubject(user, subjectId);
+  revalidatePath("/subjects");
+  revalidatePath("/classes");
+}

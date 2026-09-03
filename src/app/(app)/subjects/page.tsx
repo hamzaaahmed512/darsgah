@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SubjectCombinationCreateForm } from "@/components/classes/subject-combination-create-form";
 import { SubjectCombinationEditModal } from "@/components/classes/subject-combination-edit-modal";
 import { SubjectCreateModal } from "@/components/subjects/subject-create-modal";
+import { SubjectDeleteModal } from "@/components/subjects/subject-delete-modal";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -80,9 +81,12 @@ export default async function SubjectsPage() {
         {data.subjects.length ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.subjects.map((subject: any) => (
-              <div key={subject.id} className="rounded-xl border border-outline/50 bg-surface-low px-4 py-3">
-                <p className="font-semibold text-ink">{subject.name}</p>
-                <p className="mt-1 text-xs text-muted">{subject.code || "No subject code"}{subject.is_elective ? " · Elective" : ""}</p>
+              <div key={subject.id} className="flex items-start justify-between gap-3 rounded-xl border border-outline/50 bg-surface-low px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-ink">{subject.name}</p>
+                  <p className="mt-1 text-xs text-muted">{subject.code || "No subject code"}{subject.is_elective ? " · Elective" : ""}</p>
+                </div>
+                <SubjectDeleteModal subjectId={subject.id} subjectName={subject.name} />
               </div>
             ))}
           </div>
