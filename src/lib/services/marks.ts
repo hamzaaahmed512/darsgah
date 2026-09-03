@@ -17,6 +17,7 @@ import { formatClassDisplayName } from "@/lib/utils";
 import { getCombinationOptionsForClass } from "@/lib/services/student-combinations";
 import { isSubjectExcludedForMajor, type StudentCombinationOption } from "@/lib/student-majors";
 import { hasPermission } from "@/lib/permissions";
+import { canonicalSubjectName } from "@/lib/constants/subjectDefaults";
 
 export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "second_term", "third_term"];
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
@@ -747,15 +748,13 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
 
 async function getResultReadiness(user: AppUser, classId: string, examType: ExamType, month?: number) {
   const supabase = await createClient();
-  let examsQuery = supabase
+  const admin = createAdminClient();
+  const examsQuery = admin
     .from("exams")
-    .select("id,subject_id,exam_type,status,approval_status,month")
+    .select("id,subject_id,exam_type,status,approval_status,month,exam_date,subjects(name),result_approvals(status)")
     .eq("school_id", user.schoolId)
     .eq("class_id", classId)
-    .eq("exam_type", examType)
-    .eq("status", "approved")
-    .eq("approval_status", "approved");
-  if (examType === "monthly") examsQuery = examsQuery.eq("month", month ?? 0);
+    .eq("exam_type", examType);
 
   const [subjects, exams, students] = await Promise.all([
     supabase
@@ -781,6 +780,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
       approvedCount: 0,
       totalSubjects: 0,
       status: "pending" as const,
+      approvedExamIds: [] as string[],
       examType,
       month,
       students: (students.data ?? [])
@@ -802,11 +802,23 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
     if (item.subjects?.id) subjectMap.set(item.subjects.id, item.subjects.name);
   }
 
-  const approvedSubjects = new Set((exams.data ?? []).map((exam: any) => exam.subject_id));
-  const approvedAssignedCount = [...subjectMap.keys()].filter((subjectId) => approvedSubjects.has(subjectId)).length;
+  const matchingExams = (exams.data ?? []).filter((exam: any) => {
+    if (examType !== "monthly") return true;
+    if (Number(exam.month) === month) return true;
+    if (exam.month != null || !exam.exam_date || !month) return false;
+    return new Date(`${exam.exam_date}T00:00:00`).getMonth() + 1 === month;
+  });
+  const approvedExams = matchingExams.filter((exam: any) => {
+    const approvals = Array.isArray(exam.result_approvals) ? exam.result_approvals : exam.result_approvals ? [exam.result_approvals] : [];
+    return exam.status === "approved" || exam.approval_status === "approved" || approvals.some((approval: any) => approval.status === "approved");
+  });
+  const approvedSubjects = new Set(approvedExams.map((exam: any) => exam.subject_id as string));
+  const approvedNames = new Set(approvedExams.map((exam: any) => canonicalSubjectName(exam.subjects?.name ?? "")).filter(Boolean));
+  const isApproved = (subjectId: string, subjectName: string) => approvedSubjects.has(subjectId) || approvedNames.has(canonicalSubjectName(subjectName));
+  const approvedAssignedCount = [...subjectMap.entries()].filter(([subjectId, subjectName]) => isApproved(subjectId, subjectName)).length;
   const missing: string[] = [];
   for (const [subjectId, subjectName] of subjectMap.entries()) {
-    if (!approvedSubjects.has(subjectId)) missing.push(`${subjectName} ${formatExamType(examType)}`);
+    if (!isApproved(subjectId, subjectName)) missing.push(`${subjectName} ${formatExamType(examType)}`);
   }
 
   return {
@@ -815,6 +827,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
     approvedCount: approvedAssignedCount,
     totalSubjects: subjectMap.size,
     status: approvedAssignedCount === 0 ? "pending" as const : missing.length === 0 ? "complete" as const : "partial" as const,
+    approvedExamIds: approvedExams.map((exam: any) => exam.id as string),
     examType,
     month,
     students: (students.data ?? [])
@@ -868,28 +881,24 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
 
   if (filters.studentId) studentsQuery = studentsQuery.eq("student_id", filters.studentId);
 
-  let marksQuery = supabase
-    .from("marks")
-    .select("student_id,marks_obtained,grade,teacher_comment,exams!inner(id,title,exam_type,month,max_marks,status,subjects(name),requires_approval,approval_status)")
-    .eq("school_id", user.schoolId)
-    .eq("class_id", filters.classId)
-    .eq("exams.exam_type", filters.examType)
-    .eq("exams.status", "approved")
-    .eq("exams.requires_approval", true)
-    .eq("exams.approval_status", "approved")
-    .order("student_id");
-  let examsQuery = supabase.from("exams")
-    .select("id,subject_id,title,exam_type,month,max_marks,subjects(name)")
-    .eq("school_id", user.schoolId)
-    .eq("class_id", filters.classId)
-    .eq("exam_type", filters.examType)
-    .eq("status", "approved")
-    .eq("requires_approval", true)
-    .eq("approval_status", "approved");
-  if (filters.examType === "monthly") {
-    marksQuery = marksQuery.eq("exams.month", filters.month ?? 0);
-    examsQuery = examsQuery.eq("month", filters.month ?? 0);
-  }
+  const approvedExamIds = readiness.approvedExamIds ?? [];
+  const marksQuery = approvedExamIds.length
+    ? adminClient
+        .from("marks")
+        .select("student_id,marks_obtained,grade,teacher_comment,exams!inner(id,title,exam_type,month,max_marks,status,subjects(name),requires_approval,approval_status)")
+        .eq("school_id", user.schoolId)
+        .eq("class_id", filters.classId)
+        .in("exam_id", approvedExamIds)
+        .order("student_id")
+    : Promise.resolve({ data: [], error: null });
+  const examsQuery = approvedExamIds.length
+    ? adminClient
+        .from("exams")
+        .select("id,subject_id,title,exam_type,month,max_marks,subjects(name)")
+        .eq("school_id", user.schoolId)
+        .eq("class_id", filters.classId)
+        .in("id", approvedExamIds)
+    : Promise.resolve({ data: [], error: null });
 
   const [students, marks, subjectEnrollments, approvedExams] = await Promise.all([
     studentsQuery,

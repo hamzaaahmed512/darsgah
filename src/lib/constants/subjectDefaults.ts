@@ -181,6 +181,10 @@ export function isHighSchoolGrade(gradeName: string) {
 
 export function canonicalSubjectName(name: string) {
   const normalized = name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  const withoutCompulsory = normalized.replace(/\s+compulsory$/, "");
+  if (withoutCompulsory === "urdu" || withoutCompulsory === "english" || withoutCompulsory === "mathematics") {
+    return withoutCompulsory;
+  }
   if (normalized === "computer science" || normalized === "computer studies") {
     return "computer";
   }

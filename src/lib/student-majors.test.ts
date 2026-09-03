@@ -41,6 +41,9 @@ describe("student major subject rules", () => {
     expect(canonicalSubjectName("Pakistan Studies")).toBe("pak studies");
     expect(canonicalSubjectName("Islamiyat")).toBe("islamiat");
     expect(canonicalSubjectName("Islamiat")).toBe("islamiat");
+    expect(canonicalSubjectName("Urdu Compulsory")).toBe(canonicalSubjectName("Urdu"));
+    expect(canonicalSubjectName("English Compulsory")).toBe(canonicalSubjectName("English"));
+    expect(canonicalSubjectName("Mathematics Compulsory")).toBe(canonicalSubjectName("Mathematics"));
   });
 
   it("applies Grade 11 and 12 study-group rules", () => {
