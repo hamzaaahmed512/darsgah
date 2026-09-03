@@ -192,7 +192,7 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
   const admin = createAdminClient();
   const [classResult, subjectResult, enrollmentResult, directResult] = await Promise.all([
     admin.from("classes").select("id,grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
-    admin.from("subjects").select("id,name,is_elective").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
+    admin.from("subjects").select("id,name,is_elective").eq("school_id", user.schoolId).eq("id", subjectId).is("archived_at", null).maybeSingle(),
     admin.from("enrollments").select("student_id,students(id,first_name,last_name,admission_number,major,status)").eq("school_id", user.schoolId).eq("class_id", classId).eq("status", "active"),
     admin.from("student_subject_enrollments").select("student_id").eq("school_id", user.schoolId).eq("class_id", classId).eq("subject_id", subjectId)
   ]);

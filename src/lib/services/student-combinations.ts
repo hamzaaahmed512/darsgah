@@ -115,7 +115,7 @@ export async function getSubjectCombinationCatalog(user: AppUser) {
   const supabase = await createClient();
   const [{ data: classes, error: classesError }, { data: subjects, error: subjectsError }, { data: combinationRows, error: customError }] = await Promise.all([
     supabase.from("classes").select("id,name,grade_id,grades(name),sections(name)").eq("school_id", user.schoolId).order("name"),
-    supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).order("name"),
+    supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null).order("name"),
     supabase
       .from("student_subject_combinations")
       .select("id,name,grade_id,combination_key,student_subject_combination_classes(class_id,classes(name,grade_id,grades(name),sections(name))),student_subject_combination_subjects(subject_id,subjects(name))")
@@ -204,6 +204,7 @@ export async function createStudentSubjectCombination(user: AppUser, values: { n
     .from("subjects")
     .select("id")
     .eq("school_id", user.schoolId)
+    .is("archived_at", null)
     .in("id", subjectIds);
   if (subjectsError) throw new Error(subjectsError.message);
   if ((subjects ?? []).length !== subjectIds.length) throw new Error("One or more selected subjects could not be found.");
@@ -258,7 +259,7 @@ export async function updateDefaultStudentSubjectCombination(
   const [{ data: grade, error: gradeError }, { data: classes, error: classesError }, { data: subjects, error: subjectsError }] = await Promise.all([
     supabase.from("grades").select("id").eq("school_id", user.schoolId).eq("id", values.gradeId).maybeSingle(),
     supabase.from("classes").select("id").eq("school_id", user.schoolId).eq("grade_id", values.gradeId),
-    supabase.from("subjects").select("id").eq("school_id", user.schoolId).in("id", subjectIds)
+    supabase.from("subjects").select("id").eq("school_id", user.schoolId).is("archived_at", null).in("id", subjectIds)
   ]);
   if (gradeError) throw new Error(gradeError.message);
   if (classesError) throw new Error(classesError.message);
@@ -358,6 +359,7 @@ export async function updateStudentSubjectCombination(
     .from("subjects")
     .select("id")
     .eq("school_id", user.schoolId)
+    .is("archived_at", null)
     .in("id", subjectIds);
   if (subjectsError) throw new Error(subjectsError.message);
   if ((subjects ?? []).length !== subjectIds.length) throw new Error("One or more selected subjects could not be found.");

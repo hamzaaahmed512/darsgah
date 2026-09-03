@@ -49,9 +49,9 @@ export async function setStudentElectiveEnrollmentAction(formData: FormData) {
 
 export async function checkSubjectDeletionAction(subjectId: string) {
   const user = await requireUser("classes:manage");
-  // We need to import checkSubjectInCombinations from academics
-  const { checkSubjectInCombinations } = await import("@/lib/services/academics");
-  return await checkSubjectInCombinations(user, subjectId);
+  const parsedSubjectId = z.string().uuid("Invalid subject.").parse(subjectId);
+  const { getSubjectDeletionImpact } = await import("@/lib/services/academics");
+  return await getSubjectDeletionImpact(user, parsedSubjectId);
 }
 
 export async function deleteSubjectAction(subjectId: string) {
@@ -59,10 +59,10 @@ export async function deleteSubjectAction(subjectId: string) {
     const user = await requireUser("classes:manage");
     const parsedSubjectId = z.string().uuid("Invalid subject.").parse(subjectId);
     const { deleteSubject } = await import("@/lib/services/academics");
-    await deleteSubject(user, parsedSubjectId);
+    const result = await deleteSubject(user, parsedSubjectId);
     revalidatePath("/subjects");
     revalidatePath("/classes");
-    return { success: true };
+    return { success: true, archived: result.archived };
   } catch (error) {
     return {
       error: error instanceof z.ZodError

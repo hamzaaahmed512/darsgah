@@ -205,7 +205,8 @@ export async function runOnboardingSubjectSetup(
   const { data: existingSubjects, error: subjectsError } = await supabase
     .from("subjects")
     .select("id,name,is_elective")
-    .eq("school_id", user.schoolId);
+    .eq("school_id", user.schoolId)
+    .is("archived_at", null);
   if (subjectsError) throw new Error(subjectsError.message);
 
   const subjectMap = new Map((existingSubjects ?? []).map((subject) => [canonicalSubjectName(subject.name), subject.id]));

@@ -35,7 +35,7 @@ export async function getAcademicOptions(user: AppUser) {
     supabase.from("academic_years").select("*").eq("school_id", user.schoolId).order("starts_on", { ascending: false }),
     supabase.from("grades").select("*").eq("school_id", user.schoolId).order("sort_order"),
     supabase.from("sections").select("*").eq("school_id", user.schoolId).order("name"),
-    supabase.from("subjects").select("*").eq("school_id", user.schoolId).order("name"),
+    supabase.from("subjects").select("*").eq("school_id", user.schoolId).is("archived_at", null).order("name"),
     supabase
       .from("classes")
       .select("id,name,room,grade_id,section_id,academic_year_id,head_teacher_id,major_count,default_major,class_allowed_majors(major_key),grades(name),sections(name),academic_years(name),head_teacher:profiles!classes_head_teacher_id_fkey(full_name,email)")
@@ -609,7 +609,7 @@ export async function createSubject(user: AppUser, values: { name: string; code?
   const supabase = await createClient();
   const subjectName = values.name.trim().replace(/\s+/g, " ");
   if (!subjectName) throw new Error("Subject name is required.");
-  const { data: catalog, error: lookupError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId);
+  const { data: catalog, error: lookupError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null);
   if (lookupError) throw new Error(lookupError.message);
   if ((catalog ?? []).some((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(subjectName))) {
     throw new Error(`“${subjectName}” already exists in the subject catalog.`);
@@ -688,7 +688,8 @@ export async function addClassSubject(
   const { data: catalog, error: lookupError } = await supabase
     .from("subjects")
     .select("id,name")
-    .eq("school_id", user.schoolId);
+    .eq("school_id", user.schoolId)
+    .is("archived_at", null);
   if (lookupError) throw new Error(lookupError.message);
 
   const existingSubject = (catalog ?? []).find((subject) =>
@@ -727,7 +728,7 @@ export async function addClassSubject(
 
 export async function linkExistingClassSubject(user: AppUser, values: { classId: string; subjectId: string }) {
   const supabase = await createClient();
-  const { data: subject, error: subjectError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).eq("id", values.subjectId).maybeSingle();
+  const { data: subject, error: subjectError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).eq("id", values.subjectId).is("archived_at", null).maybeSingle();
   if (subjectError) throw new Error(subjectError.message);
   if (!subject) throw new Error("Subject not found in this school.");
   const { data: existing, error: existingError } = await supabase.from("class_subjects").select("id").eq("school_id", user.schoolId).eq("class_id", values.classId).eq("subject_id", subject.id).maybeSingle();
@@ -778,7 +779,8 @@ export async function seedDefaultSubjectsForClass(user: AppUser, classId: string
   const { data: existingSubjects, error: subjectsError } = await supabase
     .from("subjects")
     .select("id,name,is_elective")
-    .eq("school_id", user.schoolId);
+    .eq("school_id", user.schoolId)
+    .is("archived_at", null);
   if (subjectsError) throw new Error(subjectsError.message);
 
   const subjectMap = new Map((existingSubjects ?? []).map((subject) => [canonicalSubjectName(subject.name), subject]));
@@ -929,7 +931,7 @@ async function filterEligibleStudentIds(user: AppUser, classId: string, subjectI
   const supabase = await createClient();
   const [{ data: classRow, error: classError }, { data: subject, error: subjectError }, { data: students, error: studentsError }] = await Promise.all([
     supabase.from("classes").select("grades(name)").eq("school_id", user.schoolId).eq("id", classId).maybeSingle(),
-    supabase.from("subjects").select("name").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
+    supabase.from("subjects").select("name").eq("school_id", user.schoolId).eq("id", subjectId).is("archived_at", null).maybeSingle(),
     supabase.from("students").select("id").eq("school_id", user.schoolId).in("id", studentIds)
   ]);
   if (classError) throw new Error(classError.message);
@@ -1112,21 +1114,25 @@ export async function createSectionClass(
   return created;
 }
 
-export async function checkSubjectInCombinations(user: AppUser, subjectId: string) {
+export async function getSubjectDeletionImpact(user: AppUser, subjectId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("student_subject_combination_subjects")
-    .select("student_subject_combinations(name)")
-    .eq("school_id", user.schoolId)
-    .eq("subject_id", subjectId);
+  const [{ data, error }, { count: assessmentCount, error: assessmentError }] = await Promise.all([
+    supabase
+      .from("student_subject_combination_subjects")
+      .select("student_subject_combinations(name)")
+      .eq("school_id", user.schoolId)
+      .eq("subject_id", subjectId),
+    supabase.from("exams").select("id", { count: "exact", head: true }).eq("school_id", user.schoolId).eq("subject_id", subjectId)
+  ]);
 
   if (error) throw new Error(error.message);
+  if (assessmentError) throw new Error(assessmentError.message);
 
   const combinationNames = (data ?? [])
     .map((row: any) => row.student_subject_combinations?.name)
     .filter(Boolean);
   
-  return [...new Set(combinationNames)] as string[];
+  return { combinationNames: [...new Set(combinationNames)] as string[], assessmentCount: assessmentCount ?? 0 };
 }
 
 export async function deleteSubject(user: AppUser, subjectId: string) {
@@ -1139,12 +1145,6 @@ export async function deleteSubject(user: AppUser, subjectId: string) {
   if (subjectError) throw new Error(subjectError.message);
   if (examError) throw new Error(examError.message);
   if (!subject) throw new Error("Subject not found or it has already been deleted.");
-  if ((examCount ?? 0) > 0) {
-    throw new Error(
-      `“${subject.name}” cannot be deleted because it is used by ${examCount} assessment${examCount === 1 ? "" : "s"}. Historical results must be preserved.`
-    );
-  }
-
   const dependencyDeletes = await Promise.all([
     supabase.from("student_subject_combination_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
     supabase.from("class_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
@@ -1156,12 +1156,11 @@ export async function deleteSubject(user: AppUser, subjectId: string) {
 
   const { error } = await supabase
     .from("subjects")
-    .delete()
+    .update({ archived_at: new Date().toISOString() })
     .eq("school_id", user.schoolId)
-    .eq("id", subjectId);
+    .eq("id", subjectId)
+    .is("archived_at", null);
 
-  if (error?.code === "23503") {
-    throw new Error(`“${subject.name}” cannot be deleted because it is still used by academic records.`);
-  }
   if (error) throw new Error(error.message);
+  return { archived: (examCount ?? 0) > 0 };
 }
