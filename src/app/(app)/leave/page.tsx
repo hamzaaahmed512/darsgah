@@ -139,7 +139,6 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                         <td className="max-w-sm px-5 py-4 text-muted">{leave.reason}</td>
                         <td className="px-5 py-4">
                           <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
-                          {leave.principal_remarks ? <p className="mt-1 text-xs text-muted">{leave.principal_remarks}</p> : null}
                         </td>
                         <td className="px-5 py-4">
                           {leave.status === "pending" ? (
@@ -202,7 +201,6 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                       <th className="px-5 py-4">Type</th>
                       <th className="px-5 py-4">Dates</th>
                       <th className="px-5 py-4">Status</th>
-                      <th className="px-5 py-4">Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -213,7 +211,6 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                         <td className="px-5 py-4">
                           <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
                         </td>
-                        <td className="px-5 py-4 text-muted">{leave.principal_remarks || "No remarks"}</td>
                       </tr>
                     ))}
                   </tbody>

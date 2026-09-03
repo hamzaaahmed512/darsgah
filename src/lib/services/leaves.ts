@@ -122,7 +122,7 @@ export async function reviewLeaveRequest(user: AppUser, leaveId: string, values:
   const supabase = await createClient();
   const { data: leave, error: fetchError } = await supabase
     .from("staff_leaves")
-    .select("id,status")
+    .select("id,status,user_id,leave_type,start_date,end_date")
     .eq("school_id", user.schoolId)
     .eq("id", leaveId)
     .maybeSingle();
@@ -145,5 +145,23 @@ export async function reviewLeaveRequest(user: AppUser, leaveId: string, values:
 
   if (isMissingStaffLeavesTable(error)) throw new Error(missingStaffLeavesMessage());
   if (error) throw new Error(error.message);
+
+  if (parsed.decision === "rejected") {
+    const today = new Date().toISOString().slice(0, 10);
+    const { error: notificationError } = await supabase.from("announcements").insert({
+      school_id: user.schoolId,
+      title: "Leave request rejected",
+      description: principalRemarks || "Your leave request was rejected without an additional reason.",
+      priority: "high",
+      type: "urgent",
+      audience_type: "roles",
+      audience_value: `user:${leave.user_id}`,
+      publish_date: today,
+      expiry_date: null,
+      created_by: user.id
+    });
+    if (notificationError) throw new Error(`Leave was rejected, but the notification could not be sent: ${notificationError.message}`);
+  }
+
   await logActivity(user, `leave_${parsed.decision}`, "staff_leave", leaveId, { principal_remarks: principalRemarks || null });
 }

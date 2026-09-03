@@ -78,6 +78,14 @@ export function AnnouncementBell({
     fetchWorkflowNotifications();
   }, [fetchAnnouncements, fetchWorkflowNotifications]);
 
+  useEffect(() => {
+    function handleAnnouncementRead() {
+      void fetchAnnouncements();
+    }
+    window.addEventListener("announcement-read", handleAnnouncementRead);
+    return () => window.removeEventListener("announcement-read", handleAnnouncementRead);
+  }, [fetchAnnouncements]);
+
   // Realtime subscription
   useEffect(() => {
     const client = supabase();

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { BookOpen, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, LogOut, Menu, UserRound, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AppUser } from "@/types/database";
+import type { AnnouncementWithRead, AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { cn, initials } from "@/lib/utils";
 import { getNavItems, navItemVisible } from "@/components/layout/nav-items";
@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { Button } from "@/components/ui/button";
 import type { WorkflowNotification } from "@/lib/services/notifications";
 
 type SchoolBranding = {
@@ -37,6 +38,7 @@ export function AppShell({
   branding,
   sidebarBadges = { attendance: 0, leave: 0 },
   initialWorkflowNotifications = [],
+  initialLeaveRejections = [],
   principalCanAccessAcademicControl = false,
   children
 }: {
@@ -44,6 +46,7 @@ export function AppShell({
   branding: SchoolBranding;
   sidebarBadges?: { attendance: number; leave: number };
   initialWorkflowNotifications?: WorkflowNotification[];
+  initialLeaveRejections?: AnnouncementWithRead[];
   principalCanAccessAcademicControl?: boolean;
   children: ReactNode;
 }) {
@@ -53,6 +56,7 @@ export function AppShell({
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [navDate, setNavDate] = useState<string | null>(null);
+  const [leaveRejections, setLeaveRejections] = useState(initialLeaveRejections);
   const menuRef = useRef<HTMLDivElement>(null);
   const sidebarNavRef = useRef<HTMLElement>(null);
   const sidebarScrollTimeoutRef = useRef<number | null>(null);
@@ -150,6 +154,17 @@ export function AppShell({
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/";
+  }
+
+  async function acknowledgeLeaveRejection(id: string) {
+    const response = await fetch("/api/announcements/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    if (!response.ok) return;
+    setLeaveRejections((current) => current.filter((item) => item.id !== id));
+    window.dispatchEvent(new CustomEvent("announcement-read", { detail: { id } }));
   }
 
   function badgeForHref(href: string) {
@@ -325,6 +340,25 @@ export function AppShell({
     <div className="min-h-screen bg-background text-ink">
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
+      {leaveRejections[0] ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="leave-rejection-title">
+          <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-outline sm:p-7">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger">
+              <X className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <h2 id="leave-rejection-title" className="mt-5 font-display text-2xl font-bold text-ink">Leave request rejected</h2>
+            <p className="mt-2 text-sm font-semibold text-muted">Reason from the Principal/Admin:</p>
+            <p className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-surface-low p-4 text-sm leading-6 text-ink">{leaveRejections[0].description}</p>
+            <Button
+              type="button"
+              className="mt-5 w-full"
+              onClick={() => void acknowledgeLeaveRejection(leaveRejections[0].id)}
+            >
+              I understand
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden border-r border-slate-200 bg-white lg:block">{sidebar}</div>
       <div
         className={cn(
