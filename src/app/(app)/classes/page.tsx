@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { BookOpenCheck, CalendarDays, GraduationCap, Layers3 } from "lucide-react";
-import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -51,24 +49,17 @@ export default async function ClassesPage({
     <>
       <PageHeader
         eyebrow="Academics"
-        title="Class Management"
+        title="Classes"
         description="Organize the academic structure, assign teachers, and manage each class from one place."
         actions={
           <>
-            <ButtonLink href="/subjects" variant="secondary">Subjects and Combinations</ButtonLink>
+            <ButtonLink href="/subjects" variant="secondary" className="rounded-2xl">Subjects and Combinations</ButtonLink>
             <AddGradeModal existingGradeNames={academicData.grades.map((grade: any) => grade.name)} />
           </>
         }
       />
 
-      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Academic years" value={academicData.years.length} hint="Configured school sessions" icon={CalendarDays} tone="blue" />
-        <StatCard label="Grades" value={academicData.grades.length} hint="Defined academic levels" icon={GraduationCap} tone="purple" />
-        <StatCard label="Sections" value={academicData.sections.length} hint="Available section groups" icon={Layers3} tone="amber" />
-        <StatCard label="Subjects" value={academicData.subjects.length} hint="Subject catalog entries" icon={BookOpenCheck} tone="green" />
-      </section>
-
-      <Card className="mb-5 p-4">
+      <Card className="mb-5 rounded-[24px] border border-outline/70 bg-white p-4 shadow-card">
         <Suspense>
           <ClassFilterForm grades={academicData.grades} classes={academicData.classes} />
         </Suspense>
@@ -80,8 +71,8 @@ export default async function ClassesPage({
           description="Add a grade or try clearing your search filters."
         />
       ) : (
-        <div className="grid gap-3">
-          {sortedGradeNames.map((gradeName) => {
+        <div className="grid gap-4">
+          {sortedGradeNames.map((gradeName, index) => {
             const gradeClasses = classesByGrade[gradeName];
             return (
               <ClassGradeGroup
@@ -89,6 +80,7 @@ export default async function ClassesPage({
                 gradeName={gradeName}
                 classes={gradeClasses}
                 classDetails={classDetails}
+                defaultExpanded={index === 0}
               />
             );
           })}

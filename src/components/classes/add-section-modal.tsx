@@ -10,7 +10,17 @@ import { useToast } from "@/components/ui/toast";
 import { formatGradeSection } from "@/lib/utils";
 import { defaultCombinationOptionsForGrade } from "@/lib/student-majors";
 
-export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; gradeName: string }) {
+export function AddSectionModal({
+  gradeId,
+  gradeName,
+  triggerClassName,
+  triggerLabel = "Create new section"
+}: {
+  gradeId: string;
+  gradeName: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
+}) {
   const router = useRouter();
   const { pushToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -37,7 +47,7 @@ export function AddSectionModal({ gradeId, gradeName }: { gradeId: string; grade
   }
 
   return <>
-    <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Create new section</Button>
+    <Button type="button" variant="secondary" size="sm" className={triggerClassName} onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {triggerLabel}</Button>
     {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-[20px] bg-white shadow-lift">
         <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">

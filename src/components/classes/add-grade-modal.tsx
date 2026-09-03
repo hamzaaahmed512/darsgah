@@ -48,7 +48,7 @@ export function AddGradeModal({ existingGradeNames }: { existingGradeNames: stri
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" onClick={() => setOpen(true)} className="rounded-2xl">
         <Plus className="h-4 w-4" /> Add grade
       </Button>
       {open ? (

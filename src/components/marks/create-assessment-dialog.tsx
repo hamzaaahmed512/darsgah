@@ -27,7 +27,7 @@ export function CreateAssessmentDialog({
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" onClick={() => setOpen(true)} className="min-h-12 rounded-2xl px-6 text-sm">
         <Plus className="h-4 w-4" aria-hidden="true" />
         Create Assessment
       </Button>

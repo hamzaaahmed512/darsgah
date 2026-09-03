@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useRef, useTransition } from "react";
-import { Search } from "lucide-react";
+import { Building2, GraduationCap, Search } from "lucide-react";
 import { formatClassDisplayName } from "@/lib/utils";
 import { Select } from "@/components/ui/form-field";
 
@@ -54,7 +54,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_260px]">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+          className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
           aria-hidden="true"
         />
         <input
@@ -62,26 +62,32 @@ export function ClassFilterForm({ grades, classes }: Props) {
           name="q"
           defaultValue={currentQ}
           onChange={handleSearchChange}
-          className="pl-9 w-full rounded-lg border border-outline/60 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="h-14 w-full rounded-2xl border border-outline/65 bg-white px-4 pl-12 text-sm font-medium shadow-none focus:outline-none focus:ring-4 focus:ring-primary/10"
           placeholder="Search classes by name, section, room..."
         />
       </div>
-      <Select name="grade" defaultValue={currentGrade} onChange={handleGradeChange}>
-        <option value="all">All Grades</option>
-        {grades.map((grade) => (
-          <option key={grade.id} value={grade.id}>
-            {grade.name}
-          </option>
-        ))}
-      </Select>
-      <Select name="classId" defaultValue={currentClass} onChange={handleClassChange}>
-        <option value="all">All Classes</option>
-        {classes.map((cls) => (
-          <option key={cls.id} value={cls.id}>
-            {formatClassDisplayName(cls.grade_name, cls.name, cls.section_name)}
-          </option>
-        ))}
-      </Select>
+      <div className="relative">
+        <GraduationCap className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+        <Select name="grade" defaultValue={currentGrade} onChange={handleGradeChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
+          <option value="all">All Grades</option>
+          {grades.map((grade) => (
+            <option key={grade.id} value={grade.id}>
+              {grade.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div className="relative">
+        <Building2 className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+        <Select name="classId" defaultValue={currentClass} onChange={handleClassChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
+          <option value="all">All Classes</option>
+          {classes.map((cls) => (
+            <option key={cls.id} value={cls.id}>
+              {formatClassDisplayName(cls.grade_name, cls.name, cls.section_name)}
+            </option>
+          ))}
+        </Select>
+      </div>
     </div>
   );
 }
