@@ -78,11 +78,17 @@ export async function getLeaveRequestsForReview(user: AppUser, status: StaffLeav
   const { data, error } = await query;
   if (isMissingStaffLeavesTable(error)) return [];
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => ({
+  const mapped = (data ?? []).map((row: any) => ({
     ...row,
     applicant_name: formatDisplayName(row.applicant?.full_name) || row.applicant?.email || "Employee",
     reviewed_by_name: formatDisplayName(row.reviewer?.full_name) || null
   })) as StaffLeave[];
+
+  return mapped.sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 
 export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValues) {

@@ -74,7 +74,7 @@ export default async function StaffPage({
         ) : null}
       />
 
-      <Card className="mb-5 p-4">
+      <Card className="mb-5 rounded-[28px] border border-outline/70 bg-white p-4 shadow-card">
         <Suspense>
           <StaffFilterForm customRoles={customRoles ?? []} />
         </Suspense>
@@ -83,39 +83,42 @@ export default async function StaffPage({
       {!staff.length ? (
         <EmptyState
           title="No staff found"
-          description="Try a different search or role filter, or invite new staff from Settings."
+          description="Try a different search or role filter, or add a new staff record from this page."
         />
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {staff.map((member: any) => (
-            <details key={member.member_id} className="group overflow-hidden rounded-[18px] bg-white shadow-card ring-1 ring-outline/70">
-              <summary className="grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-surface-low md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <details key={member.member_id} className="group overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card">
+              <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-surface-low/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
+                  {getInitials(member.full_name)}
+                </div>
                 <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap gap-2">
+                  <div className="mb-3 flex flex-wrap gap-2">
                     <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
-                    {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     <Badge tone={member.status === "active" ? "green" : "gray"}>{member.status}</Badge>
+                    {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                   </div>
-                  <h2 className="truncate font-display text-lg font-semibold text-ink">{member.full_name}</h2>
+                  <h2 className="truncate font-display text-[1.25rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
                   {member.email ? (
-                    <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-                      <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <p className="mt-3 flex items-center gap-2 text-base text-muted">
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <span className="truncate">{member.email}</span>
                     </p>
                   ) : (
-                    <p className="mt-1 text-sm text-muted">Others / record-only staff</p>
+                    <p className="mt-3 text-base text-muted">Others / record-only staff</p>
                   )}
                 </div>
-                <div className="flex items-center justify-end gap-3">
-                  <span className="text-sm font-semibold text-muted">
+                <div className="flex items-center justify-end gap-3 self-start md:self-center">
+                  <span className="text-sm font-semibold text-muted md:text-base">
                     {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
                 </div>
               </summary>
 
-              <div className="grid gap-5 border-t border-outline/60 p-5">
+              <div className="grid gap-4 border-t border-outline/60 px-5 py-5 md:px-6">
                 <div className="grid gap-3 md:grid-cols-4">
                   <StaffInfo icon={<ShieldCheck className="h-4 w-4" />} label="Role" value={getRoleLabel(member.role, member.custom_role_name, member.other_category)} />
                   <StaffInfo icon={<Building2 className="h-4 w-4" />} label="Department" value={[member.department, member.job_title].filter(Boolean).join(" / ") || "Not set"} />
@@ -124,35 +127,43 @@ export default async function StaffPage({
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
-                    <p className="mb-2 font-label text-xs font-bold uppercase tracking-wide text-muted">Contact</p>
+                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 text-sm shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                    <p className="mb-3 font-label text-xs font-bold uppercase tracking-wide text-muted">Contact</p>
                     {member.email ? (
-                      <p className="flex items-center gap-2 font-semibold text-ink">
+                      <p className="flex items-center gap-2 text-base font-semibold text-ink">
                         <Mail className="h-4 w-4 text-primary" aria-hidden="true" />
                         <span className="truncate">{member.email}</span>
                       </p>
-                    ) : <p className="font-semibold text-ink">No account or email required</p>}
+                    ) : <p className="text-base font-semibold text-ink">No account or email required</p>}
                     {member.personal_email ? (
-                      <p className="mt-2 flex items-center gap-2 text-muted">
+                      <p className="mt-3 flex items-center gap-2 text-muted">
                         <AtSign className="h-4 w-4 text-primary" aria-hidden="true" />
                         <span className="truncate">{member.personal_email}</span>
                       </p>
                     ) : null}
                   </div>
-                  <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
-                    <p className="mb-2 font-label text-xs font-bold uppercase tracking-wide text-muted">Account</p>
-                    <p className="flex items-center gap-2 text-muted">
+                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 text-sm shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                    <p className="mb-3 font-label text-xs font-bold uppercase tracking-wide text-muted">Account</p>
+                    <p className="flex items-center gap-2 text-base text-muted">
                       <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span>{member.is_record_only ? "Record only; no login access" : member.must_change_password ? "Must change password on next login" : "Password is active"}</span>
+                      <span className={member.is_record_only || member.must_change_password ? "" : "font-semibold text-success"}>
+                        {member.is_record_only ? "Record only; no login access" : member.must_change_password ? "Must change password on next login" : "Password is active"}
+                      </span>
                     </p>
                   </div>
-                  {canManageSalary && member.is_record_only ? (
-                    <OtherStaffSalaryForm staffId={member.member_id} initialSalary={member.monthly_salary} />
-                  ) : canManageSalary ? (
-                    <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} />
-                  ) : null}
                 </div>
-                {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div> : null}
+                {canManageSalary && member.is_record_only ? (
+                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                    <p className="mb-4 font-label text-xs font-bold uppercase tracking-wide text-muted">Monthly Salary</p>
+                    <OtherStaffSalaryForm staffId={member.member_id} initialSalary={member.monthly_salary} />
+                  </div>
+                ) : canManageSalary ? (
+                  <div className="rounded-[22px] border border-outline/50 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                    <p className="mb-4 font-label text-xs font-bold uppercase tracking-wide text-muted">Monthly Salary</p>
+                    <StaffSalaryForm staffId={member.user_id} initialSalary={salaryByStaff.get(member.user_id)} />
+                  </div>
+                ) : null}
+                {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm" className="min-w-[152px] justify-center rounded-2xl">View full profile</ButtonLink></div> : null}
               </div>
             </details>
           ))}
@@ -164,12 +175,33 @@ export default async function StaffPage({
 
 function StaffInfo({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
-      <div className="mb-1 flex items-center gap-1.5 text-muted">
+    <div className="rounded-[22px] border border-outline/50 bg-white p-5 text-sm shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
         <span className="text-primary">{icon}</span>
         {label}
       </div>
-      <p className="truncate font-semibold text-ink">{value}</p>
+      <p className="truncate text-base font-semibold text-ink">{value}</p>
     </div>
   );
+}
+
+function getInitials(fullName: string) {
+  return fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function getAvatarToneClasses(fullName: string, status: string) {
+  if (status !== "active") return "bg-slate-100 text-slate-500";
+  const tones = [
+    "bg-blue-50 text-blue-600",
+    "bg-emerald-50 text-emerald-600",
+    "bg-violet-50 text-violet-600",
+    "bg-amber-50 text-amber-600"
+  ];
+  const hash = [...fullName].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return tones[hash % tones.length];
 }

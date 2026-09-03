@@ -264,6 +264,9 @@ export async function submitAttendance(user: AppUser, values: AttendanceSubmissi
   if (existingSession) {
     const reopenedAt = existingSession.reopened_at ? new Date(existingSession.reopened_at).getTime() : 0;
     const editWindowOpen = existingSession.status === "submitted" && reopenedAt && Date.now() - reopenedAt < 24 * 60 * 60 * 1_000;
+    if (!editWindowOpen) {
+      throw new Error(existingSession.reopened_at ? "The attendance edit window has expired. Ask the principal to reopen it." : "Attendance already marked for today.");
+    }
     const canResubmit = editWindowOpen && existingSession.reopened_by === user.id && (targetClass.head_teacher_id === user.id || user.role === "principal");
     if (!canResubmit) throw new Error("Attendance is not open for editing. Ask the principal to reopen it.");
 
