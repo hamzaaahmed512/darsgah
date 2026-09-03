@@ -48,7 +48,11 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
     setError(null);
     startTransition(async () => {
       try {
-        await deleteSubjectAction(subjectId);
+        const result = await deleteSubjectAction(subjectId);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
         alert(`Subject successfully deleted${combinations.length ? " and removed from associated combinations." : "."}`);
         close();
       } catch (err: any) {

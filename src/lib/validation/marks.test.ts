@@ -16,19 +16,34 @@ describe("exam workflow validation", () => {
   });
 
   it("requires a valid month for Monthly exams", () => {
-    expect(examSchema.safeParse({ ...base, exam_type: "monthly" }).success).toBe(false);
-    expect(examSchema.safeParse({ ...base, exam_type: "monthly", month: 8 }).success).toBe(true);
-    expect(examSchema.safeParse({ ...base, exam_type: "monthly", month: 13 }).success).toBe(false);
+    const monthly = { ...base, assessment_category: "examination", exam_type: "monthly" } as const;
+
+    expect(examSchema.safeParse(monthly).success).toBe(false);
+    expect(examSchema.safeParse({ ...monthly, month: 8 }).success).toBe(true);
+    expect(examSchema.safeParse({ ...monthly, month: 13 }).success).toBe(false);
   });
 
-  it("rejects month on non-Monthly exams", () => {
-    expect(examSchema.safeParse({ ...base, exam_type: "first_term", month: 8 }).success).toBe(false);
-    expect(examSchema.safeParse({ ...base, exam_type: "first_term" }).success).toBe(true);
+  it("clears month on non-Monthly examinations", () => {
+    const result = examSchema.safeParse({
+      ...base,
+      assessment_category: "examination",
+      exam_type: "first_term",
+      month: 8
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.month).toBeNull();
   });
 
-  it("rejects a major examination title that contradicts its selected type", () => {
-    const mismatch = examSchema.safeParse({ ...base, title: "2nd Term", exam_type: "first_term" });
-    expect(mismatch.success).toBe(false);
-    expect(examSchema.safeParse({ ...base, title: "2nd Term", exam_type: "second_term" }).success).toBe(true);
+  it("derives the examination title from its selected type", () => {
+    const result = examSchema.safeParse({
+      ...base,
+      assessment_category: "examination",
+      title: "Contradictory title",
+      exam_type: "second_term"
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.title).toBe("2nd Term");
   });
 });

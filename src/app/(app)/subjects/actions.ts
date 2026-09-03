@@ -55,10 +55,21 @@ export async function checkSubjectDeletionAction(subjectId: string) {
 }
 
 export async function deleteSubjectAction(subjectId: string) {
-  const user = await requireUser("classes:manage");
-  // We need to import deleteSubject from academics
-  const { deleteSubject } = await import("@/lib/services/academics");
-  await deleteSubject(user, subjectId);
-  revalidatePath("/subjects");
-  revalidatePath("/classes");
+  try {
+    const user = await requireUser("classes:manage");
+    const parsedSubjectId = z.string().uuid("Invalid subject.").parse(subjectId);
+    const { deleteSubject } = await import("@/lib/services/academics");
+    await deleteSubject(user, parsedSubjectId);
+    revalidatePath("/subjects");
+    revalidatePath("/classes");
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof z.ZodError
+        ? error.issues[0]?.message ?? "Invalid subject."
+        : error instanceof Error
+          ? error.message
+          : "Subject could not be deleted."
+    };
+  }
 }

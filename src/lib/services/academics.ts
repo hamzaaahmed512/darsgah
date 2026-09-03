@@ -1131,13 +1131,28 @@ export async function checkSubjectInCombinations(user: AppUser, subjectId: strin
 
 export async function deleteSubject(user: AppUser, subjectId: string) {
   const supabase = await createClient();
-  
-  await Promise.all([
+
+  const [{ data: subject, error: subjectError }, { count: examCount, error: examError }] = await Promise.all([
+    supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).eq("id", subjectId).maybeSingle(),
+    supabase.from("exams").select("id", { count: "exact", head: true }).eq("school_id", user.schoolId).eq("subject_id", subjectId)
+  ]);
+  if (subjectError) throw new Error(subjectError.message);
+  if (examError) throw new Error(examError.message);
+  if (!subject) throw new Error("Subject not found or it has already been deleted.");
+  if ((examCount ?? 0) > 0) {
+    throw new Error(
+      `“${subject.name}” cannot be deleted because it is used by ${examCount} assessment${examCount === 1 ? "" : "s"}. Historical results must be preserved.`
+    );
+  }
+
+  const dependencyDeletes = await Promise.all([
     supabase.from("student_subject_combination_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
     supabase.from("class_subjects").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
     supabase.from("teacher_assignments").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId),
     supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).eq("subject_id", subjectId)
   ]);
+  const dependencyError = dependencyDeletes.find((result) => result.error)?.error;
+  if (dependencyError) throw new Error(dependencyError.message);
 
   const { error } = await supabase
     .from("subjects")
@@ -1145,5 +1160,8 @@ export async function deleteSubject(user: AppUser, subjectId: string) {
     .eq("school_id", user.schoolId)
     .eq("id", subjectId);
 
+  if (error?.code === "23503") {
+    throw new Error(`“${subject.name}” cannot be deleted because it is still used by academic records.`);
+  }
   if (error) throw new Error(error.message);
 }
