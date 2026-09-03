@@ -63,7 +63,7 @@ export function StudentTable({
                     {student.photo_url ? (
                       <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-primary">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name }))}`}>
                         {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
                       </div>
                     )}
@@ -109,7 +109,7 @@ export function StudentTable({
                 {student.photo_url ? (
                   <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-primary">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name }))}`}>
                     {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
                   </div>
                 )}
@@ -134,4 +134,16 @@ export function StudentTable({
       {pagination ? <StudentPagination {...pagination} /> : null}
     </div>
   );
+}
+
+function getStudentAvatarTone(name: string) {
+  const tones = [
+    "border-blue-100 bg-blue-50 text-blue-600",
+    "border-emerald-100 bg-emerald-50 text-emerald-600",
+    "border-violet-100 bg-violet-50 text-violet-600",
+    "border-amber-100 bg-amber-50 text-amber-600",
+    "border-cyan-100 bg-cyan-50 text-cyan-600"
+  ];
+  const hash = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[hash % tones.length];
 }

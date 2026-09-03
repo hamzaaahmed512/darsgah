@@ -55,7 +55,7 @@ export function OtherStaffFormModal() {
       </Button>
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
               <div>
                 <h2 className="font-display text-lg font-bold text-ink">Add Other Staff</h2>
@@ -65,7 +65,7 @@ export function OtherStaffFormModal() {
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <form onSubmit={submit} className="grid gap-4 overflow-y-auto p-5">
+            <form onSubmit={submit} className="grid gap-4 overflow-y-auto bg-slate-50/30 p-5">
               {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
               <Field label="Full name"><Input required value={form.fullName} onChange={(event) => update("fullName", sanitizeEnglishNameInput(event.target.value))} /></Field>
               <Field label="Category" required>

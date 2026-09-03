@@ -26,11 +26,11 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
         description="Review student fee accounts, collect payments, apply discounts, and print receipts from one focused workspace."
         actions={
           <>
-            <Link href="/finance/fees/structures" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-soft hover:brightness-105">
+            <Link href="/finance/fees/structures" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow-button hover:brightness-105">
               <Settings className="h-4 w-4" aria-hidden="true" />
               Fee Structures
             </Link>
-            <Link href={`/finance/challans?month=${month}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
+            <Link href={`/finance/challans?month=${month}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
               <FileText className="h-4 w-4" aria-hidden="true" />
               Challans
             </Link>

@@ -8,10 +8,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { getStaff } from "@/lib/services/staff";
 import { hasPermission } from "@/lib/permissions";
-import { StaffFormModal } from "@/components/teachers/staff-form";
 import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
-import { OtherStaffFormModal } from "@/components/staff/other-staff-form";
+import { StaffCreateModal } from "@/components/staff/staff-create-modal";
 import { ButtonLink } from "@/components/ui/button";
 import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 
@@ -61,12 +60,7 @@ export default async function StaffPage({
         eyebrow="School Directory"
         title="Staff"
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
-        actions={canCreateUsers ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            <StaffFormModal allowedRoles={[...allowedRoles]} triggerLabel="Add Account Staff" />
-            <OtherStaffFormModal />
-          </div>
-        ) : null}
+        actions={canCreateUsers ? <StaffCreateModal allowedRoles={[...allowedRoles]} customRoles={customRoles ?? []} /> : null}
       />
 
       <Card className="mb-5 rounded-[28px] border border-outline/70 bg-white p-4 shadow-card">

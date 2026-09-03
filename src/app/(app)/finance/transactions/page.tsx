@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowDownCircle, ArrowUpCircle, Search } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, FileText, Search } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -49,23 +49,32 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       </section>
     ) : null}
 
-    <Card className="mb-5 p-4">
+    <Card className="mb-5 rounded-[28px] border border-outline/70 bg-white p-4 shadow-card">
       <form method="get" className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_160px_160px_150px_150px_auto]">
-        <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input name="q" defaultValue={params.q ?? ""} placeholder="Receipt, person, reference..." className="pl-9" /></div>
-        <Select name="period" defaultValue={period}><option value="month">This month</option><option value="year">This year</option><option value="lifetime">Lifetime</option><option value="custom">Custom dates</option></Select>
-        <Select name="direction" defaultValue={direction}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></Select>
-        <Input name="dateFrom" type="date" defaultValue={params.dateFrom ?? ""} aria-label="Date from" />
-        <Input name="dateTo" type="date" defaultValue={params.dateTo ?? ""} aria-label="Date to" />
-        <Button type="submit">Apply</Button>
+        <div className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input name="q" defaultValue={params.q ?? ""} placeholder="Receipt, person, reference..." className="h-12 rounded-2xl border-outline/70 pl-11 shadow-none" /></div>
+        <Select name="period" defaultValue={period} className="h-12 rounded-2xl border-outline/70 shadow-none"><option value="month">This month</option><option value="year">This year</option><option value="lifetime">Lifetime</option><option value="custom">Custom dates</option></Select>
+        <Select name="direction" defaultValue={direction} className="h-12 rounded-2xl border-outline/70 shadow-none"><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></Select>
+        <Input name="dateFrom" type="date" defaultValue={params.dateFrom ?? ""} aria-label="Date from" className="h-12 rounded-2xl border-outline/70 shadow-none" />
+        <Input name="dateTo" type="date" defaultValue={params.dateTo ?? ""} aria-label="Date to" className="h-12 rounded-2xl border-outline/70 shadow-none" />
+        <Button type="submit" className="min-h-12 rounded-2xl">Apply</Button>
       </form>
       <p className="mt-2 text-xs text-muted">Choose Custom dates to use the From and To fields.</p>
     </Card>
 
-    <Card>
+    <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+      <div className="flex items-start gap-4 border-b border-outline/50 px-6 py-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+          <FileText className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="font-display text-[1.5rem] font-bold text-ink">Transaction Ledger</h2>
+          <p className="mt-1 text-sm text-muted">Review income and expense entries across the selected period.</p>
+        </div>
+      </div>
       <CardContent className="p-0">
         {!data.rows.length ? <EmptyState title="No transactions found" description="Try another period or record a new income or expense." className="m-5" /> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm">
-          <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted"><tr><th className="px-4 py-3">Receipt</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Student / party</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Recorded by</th><th className="px-4 py-3">Reference</th></tr></thead>
-          <tbody>{data.rows.map((row: any) => <tr key={row.id} className="border-t border-outline/60"><td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{row.receipt_number}</td><td className="px-4 py-3"><Badge tone={row.direction === "income" ? "green" : "red"}>{TRANSACTION_CATEGORY_LABELS[row.category as TransactionCategory] ?? row.category.replace(/_/g, " ")}</Badge><p className="mt-1 text-xs capitalize text-muted">{row.source.replace(/_/g, " ")}</p></td><td className="px-4 py-3"><p className="font-semibold text-ink">{row.student_name || row.party_name || "—"}</p>{row.admission_number ? <p className="text-xs text-muted">{row.admission_number}</p> : null}<p className="max-w-xs truncate text-xs text-muted">{row.description}</p></td><td className={`px-4 py-3 font-bold ${row.direction === "income" ? "text-success" : "text-danger"}`}>{row.direction === "income" ? "+" : "−"}{formatPKR(Number(row.amount))}</td><td className="px-4 py-3 text-muted">{formatDatePK(row.transaction_date)}</td><td className="px-4 py-3 text-muted">{row.recorded_by_name || "System"}</td><td className="px-4 py-3 text-muted">{row.reference_number || "—"}</td></tr>)}</tbody>
+          <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted"><tr><th className="px-5 py-4">Receipt</th><th className="px-5 py-4">Type</th><th className="px-5 py-4">Student / party</th><th className="px-5 py-4">Amount</th><th className="px-5 py-4">Date</th><th className="px-5 py-4">Recorded by</th></tr></thead>
+          <tbody>{data.rows.map((row: any) => <tr key={row.id} className="border-t border-outline/50"><td className="px-5 py-4 font-mono text-xs font-semibold text-primary">{row.receipt_number}</td><td className="px-5 py-4"><Badge tone={row.direction === "income" ? "green" : "red"}>{TRANSACTION_CATEGORY_LABELS[row.category as TransactionCategory] ?? row.category.replace(/_/g, " ")}</Badge><p className="mt-1 text-xs capitalize text-muted">{row.source.replace(/_/g, " ")}</p></td><td className="px-5 py-4"><p className="font-semibold text-ink">{row.student_name || row.party_name || "—"}</p>{row.admission_number ? <p className="text-xs text-muted">{row.admission_number}</p> : null}<p className="max-w-xs truncate text-xs text-muted">{row.description}</p></td><td className={`px-5 py-4 font-bold ${row.direction === "income" ? "text-success" : "text-danger"}`}>{row.direction === "income" ? "+" : "−"}{formatPKR(Number(row.amount))}</td><td className="px-5 py-4 text-muted">{formatDatePK(row.transaction_date)}</td><td className="px-5 py-4 text-muted">{row.recorded_by_name || "System"}</td></tr>)}</tbody>
         </table></div>}
       </CardContent>
     </Card>

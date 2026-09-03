@@ -60,12 +60,12 @@ export function TransactionFormModal({
       {triggerLabel ?? (isIncome ? "Add income / payment" : "Add expense")}
     </Button>
     {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
+      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
         <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
           <div><h2 className="font-display text-xl font-bold text-ink">{title ?? (isIncome ? "Add income or payment" : "Add expense")}</h2><p className="mt-1 text-sm text-muted">{description ?? "Record a manual ledger entry with its date and source details."}</p></div>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
-        <form onSubmit={submit} className="grid gap-4 overflow-y-auto p-6 sm:grid-cols-2">
+        <form onSubmit={submit} className="grid gap-4 overflow-y-auto bg-slate-50/30 p-6 sm:grid-cols-2">
           {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger sm:col-span-2">{error}</div> : null}
           <Field label="Type" required>
             <Select name="category" required defaultValue={fallbackCategory}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>

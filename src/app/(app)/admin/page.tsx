@@ -6,6 +6,13 @@ import { getStaff } from "@/lib/services/staff";
 import { StaffFormModal } from "@/components/teachers/staff-form";
 import { createClient } from "@/lib/supabase/server";
 import { CreateRoleModal, DeleteUserButton, EditUserModal } from "@/components/admin/admin-role-modals";
+import { ShieldCheck } from "lucide-react";
+
+const statusTone = {
+  active: "green",
+  inactive: "yellow",
+  disabled: "red"
+} as const;
 
 export default async function AdminPage() {
   const user = await requireUser("users:manage");
@@ -34,56 +41,73 @@ export default async function AdminPage() {
         }
       />
       <section className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>User Accounts</CardTitle>
-            <Badge tone="blue">{members.length} members</Badge>
+        <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <CardHeader className="gap-4 border-b border-outline/50 pb-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-[1.5rem]">User Accounts</CardTitle>
+                <p className="mt-1 text-sm text-muted">Manage account roles, access status, and membership records.</p>
+              </div>
+            </div>
+            <Badge tone="blue" className="rounded-full px-3 py-1.5 text-xs font-bold">{members.length} members</Badge>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-[24px] border border-outline/50">
+              <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="font-label text-xs uppercase tracking-wide text-muted">
+                <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                   <tr>
-                    <th className="py-3 pr-4">Name</th>
-                    <th className="py-3 pr-4">Email</th>
-                    <th className="py-3 pr-4">Role</th>
-                    <th className="py-3 pr-4">Department</th>
-                    <th className="py-3 pr-4">Phone</th>
-                    <th className="py-3 pr-4">Status</th>
-                    <th className="py-3 pr-4 text-right">Actions</th>
+                    <th className="px-5 py-4">Name</th>
+                    <th className="px-5 py-4">Email</th>
+                    <th className="px-5 py-4">Role</th>
+                    <th className="px-5 py-4">Department</th>
+                    <th className="px-5 py-4">Phone</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {members.map((member: any) => (
                     <tr key={member.member_id} className="border-t border-outline/35">
-                      <td className="py-3 pr-4">
+                      <td className="px-5 py-4">
                         <p className="font-semibold">{member.full_name}</p>
                         <p className="text-xs text-muted">{member.job_title ?? "No title"}</p>
                       </td>
-                      <td className="py-3 pr-4">{member.email}</td>
-                      <td className="py-3 pr-4">{member.custom_role_name ?? member.role.replace("_", " ")}</td>
-                      <td className="py-3 pr-4">{member.department ?? "Not set"}</td>
-                      <td className="py-3 pr-4">{member.phone ?? "Not set"}</td>
-                      <td className="py-3 pr-4">
+                      <td className="px-5 py-4">{member.email}</td>
+                      <td className="px-5 py-4">{member.custom_role_name ?? member.role.replace("_", " ")}</td>
+                      <td className="px-5 py-4">{member.department ?? "Not set"}</td>
+                      <td className="px-5 py-4">{member.phone ?? "Not set"}</td>
+                      <td className="px-5 py-4">
                         <div className="flex flex-wrap gap-2">
-                          <Badge>{member.status}</Badge>
+                          <Badge tone={statusTone[member.status as keyof typeof statusTone] ?? "gray"}>{member.status}</Badge>
                           {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                         </div>
                       </td>
-                      <td className="py-3 pr-4">
-                        <div className="flex justify-end gap-2">
-                          <EditUserModal currentUserRole={user.role} member={member} customRoles={customRoles} />
-                          <DeleteUserButton memberId={member.member_id} memberName={member.full_name} />
-                        </div>
+                      <td className="px-5 py-4">
+                        {canManageMember(user.role, member.role) ? (
+                          <div className="flex justify-end gap-2">
+                            <EditUserModal currentUserRole={user.role} member={member} customRoles={customRoles} />
+                            <DeleteUserButton memberId={member.member_id} memberName={member.full_name} />
+                          </div>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </CardContent>
         </Card>
       </section>
     </>
   );
+}
+
+function canManageMember(currentUserRole: string, memberRole: string) {
+  if (currentUserRole === "principal") return memberRole !== "principal";
+  return memberRole !== "principal" && memberRole !== "administrator";
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
-import { CalendarDays, NotebookPen, Users } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { CalendarDays, NotebookPen, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -45,6 +45,7 @@ export function TeacherAttendanceForm({
       note: teacher.note ?? ""
     }))
   );
+  const [editing, setEditing] = useState(!submitted);
   const summary = {
     total: teachers.length,
     present: records.filter((record) => record.status === "present").length,
@@ -52,6 +53,17 @@ export function TeacherAttendanceForm({
     late: records.filter((record) => record.status === "late").length,
     excused: records.filter((record) => record.status === "excused").length
   };
+
+  useEffect(() => {
+    setRecords(
+      teachers.map((teacher) => ({
+        teacher_id: teacher.teacher_id,
+        status: teacher.current_status ?? "present",
+        note: teacher.note ?? ""
+      }))
+    );
+    setEditing(!submitted);
+  }, [teachers, submitted]);
 
   function updateDate(date: string) {
     const params = new URLSearchParams(searchParams);
@@ -80,11 +92,17 @@ export function TeacherAttendanceForm({
           attendance_date: attendanceDate,
           records: records.map((record) => ({ ...record, note: record.note || null }))
         });
+        setEditing(false);
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Teacher attendance could not be saved.");
       }
     });
+  }
+
+  function undo() {
+    setError(null);
+    setEditing(true);
   }
 
   return (
@@ -104,10 +122,23 @@ export function TeacherAttendanceForm({
               />
             </div>
           </label>
-          <Button onClick={submit} disabled={pending || !teachers.length || migrationRequired} className="min-h-12 w-full rounded-2xl px-5 text-sm md:w-auto">
-            <NotebookPen className="h-4 w-4" aria-hidden="true" />
-            {pending ? "Saving..." : submitted ? "Update teacher attendance" : "Save teacher attendance"}
-          </Button>
+          <div className="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
+            {submitted && !editing ? (
+              <Button type="button" variant="secondary" onClick={undo} disabled={pending || migrationRequired} className="min-h-12 flex-1 rounded-2xl px-4 text-sm md:flex-none">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Undo & Edit
+              </Button>
+            ) : null}
+            <Button
+              onClick={submit}
+              disabled={pending || !teachers.length || migrationRequired || (submitted && !editing)}
+              variant={submitted && !editing ? "secondary" : "primary"}
+              className="min-h-12 flex-1 rounded-2xl px-5 text-sm md:w-auto md:flex-none"
+            >
+              <NotebookPen className="h-4 w-4" aria-hidden="true" />
+              {pending ? "Saving..." : editing && submitted ? "Resubmit attendance" : submitted ? "Attendance marked" : "Save teacher attendance"}
+            </Button>
+          </div>
         </div>
         {migrationRequired ? (
           <div className="mt-4 rounded-2xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
@@ -125,7 +156,7 @@ export function TeacherAttendanceForm({
             </div>
             <div>
               <CardTitle className="text-[1.45rem]">Teacher Attendance</CardTitle>
-              <p className="mt-1.5 text-sm text-muted">{submitted ? "Teacher attendance has been marked for this date." : "Default status is present. Update exceptions before saving."}</p>
+              <p className="mt-1.5 text-sm text-muted">{editing && submitted ? "Update the saved records and resubmit the attendance." : submitted ? "Teacher attendance has been marked for this date." : "Default status is present. Update exceptions before saving."}</p>
             </div>
           </div>
           <div className="grid w-full gap-3 sm:grid-cols-2 xl:w-auto xl:grid-cols-5">
@@ -171,9 +202,10 @@ export function TeacherAttendanceForm({
                           key={status}
                           type="button"
                           onClick={() => setStatus(teacher.teacher_id, status)}
+                          disabled={submitted && !editing}
                           className={`rounded-xl border px-3.5 py-2 text-sm font-semibold capitalize transition ${
                             record?.status === status ? statusButtonTone(status, true) : statusButtonTone(status, false)
-                          }`}
+                          } disabled:cursor-not-allowed disabled:opacity-60`}
                         >
                           {status}
                         </button>
@@ -184,6 +216,7 @@ export function TeacherAttendanceForm({
                       onChange={(event) => setNote(teacher.teacher_id, event.target.value)}
                       placeholder="Optional note..."
                       aria-label={`Attendance note for ${teacher.teacher_name}`}
+                      disabled={submitted && !editing}
                       className="min-h-11 rounded-2xl text-sm"
                     />
                   </div>

@@ -4,10 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { getNextAdmissionNumberAction, validateStudentIdentifiersAction } from "@/app/(app)/students/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentAdmissionYear, sanitizeAdmissionNumberInput } from "@/lib/admission-number";
 import { sanitizeStudentFormValues, studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
@@ -25,7 +25,8 @@ export function StudentForm({
   combinations = [],
   onSubmit,
   submitLabel,
-  studentId
+  studentId,
+  onCancel
 }: {
   initialValues?: Partial<StudentFormValues>;
   classes: Array<{ id: string; name: string; grade_name: string; section_name: string | null; major_count?: number; default_major?: string | null; allowed_majors?: string[] }>;
@@ -33,6 +34,7 @@ export function StudentForm({
   onSubmit: (values: StudentFormValues) => Promise<void | { error?: string; fieldErrors?: Record<string, string> }>;
   submitLabel: string;
   studentId?: string;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -228,15 +230,16 @@ export function StudentForm({
   return (
     <form className="grid gap-6" onSubmit={handleSubmit(submit)} autoComplete="off">
       {serverError && (
-        <div className="rounded-lg bg-danger/10 p-4 border border-danger/20">
+        <div className="rounded-2xl border border-danger/20 bg-danger/10 p-4">
           <p className="text-sm font-medium text-danger">{serverError}</p>
         </div>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      <FormSection
+        step="1"
+        title="Student Details"
+        description="Enter the student's personal and admission information."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-2.5 text-sm font-semibold text-ink">
             <div className="flex items-center justify-between gap-4">
               <span>Admission number</span>
@@ -246,6 +249,7 @@ export function StudentForm({
                     type="checkbox"
                     checked={autoGenerateAdmissionNumber}
                     onChange={(event) => handleAdmissionNumberToggle(event.target.checked)}
+                    className="h-4 w-4 rounded border-outline/70 accent-primary focus:ring-2 focus:ring-primary/20"
                   />
                   Auto-generate
                 </label>
@@ -264,6 +268,7 @@ export function StudentForm({
               readOnly={isCreateMode && autoGenerateAdmissionNumber}
               disabled={isCreateMode && autoGenerateAdmissionNumber}
               placeholder={`${currentAdmissionYear}-12`}
+              className="rounded-2xl"
             />
             <span className="text-xs font-medium leading-5 text-muted">
               {isCreateMode && autoGenerateAdmissionNumber
@@ -292,6 +297,7 @@ export function StudentForm({
               inputMode="numeric"
               maxLength={15}
               autoComplete="off"
+              className="rounded-2xl"
             />
           </Field>
           <Field label="Name (English)" required error={errors.name_en?.message}>
@@ -301,9 +307,9 @@ export function StudentForm({
             <Input {...register("name_ur")} value={watch("name_ur") ?? ""} onChange={(event) => handleUrduNameChange("name_ur", event.target.value)} dir="rtl" placeholder="e.g. جان ڈو" autoComplete="off" />
           </Field>
           <Field label="Gender" required error={errors.gender?.message}>
-            <div className="flex gap-4 items-center h-10">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} required /> Male</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} required /> Female</label>
+            <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} required className="h-4 w-4 accent-primary" /> Male</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} required className="h-4 w-4 accent-primary" /> Female</label>
             </div>
           </Field>
           <Field label="Religion" required error={errors.religion?.message}>
@@ -347,17 +353,23 @@ export function StudentForm({
               </Select>
             </Field>
           ) : null}
-          <Field label="Address (optional)" error={errors.address?.message}>
-            <Textarea {...register("address")} autoComplete="new-password" />
-          </Field>
-        </CardContent>
-      </Card>
+          <div className="md:col-span-2">
+            <Field label="Address (optional)" error={errors.address?.message}>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-muted" aria-hidden="true" />
+                <Textarea {...register("address")} autoComplete="new-password" className="min-h-[52px] pl-11" placeholder="e.g. House No. 12, Street 5, F-7/2, Islamabad" />
+              </div>
+            </Field>
+          </div>
+        </div>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Father & Guardian Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      <FormSection
+        step="2"
+        title="Father & Guardian Details"
+        description="Enter father's information."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Father's Name (English)" required error={errors.father_name_en?.message}>
             <Input {...register("father_name_en")} value={watch("father_name_en") ?? ""} onChange={(event) => handleEnglishNameChange("father_name_en", event.target.value)} autoComplete="new-password" />
           </Field>
@@ -371,21 +383,22 @@ export function StudentForm({
             <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="0000012345678" inputMode="numeric" maxLength={15} autoComplete="new-password" />
           </Field>
           <Field label="Father alive?" required error={errors.father_alive?.message}>
-            <div className="flex gap-4 items-center h-10">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} required /> Yes</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} required /> No</label>
+            <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> Yes</label>
+              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> No</label>
             </div>
           </Field>
           
-          <div className="col-span-full border-t border-outline/50 my-2 pt-4">
-            <p className="text-sm font-semibold mb-3">{fatherAlive === "no" ? "Guardian Info" : "Guardian Info (Optional)"}</p>
+          <div className="col-span-full mt-2 border-t border-outline/50 pt-5">
+            <p className="text-sm font-semibold text-ink">{fatherAlive === "no" ? "Guardian Info" : "Guardian Info (Optional)"}</p>
+            <p className="mt-1 text-sm text-muted">Provide guardian details if applicable.</p>
           </div>
           
           <Field label="Guardian name" required={watch("father_alive") === "no"} error={errors.guardian_name?.message}>
             <Input {...register("guardian_name")} value={watch("guardian_name") ?? ""} onChange={(event) => handleEnglishNameChange("guardian_name", event.target.value)} autoComplete="new-password" />
           </Field>
           <Field label="Relationship" required={watch("father_alive") === "no"} error={errors.guardian_relationship?.message}>
-            <Input {...register("guardian_relationship")} autoComplete="off" />
+            <Input {...register("guardian_relationship")} autoComplete="off" placeholder="Select relationship..." />
           </Field>
           <Field label="Guardian email" error={errors.guardian_email?.message}>
             <Input type="email" {...register("guardian_email")} onChange={(event) => setValue("guardian_email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} autoComplete="new-password" />
@@ -393,12 +406,32 @@ export function StudentForm({
           <Field label="Guardian phone" required={watch("father_alive") === "no"} error={errors.guardian_phone?.message}>
             <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
           </Field>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
-      <div className="flex justify-end">
-        <Button disabled={pending}>{pending ? "Saving..." : submitLabel}</Button>
+      <div className="flex justify-end gap-3 border-t border-outline/50 px-1 pt-4">
+        <Button type="button" variant="secondary" className="rounded-2xl" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button disabled={pending} className="rounded-2xl px-6">{pending ? "Saving..." : submitLabel}</Button>
       </div>
     </form>
+  );
+}
+
+function FormSection({ step, title, description, children }: { step: string; title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-[24px] border border-outline/60 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-6">
+      <div className="mb-5 flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white shadow-button">
+          {step}
+        </div>
+        <div>
+          <h3 className="font-display text-[1.55rem] font-bold text-ink">{title}</h3>
+          <p className="mt-1 text-sm text-muted">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }

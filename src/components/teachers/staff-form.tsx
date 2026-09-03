@@ -95,10 +95,10 @@ export function StaffFormModal({
 
       {mounted ? createPortal(open ? (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full max-w-lg flex-col overflow-hidden rounded-t-[20px] bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl">
+          <div className="flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-display font-bold">Create User Account</h2>
+                <h2 className="font-display text-[1.7rem] font-bold">Create User Account</h2>
                 <p className="mt-1 break-words text-sm leading-5 text-muted">The user will change their temporary password on first login.</p>
               </div>
               <button onClick={() => setOpen(false)} className="text-muted hover:text-ink">
@@ -106,7 +106,7 @@ export function StaffFormModal({
               </button>
             </div>
             
-            <form onSubmit={handleSubmit(onSubmit)} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50/30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
               {error && (
                 <div className="mb-4 rounded-md bg-danger-soft p-3 text-sm font-semibold text-danger">
                   {error}

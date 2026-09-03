@@ -48,7 +48,7 @@ export default async function TransportPage() {
       />
 
       {data.migrationRequired ? (
-        <Card>
+        <Card className="rounded-[28px] border border-outline/70 bg-white shadow-card">
           <CardContent className="pt-6">
             <EmptyState
               title="Database migration required"
@@ -65,11 +65,11 @@ export default async function TransportPage() {
               const pct = capacity ? Math.min(100, Math.round((passengers / capacity) * 100)) : 0;
               const roster = data.assignments.filter((item) => item.vehicle_id === vehicle.id);
               return (
-                <details key={vehicle.id} className="group overflow-hidden rounded-[18px] bg-white shadow-card ring-1 ring-outline/70">
-                  <summary className="grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-surface-low md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <details key={vehicle.id} className="group overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card">
+                  <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-surface-low/60 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-display text-lg font-semibold text-ink">{vehicle.plate_number}</h3>
+                        <h3 className="font-display text-[1.35rem] font-semibold text-ink">{vehicle.plate_number}</h3>
                         <Badge tone={vehicle.status === "active" ? "green" : "yellow"}>{vehicle.status}</Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted">{vehicle.route_name ?? "No route mapped"} / {vehicle.driver_name ?? "No driver"} / {passengers} passengers</p>
@@ -110,7 +110,7 @@ export default async function TransportPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-lg bg-surface-low p-3">
+                    <div className="rounded-[22px] bg-surface-low/50 p-4">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Students and Staff Using This Transport</p>
                         {canManage ? (
@@ -122,7 +122,7 @@ export default async function TransportPage() {
                       {roster.length ? (
                         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                           {roster.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm ring-1 ring-outline/40">
+                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 text-sm ring-1 ring-outline/40">
                               <span className="min-w-0 truncate">{item.student_name} <span className="text-muted">({item.admission_number})</span></span>
                               {canManage ? (
                                 <TransportRefreshForm action={removeTransportAction} confirmText={`Remove ${item.student_name} from this transport?`}>

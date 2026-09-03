@@ -184,20 +184,20 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   return (
     <>
       <div id="fee-management-report" className="pb-24">
-        <Card className="overflow-hidden">
-          <div className="border-b border-outline/60 px-4 py-4 sm:px-5">
+        <Card className="overflow-hidden rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <div className="border-b border-outline/60 px-5 py-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-ink">Student Fee Accounts</h2>
+                <h2 className="font-display text-[1.5rem] font-bold text-ink">Student Fee Accounts</h2>
                 <p className="text-sm text-muted">Search, filter, collect payments, and apply discounts.</p>
               </div>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-5">
               <div className="relative md:col-span-2">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" placeholder="Search student or admission..." />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-outline/70 pl-11 shadow-none" placeholder="Search student or admission..." />
               </div>
-              <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Classes</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -205,14 +205,14 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   </option>
                 ))}
               </Select>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Statuses</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="partially_paid">Partially Paid</option>
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
               </Select>
-              <Select value={session} onChange={(e) => setSession(e.target.value)}>
+              <Select value={session} onChange={(e) => setSession(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Sessions</option>
                 {sessions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -239,16 +239,16 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
           ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
+              <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                 <tr>
-                  <th className="px-4 py-3">Student</th>
-                  <th className="px-4 py-3">Class</th>
-                  <th className="px-4 py-3">Payable</th>
-                  <th className="px-4 py-3">Paid</th>
-                  <th className="px-4 py-3">Remaining</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Receipt</th>
-                  {canManage && <th className="px-4 py-3 text-right">Actions</th>}
+                  <th className="px-5 py-4">Student</th>
+                  <th className="px-5 py-4">Class</th>
+                  <th className="px-5 py-4">Payable</th>
+                  <th className="px-5 py-4">Paid</th>
+                  <th className="px-5 py-4">Remaining</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Receipt</th>
+                  {canManage && <th className="px-5 py-4 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -258,26 +258,26 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   return (
                     <tr
                       key={acc.id}
-                      className={`border-t border-outline/60 ${isSelected ? "bg-primary-soft/40" : "hover:bg-surface-low/70"}`}
+                      className={`border-t border-outline/50 ${isSelected ? "bg-primary-soft/30" : "hover:bg-surface-low/40"}`}
                     >
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4">
                         <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="text-left">
                           <p className="font-semibold text-ink">{acc.student_name}</p>
                           <p className="text-xs text-muted">Adm: {acc.admission_number}</p>
                         </button>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4">
                         <div className="text-xs text-muted">{formatGradeSection(acc.grade_name, acc.section_name)}</div>
                       </td>
-                      <td className="px-4 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
-                      <td className="px-4 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
-                      <td className="px-4 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
+                      <td className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
+                      <td className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
+                      <td className="px-5 py-4">
                         <Badge tone={statusTone[acc.payment_status as keyof typeof statusTone] ?? "gray"}>
                           {acc.payment_status.replace("_", " ")}
                         </Badge>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4">
                         {receipt ? (
                           <button
                             type="button"
@@ -291,19 +291,19 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                         )}
                       </td>
                       {canManage && (
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-5 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => handleOpenCollect(acc.id)}
-                              className="inline-flex items-center gap-1 rounded bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary hover:brightness-95"
+                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary hover:brightness-95"
                             >
                               <Wallet className="h-3 w-3" /> Collect
                             </button>
                             <button
                               type="button"
                               onClick={() => handleOpenDiscount(acc)}
-                              className="inline-flex items-center gap-1 rounded bg-success-soft px-2.5 py-1 text-xs font-bold text-success hover:brightness-95"
+                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success hover:brightness-95"
                             >
                               <Percent className="h-3 w-3" /> Discount
                             </button>
@@ -340,7 +340,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
 
       {isCollectOpen && selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl">
+          <Card className="w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Record Payment</h3>
@@ -397,7 +397,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
 
       {isDiscountOpen && selectedAccount ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Apply Fee Discount</h3>

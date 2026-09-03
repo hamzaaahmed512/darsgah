@@ -25,7 +25,7 @@ export function LeaveApplicationDialog({ children }: { children: ReactNode }) {
             if (event.target === event.currentTarget) setOpen(false);
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
               <h2 className="font-display text-lg font-bold text-ink">Apply for Leave</h2>
               <button
@@ -37,7 +37,7 @@ export function LeaveApplicationDialog({ children }: { children: ReactNode }) {
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <div className="overflow-y-auto p-5">{children}</div>
+            <div className="overflow-y-auto bg-slate-50/30 p-5">{children}</div>
           </div>
         </div>
       ) : null}

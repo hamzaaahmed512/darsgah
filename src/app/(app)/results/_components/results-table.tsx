@@ -46,54 +46,55 @@ export function ResultsTable({
   inlineApproval?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-hidden rounded-[24px] border border-outline/50">
+      <div className="overflow-x-auto">
       <table className="w-full min-w-[960px] text-left text-sm">
-        <thead>
-          <tr className="border-b border-outline/40 text-xs uppercase tracking-wide text-muted">
-            <th className="py-3 pr-3">Exam Type</th>
-            <th className="py-3 pr-3">Subject</th>
-            <th className="py-3 pr-3">Class</th>
-            <th className="py-3 pr-3">Section</th>
-            <th className="py-3 pr-3">Uploaded By</th>
-            <th className="py-3 pr-3">Upload Date</th>
-            <th className="py-3 pr-3">Status</th>
+        <thead className="bg-slate-50/80">
+          <tr className="border-b border-outline/40 text-xs uppercase tracking-[0.14em] text-muted">
+            <th className="px-5 py-4">Exam Type</th>
+            <th className="px-5 py-4">Subject</th>
+            <th className="px-5 py-4">Class</th>
+            <th className="px-5 py-4">Section</th>
+            <th className="px-5 py-4">Uploaded By</th>
+            <th className="px-5 py-4">Upload Date</th>
+            <th className="px-5 py-4">Status</th>
             {showApprovalColumns ? (
               <>
-                <th className="py-3 pr-3">Approved By</th>
-                <th className="py-3 pr-3">Approval Date</th>
+                <th className="px-5 py-4">Approved By</th>
+                <th className="px-5 py-4">Approval Date</th>
               </>
             ) : null}
-            <th className="py-3 pr-3">Actions</th>
+            <th className="px-5 py-4">Actions</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-outline/25 align-top">
-              <td className="py-3 pr-3">
+            <tr key={row.id} className="border-b border-outline/25 align-top last:border-b-0">
+              <td className="px-5 py-4">
                 <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p>
                 <p className="text-xs text-muted">{row.title}</p>
               </td>
-              <td className="py-3 pr-3">{row.subjects?.name ?? "—"}</td>
-              <td className="py-3 pr-3">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</td>
-              <td className="py-3 pr-3">{formatGradeSection(null, row.classes?.sections?.name) || "—"}</td>
-              <td className="py-3 pr-3">
+              <td className="px-5 py-4">{row.subjects?.name ?? "—"}</td>
+              <td className="px-5 py-4">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</td>
+              <td className="px-5 py-4">{formatGradeSection(null, row.classes?.sections?.name) || "—"}</td>
+              <td className="px-5 py-4">
                 <p className="font-semibold">{row.uploadedByTeacherName}</p>
                 {row.uploadedByTeacherId ? <p className="text-xs text-muted">{row.uploadedByTeacherId.slice(0, 8)}…</p> : null}
               </td>
-              <td className="py-3 pr-3">{formatDateTime(row.uploaded_at)}</td>
-              <td className="py-3 pr-3">
+              <td className="px-5 py-4">{formatDateTime(row.uploaded_at)}</td>
+              <td className="px-5 py-4">
                 <WorkflowStatusBadge status={row.workflowStatus} />
               </td>
               {showApprovalColumns ? (
                 <>
-                  <td className="py-3 pr-3">{row.approved_by_principal_name ?? "—"}</td>
-                  <td className="py-3 pr-3">{formatDateTime(row.approved_at)}</td>
+                  <td className="px-5 py-4">{row.approved_by_principal_name ?? "—"}</td>
+                  <td className="px-5 py-4">{formatDateTime(row.approved_at)}</td>
                 </>
               ) : null}
-              <td className="py-3 pr-3">
+              <td className="px-5 py-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap gap-2">
-                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm">
+                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl">
                       <Eye className="h-4 w-4" /> View
                     </ButtonLink>
                     {showPrint && row.canPrint ? (
@@ -101,6 +102,7 @@ export function ResultsTable({
                         href={`/results/print?classId=${row.class_id}&examType=${row.exam_type}${row.month ? `&month=${row.month}` : ""}`}
                         target="_blank"
                         size="sm"
+                        className="rounded-xl"
                       >
                         <Printer className="h-4 w-4" /> Print
                       </ButtonLink>
@@ -121,6 +123,7 @@ export function ResultsTable({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

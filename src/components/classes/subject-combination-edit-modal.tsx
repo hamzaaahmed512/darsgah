@@ -1,12 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { Edit2, Trash2, X } from "lucide-react";
+import { Edit2, Layers3, Sparkles, Trash2, X } from "lucide-react";
 import { deleteStudentSubjectCombinationAction, updateDefaultStudentSubjectCombinationAction, updateStudentSubjectCombinationAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/form-field";
+import { Field, Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
 
 type ClassOption = { id: string; name: string; grade_id?: string | null; grade_name?: string | null; section_name?: string | null };
@@ -37,7 +38,6 @@ export function SubjectCombinationEditModal({
   const { pushToast } = useToast();
   const grades = getGradesFromClasses(classes);
   const [open, setOpen] = useState(false);
-  const [visible, setVisible] = useState(false);
   const [name, setName] = useState(combination.name);
   const [gradeIds, setGradeIds] = useState<string[]>(() => combination.gradeId ? [combination.gradeId] : getSelectedGradeIds(grades, combination.classIds ?? [], combination.gradeIds));
   const [subjectIds, setSubjectIds] = useState<string[]>(combination.subjectIds);
@@ -53,12 +53,11 @@ export function SubjectCombinationEditModal({
     setGradeIds(combination.gradeId ? [combination.gradeId] : getSelectedGradeIds(grades, combination.classIds ?? [], combination.gradeIds));
     setSubjectIds(combination.subjectIds);
     setOpen(true);
-    requestAnimationFrame(() => setVisible(true));
   }
 
   function handleClose() {
-    setVisible(false);
-    window.setTimeout(() => setOpen(false), 150);
+    if (pending) return;
+    setOpen(false);
   }
 
   function submit() {
@@ -90,11 +89,10 @@ export function SubjectCombinationEditModal({
 
   function handleDelete() {
     if (!combination.id || isDefaultCombination) return;
-    const combinationId = combination.id;
     if (!confirm("Are you sure you want to delete this combination?")) return;
     startTransition(async () => {
       try {
-        await deleteStudentSubjectCombinationAction(combinationId);
+        await deleteStudentSubjectCombinationAction(combination.id);
         pushToast("Combination deleted.", "success");
         handleClose();
         router.refresh();
@@ -109,117 +107,175 @@ export function SubjectCombinationEditModal({
       <button
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-outline/50 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:bg-surface-low hover:text-primary active:scale-95"
+        className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-outline/60 bg-white px-3.5 text-sm font-semibold text-ink shadow-sm transition hover:border-primary/15 hover:bg-slate-50 hover:text-primary"
       >
-        <Edit2 className="h-3.5 w-3.5" />
-        Edit Combination
+        <Edit2 className="h-4 w-4" />
+        Edit
       </button>
 
-      {open ? createPortal(
-        <div
-          className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}
-          onClick={handleClose}
-        >
-          <div
-            className={`flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift transition-all duration-150 ${visible ? "scale-100 opacity-100" : "scale-[0.98] opacity-0"}`}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
-              <div>
-                <h2 className="font-display text-xl font-bold text-ink">Edit combination</h2>
-                <p className="mt-1 text-sm text-muted">{isDefaultCombination ? "Update combination name or included subjects." : "Update combination name, target grades, or included subjects."}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink"
-                aria-label="Close form"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid gap-6 overflow-y-auto p-6">
-              <label className="grid gap-1.5 text-sm font-semibold text-ink">
-                Name
-                <Input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Arts with Computer"
-                  autoComplete="off"
-                />
-              </label>
-
-              {isDefaultCombination ? null : (
-                <fieldset className="grid gap-2">
-                  <legend className="text-sm font-semibold text-ink">Grades</legend>
-                  <div className="grid max-h-44 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low p-3 sm:grid-cols-2">
-                    {grades.map((grade) => (
-                      <label key={grade.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={gradeIds.includes(grade.id)}
-                          onChange={() => toggle(grade.id, gradeIds, setGradeIds)}
-                          className="h-4 w-4 rounded border-outline accent-primary"
-                        />
-                        <span>{grade.name}</span>
-                      </label>
-                    ))}
+      {open
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+              <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-4xl flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+                <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-[1.7rem] font-bold text-ink">Edit Combination</h2>
+                    <p className="mt-1 break-words text-sm leading-5 text-muted">
+                      {isDefaultCombination
+                        ? "Update the default combination name and included subjects."
+                        : "Update the combination name, linked grades, and included subjects."}
+                    </p>
                   </div>
-                </fieldset>
-              )}
-
-              <fieldset className="grid gap-2">
-                <legend className="text-sm font-semibold text-ink">Subjects</legend>
-                <div className="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-outline/50 bg-surface-low p-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {subjects.map((subject) => (
-                    <label key={subject.id} className="flex items-center gap-2 text-sm text-ink cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={subjectIds.includes(subject.id)}
-                        onChange={() => toggle(subject.id, subjectIds, setSubjectIds)}
-                        className="h-4 w-4 rounded border-outline accent-primary"
-                      />
-                      <span className="truncate">{subject.name}</span>
-                    </label>
-                  ))}
+                  <button type="button" onClick={handleClose} className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink" aria-label="Close form">
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-              </fieldset>
-            </div>
 
-            <div className="flex items-center justify-between border-t border-outline/50 px-6 py-5">
-              {isDefaultCombination ? <span /> : (
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={pending}
-                  className="gap-1.5"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
-              )}
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={handleClose} disabled={pending}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={submit}
-                  disabled={pending || !name.trim() || (!isDefaultCombination && !gradeIds.length) || !subjectIds.length}
-                >
-                  {pending ? "Saving..." : "Save changes"}
-                </Button>
+                <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+                  <div className="grid gap-6">
+                    <section className="rounded-[28px] border border-outline/70 bg-white p-5 shadow-card sm:p-6">
+                      <div className="mb-5 flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+                          <Layers3 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-[1.2rem] font-bold text-ink">Combination Details</h3>
+                          <p className="mt-1 text-sm leading-5 text-muted">Keep the label clear so staff can assign it correctly.</p>
+                        </div>
+                      </div>
+                      <Field label="Name" required>
+                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Biology Major" autoComplete="off" />
+                      </Field>
+                    </section>
+
+                    <div className="grid gap-6 xl:grid-cols-2">
+                      {!isDefaultCombination ? (
+                        <SelectionPanel
+                          icon={<Sparkles className="h-5 w-5" />}
+                          title="Grades"
+                          description="Choose where this combination should be available."
+                          count={`${gradeIds.length} selected`}
+                        >
+                          <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                            {grades.map((grade) => (
+                              <SelectionChip
+                                key={grade.id}
+                                checked={gradeIds.includes(grade.id)}
+                                label={grade.name}
+                                onToggle={() => toggle(grade.id, gradeIds, setGradeIds)}
+                              />
+                            ))}
+                          </div>
+                        </SelectionPanel>
+                      ) : (
+                        <section className="rounded-[28px] border border-outline/70 bg-white p-5 shadow-card sm:p-6">
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              Default combination
+                            </span>
+                          </div>
+                          <p className="text-sm leading-6 text-muted">This built-in combination stays attached to its grade. You can only update its name and subjects here.</p>
+                        </section>
+                      )}
+
+                      <SelectionPanel
+                        icon={<Layers3 className="h-5 w-5" />}
+                        title="Subjects"
+                        description="Only selected subjects stay inside this combination."
+                        count={`${subjectIds.length} selected`}
+                      >
+                        <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                          {subjects.map((subject) => (
+                            <SelectionChip
+                              key={subject.id}
+                              checked={subjectIds.includes(subject.id)}
+                              label={subject.name}
+                              onToggle={() => toggle(subject.id, subjectIds, setSubjectIds)}
+                            />
+                          ))}
+                        </div>
+                      </SelectionPanel>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col-reverse gap-2 border-t border-outline/50 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div>
+                    {!isDefaultCombination ? (
+                      <Button type="button" variant="danger" onClick={handleDelete} disabled={pending} className="w-full sm:w-auto">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                    <Button type="button" variant="secondary" onClick={handleClose} disabled={pending}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={submit}
+                      disabled={pending || !name.trim() || (!isDefaultCombination && !gradeIds.length) || !subjectIds.length}
+                    >
+                      {pending ? "Saving..." : "Save changes"}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </>
+  );
+}
+
+function SelectionPanel({
+  icon,
+  title,
+  description,
+  count,
+  children
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  count: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-[28px] border border-outline/70 bg-white p-5 shadow-card sm:p-6">
+      <div className="mb-5 flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+          {icon}
+        </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-[1.2rem] font-bold text-ink">{title}</h3>
+            <span className="inline-flex items-center rounded-full border border-outline/60 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-muted">
+              {count}
+            </span>
+          </div>
+          <p className="mt-1 text-sm leading-5 text-muted">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SelectionChip({ checked, label, onToggle }: { checked: boolean; label: string; onToggle: () => void }) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+        checked
+          ? "border-primary/20 bg-blue-50 text-primary shadow-[0_8px_24px_rgba(37,99,235,0.08)]"
+          : "border-outline/60 bg-slate-50/60 text-ink hover:border-primary/15 hover:bg-white"
+      }`}
+    >
+      <input type="checkbox" checked={checked} onChange={onToggle} className="h-4 w-4 rounded border-outline/70 accent-primary" />
+      <span className="truncate">{label}</span>
+    </label>
   );
 }
 

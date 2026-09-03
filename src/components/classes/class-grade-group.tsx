@@ -39,7 +39,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, defaultExpan
               return (
                 <div key={cls.id} className="flex flex-col items-start gap-4 rounded-[22px] border border-outline/55 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border text-xl font-bold ${getSectionToneClasses(cls.section_name ?? cls.name)}`}>
+                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border text-xl font-bold ${getSectionToneClasses(`${gradeName}-${cls.section_name ?? cls.name}`)}`}>
                       {(cls.section_name ?? cls.name).slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">

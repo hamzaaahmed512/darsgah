@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ClipboardList, FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResultCardsFilters, ResultCardsPanel } from "@/app/(app)/results/_components/result-cards-panel";
 import { ResultsTable } from "@/app/(app)/results/_components/results-table";
@@ -71,7 +71,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       />
 
       {user.role === "principal" ? (
-        <div className="mb-5 rounded-lg bg-warning-soft p-4 text-sm font-semibold text-warning">
+        <div className="mb-5 rounded-[22px] bg-warning-soft px-5 py-4 text-sm font-semibold text-warning">
           {pendingCount
             ? `${pendingCount} major examination result${pendingCount === 1 ? "" : "s"} awaiting your approval.`
             : "No major examination results are currently pending approval."}
@@ -82,13 +82,13 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         <div className="mb-5 flex flex-wrap gap-2">
           <Link
             href="/results?view=management"
-            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view !== "cards" ? "bg-primary text-white" : "bg-white text-muted hover:bg-surface-low"}`}
+            className={`inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition ${view !== "cards" ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:bg-surface-low"}`}
           >
             Approved Results
           </Link>
           <Link
             href="/results?view=cards"
-            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "cards" ? "bg-primary text-white" : "bg-white text-muted hover:bg-surface-low"}`}
+            className={`inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition ${view === "cards" ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:bg-surface-low"}`}
           >
             Result Cards
           </Link>
@@ -96,9 +96,17 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       {showCards && cardsWorkspace ? (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Result Card Filters</CardTitle>
+        <Card className="mb-6 rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <CardHeader className="gap-4 border-b border-outline/50 pb-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                <FileText className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-[1.5rem]">Result Card Filters</CardTitle>
+                <p className="mt-1 text-sm text-muted">Select the class and examination set for result card printing.</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <ResultCardsFilters workspace={cardsWorkspace} />
@@ -107,18 +115,26 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       {!showCards ? (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{user.role === "teacher" ? "Uploaded Results" : user.role === "principal" ? "Major Examination Review" : "Result Register"}</CardTitle>
+        <Card className="mb-6 rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <CardHeader className="gap-4 border-b border-outline/50 pb-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                <ClipboardList className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-[1.5rem]">{user.role === "teacher" ? "Uploaded Results" : user.role === "principal" ? "Major Examination Review" : "Result Register"}</CardTitle>
+                <p className="mt-1 text-sm text-muted">Filter results by term and workflow status.</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <form className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]" action="/results">
+            <form className="mb-5 grid gap-3 rounded-[24px] border border-outline/60 bg-slate-50/60 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
               {user.role === "student_staff" ? <input type="hidden" name="view" value="management" /> : null}
               <Field label="Term">
-                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" />
+                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" className="h-12 rounded-2xl border-outline/70 shadow-none" />
               </Field>
               <Field label="Status">
-                <Select name="status" defaultValue={status}>
+                <Select name="status" defaultValue={status} className="h-12 rounded-2xl border-outline/70 shadow-none">
                   {statusFilters.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
@@ -127,7 +143,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
                 </Select>
               </Field>
               <div className="flex items-end">
-                <button className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white" type="submit">
+                <button className="min-h-12 rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-button" type="submit">
                   Filter
                 </button>
               </div>
@@ -138,7 +154,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
                 <Link
                   key={item.value}
                   href={`/results?status=${item.value}${params.term ? `&term=${encodeURIComponent(params.term)}` : ""}${user.role === "student_staff" ? "&view=management" : ""}`}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${status === item.value ? "bg-primary text-white" : "bg-white text-muted hover:bg-surface-low"}`}
+                  className={`inline-flex min-h-10 items-center rounded-2xl px-4 text-sm font-semibold transition ${status === item.value ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:bg-surface-low"}`}
                 >
                   {item.label}
                 </Link>

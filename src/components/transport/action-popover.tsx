@@ -17,7 +17,7 @@ const icons: Record<TransportActionIcon, ReactNode> = {
 
 const triggerStyles: Record<TransportActionVariant, string> = {
   primary: "bg-primary px-5 py-2.5 text-sm text-white shadow-button hover:bg-primary-ink",
-  secondary: "bg-white px-3.5 py-1.5 text-xs text-primary ring-1 ring-outline hover:bg-primary-soft"
+  secondary: "bg-white px-4 py-2 text-sm text-primary ring-1 ring-outline hover:bg-primary-soft"
 };
 
 export function TransportActionPopover({
@@ -64,7 +64,7 @@ export function TransportActionPopover({
         onClick={() => setOpen(true)}
         className={cn(
           "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl font-semibold transition",
-          variant === "secondary" && "min-h-9",
+          variant === "secondary" && "min-h-10 rounded-xl",
           triggerStyles[variant]
         )}
         aria-haspopup="dialog"
