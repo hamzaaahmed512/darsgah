@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { submitAttendance, submitTeacherAttendance } from "@/lib/services/attendance";
+import { reopenAttendance, submitAttendance, submitTeacherAttendance } from "@/lib/services/attendance";
 import type { AttendanceSubmission, TeacherAttendanceSubmission } from "@/lib/validation/attendance";
 
 export async function submitAttendanceAction(values: AttendanceSubmission) {
@@ -14,5 +14,11 @@ export async function submitAttendanceAction(values: AttendanceSubmission) {
 export async function submitTeacherAttendanceAction(values: TeacherAttendanceSubmission) {
   const user = await requireUser("attendance:view");
   await submitTeacherAttendance(user, values);
+  revalidatePath("/attendance");
+}
+
+export async function reopenAttendanceAction(classId: string, attendanceDate: string) {
+  const user = await requireUser("attendance:view");
+  await reopenAttendance(user, classId, attendanceDate);
   revalidatePath("/attendance");
 }

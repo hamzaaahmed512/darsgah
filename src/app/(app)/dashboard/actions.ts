@@ -14,6 +14,7 @@ export async function sendAttendanceReminderAction(classId: string) {
 
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1_000).toISOString();
 
   const { data: targetClass, error: classError } = await supabase
     .from("classes")
@@ -44,12 +45,13 @@ export async function sendAttendanceReminderAction(classId: string) {
     .eq("action", "attendance_reminder_sent")
     .eq("entity_type", "class")
     .eq("entity_id", classId)
-    .contains("metadata", { attendance_date: today })
+    .gte("created_at", twelveHoursAgo)
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (reminderError) return { error: reminderError.message };
-  if (existingReminder) return { error: "A reminder has already been sent for this class today." };
+  if (existingReminder) return { error: "A reminder has already been sent for this class in the last 12 hours.", alreadySent: true };
 
   const headTeacher = Array.isArray(targetClass.head_teacher) ? targetClass.head_teacher[0] : targetClass.head_teacher;
 

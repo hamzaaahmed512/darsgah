@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Save } from "lucide-react";
+import { RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,8 +20,12 @@ export function AttendanceForm({
   attendanceDate,
   submitted,
   canSubmit,
+  canUndo,
+  editWindowOpen,
+  editDeadline,
   restrictionMessage,
-  onSubmit
+  onSubmit,
+  onUndo
 }: {
   classes: Array<{ id: string; name: string; grade_name: string; section_name: string | null; can_mark_attendance?: boolean }>;
   roster: Array<{ student_id: string; student_name: string; admission_number: string; current_status: AttendanceStatus | null; note: string | null }>;
@@ -29,8 +33,12 @@ export function AttendanceForm({
   attendanceDate: string;
   submitted: boolean;
   canSubmit: boolean;
+  canUndo: boolean;
+  editWindowOpen: boolean;
+  editDeadline?: string | null;
   restrictionMessage?: string | null;
   onSubmit: (values: AttendanceSubmission) => Promise<void>;
+  onUndo: (classId: string, attendanceDate: string) => Promise<void>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,6 +86,19 @@ export function AttendanceForm({
     });
   }
 
+  function undo() {
+    if (!selectedClassId || !window.confirm("Reopen this attendance for editing? You must resubmit it within 24 hours.")) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await onUndo(selectedClassId, attendanceDate);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Attendance could not be reopened.");
+      }
+    });
+  }
+
   return (
     <div className="grid gap-6">
       <Card className="p-4">
@@ -90,11 +111,24 @@ export function AttendanceForm({
             ))}
           </Select>
           <Input type="date" value={attendanceDate} onChange={(event) => updateFilters(selectedClassId ?? "", event.target.value)} aria-label="Attendance date" />
-          <Button onClick={submit} disabled={!canSubmit || pending || !roster.length} className="w-full md:w-auto">
-            <Save className="h-4 w-4" aria-hidden="true" />
-            {pending ? "Saving..." : submitted ? "Attendance marked" : "Submit attendance"}
-          </Button>
+          <div className="flex w-full gap-2 md:w-auto">
+            {canUndo ? (
+              <Button type="button" variant="secondary" onClick={undo} disabled={pending} className="flex-1 md:flex-none">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Undo & Edit
+              </Button>
+            ) : null}
+            <Button onClick={submit} disabled={!canSubmit || pending || !roster.length} className="flex-1 md:flex-none">
+              <Save className="h-4 w-4" aria-hidden="true" />
+              {pending ? "Saving..." : editWindowOpen ? "Resubmit attendance" : submitted ? "Attendance marked" : "Submit attendance"}
+            </Button>
+          </div>
         </div>
+        {editWindowOpen ? (
+          <div className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-sm font-semibold text-warning">
+            Attendance is open for editing. Resubmit within 24 hours{editDeadline ? ` (before ${new Date(editDeadline).toLocaleString()})` : ""}; otherwise the previous submission remains final.
+          </div>
+        ) : null}
         {restrictionMessage ? <div className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-sm font-semibold text-warning">{restrictionMessage}</div> : null}
         {error ? <div className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-sm font-semibold text-danger">{error}</div> : null}
       </Card>
@@ -103,7 +137,7 @@ export function AttendanceForm({
         <CardHeader>
           <div>
             <CardTitle>{selectedClass ? formatClassDisplayName(selectedClass.grade_name, selectedClass.name, selectedClass.section_name) : "Class roster"}</CardTitle>
-            <p className="mt-1 text-sm text-muted">{submitted ? "Attendance already marked for today." : "Default status is present. Update exceptions before saving."}</p>
+            <p className="mt-1 text-sm text-muted">{editWindowOpen ? "Update the saved records and resubmit before the edit window closes." : submitted ? "Attendance already marked for today." : "Default status is present. Update exceptions before saving."}</p>
           </div>
         </CardHeader>
         <CardContent>

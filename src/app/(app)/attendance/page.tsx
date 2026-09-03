@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getAttendanceContext, getTeacherAttendanceContext, principalHasTeachingClass } from "@/lib/services/attendance";
 import { getPendingAttendanceClasses } from "@/lib/services/dashboard";
 import { hasPermission } from "@/lib/permissions";
-import { submitAttendanceAction, submitTeacherAttendanceAction } from "@/app/(app)/attendance/actions";
+import { reopenAttendanceAction, submitAttendanceAction, submitTeacherAttendanceAction } from "@/app/(app)/attendance/actions";
 import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance-card";
 import { ButtonLink } from "@/components/ui/button";
 
@@ -26,7 +26,9 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
     ? [null, await getTeacherAttendanceContext(user, params.date)]
     : [await getAttendanceContext(user, params.classId, params.date, { scope: mode }), null];
   const selectedClass = context?.classes.find((item) => item.id === context.selectedClassId);
-  const canOpenMarkingForm = hasPermission(user.role, "attendance:submit", user.permissions) || (user.role === "principal" && mode === "class");
+  const canOpenMarkingForm = hasPermission(user.role, "attendance:submit", user.permissions)
+    || (user.role === "principal" && mode === "class")
+    || Boolean(user.role === "principal" && (context?.canReopen || context?.editWindowOpen));
   const datedQuery = params.date ? `&date=${encodeURIComponent(params.date)}` : "";
   const studentDateQuery = params.date ? `?date=${encodeURIComponent(params.date)}` : "";
 
@@ -66,10 +68,14 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           roster={context!.roster}
           selectedClassId={context!.selectedClassId}
           attendanceDate={context!.attendanceDate}
-          submitted={Boolean(context!.session)}
-          canSubmit={Boolean(selectedClass?.can_mark_attendance) && !context!.session}
-          restrictionMessage={selectedClass && !selectedClass.can_mark_attendance ? "Only the head teacher can mark attendance." : null}
+          submitted={Boolean(context!.session) && !context!.editWindowOpen}
+          canSubmit={Boolean(selectedClass?.can_mark_attendance && !context!.session) || context!.editWindowOpen}
+          canUndo={context!.canReopen}
+          editWindowOpen={context!.editWindowOpen}
+          editDeadline={context!.editDeadline}
+          restrictionMessage={selectedClass && !selectedClass.can_mark_attendance && !context!.editWindowOpen && !context!.canReopen ? "Only the head teacher can mark attendance." : null}
           onSubmit={submitAttendanceAction}
+          onUndo={reopenAttendanceAction}
         />
       ) : (
         <AttendanceRegisterView

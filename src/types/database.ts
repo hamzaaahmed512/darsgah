@@ -416,4 +416,5 @@ export type PendingAttendanceClass = {
   head_teacher_name: string | null;
   head_teacher_email: string | null;
   head_teacher_phone: string | null;
+  reminder_sent_at: string | null;
 };

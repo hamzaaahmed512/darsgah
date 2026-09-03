@@ -97,6 +97,25 @@ export async function getAttendanceContext(
         .maybeSingle()
     : { data: null };
 
+  const sessionData = session.data as any;
+  const now = Date.now();
+  const submittedAt = sessionData?.submitted_at ? new Date(sessionData.submitted_at).getTime() : 0;
+  const reopenedAt = sessionData?.reopened_at ? new Date(sessionData.reopened_at).getTime() : 0;
+  const editWindowOpen = Boolean(sessionData?.status === "submitted" && reopenedAt && now - reopenedAt < 24 * 60 * 60 * 1_000);
+  const teacherCanReopen = Boolean(
+    sessionData?.status === "submitted" &&
+    sessionData?.submitted_by === user.id &&
+    !sessionData?.teacher_reopen_used_at &&
+    submittedAt &&
+    now - submittedAt < 24 * 60 * 60 * 1_000
+  );
+  const principalCanReopen = Boolean(
+    user.role === "principal" &&
+    sessionData &&
+    !editWindowOpen &&
+    (sessionData.teacher_reopen_used_at || !submittedAt || now - submittedAt >= 24 * 60 * 60 * 1_000)
+  );
+
   return {
     classes: classes.map((row: any) => ({
       id: row.id,
@@ -110,8 +129,23 @@ export async function getAttendanceContext(
     selectedClassId,
     attendanceDate,
     roster,
-    session: session.data
+    session: sessionData,
+    editWindowOpen,
+    editDeadline: editWindowOpen ? new Date(reopenedAt + 24 * 60 * 60 * 1_000).toISOString() : null,
+    canReopen: teacherCanReopen || principalCanReopen
   };
+}
+
+export async function reopenAttendance(user: AppUser, classId: string, attendanceDate: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reopen_attendance_session", {
+    p_school_id: user.schoolId,
+    p_class_id: classId,
+    p_attendance_date: attendanceDate
+  });
+
+  if (error) throw new Error(error.message);
+  await logActivity(user, "attendance_reopened", "class", classId, { attendance_date: attendanceDate });
 }
 
 export async function principalHasTeachingClass(user: AppUser) {
@@ -218,20 +252,53 @@ export async function submitAttendance(user: AppUser, values: AttendanceSubmissi
 
   if (classError) throw new Error(classError.message);
   if (!targetClass) throw new Error("Class not found.");
-  if (targetClass.head_teacher_id !== user.id) {
-    throw new Error("Only the head teacher can mark attendance.");
-  }
-
   const { data: existingSession, error: existingError } = await supabase
     .from("attendance_sessions")
-    .select("id")
+    .select("id,status,reopened_at,reopened_by")
     .eq("school_id", user.schoolId)
     .eq("class_id", parsed.class_id)
     .eq("attendance_date", parsed.attendance_date)
     .maybeSingle();
 
   if (existingError) throw new Error(existingError.message);
-  if (existingSession) throw new Error("Attendance already marked for today.");
+  if (existingSession) {
+    const reopenedAt = existingSession.reopened_at ? new Date(existingSession.reopened_at).getTime() : 0;
+    const editWindowOpen = existingSession.status === "submitted" && reopenedAt && Date.now() - reopenedAt < 24 * 60 * 60 * 1_000;
+    const canResubmit = editWindowOpen && existingSession.reopened_by === user.id && (targetClass.head_teacher_id === user.id || user.role === "principal");
+    if (!canResubmit) throw new Error("Attendance is not open for editing. Ask the principal to reopen it.");
+
+    const { error: recordsError } = await supabase.from("attendance_records").upsert(
+      parsed.records.map((record) => ({
+        school_id: user.schoolId,
+        session_id: existingSession.id,
+        class_id: parsed.class_id,
+        student_id: record.student_id,
+        attendance_date: parsed.attendance_date,
+        status: record.status,
+        note: record.note || null,
+        recorded_by: user.id
+      })),
+      { onConflict: "school_id,student_id,class_id,attendance_date" }
+    );
+    if (recordsError) throw new Error(recordsError.message);
+
+    const { error: resubmitError } = await supabase
+      .from("attendance_sessions")
+      .update({ status: "submitted", submitted_at: new Date().toISOString(), submitted_by: user.id, reopened_at: null, reopened_by: null })
+      .eq("id", existingSession.id);
+    if (resubmitError) throw new Error(resubmitError.message);
+
+    await logActivity(user, "attendance_resubmitted", "attendance_session", existingSession.id, {
+      class_id: parsed.class_id,
+      attendance_date: parsed.attendance_date,
+      records: parsed.records.length
+    });
+    return;
+  }
+
+  if (targetClass.head_teacher_id !== user.id) {
+    throw new Error("Only the head teacher can mark attendance.");
+  }
 
   const { data: session, error: sessionError } = await supabase
     .from("attendance_sessions")

@@ -73,7 +73,7 @@ export async function getPendingAttendanceClasses(user: AppUser): Promise<Pendin
 
   if (error) throw new Error(error.message);
 
-  return sortClassesNaturally((data ?? [])
+  const pendingClasses = (data ?? [])
     .filter((row: any) => !row.attendance_sessions?.length)
     .map((row: any) => ({
       id: row.id,
@@ -84,8 +84,36 @@ export async function getPendingAttendanceClasses(user: AppUser): Promise<Pendin
       head_teacher_id: row.head_teacher_id,
       head_teacher_name: formatDisplayName(row.head_teacher?.full_name) || null,
       head_teacher_email: row.head_teacher?.email ?? null,
-      head_teacher_phone: row.head_teacher?.phone ?? null
-    })));
+      head_teacher_phone: row.head_teacher?.phone ?? null,
+      reminder_sent_at: null as string | null
+    }));
+
+  if (!pendingClasses.length) return [];
+
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1_000).toISOString();
+  const { data: reminderLogs, error: reminderError } = await supabase
+    .from("activity_logs")
+    .select("entity_id, created_at")
+    .eq("school_id", user.schoolId)
+    .eq("action", "attendance_reminder_sent")
+    .eq("entity_type", "class")
+    .in("entity_id", pendingClasses.map((item) => item.id))
+    .gte("created_at", twelveHoursAgo)
+    .order("created_at", { ascending: false });
+
+  if (reminderError) throw new Error(reminderError.message);
+
+  const latestReminderByClass = new Map<string, string>();
+  for (const log of reminderLogs ?? []) {
+    if (log.entity_id && !latestReminderByClass.has(log.entity_id)) {
+      latestReminderByClass.set(log.entity_id, log.created_at);
+    }
+  }
+
+  return sortClassesNaturally(pendingClasses.map((item) => ({
+    ...item,
+    reminder_sent_at: latestReminderByClass.get(item.id) ?? null
+  })));
 }
 
 async function countTeacherAttendanceConcerns(user: AppUser, today: string) {

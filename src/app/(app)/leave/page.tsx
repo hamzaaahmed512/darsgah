@@ -7,6 +7,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { LeaveApplicationDialog } from "@/components/leave/leave-application-dialog";
 import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
 import { LeaveReviewActions } from "@/components/leave/leave-review-actions";
+import { CsvExport } from "@/components/reports/csv-export";
 import { requireUser } from "@/lib/auth/session";
 import { getLeaveRequestsForReview, getMyLeaveCenter } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
@@ -51,6 +52,25 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all", range) : [];
   const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user, range);
   const { leaves, migrationRequired } = leaveCenter;
+  const exportDate = new Date().toISOString().slice(0, 10);
+  const reviewExportRows = reviewLeaves.map((leave) => ({
+    Staff: (leave as any).applicant_name ?? "Employee",
+    Type: leave.leave_type.replace(/_/g, " "),
+    "Start date": leave.start_date,
+    "End date": leave.end_date,
+    Reason: leave.reason,
+    Status: leave.status,
+    Remarks: leave.principal_remarks ?? "",
+    "Reviewed by": (leave as any).reviewed_by_name ?? ""
+  }));
+  const personalExportRows = leaves.map((leave) => ({
+    Type: leave.leave_type.replace(/_/g, " "),
+    "Start date": leave.start_date,
+    "End date": leave.end_date,
+    Reason: leave.reason,
+    Status: leave.status,
+    Remarks: leave.principal_remarks ?? ""
+  }));
 
   return (
     <>
@@ -71,6 +91,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <Card>
           <CardHeader>
             <CardTitle>Staff Leave Requests</CardTitle>
+            <CsvExport rows={reviewExportRows} filename={`staff-leave-requests-${exportDate}.csv`} />
           </CardHeader>
           <CardContent>
             <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
@@ -121,6 +142,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <Card>
           <CardHeader>
             <CardTitle>My Leave History</CardTitle>
+            <CsvExport rows={personalExportRows} filename={`my-leave-history-${exportDate}.csv`} />
           </CardHeader>
           <CardContent>
             <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
