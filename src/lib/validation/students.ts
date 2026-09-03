@@ -52,6 +52,12 @@ const optionalEnglishName = (label: string, max: number) =>
 const optionalUrduName = (label: string, max: number) =>
   z.preprocess(cleanOptionalString, urduNameSchema(label, max).nullable().optional());
 const optionalDate = z.preprocess(cleanOptionalString, z.string().date("Enter a valid date").nullable().optional());
+const requiredDate = z.preprocess(
+  cleanOptionalString,
+  z.string({ required_error: "Date of birth is required", invalid_type_error: "Date of birth is required" })
+    .min(1, "Date of birth is required")
+    .date("Enter a valid date")
+);
 const optionalEmail = z.preprocess(
   cleanOptionalString,
   z.string().trim().toLowerCase().email("Enter a valid email").transform(normalizeEmail).nullable().optional()
@@ -76,7 +82,7 @@ export const studentSchema = z.object({
   name_ur: optionalUrduName("Name (Urdu)", 80),
   first_name: optionalText(80), // for backwards compat
   last_name: optionalText(80), // for backwards compat
-  date_of_birth: optionalDate,
+  date_of_birth: requiredDate,
   gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
   religion: z.string().trim().min(1, "Religion is required").max(60),
   photo_url: optionalUrl,

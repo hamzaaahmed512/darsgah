@@ -317,8 +317,8 @@ export function StudentForm({
             </Select>
           </Field>
 
-          <Field label="Date of birth" error={errors.date_of_birth?.message}>
-            <Input type="date" {...register("date_of_birth")} autoComplete="off" />
+          <Field label="Date of birth" required error={errors.date_of_birth?.message}>
+            <Input type="date" {...register("date_of_birth")} required aria-required="true" autoComplete="off" />
           </Field>
           <Field label="Admission date" error={errors.admission_date?.message}>
             <Input type="date" {...register("admission_date")} />

@@ -35,6 +35,11 @@ describe("validation schemas", () => {
     expect(studentSchema.safeParse(student).success).toBe(true);
   });
 
+  it("requires a student date of birth", () => {
+    expect(studentSchema.safeParse({ ...student, date_of_birth: "" }).success).toBe(false);
+    expect(studentSchema.safeParse({ ...student, date_of_birth: undefined }).success).toBe(false);
+  });
+
   it("rejects invalid student email and phone", () => {
     const result = studentSchema.safeParse({ ...student, email: "bad", guardian_phone: "abc" });
     expect(result.success).toBe(false);
