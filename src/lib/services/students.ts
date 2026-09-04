@@ -438,8 +438,8 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
         father_cnic: parsed.father_cnic || null,
         ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
         photo_url: parsed.photo_url || null,
-        class_id: parsed.class_id || null,
-        ...(studentMajorsSupported ? { major: normalizedMajor || null } : {}),
+        class_id: initialStatus === "pending_approval" ? parsed.class_id || null : null,
+        ...(studentMajorsSupported ? { major: initialStatus === "pending_approval" ? normalizedMajor || null : null } : {}),
         date_of_birth: parsed.date_of_birth || null,
         gender: parsed.gender || null,
         ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
@@ -481,13 +481,24 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
       .eq("school_id", user.schoolId)
       .eq("is_active", true)
       .maybeSingle();
-    await supabase.from("enrollments").insert({
+    const { error: enrollmentError } = await supabase.from("enrollments").insert({
       school_id: user.schoolId,
       student_id: student.id,
       class_id: parsed.class_id,
       academic_year_id: activeYear?.id,
       status: "active"
     });
+    if (enrollmentError) throw new Error(enrollmentError.message);
+
+    const { error: studentClassError } = await supabase
+      .from("students")
+      .update({
+        class_id: parsed.class_id,
+        ...(studentMajorsSupported ? { major: normalizedMajor || null } : {})
+      })
+      .eq("school_id", user.schoolId)
+      .eq("id", student.id);
+    if (studentClassError) throw new Error(studentClassError.message);
   } else if (parsed.class_id && initialStatus === "pending_approval") {
     // We store the requested class assignment in the approval request metadata if needed,
     // or just rely on the form having passed it. We'll store it in metadata so the principal
