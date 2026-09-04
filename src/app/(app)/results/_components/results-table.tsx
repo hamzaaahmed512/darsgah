@@ -46,9 +46,9 @@ export function ResultsTable({
   inlineApproval?: boolean;
 }) {
   return (
-    <div className="overflow-hidden rounded-[24px] border border-outline/50">
-      <div className="overflow-x-auto">
-      <table className="w-full min-w-[960px] text-left text-sm">
+    <div className="min-w-0 overflow-hidden rounded-[24px] border border-outline/50">
+      <div className="scrollbar-thin max-w-full overflow-x-auto">
+      <table className="w-max min-w-[1180px] text-left text-sm">
         <thead className="bg-slate-50/80">
           <tr className="border-b border-outline/40 text-xs uppercase tracking-[0.14em] text-muted">
             <th className="px-5 py-4">Exam Type</th>
@@ -64,13 +64,13 @@ export function ResultsTable({
                 <th className="px-5 py-4">Approval Date</th>
               </>
             ) : null}
-            <th className="px-5 py-4">Actions</th>
+            <th className="min-w-[220px] px-5 py-4">Actions</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-outline/25 align-top last:border-b-0">
-              <td className="px-5 py-4">
+              <td className="min-w-[220px] px-5 py-4">
                 <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p>
                 <p className="text-xs text-muted">{row.title}</p>
               </td>
