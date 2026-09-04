@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, X } from "lucide-react";
+import { BriefcaseBusiness, Pencil, X } from "lucide-react";
 import { updateStaffProfileAction } from "@/app/(app)/teachers/actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/form-field";
+import { Field, Input } from "@/components/ui/form-field";
+import { FormSectionCard } from "@/components/ui/form-section-card";
 
 type StaffDetails = {
   fullName: string;
@@ -48,15 +49,23 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
           <div><h2 className="font-display text-xl font-bold text-ink">Edit staff profile</h2><p className="mt-1 text-sm text-muted">Salary is managed separately in Payroll.</p></div>
           <button type="button" aria-label="Close" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>
         </div>
-        <form action={submit} className="min-h-0 overflow-y-auto p-5 sm:p-6">
+        <form action={submit} className="min-h-0 overflow-y-auto bg-slate-50/30 p-5 sm:p-6">
           {error ? <p className="mb-4 rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</p> : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name"><Input name="full_name" defaultValue={initial.fullName} required /></Field>
-            <Field label="Phone"><Input name="phone" defaultValue={initial.phone ?? ""} /></Field>
-            <Field label="Personal email" className="sm:col-span-2"><Input name="personal_email" type="email" defaultValue={initial.personalEmail ?? ""} /></Field>
-            <Field label="Department"><Input name="department" defaultValue={initial.department ?? ""} /></Field>
-            <Field label="Job title"><Input name="job_title" defaultValue={initial.jobTitle ?? ""} /></Field>
-          </div>
+          <FormSectionCard
+            icon={<BriefcaseBusiness className="h-5 w-5" />}
+            title="Profile Details"
+            description="Update the staff member's contact and work details here. Salary is still managed separately in Payroll."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Full name" hint="Use the full display name that should appear in staff records."><Input name="full_name" defaultValue={initial.fullName} required /></Field>
+              <Field label="Phone" hint="Add a direct contact number if one is available."><Input name="phone" defaultValue={initial.phone ?? ""} /></Field>
+              <div className="sm:col-span-2">
+                <Field label="Personal email" hint="Optional email for personal contact outside the school login."><Input name="personal_email" type="email" defaultValue={initial.personalEmail ?? ""} /></Field>
+              </div>
+              <Field label="Department" hint="This helps group the staff member correctly in the directory."><Input name="department" defaultValue={initial.department ?? ""} /></Field>
+              <Field label="Job title" hint="Use the current working title that staff should see in the profile."><Input name="job_title" defaultValue={initial.jobTitle ?? ""} /></Field>
+            </div>
+          </FormSectionCard>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
             <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save changes"}</Button>
@@ -65,8 +74,4 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
       </div>
     </div> : null}
   </>;
-}
-
-function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
-  return <label className={`grid gap-1.5 text-sm font-semibold text-ink ${className ?? ""}`}>{label}{children}</label>;
 }

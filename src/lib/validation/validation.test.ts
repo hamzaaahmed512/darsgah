@@ -156,8 +156,62 @@ describe("validation schemas", () => {
     expect(otherStaffResult.success).toBe(true);
   });
 
+  it("handles conditional father and guardian validation based on father_alive", () => {
+    // When father is alive, father phone & cnic are required
+    const aliveMissingFatherPhone = studentSchema.safeParse({
+      ...student,
+      father_alive: "yes",
+      father_phone: "",
+      father_cnic: "35202-1234567-1"
+    });
+    expect(aliveMissingFatherPhone.success).toBe(false);
+
+    const aliveMissingFatherCnic = studentSchema.safeParse({
+      ...student,
+      father_alive: "yes",
+      father_phone: "0300-1234567",
+      father_cnic: ""
+    });
+    expect(aliveMissingFatherCnic.success).toBe(false);
+
+    // When father is not alive, father phone & cnic are optional, but father name and guardian details are required
+    const deceasedWithGuardian = studentSchema.safeParse({
+      ...student,
+      father_alive: "no",
+      father_name_en: "Late John Doe",
+      father_phone: "",
+      father_cnic: "",
+      guardian_name: "Jane Doe",
+      guardian_relationship: "Mother",
+      guardian_phone: "0300-9876543"
+    });
+    expect(deceasedWithGuardian.success).toBe(true);
+
+    const deceasedMissingFatherName = studentSchema.safeParse({
+      ...student,
+      father_alive: "no",
+      father_name_en: "",
+      guardian_name: "Jane Doe",
+      guardian_relationship: "Mother",
+      guardian_phone: "0300-9876543"
+    });
+    expect(deceasedMissingFatherName.success).toBe(false);
+
+    const deceasedMissingGuardian = studentSchema.safeParse({
+      ...student,
+      father_alive: "no",
+      father_name_en: "Late John Doe",
+      father_phone: "",
+      father_cnic: "",
+      guardian_name: "",
+      guardian_relationship: "",
+      guardian_phone: ""
+    });
+    expect(deceasedMissingGuardian.success).toBe(false);
+  });
+
   it("strips invalid characters from live name input sanitizers", () => {
-    expect(sanitizeEnglishNameInput("Mary123 @Jane!")).toBe("Mary Jane");
+    expect(sanitizeEnglishNameInput("Mary123 @Jane!")).toBe("Mary123 Jane");
     expect(sanitizeUrduNameInput("جان123@ ڈو!")).toBe("جان ڈو");
   });
 

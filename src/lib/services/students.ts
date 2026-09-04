@@ -168,20 +168,36 @@ async function upsertPrimaryGuardianForStudent(
     guardianRelationship: string;
     guardianEmail: string | null;
     guardianPhone: string;
-    guardianCnic: string;
+    guardianCnic?: string | null;
   }
 ) {
-  const { data: existingGuardian, error: existingGuardianError } = await supabase
-    .from("guardians")
-    .select("id")
-    .eq("school_id", user.schoolId)
-    .eq("cnic", values.guardianCnic)
-    .order("created_at")
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (existingGuardianError) throw new Error(existingGuardianError.message);
+  let guardianId: string | null = null;
 
-  let guardianId = existingGuardian?.id ?? null;
+  if (values.guardianCnic) {
+    const { data: existingGuardian, error: existingGuardianError } = await supabase
+      .from("guardians")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("cnic", values.guardianCnic)
+      .order("created_at")
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    if (existingGuardianError) throw new Error(existingGuardianError.message);
+    guardianId = existingGuardian?.id ?? null;
+  }
+
+  if (!guardianId) {
+    const { data: existingPrimaryLink, error: primaryLinkError } = await supabase
+      .from("student_guardians")
+      .select("guardian_id")
+      .eq("school_id", user.schoolId)
+      .eq("student_id", values.studentId)
+      .eq("is_primary", true)
+      .limit(1)
+      .maybeSingle<{ guardian_id: string }>();
+    if (primaryLinkError) throw new Error(primaryLinkError.message);
+    guardianId = existingPrimaryLink?.guardian_id ?? null;
+  }
 
   if (guardianId) {
     const { error: guardianUpdateError } = await supabase
@@ -191,7 +207,7 @@ async function upsertPrimaryGuardianForStudent(
         relationship: values.guardianRelationship,
         email: values.guardianEmail,
         phone: values.guardianPhone,
-        cnic: values.guardianCnic
+        cnic: values.guardianCnic || null
       })
       .eq("school_id", user.schoolId)
       .eq("id", guardianId);
@@ -205,7 +221,7 @@ async function upsertPrimaryGuardianForStudent(
         relationship: values.guardianRelationship,
         email: values.guardianEmail,
         phone: values.guardianPhone,
-        cnic: values.guardianCnic
+        cnic: values.guardianCnic || null
       })
       .select("id")
       .single();

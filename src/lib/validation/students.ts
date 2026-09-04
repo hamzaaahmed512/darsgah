@@ -97,11 +97,8 @@ export const studentSchema = z.object({
   // Father details
   father_name_en: englishNameSchema("Father's name", 120),
   father_name_ur: optionalUrduName("Father's name (Urdu)", 120),
-  father_phone: z.string().trim().min(1, "Father's phone is required").refine(isValidPakistaniPhone, "Phone number must be exactly 11 digits, like 0300-0000000"),
-  father_cnic: z.string()
-    .trim()
-    .transform(formatCnic)
-    .pipe(z.string().regex(/^\d{5}-\d{7}-\d{1}$/, "Enter a valid 13-digit CNIC")),
+  father_phone: phone,
+  father_cnic: optionalCnic("Father CNIC"),
   father_alive: z.enum(["yes", "no"]).default("yes"),
     
   guardian_name: optionalEnglishName("Guardian name", 120),
@@ -109,7 +106,15 @@ export const studentSchema = z.object({
   guardian_email: optionalEmail,
   guardian_phone: phone
 }).superRefine((values, ctx) => {
-  if (values.father_alive !== "no") return;
+  if (values.father_alive === "yes") {
+    if (!values.father_phone?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["father_phone"], message: "Father's phone is required" });
+    }
+    if (!values.father_cnic?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["father_cnic"], message: "Father's CNIC is required" });
+    }
+    return;
+  }
   if (!values.guardian_name?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["guardian_name"], message: "Guardian name is required when father is not alive" });
   }

@@ -6,6 +6,7 @@ import { Coins, X } from "lucide-react";
 import { createManualTransactionAction } from "@/app/(app)/finance/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
+import { FormSectionCard } from "@/components/ui/form-section-card";
 import { useToast } from "@/components/ui/toast";
 
 export function AddCashModal() {
@@ -49,14 +50,22 @@ export function AddCashModal() {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <form onSubmit={submit} className="grid gap-4 p-6">
+        <form onSubmit={submit} className="grid gap-6 bg-slate-50/30 p-6">
           {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
-          <Field label="Amount" required>
-            <Input name="amount" type="number" min="0.01" step="0.01" required />
-          </Field>
-          <Field label="Date" required>
-            <Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-          </Field>
+          <FormSectionCard
+            icon={<Coins className="h-5 w-5" />}
+            title="Cash Entry"
+            description="Add only the amount and the date. This creates a simple cash income entry in the ledger."
+          >
+            <div className="grid gap-4">
+              <Field label="Amount" required hint="Enter the total cash amount being added to the system.">
+                <Input name="amount" type="number" min="0.01" step="0.01" required />
+              </Field>
+              <Field label="Date" required hint="Use the date this cash should appear in reporting.">
+                <Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+              </Field>
+            </div>
+          </FormSectionCard>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
             <Button disabled={pending}>{pending ? "Saving..." : "Add cash"}</Button>

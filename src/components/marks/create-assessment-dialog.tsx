@@ -7,6 +7,7 @@ import { createExamAction } from "@/app/(app)/marks/actions";
 import { examinationTypeLabels, type ExaminationExamType } from "@/lib/validation/marks";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form-field";
+import { FormSectionCard } from "@/components/ui/form-section-card";
 
 type AssessmentCategory = "general" | "examination";
 
@@ -142,127 +143,135 @@ export function CreateAssessmentDialog({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-4 p-5">
+            <form onSubmit={handleSubmit} className="grid gap-6 p-5">
               {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
               {/* Hidden identifiers */}
               <input type="hidden" name="class_id" value={classId} />
               <input type="hidden" name="subject_id" value={subjectId} />
               <input type="hidden" name="assessment_category" value={category} />
 
-              {/* ── Category selection ── */}
-              <fieldset className="grid grid-cols-2 gap-2">
-                <legend className="mb-2 text-sm font-medium text-ink">Assessment type</legend>
-                {CATEGORY_OPTIONS.map((option) => {
-                  const checked = category === option.value;
-                  return (
-                    <label
-                      key={option.value}
-                      className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border px-4 py-3 transition-colors ${
-                        checked
-                          ? "border-primary/40 bg-primary-soft text-primary"
-                          : "border-outline bg-white text-ink hover:bg-surface-low"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="_ui_category"
-                        value={option.value}
-                        checked={checked}
-                        onChange={() => handleCategoryChange(option.value)}
-                        className="sr-only"
+              <FormSectionCard
+                icon={<ClipboardList className="h-5 w-5" />}
+                title="Assessment Setup"
+                description="Choose the assessment style first, then fill only the fields that apply to that type."
+              >
+                <fieldset className="grid grid-cols-2 gap-2">
+                  <legend className="mb-2 text-sm font-medium text-ink">Assessment type</legend>
+                  {CATEGORY_OPTIONS.map((option) => {
+                    const checked = category === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border px-4 py-3 transition-colors ${
+                          checked
+                            ? "border-primary/40 bg-primary-soft text-primary"
+                            : "border-outline bg-white text-ink hover:bg-surface-low"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="_ui_category"
+                          value={option.value}
+                          checked={checked}
+                          onChange={() => handleCategoryChange(option.value)}
+                          className="sr-only"
+                        />
+                        <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
+                          <ClipboardList className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          {option.label}
+                        </span>
+                        <span className={`text-xs leading-snug ${checked ? "text-primary/70" : "text-muted"}`}>
+                          {option.description}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+
+                <div className="mt-4 grid gap-4">
+                  {isGeneral && (
+                    <Field label="Title" hint="Use a short title students and staff will understand later.">
+                      <Input
+                        name="title"
+                        placeholder="e.g. Quiz 1, Assignment, Presentation…"
+                        required
+                        autoFocus
                       />
-                      <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
-                        <ClipboardList className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        {option.label}
-                      </span>
-                      <span className={`text-xs leading-snug ${checked ? "text-primary/70" : "text-muted"}`}>
-                        {option.description}
-                      </span>
-                    </label>
-                  );
-                })}
-              </fieldset>
+                    </Field>
+                  )}
 
-              {/* ── General Assessment: Title field ── */}
-              {isGeneral && (
-                <Field label="Title">
-                  <Input
-                    name="title"
-                    placeholder="e.g. Quiz 1, Assignment, Presentation…"
-                    required
-                    autoFocus
-                  />
-                </Field>
-              )}
+                  {!isGeneral && (
+                    <Field label="Examination type" hint="Pick the exam cycle this assessment belongs to.">
+                      <Select
+                        name="exam_type"
+                        value={examinationType}
+                        onChange={(e) => handleExaminationTypeChange(e.target.value as ExaminationExamType)}
+                        required
+                      >
+                        {EXAMINATION_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  )}
 
-              {/* ── Examination: Examination Type dropdown ── */}
-              {!isGeneral && (
-                <Field label="Examination type">
-                  <Select
-                    name="exam_type"
-                    value={examinationType}
-                    onChange={(e) => handleExaminationTypeChange(e.target.value as ExaminationExamType)}
-                    required
-                  >
-                    {EXAMINATION_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              )}
-
-              {/* ── Monthly Test: Month dropdown ── */}
-              {isMonthlyTest && (
-                <div className="grid gap-1">
-                  <Field label="Month *">
-                    <Select
-                      name="month"
-                      value={selectedMonth}
-                      onChange={(e) => handleMonthChange(e.target.value)}
-                      aria-describedby={monthError ? "month-error" : undefined}
-                      aria-invalid={monthError}
-                    >
-                      <option value="" disabled>
-                        Select month…
-                      </option>
-                      {MONTH_OPTIONS.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  {monthError && (
-                    <p id="month-error" className="text-xs font-medium text-red-600" role="alert">
-                      Please select a month for the monthly test.
-                    </p>
+                  {isMonthlyTest && (
+                    <div className="grid gap-1">
+                      <Field label="Month *" hint="Monthly tests should be tied to the correct month for filtering and reports.">
+                        <Select
+                          name="month"
+                          value={selectedMonth}
+                          onChange={(e) => handleMonthChange(e.target.value)}
+                          aria-describedby={monthError ? "month-error" : undefined}
+                          aria-invalid={monthError}
+                        >
+                          <option value="" disabled>
+                            Select month…
+                          </option>
+                          {MONTH_OPTIONS.map((m) => (
+                            <option key={m.value} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      {monthError && (
+                        <p id="month-error" className="text-xs font-medium text-red-600" role="alert">
+                          Please select a month for the monthly test.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </FormSectionCard>
 
-              {/* ── Shared: Date + Max Marks ── */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Date">
-                  <Input
-                    name="exam_date"
-                    type="date"
-                    defaultValue={new Date().toISOString().slice(0, 10)}
-                    required
-                  />
-                </Field>
-                <Field label="Max marks">
-                  <Input
-                    name="max_marks"
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    defaultValue="100"
-                    required
-                  />
-                </Field>
-              </div>
+              <FormSectionCard
+                title="Scoring Details"
+                description="Set the date and total marks carefully because these values flow into marking and results."
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Date" hint="Use the actual assessment date.">
+                    <Input
+                      name="exam_date"
+                      type="date"
+                      defaultValue={new Date().toISOString().slice(0, 10)}
+                      required
+                    />
+                  </Field>
+                  <Field label="Max marks" hint="Students will be graded against this total.">
+                    <Input
+                      name="max_marks"
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      defaultValue="100"
+                      required
+                    />
+                  </Field>
+                </div>
+              </FormSectionCard>
 
               {/* ── Actions ── */}
               <div className="flex justify-end gap-2 pt-1">

@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react";
 import { createSectionClassAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
+import { FormSectionCard } from "@/components/ui/form-section-card";
 import { useToast } from "@/components/ui/toast";
 import { formatGradeSection } from "@/lib/utils";
 import { defaultCombinationOptionsForGrade } from "@/lib/student-majors";
@@ -54,11 +55,19 @@ export function AddSectionModal({
           <div><h2 className="font-display text-xl font-bold text-ink">New {gradeName} section</h2><p className="mt-1 text-sm text-muted">Default grade subjects will be linked automatically.</p></div>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
-        <form onSubmit={submit} className="grid gap-4 bg-slate-50/30 p-6">
+        <form onSubmit={submit} className="grid gap-6 bg-slate-50/30 p-6">
           {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
-          <Field label="Section name"><Input name="section_name" required placeholder="e.g. A or Orange" /></Field>
-          <Field label="Room (optional)"><Input name="room" placeholder="e.g. 204" /></Field>
-          {majorOptions.length ? <div><p className="text-sm font-semibold text-ink">Majors offered</p><p className="mt-1 text-xs text-muted">Choose one for automatic assignment or multiple for manual student selection.</p><div className="mt-3 grid gap-2">{majorOptions.map((option) => <label key={option.value} className="flex items-center gap-3 rounded-xl border border-outline p-3 text-sm font-semibold"><input type="checkbox" name="allowed_major" value={option.value} className="h-4 w-4 accent-primary" />{option.label}</label>)}</div></div> : null}
+          <FormSectionCard
+            icon={<Plus className="h-5 w-5" />}
+            title="Section Details"
+            description="Set the section name and room first. Default grade subjects will be added automatically."
+          >
+            <div className="grid gap-4">
+              <Field label="Section name" hint="Use a simple label like A, B, Orange, or Morning."><Input name="section_name" required placeholder="e.g. A or Orange" /></Field>
+              <Field label="Room (optional)" hint="Add a room now if you already know the section location."><Input name="room" placeholder="e.g. 204" /></Field>
+            </div>
+          </FormSectionCard>
+          {majorOptions.length ? <FormSectionCard title="Majors Offered" description="Choose one major for automatic assignment or multiple majors if students in this section can choose later." badge={`${majorOptions.length} available`}><div className="grid gap-2">{majorOptions.map((option) => <label key={option.value} className="flex items-center gap-3 rounded-xl border border-outline p-3 text-sm font-semibold"><input type="checkbox" name="allowed_major" value={option.value} className="h-4 w-4 accent-primary" />{option.label}</label>)}</div></FormSectionCard> : null}
           <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Creating..." : "Create section"}</Button></div>
         </form>
       </div>

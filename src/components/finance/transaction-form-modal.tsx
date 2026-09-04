@@ -6,6 +6,7 @@ import { ArrowDownCircle, ArrowUpCircle, X } from "lucide-react";
 import { createManualTransactionAction } from "@/app/(app)/finance/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
+import { FormSectionCard } from "@/components/ui/form-section-card";
 import { useToast } from "@/components/ui/toast";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 
@@ -65,20 +66,35 @@ export function TransactionFormModal({
           <div><h2 className="font-display text-xl font-bold text-ink">{title ?? (isIncome ? "Add income or payment" : "Add expense")}</h2><p className="mt-1 text-sm text-muted">{description ?? "Record a manual ledger entry with its date and source details."}</p></div>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
-        <form onSubmit={submit} className="grid gap-4 overflow-y-auto bg-slate-50/30 p-6 sm:grid-cols-2">
-          {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger sm:col-span-2">{error}</div> : null}
-          <Field label="Type" required>
-            <Select name="category" required defaultValue={fallbackCategory}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>
-          </Field>
-          <Field label="Amount (PKR)"><Input name="amount" type="number" min="0.01" step="0.01" required /></Field>
-          <Field label="Date"><Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></Field>
-          <Field label="Payment method"><Select name="payment_method" defaultValue={defaultPaymentMethod}><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="cheque">Cheque</option><option value="online_payment">Online payment</option><option value="other">Other</option></Select></Field>
-          {isIncome ? <Field label="Student (optional)"><Select name="student_id" defaultValue=""><option value="">Not linked to a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.name} · {student.admissionNumber}</option>)}</Select></Field> : null}
-          <Field label={isIncome ? "Received from" : "Paid to"}><Input name="party_name" placeholder={isIncome ? "Person or organization" : "Landlord, vendor, staff member..."} /></Field>
-          <Field label="Reference number"><Input name="reference_number" placeholder="Bank reference, invoice, etc." /></Field>
-          <div className="sm:col-span-2"><Field label="Description / notes"><Textarea name="description" placeholder="What was this transaction for?" /></Field></div>
-          {isIncome ? <p className="text-xs leading-5 text-muted sm:col-span-2">For a payment that must reduce a student&apos;s outstanding fee balance, record it from Fee Management. It will automatically appear here too.</p> : null}
-          <div className="flex justify-end gap-3 sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Saving..." : `Record ${direction}`}</Button></div>
+        <form onSubmit={submit} className="grid gap-6 overflow-y-auto bg-slate-50/30 p-6">
+          {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
+          <FormSectionCard
+            icon={isIncome ? <ArrowDownCircle className="h-5 w-5" /> : <ArrowUpCircle className="h-5 w-5" />}
+            title="Transaction Details"
+            description={isIncome ? "Choose the income type, amount, and source so the ledger stays clean." : "Record the expense type, amount, and who received the payment."}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Type" required hint="Pick the category that best matches this entry.">
+                <Select name="category" required defaultValue={fallbackCategory}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>
+              </Field>
+              <Field label="Amount (PKR)" hint="Enter the final amount exactly as paid or received."><Input name="amount" type="number" min="0.01" step="0.01" required /></Field>
+              <Field label="Date" hint="Use the actual transaction date for correct reporting."><Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></Field>
+              <Field label="Payment method" hint="This helps separate cash, bank, cheque, and online entries."><Select name="payment_method" defaultValue={defaultPaymentMethod}><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="cheque">Cheque</option><option value="online_payment">Online payment</option><option value="other">Other</option></Select></Field>
+            </div>
+          </FormSectionCard>
+          <FormSectionCard
+            title="Reference and Source"
+            description="Add the person, student link, or reference number if this transaction needs follow-up later."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              {isIncome ? <Field label="Student (optional)" hint="Only use this when the entry relates to a specific student."><Select name="student_id" defaultValue=""><option value="">Not linked to a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.name} · {student.admissionNumber}</option>)}</Select></Field> : null}
+              <Field label={isIncome ? "Received from" : "Paid to"} hint="Add the person, vendor, or organization involved."><Input name="party_name" placeholder={isIncome ? "Person or organization" : "Landlord, vendor, staff member..."} /></Field>
+              <Field label="Reference number" hint="Use invoice, bank reference, or receipt number if available."><Input name="reference_number" placeholder="Bank reference, invoice, etc." /></Field>
+              <div className={isIncome ? "" : "sm:col-span-2"}><Field label="Description / notes" hint="Write a short note so this entry stays understandable later."><Textarea name="description" placeholder="What was this transaction for?" /></Field></div>
+            </div>
+            {isIncome ? <p className="mt-4 text-xs leading-5 text-muted">For a payment that must reduce a student&apos;s outstanding fee balance, record it from Fee Management. It will automatically appear here too.</p> : null}
+          </FormSectionCard>
+          <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Saving..." : `Record ${direction}`}</Button></div>
         </form>
       </div>
     </div> : null}

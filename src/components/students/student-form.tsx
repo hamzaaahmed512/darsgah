@@ -239,12 +239,12 @@ export function StudentForm({
         title="Student Details"
         description="Enter the student's personal and admission information."
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid items-start gap-4 md:grid-cols-2">
           <div className="grid gap-2.5 text-sm font-semibold text-ink">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex min-h-6 items-center justify-between gap-4">
               <span>Admission number</span>
               {isCreateMode ? (
-                <label className="flex items-center gap-2 text-xs font-medium text-muted">
+                <label className="flex items-center gap-2 text-xs font-medium text-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={autoGenerateAdmissionNumber}
@@ -308,8 +308,8 @@ export function StudentForm({
           </Field>
           <Field label="Gender" required error={errors.gender?.message}>
             <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="male" {...register("gender")} required className="h-4 w-4 accent-primary" /> Male</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="female" {...register("gender")} required className="h-4 w-4 accent-primary" /> Female</label>
+              <label className="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" value="male" {...register("gender")} required className="h-4 w-4 accent-primary" /> Male</label>
+              <label className="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" value="female" {...register("gender")} required className="h-4 w-4 accent-primary" /> Female</label>
             </div>
           </Field>
           <Field label="Religion" required error={errors.religion?.message}>
@@ -330,7 +330,7 @@ export function StudentForm({
             <Input type="date" {...register("admission_date")} />
           </Field>
           <Field label="Email" error={errors.email?.message}>
-            <Input type="email" {...register("email")} onChange={(event) => setValue("email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} autoComplete="new-password" />
+            <Input type="email" {...register("email")} onChange={(event) => setValue("email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="e.g. student@example.com" autoComplete="new-password" />
           </Field>
           <Field label="Phone" error={errors.phone?.message}>
             <Input {...register("phone")} value={formatPakistaniPhone(watch("phone"))} onChange={(event) => setValue("phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
@@ -369,24 +369,26 @@ export function StudentForm({
         title="Father & Guardian Details"
         description="Enter father's information."
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid items-start gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Field label="Father alive?" required error={errors.father_alive?.message} hint="Choose this first so the required contact fields adjust correctly.">
+              <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
+                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" value="yes" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> Yes</label>
+                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" value="no" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> No</label>
+              </div>
+            </Field>
+          </div>
           <Field label="Father's Name (English)" required error={errors.father_name_en?.message}>
-            <Input {...register("father_name_en")} value={watch("father_name_en") ?? ""} onChange={(event) => handleEnglishNameChange("father_name_en", event.target.value)} autoComplete="new-password" />
+            <Input {...register("father_name_en")} value={watch("father_name_en") ?? ""} onChange={(event) => handleEnglishNameChange("father_name_en", event.target.value)} autoComplete="new-password" placeholder="e.g. Ahmed Khan" />
           </Field>
           <Field label="Father's Name (Urdu)" error={errors.father_name_ur?.message}>
-            <Input {...register("father_name_ur")} value={watch("father_name_ur") ?? ""} onChange={(event) => handleUrduNameChange("father_name_ur", event.target.value)} dir="rtl" autoComplete="off" />
+            <Input {...register("father_name_ur")} value={watch("father_name_ur") ?? ""} onChange={(event) => handleUrduNameChange("father_name_ur", event.target.value)} dir="rtl" autoComplete="off" placeholder="e.g. احمد خان" />
           </Field>
-          <Field label="Father's Phone" required error={errors.father_phone?.message}>
+          <Field label="Father's Phone" required={fatherAlive !== "no"} error={errors.father_phone?.message} hint={fatherAlive === "no" ? "Optional when father is not alive." : undefined}>
             <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
           </Field>
-          <Field label="Father's CNIC" required error={errors.father_cnic?.message}>
-            <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="0000012345678" inputMode="numeric" maxLength={15} autoComplete="new-password" />
-          </Field>
-          <Field label="Father alive?" required error={errors.father_alive?.message}>
-            <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="yes" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> Yes</label>
-              <label className="flex items-center gap-2 text-sm text-ink"><input type="radio" value="no" {...register("father_alive")} required className="h-4 w-4 accent-primary" /> No</label>
-            </div>
+          <Field label="Father's CNIC" required={fatherAlive !== "no"} error={errors.father_cnic?.message} hint={fatherAlive === "no" ? "Optional when father is not alive." : undefined}>
+            <Input {...register("father_cnic")} value={formatCnic(watch("father_cnic"))} onChange={(event) => setValue("father_cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} placeholder="00000-0000000-0" inputMode="numeric" maxLength={15} autoComplete="new-password" />
           </Field>
           
           <div className="col-span-full mt-2 border-t border-outline/50 pt-5">
@@ -395,13 +397,10 @@ export function StudentForm({
           </div>
           
           <Field label="Guardian name" required={watch("father_alive") === "no"} error={errors.guardian_name?.message}>
-            <Input {...register("guardian_name")} value={watch("guardian_name") ?? ""} onChange={(event) => handleEnglishNameChange("guardian_name", event.target.value)} autoComplete="new-password" />
+            <Input {...register("guardian_name")} value={watch("guardian_name") ?? ""} onChange={(event) => handleEnglishNameChange("guardian_name", event.target.value)} autoComplete="new-password" placeholder="e.g. Ali Khan" />
           </Field>
           <Field label="Relationship" required={watch("father_alive") === "no"} error={errors.guardian_relationship?.message}>
-            <Input {...register("guardian_relationship")} autoComplete="off" placeholder="Select relationship..." />
-          </Field>
-          <Field label="Guardian email" error={errors.guardian_email?.message}>
-            <Input type="email" {...register("guardian_email")} onChange={(event) => setValue("guardian_email", normalizeEmail(event.target.value), { shouldDirty: true, shouldValidate: true })} autoComplete="new-password" />
+            <Input {...register("guardian_relationship")} autoComplete="off" placeholder="Select or enter relationship (e.g. Mother, Uncle)..." />
           </Field>
           <Field label="Guardian phone" required={watch("father_alive") === "no"} error={errors.guardian_phone?.message}>
             <Input {...register("guardian_phone")} value={formatPakistaniPhone(watch("guardian_phone"))} onChange={(event) => setValue("guardian_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />
