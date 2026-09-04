@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { UserPlus, X } from "lucide-react";
 import { assignTeacherClassAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,14 @@ import { isCustomStudentMajor, isSubjectExcludedForMajor, type StudentCombinatio
 
 type SubjectOption = { id: string; name: string };
 type MajorSubjectGroup = { value: string; label: string; subjects: SubjectOption[] };
+type TeacherAssignment = { teacher_id: string; subject_ids?: string[] };
 
 export function TeacherAssignmentModal({
   classId,
   className,
   teachers,
   subjects,
+  assignments = [],
   combinations = [],
   allowedMajors = [],
   gradeName,
@@ -29,6 +31,7 @@ export function TeacherAssignmentModal({
   className: string;
   teachers: { user_id: string; full_name: string }[];
   subjects: SubjectOption[];
+  assignments?: TeacherAssignment[];
   combinations?: StudentCombinationOption[];
   allowedMajors?: string[];
   gradeName?: string;
@@ -41,6 +44,12 @@ export function TeacherAssignmentModal({
   const [error, setError] = useState<string | null>(null);
   const [teacherId, setTeacherId] = useState("");
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const assignment = assignments.find((item) => item.teacher_id === teacherId);
+    setSelectedSubjectIds(assignment?.subject_ids ?? []);
+  }, [assignments, teacherId]);
+
   const majorSubjectGroups: MajorSubjectGroup[] = combinations
     .filter((combination) => !allowedMajors.length || allowedMajors.includes(combination.value))
     .map((combination) => ({
@@ -162,16 +171,6 @@ export function TeacherAssignmentModal({
                 ) : (
                   <p className="text-xs italic text-muted">Link subjects to this class first.</p>
                 )}
-                {majorSubjectGroups.length ? (
-                  <div className="grid gap-2 pt-2">
-                    {majorSubjectGroups.map((group) => (
-                      <div key={group.value} className="rounded-xl border border-outline/50 bg-surface-low px-3 py-2">
-                        <p className="text-xs font-bold uppercase tracking-wide text-muted">{group.label}</p>
-                        <p className="mt-1 text-xs text-ink">{group.subjects.map((subject) => subject.name).join(", ")}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
               </div>
 
               {selectedSubjectNames.length ? (

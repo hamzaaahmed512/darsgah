@@ -447,7 +447,7 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
   const [assignmentsResult, recordsResult, enrollmentsResult] = await Promise.all([
     supabase
       .from("teacher_assignments")
-      .select("id,class_id,teacher_id,profiles!teacher_assignments_teacher_id_fkey(full_name),subjects(name)")
+      .select("id,class_id,teacher_id,subject_id,profiles!teacher_assignments_teacher_id_fkey(full_name),subjects(name)")
       .eq("school_id", user.schoolId),
     supabase
       .from("attendance_records")
@@ -476,6 +476,7 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     teacher_name: string;
     subject_name: string | null;
     subject_names: string[];
+    subject_ids: string[];
     assignment_ids: string[];
   }>> = {};
 
@@ -488,6 +489,9 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
     const existing = teachersByClass[classId].find((item) => item.teacher_id === a.teacher_id);
     if (existing) {
       existing.assignment_ids.push(a.id);
+      if (a.subject_id && !existing.subject_ids.includes(a.subject_id)) {
+        existing.subject_ids.push(a.subject_id);
+      }
       if (subjectName && !existing.subject_names.includes(subjectName)) {
         existing.subject_names.push(subjectName);
       }
@@ -500,6 +504,7 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
       teacher_name: formatDisplayName(a.profiles?.full_name) || "Unknown",
       subject_name: subjectName,
       subject_names: subjectName ? [subjectName] : [],
+      subject_ids: a.subject_id ? [a.subject_id] : [],
       assignment_ids: [a.id]
     });
   }

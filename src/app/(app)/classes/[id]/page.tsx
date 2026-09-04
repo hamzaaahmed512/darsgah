@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions, getAssignableHeadTeachers, getClassStudentRoster, getClassSubjectsMap, getClassTeachersAndAttendance } from "@/lib/services/academics";
-import { isCustomStudentMajor, isSubjectExcludedForMajor, studentMajorLabel } from "@/lib/student-majors";
 import { formatGradeSection } from "@/lib/utils";
 
 export default async function ManageSectionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +43,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
           classId={cls.id}
           className={formatGradeSection(cls.grade_name, cls.section_name)}
           teachers={teachers}
+          assignments={assignedTeachers}
           subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))}
           combinations={rosterData.combinationOptions}
           allowedMajors={cls.allowed_majors ?? []}
@@ -97,15 +97,6 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
     <section className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.5fr)]">
       <div>
         <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={classSubjects} availableSubjects={academicData.subjects} />
-        {rosterData.roster.some((student: any) => student.major) ? <Card className="mt-4"><CardHeader><CardTitle className="text-base">Subjects by student combination</CardTitle></CardHeader><CardContent className="grid gap-3">
-          {rosterData.roster.filter((student: any) => student.major).map((student: any) => {
-            const combination = rosterData.combinationOptions.find((option: any) => option.value === student.major);
-            const allowed = isCustomStudentMajor(student.major)
-              ? classSubjects.filter((subject: any) => combination?.subjectIds?.includes(subject.subject_id))
-              : classSubjects.filter((subject: any) => !isSubjectExcludedForMajor(cls.grade_name, student.major, subject.name));
-            return <div key={student.id} className="rounded-xl border border-outline/50 p-3"><p className="text-sm font-semibold text-ink">{student.name} · {studentMajorLabel(student.major, rosterData.combinationOptions)}</p><p className="mt-1 text-xs leading-5 text-muted">{allowed.map((subject: any) => subject.name).join(", ") || "No subjects selected"}</p></div>;
-          })}
-        </CardContent></Card> : null}
       </div>
       <Card className="h-fit">
         <CardHeader><CardTitle>Section details</CardTitle></CardHeader>
