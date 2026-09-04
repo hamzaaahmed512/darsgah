@@ -1,14 +1,14 @@
 import { z } from "zod";
 
-export const ENGLISH_NAME_REGEX = /^[a-zA-Z\s'\-.]+$/;
+export const ENGLISH_NAME_REGEX = /^[a-zA-Z0-9\s'\-.]+$/;
 export const URDU_NAME_REGEX = /^[\u0600-\u06FF\s'\-.]+$/;
 export const CLASS_NAME_REGEX = /^[a-zA-Z0-9\s'./-]+$/;
 
-const ENGLISH_NAME_SANITIZER_REGEX = /[^a-zA-Z\s'\-.]/g;
+const ENGLISH_NAME_SANITIZER_REGEX = /[^a-zA-Z0-9\s'\-.]/g;
 const URDU_NAME_SANITIZER_REGEX = /[^\u0600-\u06FF\s'\-.]/g;
 const CLASS_NAME_SANITIZER_REGEX = /[^a-zA-Z0-9\s'./-]/g;
 
-const ENGLISH_NAME_RULE = "can only contain letters, spaces, hyphens, apostrophes, and periods";
+const ENGLISH_NAME_RULE = "can only contain letters, numbers, spaces, hyphens, apostrophes, and periods";
 const URDU_NAME_RULE = "can only contain valid Urdu letters, spaces, hyphens, apostrophes, and periods";
 const CLASS_NAME_RULE = "can only contain letters, numbers, spaces, hyphens, slashes, apostrophes, and periods";
 
