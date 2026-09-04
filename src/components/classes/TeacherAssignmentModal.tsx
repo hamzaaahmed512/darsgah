@@ -9,20 +9,28 @@ import { Select } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { formatDisplayName } from "@/lib/student-name";
+import { isCustomStudentMajor, isSubjectExcludedForMajor, type StudentCombinationOption } from "@/lib/student-majors";
 
 type SubjectOption = { id: string; name: string };
+type MajorSubjectGroup = { value: string; label: string; subjects: SubjectOption[] };
 
 export function TeacherAssignmentModal({
   classId,
   className,
   teachers,
   subjects,
+  combinations = [],
+  allowedMajors = [],
+  gradeName,
   compact = false
 }: {
   classId: string;
   className: string;
   teachers: { user_id: string; full_name: string }[];
   subjects: SubjectOption[];
+  combinations?: StudentCombinationOption[];
+  allowedMajors?: string[];
+  gradeName?: string;
   compact?: boolean;
 }) {
   const router = useRouter();
@@ -32,6 +40,16 @@ export function TeacherAssignmentModal({
   const [error, setError] = useState<string | null>(null);
   const [teacherId, setTeacherId] = useState("");
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const majorSubjectGroups: MajorSubjectGroup[] = combinations
+    .filter((combination) => !allowedMajors.length || allowedMajors.includes(combination.value))
+    .map((combination) => ({
+      value: combination.value,
+      label: combination.label,
+      subjects: subjects.filter((subject) => isCustomStudentMajor(combination.value)
+        ? Boolean(combination.subjectIds?.includes(subject.id))
+        : !isSubjectExcludedForMajor(gradeName ?? "", combination.value, subject.name))
+    }))
+    .filter((group) => group.subjects.length);
 
   const selectedSubjectNames = useMemo(
     () => subjects.filter((subject) => selectedSubjectIds.includes(subject.id)).map((subject) => subject.name),
@@ -116,7 +134,9 @@ export function TeacherAssignmentModal({
                 <p className="text-sm font-semibold text-ink">Subjects taught in this class</p>
                 {subjects.length ? (
                   <div className="grid max-h-48 gap-2 overflow-y-auto pr-1">
-                    {subjects.map((subject) => {
+                    {(majorSubjectGroups.length ? majorSubjectGroups.flatMap((group) => group.subjects) : subjects)
+                      .filter((subject, index, all) => all.findIndex((candidate) => candidate.id === subject.id) === index)
+                      .map((subject) => {
                       const checked = selectedSubjectIds.includes(subject.id);
                       return (
                         <label
@@ -139,6 +159,16 @@ export function TeacherAssignmentModal({
                 ) : (
                   <p className="text-xs italic text-muted">Link subjects to this class first.</p>
                 )}
+                {majorSubjectGroups.length ? (
+                  <div className="grid gap-2 pt-2">
+                    {majorSubjectGroups.map((group) => (
+                      <div key={group.value} className="rounded-xl border border-outline/50 bg-surface-low px-3 py-2">
+                        <p className="text-xs font-bold uppercase tracking-wide text-muted">{group.label}</p>
+                        <p className="mt-1 text-xs text-ink">{group.subjects.map((subject) => subject.name).join(", ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {selectedSubjectNames.length ? (
