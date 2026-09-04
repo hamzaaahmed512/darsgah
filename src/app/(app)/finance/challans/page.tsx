@@ -57,7 +57,8 @@ export default async function FinanceChallansPage({ searchParams }: { searchPara
                 <tr>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">Class</th>
-                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Challan Amount</th>
+                  <th className="px-4 py-3">Paid This Month</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Generated</th>
                 </tr>
@@ -68,13 +69,14 @@ export default async function FinanceChallansPage({ searchParams }: { searchPara
                     <td className="px-4 py-3 font-semibold">{row.student_name}<span className="ml-2 text-xs text-muted">{row.admission_number}</span></td>
                     <td className="px-4 py-3">{row.class_name}</td>
                     <td className="px-4 py-3">{formatPKR(row.amount)}</td>
-                    <td className="px-4 py-3"><Badge tone={row.payment_status === "paid" ? "green" : "yellow"}>{row.payment_status}</Badge></td>
+                    <td className="px-4 py-3 font-semibold text-success">{formatPKR(row.amount_paid_for_month)}</td>
+                    <td className="px-4 py-3"><Badge tone={row.payment_status === "paid" ? "green" : row.payment_status === "partially paid" ? "blue" : "yellow"}>{row.payment_status}</Badge></td>
                     <td className="px-4 py-3 text-muted">{formatDatePK(row.created_at)}</td>
                   </tr>
                 ))}
                 {!challans.length && (
                   <tr>
-                    <td className="px-4 py-4 text-muted" colSpan={5}>No challans generated for this month.</td>
+                    <td className="px-4 py-4 text-muted" colSpan={6}>No challans generated for this month.</td>
                   </tr>
                 )}
               </tbody>

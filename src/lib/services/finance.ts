@@ -228,18 +228,29 @@ export async function getFeeChallans(user: AppUser, month: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("fee_challans")
-    .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), student_fee_accounts(total_payable, amount_paid)")
+    .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), student_fee_accounts(total_payable, amount_paid, fee_payments(amount, payment_date, is_voided))")
     .eq("school_id", user.schoolId)
     .eq("fee_month", `${month}-01`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    student_name: formatFullName(row.students?.first_name, row.students?.last_name),
-    admission_number: row.students?.admission_number ?? "—",
-    class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
-    payment_status: Number(row.student_fee_accounts?.amount_paid ?? 0) >= Number(row.student_fee_accounts?.total_payable ?? 1) ? "paid" : "unpaid"
-  }));
+  return (data ?? []).map((row: any) => {
+    const monthlyPaid = (row.student_fee_accounts?.fee_payments ?? [])
+      .filter((payment: any) => !payment.is_voided && String(payment.payment_date).startsWith(month))
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount ?? 0), 0);
+    const challanAmount = Number(row.amount ?? 0);
+    return {
+      ...row,
+      student_name: formatFullName(row.students?.first_name, row.students?.last_name),
+      admission_number: row.students?.admission_number ?? "—",
+      class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
+      amount_paid_for_month: monthlyPaid,
+      payment_status: challanAmount > 0 && monthlyPaid >= challanAmount
+        ? "paid"
+        : monthlyPaid > 0
+          ? "partially paid"
+          : "pending"
+    };
+  });
 }
 
 export async function generateFeeChallans(user: AppUser, values: { month: string; student_id?: string; class_id?: string }) {
