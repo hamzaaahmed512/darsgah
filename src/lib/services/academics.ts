@@ -108,6 +108,42 @@ export async function configureClassMajors(user: AppUser, classId: string, allow
     if (insertError) throw new Error(insertError.message);
   }
 
+  const selectedOptions = available.filter((option) => normalized.includes(option.value as string));
+  const requiredSubjectIds = new Set<string>();
+  const defaultSubjectNames = new Set(
+    selectedOptions.flatMap((option) => option.kind === "default" && !option.subjectIds?.length
+      ? getDefaultSubjectsForGrade((cls as any).grades?.name ?? "")
+        .filter((subject) => !isSubjectExcludedForMajor((cls as any).grades?.name ?? "", option.value, subject.name))
+        .map((subject) => canonicalSubjectName(subject.name))
+      : [])
+  );
+  selectedOptions.forEach((option) => (option.subjectIds ?? []).forEach((subjectId) => requiredSubjectIds.add(subjectId)));
+
+  if (defaultSubjectNames.size) {
+    const { data: catalogSubjects, error: catalogError } = await supabase
+      .from("subjects")
+      .select("id,name")
+      .eq("school_id", user.schoolId)
+      .is("archived_at", null);
+    if (catalogError) throw new Error(catalogError.message);
+    (catalogSubjects ?? []).forEach((subject: any) => {
+      if (defaultSubjectNames.has(canonicalSubjectName(subject.name))) requiredSubjectIds.add(subject.id);
+    });
+  }
+
+  if (requiredSubjectIds.size) {
+    const { error: classSubjectsError } = await supabase.from("class_subjects").upsert(
+      [...requiredSubjectIds].map((subjectId) => ({
+        school_id: user.schoolId,
+        class_id: classId,
+        subject_id: subjectId,
+        is_class_specific: false
+      })),
+      { onConflict: "school_id,class_id,subject_id" }
+    );
+    if (classSubjectsError) throw new Error(classSubjectsError.message);
+  }
+
   if (defaultMajor) {
     const { error: studentsError } = await supabase
       .from("students")
