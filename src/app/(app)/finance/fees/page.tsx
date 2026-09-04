@@ -1,12 +1,13 @@
 import { requireUser } from "@/lib/auth/session";
 import Link from "next/link";
-import { AlertCircle, Banknote, FileText, Percent, Settings } from "lucide-react";
+import { AlertCircle, Banknote, FileText, Percent, Plus, Settings } from "lucide-react";
 import { getStudentFees, getPaymentHistory, getFinanceDashboard } from "@/lib/services/finance";
 import { getAcademicOptions } from "@/lib/services/academics";
 import { PageHeader } from "@/components/layout/page-header";
 import { FeeManagementClient } from "@/components/finance/fee-management-client";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { formatPKR } from "@/lib/utils";
+import { hasPermission } from "@/lib/permissions";
 
 export default async function FeeManagementPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const user = await requireUser("finance:view");
@@ -30,6 +31,12 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
               <Settings className="h-4 w-4" aria-hidden="true" />
               Fee Structures
             </Link>
+            {hasPermission(user.role, "finance:manage", user.permissions) ? (
+              <Link href="/finance/fees/structures?open=create" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add Fee Structure
+              </Link>
+            ) : null}
             <Link href={`/finance/challans?month=${month}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
               <FileText className="h-4 w-4" aria-hidden="true" />
               Challans

@@ -6,8 +6,9 @@ import { getFeeStructures } from "@/lib/services/finance";
 import { PageHeader } from "@/components/layout/page-header";
 import { FeeStructuresClient } from "@/components/finance/fee-structures-client";
 
-export default async function FeeStructuresPage() {
+export default async function FeeStructuresPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
   const user = await requireUser("finance:view");
+  const params = await searchParams;
   const [academics, structures] = await Promise.all([
     getAcademicOptions(user),
     getFeeStructures(user)
@@ -31,6 +32,7 @@ export default async function FeeStructuresPage() {
         classes={academics.classes}
         sessions={academics.years}
         structures={structures}
+        initialOpen={params.open === "create"}
       />
     </>
   );

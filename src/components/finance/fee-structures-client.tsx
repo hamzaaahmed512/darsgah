@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Edit2, Plus, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -21,12 +21,13 @@ type Props = {
   classes: any[];
   sessions: any[];
   structures: any[];
+  initialOpen?: boolean;
 };
 
-export function FeeStructuresClient({ user, classes, sessions, structures }: Props) {
+export function FeeStructuresClient({ user, classes, sessions, structures, initialOpen = false }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [editing, setEditing] = useState<any | null>(null);
   const [scope, setScope] = useState<"one" | "all">("one");
   const [sessionId, setSessionId] = useState("");
@@ -58,6 +59,15 @@ export function FeeStructuresClient({ user, classes, sessions, structures }: Pro
     setError(null);
     setOpen(true);
   }
+
+  useEffect(() => {
+    if (!initialOpen) return;
+    setEditing(null);
+    setScope("one");
+    setSessionId(sessions[0]?.id || "");
+    setClassId(classes[0]?.id || "");
+    setOpen(true);
+  }, [classes, initialOpen, sessions]);
 
   function openEdit(struct: any) {
     setEditing(struct);
