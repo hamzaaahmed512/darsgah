@@ -246,19 +246,6 @@ export async function getEligibleSubjectRoster(user: AppUser, classId: string, s
   }));
 }
 
-async function getActiveClassStudentCount(user: AppUser, classId: string) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("enrollments")
-    .select("student_id")
-    .eq("school_id", user.schoolId)
-    .eq("class_id", classId)
-    .eq("status", "active");
-
-  if (error) throw new Error(error.message);
-  return new Set((data ?? []).map((row: any) => row.student_id as string)).size;
-}
-
 export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId?: string; subjectId?: string; examId?: string } = {}) {
   const canUseTeacherWorkspace =
     user.role === "teacher" ||
@@ -333,10 +320,9 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
   const selectedExam = filters.examId ? examRows.find((exam: any) => exam.id === filters.examId) ?? null : null;
   const examIds = examRows.map((exam: any) => exam.id);
 
-  const [roster, classStudentCount, marks, assessmentMarks] = selected
+  const [roster, marks, assessmentMarks] = selected
     ? await Promise.all([
         getEligibleSubjectRoster(user, selected.class_id, selected.subject_id).then((data) => ({ data, error: null })),
-        getActiveClassStudentCount(user, selected.class_id),
         selectedExam
           ? readClient.from("marks").select("*").eq("school_id", user.schoolId).eq("exam_id", selectedExam.id)
           : Promise.resolve({ data: [], error: null }),
@@ -344,7 +330,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
           ? readClient.from("marks").select("exam_id,student_id").eq("school_id", user.schoolId).in("exam_id", examIds)
           : Promise.resolve({ data: [], error: null })
       ])
-    : [{ data: [], error: null }, 0, { data: [], error: null }, { data: [], error: null }];
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
   if (marks.error) throw new Error(marks.error.message);
   if (assessmentMarks.error) throw new Error(assessmentMarks.error.message);
@@ -360,13 +346,14 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
     counts[mark.exam_id] = (counts[mark.exam_id] ?? 0) + 1;
     return counts;
   }, {});
-  const eligibleRosterCount = (roster.data ?? []).length;
+  const rosterCount = (roster.data ?? []).length;
+
   const examsWithMarking = examRows.map((exam: any) => ({
     ...exam,
     workflow_status: getWorkflowStatusFromExam(exam),
     marked_count: markCounts[exam.id] ?? 0,
-    roster_count: classStudentCount,
-    is_marked: eligibleRosterCount > 0 && (markCounts[exam.id] ?? 0) >= eligibleRosterCount
+    roster_count: rosterCount,
+    is_marked: rosterCount > 0 && (markCounts[exam.id] ?? 0) >= rosterCount
   }));
 
   return {
