@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { formatDisplayName } from "@/lib/student-name";
+import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import { isCustomStudentMajor, isSubjectExcludedForMajor, type StudentCombinationOption } from "@/lib/student-majors";
 
 type SubjectOption = { id: string; name: string };
@@ -47,7 +48,9 @@ export function TeacherAssignmentModal({
       label: combination.label,
       subjects: subjects.filter((subject) => isCustomStudentMajor(combination.value)
         ? Boolean(combination.subjectIds?.includes(subject.id))
-        : !isSubjectExcludedForMajor(gradeName ?? "", combination.value, subject.name))
+        : getDefaultSubjectsForGrade(gradeName ?? "")
+          .some((defaultSubject) => canonicalSubjectName(defaultSubject.name) === canonicalSubjectName(subject.name))
+          && !isSubjectExcludedForMajor(gradeName ?? "", combination.value, subject.name))
     }))
     .filter((group) => group.subjects.length);
 
