@@ -92,7 +92,7 @@ export function ResultsTable({
                 </>
               ) : null}
               <td className="px-5 py-4">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-start gap-2">
                   <div className="flex flex-wrap gap-2">
                     <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl">
                       <Eye className="h-4 w-4" /> View
@@ -114,9 +114,7 @@ export function ResultsTable({
                     ) : null}
                     {row.canReturn ? <ReturnApprovedResult examId={row.id} compact /> : null}
                   </div>
-                  {inlineApproval && row.canApprove && row.approvalId ? (
-                    <ApprovalActions approvalId={row.approvalId} />
-                  ) : null}
+                  {inlineApproval && row.canApprove && row.approvalId ? <ApprovalActions approvalId={row.approvalId} /> : null}
                 </div>
               </td>
             </tr>
