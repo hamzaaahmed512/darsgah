@@ -61,7 +61,7 @@ export default async function RegistrarDashboardPage() {
             <h3 className="font-display text-lg font-bold text-ink">Collect Fees</h3>
             <p className="mt-1 text-sm text-muted">Record student tuition payments and print localized receipts.</p>
           </div>
-          <ButtonLink href="/finance/payments" variant="secondary">
+          <ButtonLink href="/finance/fees" variant="secondary">
             Payments &rarr;
           </ButtonLink>
         </div>
