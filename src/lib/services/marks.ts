@@ -250,11 +250,10 @@ async function getActiveClassStudentCount(user: AppUser, classId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("enrollments")
-    .select("student_id,students!inner(id,status)")
+    .select("student_id")
     .eq("school_id", user.schoolId)
     .eq("class_id", classId)
-    .eq("status", "active")
-    .eq("students.status", "active");
+    .eq("status", "active");
 
   if (error) throw new Error(error.message);
   return new Set((data ?? []).map((row: any) => row.student_id as string)).size;
