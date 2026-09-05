@@ -221,13 +221,33 @@ export async function getStudentFees(user: AppUser, filters: {
 
   const { data, error } = await query.order("student_name");
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((row: any) => ({
+    ...row,
+    payment_status: normalizeStudentFeeStatus(row)
+  }));
 }
 
 export function resolveChallanAmount(row: { amount?: number | string | null; student_fee_accounts?: { total_payable?: number | string | null } | null }) {
   const generatedAmount = Number(row.amount ?? 0);
   const accountAmount = Number(row.student_fee_accounts?.total_payable ?? 0);
   return generatedAmount > 0 ? generatedAmount : accountAmount;
+}
+
+export function normalizeStudentFeeStatus(row: {
+  total_payable?: number | string | null;
+  amount_paid?: number | string | null;
+  due_date?: string | null;
+  payment_status?: string | null;
+}) {
+  const totalPayable = Number(row.total_payable ?? 0);
+  const amountPaid = Number(row.amount_paid ?? 0);
+  const dueDate = row.due_date ? new Date(row.due_date) : null;
+
+  if (totalPayable <= 0) return "paid";
+  if (amountPaid >= totalPayable) return "paid";
+  if (dueDate && dueDate.getTime() < Date.now()) return "overdue";
+  if (amountPaid > 0) return "partially_paid";
+  return "pending";
 }
 
 export async function getFeeChallans(user: AppUser, month: string) {

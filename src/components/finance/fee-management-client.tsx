@@ -26,7 +26,7 @@ interface FeeManagementClientProps {
 const statusTone = {
   paid: "green",
   partially_paid: "blue",
-  unpaid: "yellow",
+  pending: "yellow",
   overdue: "red"
 } as const;
 
@@ -79,7 +79,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       acc.student_name.toLowerCase().includes(q.toLowerCase()) ||
       acc.admission_number.toLowerCase().includes(q.toLowerCase());
     const matchesClass = classId === "all" || acc.class_id === classId;
-    const matchesStatus = status === "all" || acc.payment_status === status;
+    const matchesStatus = status === "all"
+      || ((status === "pending") ? (acc.payment_status === "pending" || acc.payment_status === "unpaid" || acc.payment_status === "partially_paid") : acc.payment_status === status);
     const matchesSession = session === "all" || acc.academic_year_id === session;
     const matchesDiscount = !onlyDiscounted || acc.discount_type !== "none";
     return matchesQ && matchesClass && matchesStatus && matchesSession && matchesDiscount;
@@ -207,7 +208,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               </Select>
               <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Statuses</option>
-                <option value="unpaid">Unpaid</option>
+                <option value="pending">Pending</option>
                 <option value="partially_paid">Partially Paid</option>
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
@@ -274,7 +275,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                       <td className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
                       <td className="px-5 py-4">
                         <Badge tone={statusTone[acc.payment_status as keyof typeof statusTone] ?? "gray"}>
-                          {acc.payment_status.replace("_", " ")}
+                          {(acc.payment_status === "pending" || acc.payment_status === "unpaid") ? "Pending" : acc.payment_status.replace("_", " ")}
                         </Badge>
                       </td>
                       <td className="px-5 py-4">
