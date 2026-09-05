@@ -35,20 +35,38 @@ select
   sfa.discount_applied_date,
   sfa.total_payable,
   sfa.amount_paid,
-  (sfa.total_payable - sfa.amount_paid) as remaining_balance,
+  greatest(
+    sfa.total_payable - sfa.amount_paid,
+    coalesce(
+      (select sum(fc.amount)
+       from public.fee_challans fc
+       where fc.school_id = sfa.school_id
+         and fc.student_id = sfa.student_id
+         and fc.amount > 0),
+      0
+    )
+  ) as remaining_balance,
   sfa.due_date,
   case
+    when coalesce(
+      (select sum(fc.amount)
+       from public.fee_challans fc
+       where fc.school_id = sfa.school_id
+         and fc.student_id = sfa.student_id
+         and fc.amount > 0),
+      0
+    ) > 0 and sfa.amount_paid < coalesce(
+      (select sum(fc.amount)
+       from public.fee_challans fc
+       where fc.school_id = sfa.school_id
+         and fc.student_id = sfa.student_id
+         and fc.amount > 0),
+      0
+    ) then 'pending'
     when sfa.total_payable <= 0 then 'paid'
     when sfa.amount_paid >= sfa.total_payable then 'paid'
     when sfa.amount_paid > 0 and sfa.amount_paid < sfa.total_payable then 'partially_paid'
     when sfa.total_payable > 0 and current_date > sfa.due_date then 'overdue'
-    when exists (
-      select 1
-      from public.fee_challans fc
-      where fc.school_id = sfa.school_id
-        and fc.student_id = sfa.student_id
-        and fc.amount > 0
-    ) then 'pending'
     else 'pending'
   end as payment_status,
   sfa.created_at,
