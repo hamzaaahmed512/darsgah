@@ -224,6 +224,12 @@ export async function getStudentFees(user: AppUser, filters: {
   return data || [];
 }
 
+export function resolveChallanAmount(row: { amount?: number | string | null; student_fee_accounts?: { total_payable?: number | string | null } | null }) {
+  const generatedAmount = Number(row.amount ?? 0);
+  const accountAmount = Number(row.student_fee_accounts?.total_payable ?? 0);
+  return generatedAmount > 0 ? generatedAmount : accountAmount;
+}
+
 export async function getFeeChallans(user: AppUser, month: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -237,12 +243,13 @@ export async function getFeeChallans(user: AppUser, month: string) {
     const monthlyPaid = (row.student_fee_accounts?.fee_payments ?? [])
       .filter((payment: any) => !payment.is_voided && String(payment.payment_date).startsWith(month))
       .reduce((sum: number, payment: any) => sum + Number(payment.amount ?? 0), 0);
-    const challanAmount = Number(row.amount ?? 0);
+    const challanAmount = resolveChallanAmount(row);
     return {
       ...row,
       student_name: formatFullName(row.students?.first_name, row.students?.last_name),
       admission_number: row.students?.admission_number ?? "—",
       class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
+      amount: challanAmount,
       amount_paid_for_month: monthlyPaid,
       payment_status: challanAmount > 0 && monthlyPaid >= challanAmount
         ? "paid"
