@@ -136,6 +136,17 @@ export async function getSalaryAdjustments(user: AppUser, teacherId?: string, mo
   }));
 }
 
+export function findNextUnpaidPayrollMonth(
+  payrolls: Array<{ month: string; status: string }>,
+  effectiveDate: string
+): string | null {
+  const month = effectiveDate.slice(0, 7);
+  const nextPayable = (payrolls ?? [])
+    .filter((row) => row.month >= month && row.status !== "paid")
+    .sort((a, b) => a.month.localeCompare(b.month))[0];
+  return nextPayable?.month ?? null;
+}
+
 export async function createSalaryAdjustment(
   user: AppUser,
   values: Pick<SalaryAdjustment, "teacher_id" | "amount" | "type" | "reason" | "effective_date">
@@ -154,39 +165,44 @@ export async function createSalaryAdjustment(
   });
   if (error) throw new Error(error.message);
 
-  const month = values.effective_date.slice(0, 7);
-  const { data: payroll } = await supabase
+  const effectiveMonth = values.effective_date.slice(0, 7);
+  const { data: payrollRows, error: payrollRowsError } = await supabase
     .from("payroll")
-    .select("id, base_salary, status")
+    .select("id, base_salary, status, month")
     .eq("school_id", user.schoolId)
     .eq("teacher_id", values.teacher_id)
-    .eq("month", month)
-    .maybeSingle();
+    .gte("month", effectiveMonth)
+    .order("month", { ascending: true });
+  if (payrollRowsError) throw new Error(payrollRowsError.message);
 
-  if (payroll && payroll.status !== "paid") {
-    const { data: adjustments, error: adjustmentError } = await supabase
-      .from("salary_adjustments")
-      .select("amount, type")
-      .eq("school_id", user.schoolId)
-      .eq("teacher_id", values.teacher_id)
-      .gte("effective_date", `${month}-01`)
-      .lt("effective_date", getNextMonth(month));
-    if (adjustmentError) throw new Error(adjustmentError.message);
+  const targetMonth = findNextUnpaidPayrollMonth(payrollRows ?? [], values.effective_date);
+  if (!targetMonth) return;
 
-    const bonus = (adjustments ?? []).filter((row) => row.type === "bonus").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-    const deduction = (adjustments ?? []).filter((row) => row.type === "deduction").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-    const baseSalary = Number(payroll.base_salary ?? 0);
-    const { error: payrollUpdateError } = await supabase
-      .from("payroll")
-      .update({
-        total_bonus: bonus,
-        total_deductions: deduction,
-        net_salary: Math.max(0, baseSalary + bonus - deduction)
-      })
-      .eq("id", payroll.id)
-      .eq("school_id", user.schoolId);
-    if (payrollUpdateError) throw new Error(payrollUpdateError.message);
-  }
+  const targetPayroll = (payrollRows ?? []).find((row) => row.month === targetMonth);
+  if (!targetPayroll || targetPayroll.status === "paid") return;
+
+  const { data: adjustments, error: adjustmentError } = await supabase
+    .from("salary_adjustments")
+    .select("amount, type")
+    .eq("school_id", user.schoolId)
+    .eq("teacher_id", values.teacher_id)
+    .gte("effective_date", `${targetMonth}-01`)
+    .lt("effective_date", getNextMonth(targetMonth));
+  if (adjustmentError) throw new Error(adjustmentError.message);
+
+  const bonus = (adjustments ?? []).filter((row) => row.type === "bonus").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const deduction = (adjustments ?? []).filter((row) => row.type === "deduction").reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const baseSalary = Number(targetPayroll.base_salary ?? 0);
+  const { error: payrollUpdateError } = await supabase
+    .from("payroll")
+    .update({
+      total_bonus: bonus,
+      total_deductions: deduction,
+      net_salary: Math.max(0, baseSalary + bonus - deduction)
+    })
+    .eq("id", targetPayroll.id)
+    .eq("school_id", user.schoolId);
+  if (payrollUpdateError) throw new Error(payrollUpdateError.message);
 }
 
 export async function deleteSalaryAdjustment(user: AppUser, adjustmentId: string) {
