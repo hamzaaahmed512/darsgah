@@ -231,15 +231,27 @@ export async function getStudentFees(user: AppUser, filters: {
   if (error) throw new Error(error.message);
   if (challansError) throw new Error(challansError.message);
 
+  const accountByStudent = new Map<string, any>();
+  for (const row of data ?? []) accountByStudent.set(String(row.student_id), row);
+
   const pendingByStudent = new Map<string, number>();
   for (const challan of challansData ?? []) {
     const studentId = String(challan.student_id);
-    pendingByStudent.set(studentId, (pendingByStudent.get(studentId) ?? 0) + Number(challan.amount ?? 0));
+    const account = accountByStudent.get(studentId);
+    const amount = Number(challan.amount ?? 0) > 0
+      ? Number(challan.amount)
+      : Number(account?.total_payable ?? 0);
+    pendingByStudent.set(studentId, (pendingByStudent.get(studentId) ?? 0) + amount);
   }
 
   return (data || []).map((row: any) => ({
     ...row,
     pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0,
+    remaining_balance: Math.max(
+      Number(row.remaining_balance ?? 0),
+      (pendingByStudent.get(String(row.student_id)) ?? 0) - Number(row.amount_paid ?? 0),
+      Number(row.total_payable ?? 0) - Number(row.amount_paid ?? 0)
+    ),
     payment_status: normalizeStudentFeeStatus({
       ...row,
       pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0
@@ -421,7 +433,20 @@ export async function recordPayment(user: AppUser, values: any) {
 
   if (!account) throw new Error("Student fee account not found");
 
-  const remaining = Number(account.total_payable) - Number(account.amount_paid);
+  const { data: challans } = await supabase
+    .from("fee_challans")
+    .select("amount")
+    .eq("school_id", user.schoolId)
+    .eq("student_id", account.student_id);
+
+  const generatedTotal = (challans ?? []).reduce(
+    (sum, challan) => sum + (Number(challan.amount ?? 0) > 0 ? Number(challan.amount) : Number(account.total_payable)),
+    0
+  );
+  const remaining = Math.max(
+    Number(account.total_payable) - Number(account.amount_paid),
+    generatedTotal - Number(account.amount_paid)
+  );
   if (parsed.amount > remaining) {
     throw new Error(`Payment amount (${parsed.amount}) exceeds the remaining balance (${remaining})`);
   }
