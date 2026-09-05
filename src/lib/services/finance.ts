@@ -219,11 +219,31 @@ export async function getStudentFees(user: AppUser, filters: {
     query = query.or(`student_name.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
   }
 
-  const { data, error } = await query.order("student_name");
+  const [{ data, error }, { data: challansData, error: challansError }] = await Promise.all([
+    query.order("student_name"),
+    supabase
+      .from("fee_challans")
+      .select("student_id, amount")
+      .eq("school_id", user.schoolId)
+      .gt("amount", 0)
+  ]);
+
   if (error) throw new Error(error.message);
+  if (challansError) throw new Error(challansError.message);
+
+  const pendingByStudent = new Map<string, number>();
+  for (const challan of challansData ?? []) {
+    const studentId = String(challan.student_id);
+    pendingByStudent.set(studentId, (pendingByStudent.get(studentId) ?? 0) + Number(challan.amount ?? 0));
+  }
+
   return (data || []).map((row: any) => ({
     ...row,
-    payment_status: normalizeStudentFeeStatus(row)
+    pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0,
+    payment_status: normalizeStudentFeeStatus({
+      ...row,
+      pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0
+    })
   }));
 }
 
@@ -238,11 +258,14 @@ export function normalizeStudentFeeStatus(row: {
   amount_paid?: number | string | null;
   due_date?: string | null;
   payment_status?: string | null;
+  pending_challan_amount?: number | string | null;
 }) {
   const totalPayable = Number(row.total_payable ?? 0);
   const amountPaid = Number(row.amount_paid ?? 0);
+  const pendingChallanAmount = Number(row.pending_challan_amount ?? 0);
   const dueDate = row.due_date ? new Date(row.due_date) : null;
 
+  if (pendingChallanAmount > 0 && amountPaid < pendingChallanAmount) return "pending";
   if (totalPayable <= 0) return "paid";
   if (amountPaid >= totalPayable) return "paid";
   if (dueDate && dueDate.getTime() < Date.now()) return "overdue";
