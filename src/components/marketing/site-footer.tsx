@@ -18,8 +18,8 @@ export function SiteFooter() {
           <p className="mt-5 max-w-sm text-sm leading-7 text-muted">
             Darsgah brings school operations into one calm, connected workspace, built for the people who keep education moving.
           </p>
-          <a href="mailto:hello@getdarsgah.com" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-ink">
-            <Mail className="h-4 w-4" /> hello@getdarsgah.com
+          <a href="mailto:darsgah.help@gmail.com" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-ink">
+            <Mail className="h-4 w-4" /> darsgah.help@gmail.com
           </a>
         </div>
         <FooterColumn title="Product" links={productLinks} />
