@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 import { normalizeEmail } from "@/lib/email";
+import { plans } from "@/components/marketing/pricing-data";
 
 export type ContactFormState = {
   status: "idle" | "success" | "error";
@@ -16,7 +17,10 @@ const enquirySchema = z.object({
   school: z.string().trim().min(2, "Enter your school name.").max(150, "School name is too long."),
   email: z.string().trim().transform(normalizeEmail).pipe(z.string().email("Enter a valid email address.").max(254)),
   message: z.string().trim().min(10, "Tell us a little more about what you need.").max(3000, "Message must be 3,000 characters or fewer."),
-  website: z.string().max(200)
+  website: z.string().max(200),
+  plan: z.enum(plans.map((plan) => plan.id) as [string, ...string[]]).optional(),
+  billing: z.enum(["monthly", "yearly"]).optional(),
+  enquiry: z.enum(["custom-development"]).optional()
 });
 
 const attempts = new Map<string, number[]>();
@@ -39,7 +43,7 @@ function escapeHtml(value: string) {
 export async function sendContactEnquiryAction(_previous: ContactFormState, formData: FormData): Promise<ContactFormState> {
   const parsed = enquirySchema.safeParse({
     name: formData.get("name"), school: formData.get("school"), email: formData.get("email"), message: formData.get("message"),
-    website: formData.get("website") ?? ""
+    website: formData.get("website") ?? "", plan: formData.get("plan") ?? undefined, billing: formData.get("billing") ?? undefined, enquiry: formData.get("enquiry") ?? undefined
   });
 
   if (!parsed.success) {
@@ -65,13 +69,17 @@ export async function sendContactEnquiryAction(_previous: ContactFormState, form
   }
 
   const { name, school, email, message } = parsed.data;
+  const customDevelopment = parsed.data.enquiry === "custom-development";
+  const plan = parsed.data.plan;
+  const billing = parsed.data.billing;
+  const selection = customDevelopment ? "Custom development enquiry" : plan ? `Selected plan: ${plan[0].toUpperCase()}${plan.slice(1)}${billing ? ` (${billing})` : ""}` : "No plan selected";
   try {
     const transporter = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: smtpUser, pass: smtpPassword } });
     await transporter.sendMail({
       from: `Darsgah Website <${smtpUser}>`, to: recipient, replyTo: email,
-      subject: `Demo enquiry from ${school.replace(/[\r\n]/g, " ")}`,
-      text: `Name: ${name}\nSchool: ${school}\nEmail: ${email}\n\n${message}`,
-      html: `<h2>New Darsgah demo enquiry</h2><p><strong>Name:</strong> ${escapeHtml(name)}</p><p><strong>School:</strong> ${escapeHtml(school)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Message:</strong></p><p style="white-space:pre-wrap">${escapeHtml(message)}</p>`
+      subject: `${customDevelopment ? "Custom development" : "Demo"} enquiry from ${school.replace(/[\r\n]/g, " ")}`,
+      text: `Name: ${name}\nSchool: ${school}\nEmail: ${email}\n${selection}\n\n${message}`,
+      html: `<h2>New Darsgah enquiry</h2><p><strong>Name:</strong> ${escapeHtml(name)}</p><p><strong>School:</strong> ${escapeHtml(school)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Selection:</strong> ${escapeHtml(selection)}</p><p><strong>Message:</strong></p><p style="white-space:pre-wrap">${escapeHtml(message)}</p>`
     });
     return { status: "success" };
   } catch (error) {

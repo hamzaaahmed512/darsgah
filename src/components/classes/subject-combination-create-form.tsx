@@ -14,12 +14,12 @@ type ClassOption = { id: string; name: string; grade_id?: string | null; grade_n
 type SubjectOption = { id: string; name: string };
 type GradeOption = { id: string; name: string; classIds: string[] };
 
-export function SubjectCombinationCreateForm({ classes, subjects }: { classes: ClassOption[]; subjects: SubjectOption[] }) {
+export function SubjectCombinationCreateForm({ classes, subjects, initialGradeId }: { classes: ClassOption[]; subjects: SubjectOption[]; initialGradeId?: string }) {
   const router = useRouter();
   const { pushToast } = useToast();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [gradeIds, setGradeIds] = useState<string[]>([]);
+  const [gradeIds, setGradeIds] = useState<string[]>(initialGradeId ? [initialGradeId] : []);
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const grades = getGradesFromClasses(classes);
@@ -27,7 +27,7 @@ export function SubjectCombinationCreateForm({ classes, subjects }: { classes: C
   function close() {
     setOpen(false);
     setName("");
-    setGradeIds([]);
+    setGradeIds(initialGradeId ? [initialGradeId] : []);
     setSubjectIds([]);
   }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { PageHero } from "@/components/marketing/shared";
+import { pricingFaqs } from "@/components/marketing/pricing-data";
 
 export const metadata: Metadata = { title: "FAQs | GetDarsgah", description: "Answers to common questions about Darsgah, implementation, access, data, and pricing." };
 
@@ -13,9 +14,8 @@ const faqs = [
   ["Can Darsgah manage school fees and payroll?", "Yes. The finance workspace includes fee management, payments, challans, financial visibility, payroll, and salary adjustments."],
   ["How does onboarding work?", "We begin with a discovery conversation, understand your current processes, confirm the right setup, and plan onboarding around your team and data needs."],
   ["Can we move existing school data into Darsgah?", "Data migration needs vary by school. We assess the structure and quality of your existing records during discovery and include an appropriate migration approach in the proposal."],
-  ["How much does Darsgah cost?", "Pricing is tailored to school size, selected scope, and implementation needs. This keeps the proposal relevant and avoids charging schools for capacity they do not need."],
-  ["Is Darsgah suitable for more than one campus?", "Yes. We can plan a coordinated setup for school groups and multi-campus organizations, including standardized workflows and onboarding."],
   ["How can I see the product?", "Book a demo through our contact page. We will arrange a focused walkthrough based on your school and the areas you want to improve."],
+  ...pricingFaqs,
 ];
 
 export default function FAQsPage() {

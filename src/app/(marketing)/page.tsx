@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, CalendarCheck, CheckCircle2, Coins, GraduationCap, Layers3, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { CTA, Eyebrow, SectionHeading } from "@/components/marketing/shared";
 import { ProductPreview } from "@/components/marketing/product-preview";
+import { PricingSection } from "@/components/marketing/pricing-section";
 
 export const metadata: Metadata = {
   title: "GetDarsgah | School management, made clear",
@@ -76,6 +77,11 @@ export default function OverviewPage() {
             <div className="mt-10 grid grid-cols-3 gap-2 border-t border-white/10 pt-6 text-center"><MiniStat value="One" label="workspace" /><MiniStat value="Clear" label="ownership" /><MiniStat value="Live" label="visibility" /></div>
           </div>
         </div>
+      </section>
+      <section className="marketing-container py-20 sm:py-24">
+        <div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pricing</p><h2 className="mt-4 font-display text-3xl font-bold tracking-[-0.035em] text-ink sm:text-4xl">Simple pricing. Room to grow.</h2><p className="mt-4 text-base leading-7 text-muted">Choose a plan that fits your school, with clear pricing and room to grow.</p></div>
+        <PricingSection compact />
+        <div className="mt-8 text-center"><Link href="/pricing" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-ink">Compare all features <ArrowRight className="h-4 w-4" /></Link></div>
       </section>
       <CTA />
     </>

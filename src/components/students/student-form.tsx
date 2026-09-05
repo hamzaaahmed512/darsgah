@@ -15,6 +15,7 @@ import { canSelectStudentCombination, defaultCombinationOptionsForGrade, normali
 import { normalizeEmail } from "@/lib/email";
 import { formatClassDisplayName } from "@/lib/utils";
 import { sanitizeEnglishNameInput, sanitizeUrduNameInput } from "@/lib/validation/names";
+import { useToast } from "@/components/ui/toast";
 
 type EnglishNameField = "name_en" | "father_name_en" | "guardian_name";
 type UrduNameField = "name_ur" | "father_name_ur";
@@ -37,6 +38,7 @@ export function StudentForm({
   onCancel?: () => void;
 }) {
   const router = useRouter();
+  const { pushToast } = useToast();
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [autoGenerateAdmissionNumber, setAutoGenerateAdmissionNumber] = useState(!initialValues?.admission_number);
@@ -217,6 +219,7 @@ export function StudentForm({
             setAdmissionNumberRefreshKey((value) => value + 1);
           }
           router.refresh();
+          pushToast("Student added successfully.", "success");
         }
       } catch (err: any) {
         if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {

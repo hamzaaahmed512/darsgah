@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, MapPin, Settings, UserRound, Users } from "lucide-react";
+import { ChevronDown, Layers3, MapPin, Settings, UserRound, Users } from "lucide-react";
 import { AddSectionModal } from "@/components/classes/add-section-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatGradeSection } from "@/lib/utils";
@@ -23,13 +23,16 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, defaultExpan
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-outline/70 bg-white shadow-card">
-      <button type="button" className="grid w-full gap-4 px-5 py-4 text-left transition hover:bg-surface-low/50 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" onClick={() => setExpanded((value) => !value)}>
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-[1.65rem] font-bold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3>
-          <p className="mt-1.5 text-sm text-muted">{classes.length} {classes.length === 1 ? "Section" : "Sections"} • {totalStudents} Students</p>
-        </div>
-        <ChevronDown className={`h-5 w-5 justify-self-end text-muted transition ${expanded ? "rotate-180" : ""}`} />
-      </button>
+      <div className="flex items-center gap-3 px-5 py-4 transition hover:bg-surface-low/50">
+        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setExpanded((value) => !value)}>
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-[1.65rem] font-bold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3>
+            <p className="mt-1.5 text-sm text-muted">{classes.length} {classes.length === 1 ? "Section" : "Sections"} • {totalStudents} Students</p>
+          </div>
+        </button>
+        {gradeId ? <ButtonLink href={`/subjects?grade=${gradeId}`} size="sm" variant="secondary" className="min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
+        <button type="button" onClick={() => setExpanded((value) => !value)} className="rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
+      </div>
 
       {expanded ? (
         <div className="border-t border-outline/60 bg-white p-4 pt-0">

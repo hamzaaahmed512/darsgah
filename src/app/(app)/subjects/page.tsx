@@ -12,24 +12,30 @@ import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions } from "@/lib/services/academics";
 import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
 
-export default async function SubjectsPage() {
+export default async function SubjectsPage({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
   const user = await requireUser("classes:manage");
+  const params = await searchParams;
   const [data, combinations] = await Promise.all([getAcademicOptions(user), getSubjectCombinationCatalog(user)]);
-  const totalCombinations = combinations.defaultCombinations.length + combinations.customCombinations.length;
+  const selectedGrade = data.grades.find((grade: any) => grade.id === params.grade);
+  const defaultCombinations = selectedGrade ? combinations.defaultCombinations.filter((combination: any) => combination.gradeId === selectedGrade.id) : combinations.defaultCombinations;
+  const customCombinations = selectedGrade ? combinations.customCombinations.filter((combination: any) => combination.gradeIds.includes(selectedGrade.id)) : combinations.customCombinations;
+  const totalCombinations = defaultCombinations.length + customCombinations.length;
+  const subjectIdsInCombinations = new Set([...defaultCombinations, ...customCombinations].flatMap((combination: any) => combination.subjectIds));
+  const visibleSubjects = selectedGrade ? data.subjects.filter((subject: any) => subjectIdsInCombinations.has(subject.id)) : data.subjects;
 
   return (
     <>
       <PageHeader
         eyebrow="Academic structure"
-        title="Subjects and Combinations"
-        description="Maintain subjects and the subject combinations students can choose from."
+        title={selectedGrade ? `${selectedGrade.name} subjects and combinations` : "Subjects and Combinations"}
+        description={selectedGrade ? `Manage the subject combinations and subjects available for ${selectedGrade.name}.` : "Maintain subjects and the subject combinations students can choose from."}
         actions={
           <>
             <ButtonLink href="/classes" variant="secondary" className="rounded-2xl">
               <ArrowLeft className="h-4 w-4" /> Back to classes
             </ButtonLink>
             <SubjectCreateModal />
-            <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} />
+            <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} initialGradeId={selectedGrade?.id} />
           </>
         }
       />
@@ -38,8 +44,8 @@ export default async function SubjectsPage() {
         <MetricCard
           icon={<BookOpenCheck className="h-5 w-5" />}
           title="Subject Catalog"
-          value={data.subjects.length}
-          note="Available school subjects"
+          value={visibleSubjects.length}
+          note={selectedGrade ? "Subjects used in this grade" : "Available school subjects"}
           tone="blue"
         />
         <MetricCard
@@ -76,7 +82,7 @@ export default async function SubjectsPage() {
           <CardContent className="grid gap-4 px-5 py-5 sm:px-6">
             {totalCombinations ? (
               <>
-                {combinations.defaultCombinations.map((combination: any, index: number) => (
+                {defaultCombinations.map((combination: any, index: number) => (
                   <div
                     key={`${combination.value}-${combination.gradeId}-${index}`}
                     className="flex flex-col items-start gap-4 rounded-[24px] border border-outline/55 bg-slate-50/70 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:justify-between"
@@ -102,7 +108,7 @@ export default async function SubjectsPage() {
                   </div>
                 ))}
 
-                {combinations.customCombinations.map((combination) => (
+                {customCombinations.map((combination) => (
                   <div
                     key={combination.id}
                     className="flex flex-col items-start gap-4 rounded-[24px] border border-outline/55 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:justify-between"
@@ -149,9 +155,9 @@ export default async function SubjectsPage() {
             </div>
           </CardHeader>
           <CardContent className="px-5 py-5 sm:px-6">
-            {data.subjects.length ? (
+            {visibleSubjects.length ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                {data.subjects.map((subject: any, index: number) => (
+                {visibleSubjects.map((subject: any, index: number) => (
                   <div
                     key={subject.id}
                     className="flex items-start justify-between gap-3 rounded-[22px] border border-outline/55 bg-slate-50/60 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"

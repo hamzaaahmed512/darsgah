@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Clock3, Mail, MessageSquareText } from "lucide-react";
 import { ContactForm } from "@/components/marketing/contact-form";
 import { Eyebrow } from "@/components/marketing/shared";
@@ -22,7 +23,7 @@ export default function ContactPage() {
       <div className="marketing-card rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.09)] sm:p-9">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Tell us about your school</p>
         <h2 className="mt-3 text-2xl font-bold tracking-tight text-ink">Start a conversation</h2>
-        <div className="mt-8"><ContactForm /></div>
+        <div className="mt-8"><Suspense fallback={<div className="min-h-[450px]" />}><ContactForm /></Suspense></div>
       </div>
     </div>
   </section>;

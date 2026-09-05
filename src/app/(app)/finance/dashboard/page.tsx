@@ -140,7 +140,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
           eyebrow="Finance"
           title="Finance"
           description="Record income and expenses, then review posted transaction entries."
-          actions={canManage ? <><TransactionFormModal direction="income" students={students} /><TransactionFormModal direction="expense" students={students} /></> : null}
+          actions={canManage ? <><TransactionFormModal direction="income" /><TransactionFormModal direction="expense" /></> : null}
         />
 
         <Card className="mb-5 p-4">
@@ -254,7 +254,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
         eyebrow="Finance"
         title="Financial Dashboard"
         description="Track school finances by month, year, and lifetime from one ledger."
-        actions={canManage ? <><TransactionFormModal direction="income" students={students} /><TransactionFormModal direction="expense" students={students} /></> : null}
+        actions={canManage ? <><TransactionFormModal direction="income" /><TransactionFormModal direction="expense" /></> : null}
       />
 
       <div className="mb-5 flex justify-start">

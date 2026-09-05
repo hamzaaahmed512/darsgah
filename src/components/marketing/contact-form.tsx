@@ -1,20 +1,31 @@
 "use client";
 
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, CheckCircle2, LoaderCircle } from "lucide-react";
 import { sendContactEnquiryAction, type ContactFormState } from "@/app/(marketing)/contact/actions";
 import { normalizeEmail } from "@/lib/email";
+import { isBillingCycle, isPlanId, plans } from "./pricing-data";
 
 const initialState: ContactFormState = { status: "idle" };
 
 export function ContactForm() {
   const [state, action, pending] = useActionState(sendContactEnquiryAction, initialState);
+  const searchParams = useSearchParams();
+  const planId = searchParams.get("plan");
+  const billing = searchParams.get("billing");
+  const enquiry = searchParams.get("enquiry");
+  const plan = isPlanId(planId) ? plans.find((item) => item.id === planId) : undefined;
+  const validBilling = isBillingCycle(billing) ? billing : undefined;
+  const customDevelopment = enquiry === "custom-development";
 
   if (state.status === "success") {
     return <div className="flex min-h-[450px] flex-col items-center justify-center text-center"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success"><CheckCircle2 className="h-7 w-7" /></span><h2 className="mt-6 text-2xl font-bold text-ink">Enquiry sent</h2><p className="mt-3 max-w-sm text-sm leading-6 text-muted">Thank you. Your demo request has been delivered to the Darsgah team, and we will reply to your email.</p></div>;
   }
 
   return <form action={action} className="relative grid gap-5">
+    {plan ? <div className="rounded-xl border border-blue-100 bg-primary-soft px-4 py-3 text-sm"><p className="font-bold text-ink">Your selected plan</p><p className="mt-1 text-muted">{plan.name} · {validBilling === "yearly" ? "Yearly billing" : "Monthly billing"}</p><input type="hidden" name="plan" value={plan.id} /><input type="hidden" name="billing" value={validBilling ?? "monthly"} /></div> : null}
+    {customDevelopment ? <div className="rounded-xl border border-blue-100 bg-primary-soft px-4 py-3 text-sm"><p className="font-bold text-ink">Custom development enquiry</p><p className="mt-1 text-muted">Tell us about the solution you need and we will discuss the scope with you.</p><input type="hidden" name="enquiry" value="custom-development" /></div> : null}
     <div className="pointer-events-none absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
     <div className="grid gap-5 sm:grid-cols-2"><Field label="Your name" name="name" placeholder="Full name" error={state.errors?.name} /><Field label="School name" name="school" placeholder="Your school" error={state.errors?.school} /></div>
     <Field label="Work email" name="email" type="email" placeholder="you@school.edu" error={state.errors?.email} />
