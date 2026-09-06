@@ -125,16 +125,16 @@ export async function AssessmentsView({
             ) : (
               <div className="grid gap-4">
                 {visibleExams.map((exam: any) => (
-                  <div key={exam.id} className="rounded-[22px] border border-outline/55 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                  <div key={exam.id} className="rounded-[22px] border border-outline/55 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-4">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex min-w-0 items-start gap-4">
+                      <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                         <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border ${getAssessmentToneClasses(exam.title)}`}>
                           <FileQuestion className="h-7 w-7" aria-hidden="true" />
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="min-w-0 flex-1">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="truncate font-display text-[1.45rem] font-bold leading-none text-ink">{exam.title}</p>
+                              <p className="break-words font-display text-xl font-bold leading-tight text-ink sm:text-[1.45rem]">{exam.title}</p>
                               <WorkflowStatusBadge status={exam.workflow_status} />
                               <Badge tone={exam.is_marked ? "green" : "gray"}>{exam.is_marked ? "Marked" : "Unmarked"}</Badge>
                             </div>
@@ -152,12 +152,12 @@ export async function AssessmentsView({
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-end">
+                      <div className="flex w-full justify-end lg:w-auto">
                         <ButtonLink
                           href={buildMarkingHref(basePath, exam)}
                           variant="secondary"
                           size="sm"
-                          className="min-h-10 rounded-2xl border-primary/40 px-4 text-sm text-primary hover:bg-primary-soft"
+                          className="min-h-10 w-full justify-center rounded-2xl border-primary/40 px-4 text-sm text-primary hover:bg-primary-soft sm:w-auto"
                         >
                           {exam.is_marked ? <Edit3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                           {exam.is_marked ? "Edit Marks" : "Do Marking"}
@@ -169,9 +169,9 @@ export async function AssessmentsView({
               </div>
             )}
             {visibleExams.length ? (
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-[20px] border border-outline/50 px-5 py-4 text-sm text-muted">
+              <div className="mt-4 flex flex-col items-stretch gap-3 rounded-[20px] border border-outline/50 px-4 py-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <p>Showing 1 to {visibleExams.length} of {visibleExams.length} assessments</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2">
                   <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
                     ‹
                   </button>

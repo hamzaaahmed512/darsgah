@@ -126,7 +126,7 @@ export function CreateAssessmentDialog({
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lift ring-1 ring-outline">
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b border-outline px-5 py-4">
               <div>
@@ -143,7 +143,7 @@ export function CreateAssessmentDialog({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-6 p-5">
+            <form onSubmit={handleSubmit} className="grid gap-6 overflow-y-auto p-4 sm:p-5">
               {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
               {/* Hidden identifiers */}
               <input type="hidden" name="class_id" value={classId} />
@@ -155,7 +155,7 @@ export function CreateAssessmentDialog({
                 title="Assessment Setup"
                 description="Choose the assessment style first, then fill only the fields that apply to that type."
               >
-                <fieldset className="grid grid-cols-2 gap-2">
+                <fieldset className="grid gap-2 sm:grid-cols-2">
                   <legend className="mb-2 text-sm font-medium text-ink">Assessment type</legend>
                   {CATEGORY_OPTIONS.map((option) => {
                     const checked = category === option.value;
