@@ -117,10 +117,18 @@ export async function MarkAssessmentView({
                               type="number"
                               min="0"
                               max={Number(selectedExam.max_marks)}
-                              step="0.01"
+                              step="1"
                               defaultValue={value}
                               disabled={inputDisabled}
                               required
+                              onChange={(event) => {
+                                const rawValue = event.currentTarget.value;
+                                if (rawValue === "") return;
+                                const numericValue = Number(rawValue);
+                                if (Number.isFinite(numericValue)) {
+                                  event.currentTarget.value = String(Math.trunc(numericValue));
+                                }
+                              }}
                             />
                           </td>
                           <td className="py-3 pr-3">
