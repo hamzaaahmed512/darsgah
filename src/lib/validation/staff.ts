@@ -6,7 +6,7 @@ export const staffFormSchema = z.object({
   full_name: englishNameSchema("Full name", 100, 2),
   email: z.string().trim().toLowerCase().email("Enter a valid email").transform(normalizeEmail),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["teacher", "head_teacher", "staff", "student_staff", "cashier", "principal", "administrator"]),
+  role: z.enum(["teacher", "head_teacher", "staff", "student_staff", "cashier", "librarian", "principal", "administrator"]),
   custom_role_id: z.preprocess(
     (value) => value === "" || value == null ? undefined : value,
     z.string().uuid().optional()

@@ -5,8 +5,8 @@ import { getRolePermissions } from "@/lib/permissions";
 export function StandardRolePermissionsCard({ currentUserRole }: { currentUserRole: string }) {
   const visibleRoleCards =
     currentUserRole === "principal"
-      ? (["administrator", "principal", "teacher"] as const)
-      : (["administrator", "teacher"] as const);
+      ? (["administrator", "principal", "teacher", "librarian"] as const)
+      : (["administrator", "teacher", "librarian"] as const);
 
   return (
     <Card>

@@ -17,11 +17,12 @@ export class StaffEmailAlreadyAssignedError extends Error {
 }
 
 const creatableRoles: Record<UserRole, UserRole[]> = {
-  administrator: ["teacher", "staff", "student_staff", "cashier"],
-  principal: ["administrator", "teacher", "staff", "student_staff", "cashier"],
+  administrator: ["teacher", "staff", "student_staff", "cashier", "librarian"],
+  principal: ["administrator", "teacher", "staff", "student_staff", "cashier", "librarian"],
   teacher: [],
   student_staff: [],
   cashier: [],
+  librarian: [],
   staff: [],
   head_teacher: []
 };

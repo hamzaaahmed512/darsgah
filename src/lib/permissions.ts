@@ -1,6 +1,8 @@
 import type { UserRole } from "@/types/database";
 
 export type Permission =
+  | "library:view"
+  | "library:manage"
   | "dashboard:view"
   | "students:view"
   | "students:create"
@@ -36,6 +38,7 @@ export type Permission =
   | "announcements:manage";
 
 export const AVAILABLE_PERMISSIONS: Permission[] = [
+  "library:view", "library:manage",
   "dashboard:view", "students:view", "students:create", "students:update", "students:archive",
   "attendance:view", "attendance:submit", "staff:view", "staff:manage", "academics:view",
   "academics:manage", "marks:manage", "marks:approve", "results:view", "results:generate",
@@ -46,7 +49,9 @@ export const AVAILABLE_PERMISSIONS: Permission[] = [
 ];
 
 const rolePermissions: Record<UserRole, Permission[]> = {
+  librarian: ["dashboard:view", "library:view", "library:manage", "leave:view", "announcements:view"],
   principal: [
+    "library:view", "library:manage",
     "dashboard:view",
     "students:view",
     "students:create",
@@ -105,6 +110,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     "announcements:view"
   ],
   administrator: [
+    "library:view", "library:manage",
     "dashboard:view",
     "students:view",
     "students:create",
@@ -191,6 +197,7 @@ export function getRolePermissions(role: UserRole) {
 }
 
 export function roleHome(role: UserRole) {
+  if (role === "librarian") return "/library";
   if (role === "administrator") return "/admin";
   if (role === "cashier") return "/finance";
   if (role === "staff") return "/leave";

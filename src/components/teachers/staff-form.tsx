@@ -17,6 +17,7 @@ import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
   cashier: "Cashier",
+  librarian: "Librarian",
   principal: "Principal",
   staff: "Staff",
   teacher: "Teacher",

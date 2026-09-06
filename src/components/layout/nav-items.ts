@@ -42,12 +42,14 @@ const coreNavItems: NavItem[] = [
   { href: "/finance/payroll", label: "Staff Pay", icon: Wallet, permission: "payroll:view", section: "FINANCE" },
   { href: "/finance/transactions", label: "Transactions", icon: Receipt, permission: "finance:view", section: "FINANCE" },
   { href: "/transport", label: "Transport", icon: Bus, permission: "transport:view", section: "OPERATIONS" },
+  { href: "/library", label: "Library", icon: BookOpen, permission: "library:view", section: "OPERATIONS" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
   { href: "/admin", label: "Admin Console", icon: Shield, permission: "users:manage", anyPermissions: ["settings:manage"], section: "SYSTEM" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage", section: "SYSTEM" }
 ];
 
 function getOverviewHref(role: UserRole) {
+  if (role === "librarian") return "/library";
   if (role === "administrator") return "/dashboard/admin";
   if (role === "principal") return "/dashboard/principal";
   if (role === "student_staff") return "/dashboard/registrar";

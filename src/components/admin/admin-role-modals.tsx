@@ -35,6 +35,7 @@ const BASE_ROLE_LABELS: Record<string, string> = {
   student_staff: "Student-management staff",
   staff: "Staff",
   cashier: "Cashier",
+  librarian: "Librarian",
   principal: "Principal",
   head_teacher: "Teacher"
 };
@@ -206,8 +207,8 @@ export function EditUserModal({
     : member.role !== "principal" && member.role !== "administrator";
 
   const baseRoleOptions = canManageElevatedRoles
-    ? ["administrator", "teacher", "student_staff", "staff", "cashier"]
-    : ["teacher", "student_staff", "staff", "cashier"];
+    ? ["administrator", "teacher", "student_staff", "staff", "cashier", "librarian"]
+    : ["teacher", "student_staff", "staff", "cashier", "librarian"];
   const availableCustomRoles = customRoles.filter((role) =>
     canManageElevatedRoles ? role.base_role !== "principal" : role.base_role !== "principal" && role.base_role !== "administrator"
   );

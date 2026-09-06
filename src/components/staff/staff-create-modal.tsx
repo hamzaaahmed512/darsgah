@@ -20,6 +20,7 @@ import type { UserRole } from "@/types/database";
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
   cashier: "Cashier",
+  librarian: "Librarian",
   principal: "Principal",
   staff: "Staff",
   teacher: "Teacher",

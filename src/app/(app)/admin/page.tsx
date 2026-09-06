@@ -22,8 +22,8 @@ export default async function AdminPage() {
   );
   const allowedRoles =
     user.role === "principal"
-      ? (["administrator", "teacher", "staff", "student_staff", "cashier"] as const)
-      : (["teacher", "staff", "student_staff", "cashier"] as const);
+      ? (["administrator", "teacher", "staff", "student_staff", "cashier", "librarian"] as const)
+      : (["teacher", "staff", "student_staff", "cashier", "librarian"] as const);
   const { data: customRolesData } = await supabase.from("custom_roles").select("*").eq("school_id", user.schoolId).order("name");
   const customRoles = customRolesData ?? [];
 

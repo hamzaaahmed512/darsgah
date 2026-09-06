@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 
 export default async function DashboardPage() {
   const user = await requireUser("dashboard:view");
+  if (user.role === "librarian") redirect("/library");
 
   if (user.role === "principal") {
     redirect("/dashboard/principal");

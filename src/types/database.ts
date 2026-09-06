@@ -1,4 +1,4 @@
-export type UserRole = "principal" | "teacher" | "student_staff" | "administrator" | "cashier" | "staff" | "head_teacher";
+export type UserRole = "principal" | "teacher" | "student_staff" | "administrator" | "cashier" | "librarian" | "staff" | "head_teacher";
 export type StudentStatus =
   | "active"
   | "graduated"
