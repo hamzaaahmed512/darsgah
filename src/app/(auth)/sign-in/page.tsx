@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
@@ -15,7 +15,10 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function onSubmit(formData: FormData) {
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+    const formData = new FormData(event.currentTarget);
     setError("");
     startTransition(async () => {
       try {
@@ -46,8 +49,8 @@ export default function SignInPage() {
         <h1 className="font-display text-3xl font-bold tracking-tight text-[#153476] sm:text-4xl">Welcome back</h1>
         <p className="mt-2 text-sm leading-6 text-muted sm:text-base">Enter your details to sign in to Darsgah.</p>
       </div>
-      {error ? <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
-      <form className="mt-8 grid gap-4" action={onSubmit}>
+      {error ? <div role="alert" className="mt-4 rounded-lg bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
+      <form className="mt-8 grid gap-4" onSubmit={onSubmit}>
         <label className="relative block">
           <span className="sr-only">Email address</span>
           <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
