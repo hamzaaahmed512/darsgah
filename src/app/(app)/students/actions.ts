@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
@@ -43,6 +44,16 @@ export async function createStudentAction(values: StudentFormValues) {
     if (error instanceof StudentIdentifierValidationError) {
       return { error: error.message, fieldErrors: error.fieldErrors };
     }
+    if (error instanceof z.ZodError) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of error.issues) {
+        const path = issue.path.join(".");
+        if (path && !fieldErrors[path]) {
+          fieldErrors[path] = issue.message;
+        }
+      }
+      return { error: error.issues[0]?.message || "Validation error.", fieldErrors };
+    }
     return { error: error.message || "Failed to create student." };
   }
   revalidatePath("/students");
@@ -56,6 +67,16 @@ export async function updateStudentAction(id: string, values: StudentFormValues)
   } catch (error: any) {
     if (error instanceof StudentIdentifierValidationError) {
       return { error: error.message, fieldErrors: error.fieldErrors };
+    }
+    if (error instanceof z.ZodError) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of error.issues) {
+        const path = issue.path.join(".");
+        if (path && !fieldErrors[path]) {
+          fieldErrors[path] = issue.message;
+        }
+      }
+      return { error: error.issues[0]?.message || "Validation error.", fieldErrors };
     }
     return { error: error.message || "Failed to update student." };
   }

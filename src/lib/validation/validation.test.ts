@@ -8,6 +8,7 @@ import { studentSchema } from "@/lib/validation/students";
 
 const student = {
   admission_number: "2026-0001",
+  student_cnic: "35202-7654321-1",
   first_name: "Alex",
   last_name: "Rivera",
   name_en: "Alex Rivera",
@@ -33,6 +34,31 @@ const student = {
 describe("validation schemas", () => {
   it("accepts a complete student payload", () => {
     expect(studentSchema.safeParse(student).success).toBe(true);
+  });
+
+  it("requires student cnic and displays 'Please enter CNIC.'", () => {
+    const emptyCnicResult = studentSchema.safeParse({ ...student, student_cnic: "" });
+    expect(emptyCnicResult.success).toBe(false);
+    if (!emptyCnicResult.success) {
+      const cnicIssue = emptyCnicResult.error.issues.find((i) => i.path.includes("student_cnic"));
+      expect(cnicIssue?.message).toBe("Please enter CNIC.");
+    }
+
+    const missingCnicResult = studentSchema.safeParse({ ...student, student_cnic: undefined });
+    expect(missingCnicResult.success).toBe(false);
+    if (!missingCnicResult.success) {
+      const cnicIssue = missingCnicResult.error.issues.find((i) => i.path.includes("student_cnic"));
+      expect(cnicIssue?.message).toBe("Please enter CNIC.");
+    }
+  });
+
+  it("enforces 13-digit cnic format validation when student cnic is entered incorrectly", () => {
+    const invalidCnicResult = studentSchema.safeParse({ ...student, student_cnic: "12345" });
+    expect(invalidCnicResult.success).toBe(false);
+    if (!invalidCnicResult.success) {
+      const cnicIssue = invalidCnicResult.error.issues.find((i) => i.path.includes("student_cnic"));
+      expect(cnicIssue?.message).toBe("Enter a valid 13-digit CNIC");
+    }
   });
 
   it("requires a student date of birth", () => {

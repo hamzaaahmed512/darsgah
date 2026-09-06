@@ -47,6 +47,18 @@ const optionalCnic = (label: string) =>
       .nullable()
       .optional()
   );
+const requiredCnic = (label: string) =>
+  z.preprocess(
+    cleanOptionalString,
+    z
+      .string({
+        required_error: "Please enter CNIC.",
+        invalid_type_error: "Please enter CNIC."
+      })
+      .min(1, "Please enter CNIC.")
+      .transform(formatCnic)
+      .pipe(z.string().regex(/^\d{5}-\d{7}-\d{1}$/, `Enter a valid 13-digit ${label}`))
+  );
 const optionalEnglishName = (label: string, max: number) =>
   z.preprocess(cleanOptionalString, englishNameSchema(label, max).nullable().optional());
 const optionalDate = z.preprocess(cleanOptionalString, z.string().date("Enter a valid date").nullable().optional());
@@ -75,7 +87,7 @@ const phone = z
 
 export const studentSchema = z.object({
   admission_number: optionalAdmissionNumber,
-  student_cnic: optionalCnic("Student CNIC / Form-B"),
+  student_cnic: requiredCnic("CNIC"),
   name_en: englishNameSchema("Name (English)", 80),
   first_name: optionalText(80), // for backwards compat
   last_name: optionalText(80), // for backwards compat
