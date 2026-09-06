@@ -14,11 +14,10 @@ import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 import { canSelectStudentCombination, defaultCombinationOptionsForGrade, normalizeStudentMajorValue, type StudentCombinationOption } from "@/lib/student-majors";
 import { normalizeEmail } from "@/lib/email";
 import { formatClassDisplayName } from "@/lib/utils";
-import { sanitizeEnglishNameInput, sanitizeUrduNameInput } from "@/lib/validation/names";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 import { useToast } from "@/components/ui/toast";
 
 type EnglishNameField = "name_en" | "father_name_en" | "guardian_name";
-type UrduNameField = "name_ur" | "father_name_ur";
 
 export function StudentForm({
   initialValues,
@@ -50,9 +49,7 @@ export function StudentForm({
     admission_number: "",
     student_cnic: "",
     name_en: "",
-    name_ur: "",
     father_name_en: "",
-    father_name_ur: "",
     father_phone: "",
     father_cnic: "",
     father_alive: "yes",
@@ -187,10 +184,6 @@ export function StudentForm({
     setValue(field as any, sanitizeEnglishNameInput(value), { shouldDirty: true, shouldValidate: true });
   }
 
-  function handleUrduNameChange(field: UrduNameField, value: string) {
-    setValue(field as any, sanitizeUrduNameInput(value), { shouldDirty: true, shouldValidate: true });
-  }
-
   function handleAdmissionNumberToggle(checked: boolean) {
     setAutoGenerateAdmissionNumber(checked);
     setServerError(null);
@@ -306,9 +299,6 @@ export function StudentForm({
           <Field label="Name (English)" required error={errors.name_en?.message}>
             <Input {...register("name_en")} value={watch("name_en") ?? ""} onChange={(event) => handleEnglishNameChange("name_en", event.target.value)} placeholder="e.g. John Doe" autoComplete="off" />
           </Field>
-          <Field label="Name (Urdu)" error={errors.name_ur?.message}>
-            <Input {...register("name_ur")} value={watch("name_ur") ?? ""} onChange={(event) => handleUrduNameChange("name_ur", event.target.value)} dir="rtl" placeholder="e.g. جان ڈو" autoComplete="off" />
-          </Field>
           <Field label="Gender" required error={errors.gender?.message}>
             <div className="flex min-h-12 flex-wrap items-center gap-6 rounded-2xl border border-transparent px-1">
               <label className="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" value="male" {...register("gender")} required className="h-4 w-4 accent-primary" /> Male</label>
@@ -383,9 +373,6 @@ export function StudentForm({
           </div>
           <Field label="Father's Name (English)" required error={errors.father_name_en?.message}>
             <Input {...register("father_name_en")} value={watch("father_name_en") ?? ""} onChange={(event) => handleEnglishNameChange("father_name_en", event.target.value)} autoComplete="new-password" placeholder="e.g. Ahmed Khan" />
-          </Field>
-          <Field label="Father's Name (Urdu)" error={errors.father_name_ur?.message}>
-            <Input {...register("father_name_ur")} value={watch("father_name_ur") ?? ""} onChange={(event) => handleUrduNameChange("father_name_ur", event.target.value)} dir="rtl" autoComplete="off" placeholder="e.g. احمد خان" />
           </Field>
           <Field label="Father's Phone" required={fatherAlive !== "no"} error={errors.father_phone?.message} hint={fatherAlive === "no" ? "Optional when father is not alive." : undefined}>
             <Input {...register("father_phone")} value={formatPakistaniPhone(watch("father_phone"))} onChange={(event) => setValue("father_phone", formatPakistaniPhone(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={12} placeholder="0300-0000000" autoComplete="new-password" />

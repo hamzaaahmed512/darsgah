@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ADMISSION_NUMBER_REGEX, formatAdmissionNumber, parseAdmissionNumber, sanitizeAdmissionNumberInput } from "@/lib/admission-number";
 import { attendanceSubmissionSchema } from "@/lib/validation/attendance";
-import { sanitizeEnglishNameInput, sanitizeUrduNameInput } from "@/lib/validation/names";
+import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 import { profileFormSchema } from "@/lib/validation/profile";
 import { otherStaffRecordSchema, staffFormSchema } from "@/lib/validation/staff";
 import { studentSchema } from "@/lib/validation/students";
@@ -83,12 +83,11 @@ describe("validation schemas", () => {
     expect(profileResult.data.personalEmail).toBe("jane.personal@gmail.com");
   });
 
-  it("rejects digits and symbols in english and urdu name fields", () => {
+  it("rejects digits and symbols in english name fields", () => {
     const studentResult = studentSchema.safeParse({
       ...student,
       admission_number: "2026-ABC",
       name_en: "Alex123",
-      father_name_ur: "ابو@123"
     });
     const staffResult = staffFormSchema.safeParse({
       full_name: "Jane#Doe",
@@ -128,13 +127,11 @@ describe("validation schemas", () => {
     expect(parseAdmissionNumber("2026-14")).toEqual({ year: 2026, sequence: 14 });
   });
 
-  it("accepts accented english names, urdu names, and sanitized other staff records", () => {
+  it("accepts accented english names and sanitized other staff records", () => {
     const studentResult = studentSchema.safeParse({
       ...student,
       name_en: "Mary-Jane D'Souza",
       father_name_en: "Jose Alvarez",
-      name_ur: "مریم جین",
-      father_name_ur: "جان ڈو"
     });
     const staffResult = staffFormSchema.safeParse({
       full_name: "Andre d'Almeida",
@@ -212,20 +209,17 @@ describe("validation schemas", () => {
 
   it("strips invalid characters from live name input sanitizers", () => {
     expect(sanitizeEnglishNameInput("Mary123 @Jane!")).toBe("Mary123 Jane");
-    expect(sanitizeUrduNameInput("جان123@ ڈو!")).toBe("جان ڈو");
   });
 
   it("normalizes blank optional student fields to null", () => {
     const result = studentSchema.safeParse({
       ...student,
       admission_number: "   ",
-      name_ur: "   ",
       email: "",
       phone: "",
       address: "   ",
       class_id: "",
       major: "",
-      father_name_ur: "none",
       guardian_name: "Guardian",
       guardian_relationship: "",
       guardian_email: "",
@@ -235,13 +229,11 @@ describe("validation schemas", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.admission_number).toBeNull();
-    expect(result.data.name_ur).toBeNull();
     expect(result.data.email).toBeNull();
     expect(result.data.phone).toBeNull();
     expect(result.data.address).toBeNull();
     expect(result.data.class_id).toBeNull();
     expect(result.data.major).toBeNull();
-    expect(result.data.father_name_ur).toBeNull();
     expect(result.data.guardian_name).toBeNull();
     expect(result.data.guardian_relationship).toBeNull();
     expect(result.data.guardian_email).toBeNull();

@@ -71,7 +71,6 @@ export function StudentTable({
                       <Link href={`/students/${student.id}`} prefetch={false} className="font-semibold text-slate-900 hover:text-primary">
                         {formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}
                       </Link>
-                      {student.name_ur && <p className="text-xs text-muted" dir="rtl">{student.name_ur}</p>}
                     </div>
                   </div>
                 </td>

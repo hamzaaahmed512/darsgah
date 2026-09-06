@@ -16,7 +16,6 @@ type ParsedRecord = {
   _errors: string[];
   admission_number: string;
   name_en: string;
-  name_ur: string;
   father_name_en: string;
   father_phone: string;
   class_name: string;
@@ -64,7 +63,6 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
           _errors: [],
           admission_number: admNo,
           name_en: nameEn,
-          name_ur: String(lowerRow["name (ur)"] || ""),
           father_name_en: String(lowerRow["father name"] || lowerRow["guardian name"] || ""),
           father_phone: String(lowerRow["contact number"] || lowerRow["father phone"] || lowerRow["phone"] || ""),
           class_name: grade,

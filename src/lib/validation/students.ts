@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ADMISSION_NUMBER_REGEX } from "@/lib/admission-number";
 import { normalizeEmail } from "@/lib/email";
 import { formatCnic, isValidPakistaniPhone } from "@/lib/pakistan-format";
-import { englishNameSchema, urduNameSchema } from "@/lib/validation/names";
+import { englishNameSchema } from "@/lib/validation/names";
 
 const placeholderArtifacts = new Set([
   "-",
@@ -49,8 +49,6 @@ const optionalCnic = (label: string) =>
   );
 const optionalEnglishName = (label: string, max: number) =>
   z.preprocess(cleanOptionalString, englishNameSchema(label, max).nullable().optional());
-const optionalUrduName = (label: string, max: number) =>
-  z.preprocess(cleanOptionalString, urduNameSchema(label, max).nullable().optional());
 const optionalDate = z.preprocess(cleanOptionalString, z.string().date("Enter a valid date").nullable().optional());
 const requiredDate = z.preprocess(
   cleanOptionalString,
@@ -79,7 +77,6 @@ export const studentSchema = z.object({
   admission_number: optionalAdmissionNumber,
   student_cnic: optionalCnic("Student CNIC / Form-B"),
   name_en: englishNameSchema("Name (English)", 80),
-  name_ur: optionalUrduName("Name (Urdu)", 80),
   first_name: optionalText(80), // for backwards compat
   last_name: optionalText(80), // for backwards compat
   date_of_birth: requiredDate,
@@ -96,7 +93,6 @@ export const studentSchema = z.object({
   
   // Father details
   father_name_en: englishNameSchema("Father's name", 120),
-  father_name_ur: optionalUrduName("Father's name (Urdu)", 120),
   father_phone: phone,
   father_cnic: optionalCnic("Father CNIC"),
   father_alive: z.enum(["yes", "no"]).default("yes"),

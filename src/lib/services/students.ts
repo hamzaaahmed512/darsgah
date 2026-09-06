@@ -46,8 +46,8 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   const directoryFields: string = isTeacher
-    ? "id, first_name, last_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, photo_url"
-    : "id, first_name, last_name, name_en, name_ur, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url";
+    ? "id, first_name, last_name, name_en, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, photo_url"
+    : "id, first_name, last_name, name_en, admission_number, status, class_id, class_name, grade_name, section_name, guardian_name, father_name_en, father_phone, attendance_rate, gender, photo_url";
 
   let query = supabase
     .from("student_directory")
@@ -66,8 +66,8 @@ export async function getStudents(user: AppUser, filters: StudentFilters = {}) {
   if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
   if (filters.q) {
     query = query.or(isTeacher
-      ? `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`
-      : `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+      ? `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`
+      : `first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
   }
 
   const { data, count, error } = await query;
@@ -308,7 +308,7 @@ export async function getStudentRecord(
 
   const studentFields: string = isTeacher
     ? `id, first_name, last_name, admission_number, status, class_id, class_name, grade_name, section_name, attendance_rate, gender, admission_date${studentMajorsSupported ? ", major" : ""}`
-    : `id, first_name, last_name, name_en, name_ur, admission_number, student_cnic, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_name_ur, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
+    : `id, first_name, last_name, name_en, admission_number, student_cnic, status, class_id, class_name, grade_name, section_name, guardian_name, attendance_rate, date_of_birth, gender${studentBioFieldsSupported ? ", religion, father_alive" : ""}, father_name_en, father_phone, father_cnic, photo_url, email, phone, address, admission_date${studentMajorsSupported ? ", major" : ""}`;
   let studentQuery = supabase
       .from("student_directory")
       .select(studentFields)
@@ -447,9 +447,7 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
         first_name: studentName.firstName,
         last_name: studentName.lastName,
         name_en: parsed.name_en,
-        name_ur: parsed.name_ur || null,
         father_name_en: parsed.father_name_en || null,
-        father_name_ur: parsed.father_name_ur || null,
         father_phone: fatherPhone,
         father_cnic: parsed.father_cnic || null,
         ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
@@ -573,9 +571,7 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       first_name: studentName.firstName,
       last_name: studentName.lastName,
       name_en: parsed.name_en,
-      name_ur: parsed.name_ur || null,
       father_name_en: parsed.father_name_en || null,
-      father_name_ur: parsed.father_name_ur || null,
       father_phone: fatherPhone,
       father_cnic: parsed.father_cnic || null,
       ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
@@ -865,13 +861,13 @@ export async function exportStudents(user: AppUser, filters: StudentFilters = {}
   const supabase = await createClient();
   let query = supabase
     .from("student_directory")
-    .select("admission_number, name_en, name_ur, father_name_en, father_phone, gender, class_name, grade_name, section_name, status, date_of_birth, email, phone, address")
+    .select("admission_number, name_en, father_name_en, father_phone, gender, class_name, grade_name, section_name, status, date_of_birth, email, phone, address")
     .eq("school_id", user.schoolId)
     .order("last_name");
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
-  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,name_ur.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -881,7 +877,6 @@ export async function exportStudents(user: AppUser, filters: StudentFilters = {}
   return data.map(s => ({
     "Admission No": s.admission_number || "",
     "Name (EN)": s.name_en || "",
-    "Name (UR)": s.name_ur || "",
     "Father Name": s.father_name_en || "",
     "Father Phone": s.father_phone || "",
     "Gender": s.gender || "",
@@ -922,7 +917,6 @@ export async function importStudentsBulk(user: AppUser, records: any[]) {
       first_name: studentName.firstName || "Unknown",
       last_name: studentName.lastName,
       name_en: r.name_en || null,
-      name_ur: r.name_ur || null,
       father_name_en: r.father_name_en || null,
       father_phone: formatPakistaniPhoneForStorage(r.father_phone),
       class_id: classId,
