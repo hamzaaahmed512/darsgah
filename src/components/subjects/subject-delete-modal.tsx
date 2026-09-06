@@ -69,7 +69,7 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
       <button 
         type="button" 
         onClick={handleCheck}
-        className="rounded p-1.5 text-muted hover:bg-danger-soft hover:text-danger transition-colors"
+        className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 shadow-sm transition hover:bg-red-100 hover:text-red-700"
         aria-label={`Archive ${subjectName}`}
         title={`Archive ${subjectName}`}
       >

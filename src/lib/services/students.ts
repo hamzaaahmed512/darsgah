@@ -3,7 +3,7 @@ import { formatAdmissionNumber, getCurrentAdmissionYear, parseAdmissionNumber } 
 import type { AppUser } from "@/types/database";
 import { studentSchema, type StudentFormValues } from "@/lib/validation/students";
 import { logActivity } from "@/lib/services/activity";
-import { getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
+import { getCombinationOptionsForClass, getCustomCombinationOptionForClass, getDefaultCombinationOverrideForClass } from "@/lib/services/student-combinations";
 import { canSelectStudentCombination, isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, normalizeStudentMajorValue, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { formatDisplayName, splitFullName } from "@/lib/student-name";
@@ -744,9 +744,14 @@ async function assertMajorAvailableForClass(
     if (error) throw new Error(error.message);
     gradeName = (classRow as any)?.grades?.name ?? "";
   }
+  const resolvedGradeName = gradeName ?? "";
 
   if (isDefaultStudentMajor(major)) {
-    if (!majorsForGrade(gradeName).includes(major)) throw new Error("That combination is not available for this grade.");
+    if (!majorsForGrade(resolvedGradeName).includes(major)) throw new Error("That combination is not available for this grade.");
+    const combinations = await getCombinationOptionsForClass(user, classId, resolvedGradeName);
+    if (!combinations.some((combination) => combination.value === major)) {
+      throw new Error("That combination is not available for this class.");
+    }
     return;
   }
 

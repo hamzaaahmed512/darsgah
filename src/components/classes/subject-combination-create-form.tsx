@@ -14,10 +14,10 @@ type ClassOption = { id: string; name: string; grade_id?: string | null; grade_n
 type SubjectOption = { id: string; name: string };
 type GradeOption = { id: string; name: string; classIds: string[] };
 
-export function SubjectCombinationCreateForm({ classes, subjects, initialGradeId }: { classes: ClassOption[]; subjects: SubjectOption[]; initialGradeId?: string }) {
+export function SubjectCombinationCreateForm({ classes, subjects, initialGradeId, openOnLoad = false, triggerLabel = "Create combination", triggerVariant = "primary" }: { classes: ClassOption[]; subjects: SubjectOption[]; initialGradeId?: string; openOnLoad?: boolean; triggerLabel?: string; triggerVariant?: "primary" | "secondary" }) {
   const router = useRouter();
   const { pushToast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openOnLoad);
   const [name, setName] = useState("");
   const [gradeIds, setGradeIds] = useState<string[]>(initialGradeId ? [initialGradeId] : []);
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
@@ -55,9 +55,9 @@ export function SubjectCombinationCreateForm({ classes, subjects, initialGradeId
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" />
-        Create combination
+      <Button type="button" variant={triggerVariant} onClick={() => setOpen(true)}>
+        {triggerVariant === "secondary" ? <Sparkles className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+        {triggerLabel}
       </Button>
 
       {open

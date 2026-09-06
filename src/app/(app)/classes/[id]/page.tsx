@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpenCheck, GraduationCap, MapPin, Users } from "lucide-react";
+import { ArrowLeft, GraduationCap, Users } from "lucide-react";
 import { ClassFormModal } from "@/components/classes/class-form";
 import { ClassSubjectManager } from "@/components/classes/ClassSubjectManager";
 import { TeacherAssignmentModal } from "@/components/classes/TeacherAssignmentModal";
@@ -31,13 +31,19 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
     : null;
   const classSubjects = subjectsByClass[id] ?? [];
   const faculty = assignedTeachers.filter((teacher: any) => teacher.teacher_id !== cls.head_teacher_id);
+  const configuredCombinationValues = cls.allowed_majors ?? [];
+  const configuredCombinations = rosterData.combinationOptions.filter((option: any) => configuredCombinationValues.includes(option.value));
+  const combinationSubjectIds = new Set(configuredCombinations.flatMap((option: any) => option.subjectIds ?? []));
+  const visibleClassSubjects = configuredCombinationValues.length
+    ? classSubjects.filter((subject: any) => subject.is_class_specific || combinationSubjectIds.has(subject.subject_id))
+    : classSubjects;
 
   return <>
     <div className="mb-4"><Link href="/classes" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-primary"><ArrowLeft className="h-4 w-4" /> Back to classes</Link></div>
     <PageHeader
       eyebrow={cls.academic_year_name}
       title={formatGradeSection(cls.grade_name, cls.section_name)}
-      description="Manage this section's people, subjects, room, and assignments on one page."
+      description={`Room: ${cls.room || "Not set"} · ${visibleClassSubjects.length} ${visibleClassSubjects.length === 1 ? "subject" : "subjects"}`}
       actions={<>
         <TeacherAssignmentModal
           classId={cls.id}
@@ -50,6 +56,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
           gradeName={cls.grade_name}
         />
         <ClassFormModal grades={academicData.grades} sections={academicData.sections} academicYears={academicData.years} teachers={teachers} subjects={classSubjects.map((subject: any) => ({ id: subject.subject_id, name: subject.name }))} assignedTeachers={assignedTeachers} initialClass={{ id: cls.id, name: cls.name, grade_id: cls.grade_id, section_id: cls.section_id, academic_year_id: cls.academic_year_id, room: cls.room, head_teacher_id: cls.head_teacher_id }} />
+        <DeleteClassButton classId={cls.id} className={formatGradeSection(cls.grade_name, cls.section_name)} />
       </>}
     />
 
@@ -94,18 +101,8 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
       </Card>
     </section>
 
-    <section className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.5fr)]">
-      <div>
-        <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={classSubjects} availableSubjects={academicData.subjects} />
-      </div>
-      <Card className="h-fit">
-        <CardHeader><CardTitle>Section details</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 text-sm">
-          <div className="flex items-center gap-2 rounded-xl bg-surface-low p-3"><MapPin className="h-4 w-4 text-primary" /> Room: {cls.room || "Not set"}</div>
-          <div className="flex items-center gap-2 rounded-xl bg-surface-low p-3"><BookOpenCheck className="h-4 w-4 text-primary" /> {classSubjects.length} subjects</div>
-          <div className="pt-2"><DeleteClassButton classId={cls.id} className={formatGradeSection(cls.grade_name, cls.section_name)} /></div>
-        </CardContent>
-      </Card>
+    <section>
+      <ClassSubjectManager classId={cls.id} gradeName={cls.grade_name} subjects={visibleClassSubjects} availableSubjects={academicData.subjects} allLinkedSubjectIds={classSubjects.map((subject: any) => subject.subject_id)} />
     </section>
   </>;
 }

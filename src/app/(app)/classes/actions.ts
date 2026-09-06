@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { createClass, updateClass, deleteClass, addClassSubject, assignTeacherWithSubjects, removeClassSubject, getClassStudentRoster, createSectionClass, linkExistingClassSubject, configureClassMajors } from "@/lib/services/academics";
+import { createClass, updateClass, deleteClass, addClassSubject, addGradeSubject, assignTeacherWithSubjects, removeClassSubject, removeGradeSubject, getClassStudentRoster, createSectionClass, linkExistingClassSubject, configureClassMajors } from "@/lib/services/academics";
 import { assignTeacherToClass, unassignTeacherFromClass } from "@/lib/services/teachers";
 import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
-import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
+import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, deleteDefaultStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
 import { classNameSchema, englishNameSchema } from "@/lib/validation/names";
 
 
@@ -90,11 +90,30 @@ export async function linkExistingClassSubjectAction(formData: FormData) {
   revalidatePath("/subjects");
 }
 
+export async function addGradeSubjectAction(formData: FormData) {
+  const user = await requireUser("classes:manage");
+  await addGradeSubject(user, {
+    gradeId: z.string().uuid().parse(formData.get("grade_id")),
+    subjectId: formData.get("subject_id") ? z.string().uuid().parse(formData.get("subject_id")) : undefined,
+    name: formData.get("name") ? z.string().trim().min(1).max(120).parse(formData.get("name")) : undefined
+  });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+}
+
 export async function removeClassSubjectAction(classSubjectId: string) {
   const user = await requireUser("classes:manage");
   await removeClassSubject(user, classSubjectId);
   revalidatePath("/classes");
   revalidatePath("/subjects");
+}
+
+export async function removeGradeSubjectAction(gradeId: string, subjectId: string) {
+  const user = await requireUser("classes:manage");
+  await removeGradeSubject(user, { gradeId: z.string().uuid().parse(gradeId), subjectId: z.string().uuid().parse(subjectId) });
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
 }
 
 export async function getClassStudentRosterAction(classId: string) {
@@ -215,6 +234,17 @@ export async function updateDefaultStudentSubjectCombinationAction(formData: For
 export async function deleteStudentSubjectCombinationAction(combinationId: string) {
   const user = await requireUser("classes:manage");
   await deleteStudentSubjectCombination(user, z.string().uuid().parse(combinationId));
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/students");
+}
+
+export async function deleteDefaultStudentSubjectCombinationAction(combinationKey: string, gradeId: string) {
+  const user = await requireUser("classes:manage");
+  await deleteDefaultStudentSubjectCombination(user, {
+    combinationKey: z.string().trim().min(1).max(120).parse(combinationKey),
+    gradeId: z.string().uuid().parse(gradeId)
+  });
   revalidatePath("/classes");
   revalidatePath("/subjects");
   revalidatePath("/students");

@@ -6,7 +6,6 @@ import { useState, useTransition } from "react";
 import { addClassSubjectAction, linkExistingClassSubjectAction, removeClassSubjectAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { isHighSchoolGrade } from "@/lib/constants/subjectDefaults";
 import { canonicalSubjectName } from "@/lib/constants/subjectDefaults";
@@ -23,12 +22,14 @@ export function ClassSubjectManager({
   classId,
   gradeName,
   subjects,
-  availableSubjects = []
+  availableSubjects = [],
+  allLinkedSubjectIds
 }: {
   classId: string;
   gradeName: string;
   subjects: ClassSubject[];
   availableSubjects?: Array<{ id: string; name: string }>;
+  allLinkedSubjectIds?: string[];
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
@@ -39,7 +40,7 @@ export function ClassSubjectManager({
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const isHighSchool = isHighSchoolGrade(gradeName);
-  const linkedIds = new Set(subjects.map((subject) => subject.subject_id));
+  const linkedIds = new Set(allLinkedSubjectIds ?? subjects.map((subject) => subject.subject_id));
   const linkedNames = new Set(subjects.map((subject) => canonicalSubjectName(subject.name)));
   const unlinkedSubjects = availableSubjects.filter((subject) => !linkedIds.has(subject.id) && !linkedNames.has(canonicalSubjectName(subject.name)));
 
@@ -106,17 +107,15 @@ export function ClassSubjectManager({
         <span className="text-xs text-muted">{subjects.length} linked</span>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
         {subjects.length ? (
-          subjects.map((subject) => (
-            <span
+          subjects.map((subject, index) => (
+            <div
               key={subject.id}
-              className="inline-flex items-center gap-1"
+              className="flex items-center gap-3 rounded-[20px] border border-outline/55 bg-slate-50/70 p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
             >
-              <Badge tone={subject.is_class_specific ? "blue" : "gray"}>
-                {subject.name}
-                {subject.is_elective ? " · Elective" : ""}
-              </Badge>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-xs font-bold ${subjectTone(index)}`}>{initials(subject.name)}</div>
+              <div className="min-w-0 flex-1"><p className="truncate font-semibold text-ink">{subject.name}</p><p className="mt-0.5 text-xs text-muted">{subject.is_elective ? "Elective" : subject.is_class_specific ? "Section-specific" : "Grade subject"}</p></div>
               <button
                 type="button"
                 onClick={() => handleRemoveSubject(subject.id, subject.name)}
@@ -126,7 +125,7 @@ export function ClassSubjectManager({
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
-            </span>
+            </div>
           ))
         ) : (
           <p className="text-xs italic text-muted">No subjects linked yet.</p>
@@ -167,4 +166,12 @@ export function ClassSubjectManager({
       ) : null}
     </div>
   );
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+}
+
+function subjectTone(index: number) {
+  return ["border-blue-100 bg-blue-50 text-blue-600", "border-violet-100 bg-violet-50 text-violet-600", "border-cyan-100 bg-cyan-50 text-cyan-600", "border-rose-100 bg-rose-50 text-rose-600"][index % 4];
 }

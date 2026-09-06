@@ -35,7 +35,7 @@ export function ClassMajorConfiguration({ classId, options, initialAllowed }: { 
     <div className="grid gap-2 sm:grid-cols-2">
       {options.map((option) => <label key={option.value} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-semibold ${selected.includes(option.value) ? "border-primary/40 bg-primary-soft text-primary" : "border-outline text-ink"}`}>
         <input type="checkbox" checked={selected.includes(option.value)} onChange={() => setSelected((current) => current.includes(option.value) ? current.filter((value) => value !== option.value) : [...current, option.value])} className="h-4 w-4 accent-primary" />
-        {option.label}
+        <span className="flex min-w-0 items-center gap-2"><span className="truncate">{option.label}</span>{option.sectionCustomized ? <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">Custom</span> : null}</span>
       </label>)}
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-semibold text-muted">{selected.length === 0 ? "No majors configured" : selected.length === 1 ? "Single major · automatic" : `${selected.length} majors · manual selection`}</p><Button type="button" onClick={submit} disabled={pending}>{pending ? "Saving..." : "Save major setup"}</Button></div>

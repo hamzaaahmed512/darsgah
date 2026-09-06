@@ -164,7 +164,7 @@ export function ClassFormModal({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} variant={editing ? "secondary" : "primary"} size={editing ? "sm" : "md"} className="flex items-center gap-2">
+      <Button onClick={() => setOpen(true)} variant={editing ? "secondary" : "primary"} size={editing ? "sm" : "md"} className={`flex items-center gap-2 ${editing ? "rounded-2xl border border-primary/15 bg-primary-soft/50 px-4 text-primary shadow-none hover:bg-primary-soft" : ""}`}>
         {editing ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
         {editing ? "Edit" : "Add Class"}
       </Button>

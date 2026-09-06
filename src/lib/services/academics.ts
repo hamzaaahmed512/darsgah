@@ -117,7 +117,7 @@ export async function configureClassMajors(user: AppUser, classId: string, allow
         .map((subject) => canonicalSubjectName(subject.name))
       : [])
   );
-  selectedOptions.forEach((option) => (option.subjectIds ?? []).forEach((subjectId) => requiredSubjectIds.add(subjectId)));
+  selectedOptions.forEach((option) => (option.subjectIds ?? []).forEach((subjectId: string) => requiredSubjectIds.add(subjectId)));
 
   if (defaultSubjectNames.size) {
     const { data: catalogSubjects, error: catalogError } = await supabase
@@ -782,6 +782,40 @@ export async function linkExistingClassSubject(user: AppUser, values: { classId:
   if (error) throw new Error(error.message);
 }
 
+export async function addGradeSubject(user: AppUser, values: { gradeId: string; name?: string; subjectId?: string }) {
+  const supabase = await createClient();
+  const { data: classes, error: classesError } = await supabase
+    .from("classes")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("grade_id", values.gradeId);
+  if (classesError) throw new Error(classesError.message);
+  if (!(classes ?? []).length) throw new Error("Add a section to this grade before adding subjects.");
+
+  let subjectId = values.subjectId;
+  if (subjectId) {
+    const { data: subject, error } = await supabase.from("subjects").select("id").eq("school_id", user.schoolId).eq("id", subjectId).is("archived_at", null).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!subject) throw new Error("Subject not found in this school.");
+  } else {
+    const name = values.name?.trim().replace(/\s+/g, " ") ?? "";
+    if (!name) throw new Error("Subject name is required.");
+    const { data: catalog, error: catalogError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null);
+    if (catalogError) throw new Error(catalogError.message);
+    const existing = (catalog ?? []).find((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(name));
+    if (existing) throw new Error(`“${existing.name}” already exists. Select it from existing subjects instead.`);
+    const { data: created, error: createError } = await supabase.from("subjects").insert({ school_id: user.schoolId, name }).select("id").single();
+    if (createError) throw new Error(createError.message);
+    subjectId = created.id;
+  }
+
+  const { error: linkError } = await supabase.from("class_subjects").upsert(
+    (classes ?? []).map((cls) => ({ school_id: user.schoolId, class_id: cls.id, subject_id: subjectId!, is_class_specific: false })),
+    { onConflict: "school_id,class_id,subject_id" }
+  );
+  if (linkError) throw new Error(linkError.message);
+}
+
 export async function removeClassSubject(user: AppUser, classSubjectId: string) {
   const supabase = await createClient();
   const { data: link, error: lookupError } = await supabase
@@ -792,6 +826,26 @@ export async function removeClassSubject(user: AppUser, classSubjectId: string) 
     .maybeSingle();
   if (lookupError) throw new Error(lookupError.message);
   if (!link) throw new Error("Subject link not found.");
+
+  const { data: combinations, error: combinationsError } = await supabase
+    .from("student_subject_combination_classes")
+    .select("combination_id,student_subject_combinations!inner(student_subject_combination_subjects!inner(subject_id))")
+    .eq("school_id", user.schoolId)
+    .eq("class_id", link.class_id)
+    .eq("student_subject_combinations.student_subject_combination_subjects.subject_id", link.subject_id);
+  if (combinationsError) throw new Error(combinationsError.message);
+  if ((combinations ?? []).length) {
+    const { error: overrideError } = await supabase.from("student_subject_combination_section_subject_overrides").upsert(
+      (combinations ?? []).map((combination: any) => ({
+        school_id: user.schoolId,
+        class_id: link.class_id,
+        combination_id: combination.combination_id,
+        subject_id: link.subject_id
+      })),
+      { onConflict: "class_id,combination_id,subject_id" }
+    );
+    if (overrideError) throw new Error(overrideError.message);
+  }
 
   await supabase
     .from("teacher_assignments")
@@ -813,6 +867,38 @@ export async function removeClassSubject(user: AppUser, classSubjectId: string) 
     .eq("school_id", user.schoolId)
     .eq("id", classSubjectId);
   if (error) throw new Error(error.message);
+}
+
+export async function removeGradeSubject(user: AppUser, values: { gradeId: string; subjectId: string }) {
+  const supabase = await createClient();
+  const { data: classes, error: classesError } = await supabase
+    .from("classes")
+    .select("id")
+    .eq("school_id", user.schoolId)
+    .eq("grade_id", values.gradeId);
+  if (classesError) throw new Error(classesError.message);
+  const classIds = (classes ?? []).map((item: any) => item.id as string);
+  if (!classIds.length) return;
+
+  const { data: combinationLinks, error: combinationLinksError } = await supabase
+    .from("student_subject_combination_classes")
+    .select("combination_id")
+    .eq("school_id", user.schoolId)
+    .in("class_id", classIds);
+  if (combinationLinksError) throw new Error(combinationLinksError.message);
+  const combinationIds = [...new Set((combinationLinks ?? []).map((item: any) => item.combination_id as string))];
+
+  const operations = [
+    supabase.from("class_subjects").delete().eq("school_id", user.schoolId).in("class_id", classIds).eq("subject_id", values.subjectId),
+    supabase.from("teacher_assignments").delete().eq("school_id", user.schoolId).in("class_id", classIds).eq("subject_id", values.subjectId),
+    supabase.from("student_subject_enrollments").delete().eq("school_id", user.schoolId).in("class_id", classIds).eq("subject_id", values.subjectId)
+  ];
+  if (combinationIds.length) operations.push(
+    supabase.from("student_subject_combination_subjects").delete().eq("school_id", user.schoolId).in("combination_id", combinationIds).eq("subject_id", values.subjectId)
+  );
+  const results = await Promise.all(operations);
+  const failure = results.find((result) => result.error)?.error;
+  if (failure) throw new Error(failure.message);
 }
 
 export async function seedDefaultSubjectsForClass(user: AppUser, classId: string, gradeName: string) {

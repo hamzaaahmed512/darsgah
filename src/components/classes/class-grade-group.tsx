@@ -30,7 +30,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, defaultExpan
             <p className="mt-1.5 text-sm text-muted">{classes.length} {classes.length === 1 ? "Section" : "Sections"} • {totalStudents} Students</p>
           </div>
         </button>
-        {gradeId ? <ButtonLink href={`/subjects?grade=${gradeId}`} size="sm" variant="secondary" className="min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
+        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
         <button type="button" onClick={() => setExpanded((value) => !value)} className="rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
       </div>
 

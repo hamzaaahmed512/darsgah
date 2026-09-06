@@ -13,6 +13,7 @@ export function DeleteClassButton({ classId, className }: { classId: string; cla
       type="button"
       variant="danger"
       size="sm"
+      className="rounded-2xl border border-red-200 bg-red-50 px-4 text-red-700 shadow-none hover:bg-red-100"
       disabled={pending}
       onClick={() => {
         if (!window.confirm(`Delete class "${className}"? This will also remove all teacher assignments. Students must be withdrawn first.`)) return;

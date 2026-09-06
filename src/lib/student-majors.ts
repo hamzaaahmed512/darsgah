@@ -13,6 +13,7 @@ export type StudentCombinationOption = {
   kind: "default" | "custom";
   subjectIds?: string[];
   classIds?: string[];
+  sectionCustomized?: boolean;
 };
 
 export const STUDENT_MAJOR_LABELS: Record<StudentMajor, string> = {

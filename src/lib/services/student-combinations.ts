@@ -21,15 +21,92 @@ export type CustomCombinationSummary = {
 export async function getCombinationOptionsForClass(user: AppUser, classId: string, gradeName: string) {
   const supabase = await createClient();
   const defaultOptions = defaultCombinationOptionsForGrade(gradeName);
-  const overrides = await getDefaultCombinationOverridesForClass(supabase, user.schoolId, classId);
-  const custom = await getCustomCombinationOptionsForClass(supabase, user.schoolId, classId);
+  const [overrides, custom, disabledDefaults, sectionExclusions, defaultSubjectIds] = await Promise.all([
+    getDefaultCombinationOverridesForClass(supabase, user.schoolId, classId),
+    getCustomCombinationOptionsForClass(supabase, user.schoolId, classId),
+    getDisabledDefaultCombinationValuesForClass(supabase, user.schoolId, classId),
+    getSectionCombinationExclusions(supabase, user.schoolId, classId),
+    getDefaultSubjectIdsForClass(supabase, user.schoolId, classId, gradeName)
+  ]);
   return [
-    ...defaultOptions.map((option) => {
+    ...defaultOptions.flatMap((option) => {
       const override = overrides.find((item) => item.value === option.value);
-      return override ? { ...option, label: override.label, subjectIds: override.subjectIds } : option;
+      if (disabledDefaults.has(option.value as StudentMajor) || (override && !override.isActive)) return [];
+      const excluded = override ? sectionExclusions.get((override as any).combinationId) : undefined;
+      const subjectIds = override?.subjectIds?.length ? override.subjectIds : defaultSubjectIds.get(option.value as StudentMajor) ?? [];
+      return [override ? { ...option, label: override.label, subjectIds: subjectIds.filter((subjectId) => !excluded?.has(subjectId)), sectionCustomized: Boolean(excluded?.size) } : { ...option, subjectIds }];
     }),
-    ...custom
+    ...custom.map((option: any) => ({ ...option, subjectIds: (option.subjectIds ?? []).filter((subjectId: string) => !sectionExclusions.get(option.combinationId)?.has(subjectId)), sectionCustomized: Boolean(sectionExclusions.get(option.combinationId)?.size) }))
   ];
+}
+
+async function getDefaultSubjectIdsForClass(supabase: Supabase, schoolId: string, classId: string, gradeName: string) {
+  const { data, error } = await supabase
+    .from("class_subjects")
+    .select("subject_id,subjects(name)")
+    .eq("school_id", schoolId)
+    .eq("class_id", classId);
+  if (error) throw new Error(error.message);
+  const defaults = getDefaultSubjectsForGrade(gradeName);
+  const expectedNames = new Set(defaults.map((subject) => canonicalSubjectName(subject.name)));
+  const preferredNames = new Set(defaults.map((subject) => subject.name.trim().toLocaleLowerCase()));
+  const result = new Map<StudentMajor, string[]>();
+  for (const option of defaultCombinationOptionsForGrade(gradeName)) {
+    const candidates = (data ?? [])
+      .filter((row: any) => expectedNames.has(canonicalSubjectName(row.subjects?.name ?? "")) && !isSubjectExcludedForMajor(gradeName, option.value, row.subjects?.name ?? ""));
+    const preferredByCanonicalName = new Map<string, any>();
+    for (const row of candidates) {
+      const key = canonicalSubjectName((row as any).subjects?.name ?? "");
+      const isPreferred = preferredNames.has(String((row as any).subjects?.name ?? "").trim().toLocaleLowerCase());
+      const current = preferredByCanonicalName.get(key);
+      if (!current || isPreferred) preferredByCanonicalName.set(key, row);
+    }
+    result.set(option.value as StudentMajor, [...preferredByCanonicalName.values()].map((row: any) => row.subject_id as string));
+  }
+  return result;
+}
+
+async function getSectionCombinationExclusions(supabase: Supabase, schoolId: string, classId: string) {
+  const { data, error } = await supabase
+    .from("student_subject_combination_section_subject_overrides")
+    .select("combination_id,subject_id")
+    .eq("school_id", schoolId)
+    .eq("class_id", classId);
+  if (error) {
+    if (error.code === "42P01" || error.message.includes("student_subject_combination_section_subject_overrides")) return new Map<string, Set<string>>();
+    throw new Error(error.message);
+  }
+  const result = new Map<string, Set<string>>();
+  for (const row of data ?? []) {
+    const subjects = result.get((row as any).combination_id) ?? new Set<string>();
+    subjects.add((row as any).subject_id);
+    result.set((row as any).combination_id, subjects);
+  }
+  return result;
+}
+
+async function getDisabledDefaultCombinationValuesForClass(supabase: Supabase, schoolId: string, classId: string) {
+  const { data: classRow, error: classError } = await supabase
+    .from("classes")
+    .select("grade_id")
+    .eq("school_id", schoolId)
+    .eq("id", classId)
+    .maybeSingle();
+  if (classError) throw new Error(classError.message);
+  if (!classRow?.grade_id) return new Set<StudentMajor>();
+
+  const { data, error } = await supabase
+    .from("student_subject_combinations")
+    .select("combination_key")
+    .eq("school_id", schoolId)
+    .eq("grade_id", classRow.grade_id)
+    .eq("is_active", false)
+    .not("combination_key", "is", null);
+  if (error) {
+    if (error.code === "42P01" || error.code === "42703" || error.message.includes("student_subject_combinations") || error.message.includes("combination_key")) return new Set<StudentMajor>();
+    throw new Error(error.message);
+  }
+  return new Set((data ?? []).map((row: any) => row.combination_key).filter(isDefaultStudentMajor));
 }
 
 export async function getDefaultCombinationOverrideForClass(
@@ -39,21 +116,26 @@ export async function getDefaultCombinationOverrideForClass(
   major: string | null | undefined
 ) {
   if (!isDefaultStudentMajor(major)) return null;
-  const overrides = await getDefaultCombinationOverridesForClass(supabase, schoolId, classId);
-  return overrides.find((option) => option.value === major) ?? null;
+  const [overrides, exclusions] = await Promise.all([
+    getDefaultCombinationOverridesForClass(supabase, schoolId, classId),
+    getSectionCombinationExclusions(supabase, schoolId, classId)
+  ]);
+  const override = overrides.find((option) => option.value === major);
+  if (!override) return null;
+  const excluded = exclusions.get((override as any).combinationId);
+  return { ...override, subjectIds: (override.subjectIds ?? []).filter((subjectId) => !excluded?.has(subjectId)) };
 }
 
 async function getDefaultCombinationOverridesForClass(
   supabase: Supabase,
   schoolId: string,
   classId: string
-): Promise<StudentCombinationOption[]> {
+): Promise<Array<StudentCombinationOption & { isActive: boolean }>> {
   const { data, error } = await supabase
     .from("student_subject_combinations")
-    .select("id,name,combination_key,student_subject_combination_classes!inner(class_id),student_subject_combination_subjects(subject_id)")
+    .select("id,name,combination_key,is_active,student_subject_combination_classes!inner(class_id),student_subject_combination_subjects(subject_id)")
     .eq("school_id", schoolId)
     .eq("student_subject_combination_classes.class_id", classId)
-    .eq("is_active", true)
     .not("combination_key", "is", null)
     .order("name");
 
@@ -66,9 +148,11 @@ async function getDefaultCombinationOverridesForClass(
     value: row.combination_key as StudentMajor,
     label: row.name,
     kind: "default",
+    isActive: row.is_active,
+    combinationId: row.id,
     classIds: (row.student_subject_combination_classes ?? []).map((item: any) => item.class_id),
     subjectIds: (row.student_subject_combination_subjects ?? []).map((item: any) => item.subject_id)
-  }));
+  })) as Array<StudentCombinationOption & { isActive: boolean }>;
 }
 
 export async function getCustomCombinationOptionsForClass(
@@ -94,6 +178,7 @@ export async function getCustomCombinationOptionsForClass(
     value: `custom:${row.id}`,
     label: row.name,
     kind: "custom",
+    combinationId: row.id,
     classIds: (row.student_subject_combination_classes ?? []).map((item: any) => item.class_id),
     subjectIds: (row.student_subject_combination_subjects ?? []).map((item: any) => item.subject_id)
   }));
@@ -118,9 +203,8 @@ export async function getSubjectCombinationCatalog(user: AppUser) {
     supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null).order("name"),
     supabase
       .from("student_subject_combinations")
-      .select("id,name,grade_id,combination_key,student_subject_combination_classes(class_id,classes(name,grade_id,grades(name),sections(name))),student_subject_combination_subjects(subject_id,subjects(name))")
+      .select("id,name,grade_id,combination_key,is_active,student_subject_combination_classes(class_id,classes(name,grade_id,grades(name),sections(name))),student_subject_combination_subjects(subject_id,subjects(name))")
       .eq("school_id", user.schoolId)
-      .eq("is_active", true)
       .order("name")
   ]);
 
@@ -144,30 +228,31 @@ export async function getSubjectCombinationCatalog(user: AppUser) {
   );
 
   const defaultCombinations = [...grades.values()].flatMap((grade) =>
-    defaultCombinationOptionsForGrade(grade.name).map((option) => {
+    defaultCombinationOptionsForGrade(grade.name).flatMap((option) => {
       const override = overridesByGradeAndKey.get(`${grade.id}:${option.value}`) as any | undefined;
+      if (override && !override.is_active) return [];
       const defaultSubjectNames = getDefaultSubjectsForGrade(grade.name)
         .filter((subject) => !isSubjectExcludedForMajor(grade.name, option.value, subject.name))
         .map((subject) => subjectsByName.get(canonicalSubjectName(subject.name)))
         .filter(Boolean) as { id: string; name: string }[];
-      return {
+      return [{
         id: override?.id as string | undefined,
         value: option.value,
         name: override?.name ?? option.label,
         gradeId: grade.id,
         gradeName: grade.name,
-        subjectIds: override
+        subjectIds: override && (override.student_subject_combination_subjects ?? []).length
           ? (override.student_subject_combination_subjects ?? []).map((item: any) => item.subject_id)
           : defaultSubjectNames.map((subject) => subject.id),
-        subjectNames: override
+        subjectNames: override && (override.student_subject_combination_subjects ?? []).length
           ? (override.student_subject_combination_subjects ?? []).map((item: any) => item.subjects?.name ?? "Unknown")
           : defaultSubjectNames.map((subject) => subject.name),
         kind: "default" as const
-      };
+      }];
     })
   );
 
-  const customCombinations: CustomCombinationSummary[] = (combinationRows ?? []).filter((row: any) => !row.combination_key).map((row: any) => ({
+  const customCombinations: CustomCombinationSummary[] = (combinationRows ?? []).filter((row: any) => !row.combination_key && row.is_active).map((row: any) => ({
     id: row.id,
     value: `custom:${row.id}`,
     name: row.name,
@@ -463,6 +548,69 @@ export async function deleteStudentSubjectCombination(user: AppUser, combination
     .eq("school_id", user.schoolId)
     .eq("id", combinationId);
   if (error) throw new Error(error.message);
+}
+
+export async function deleteDefaultStudentSubjectCombination(
+  user: AppUser,
+  values: { combinationKey: string; gradeId: string }
+) {
+  const supabase = await createClient();
+  if (!isDefaultStudentMajor(values.combinationKey)) throw new Error("That default combination is not available.");
+
+  const [{ data: grade, error: gradeError }, { data: classes, error: classesError }, { data: existing, error: existingError }] = await Promise.all([
+    supabase.from("grades").select("id").eq("school_id", user.schoolId).eq("id", values.gradeId).maybeSingle(),
+    supabase.from("classes").select("id").eq("school_id", user.schoolId).eq("grade_id", values.gradeId),
+    supabase
+      .from("student_subject_combinations")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("grade_id", values.gradeId)
+      .eq("combination_key", values.combinationKey)
+      .maybeSingle()
+  ]);
+  if (gradeError) throw new Error(gradeError.message);
+  if (classesError) throw new Error(classesError.message);
+  if (existingError) throw new Error(existingError.message);
+  if (!grade) throw new Error("Selected grade could not be found.");
+
+  const result = existing
+    ? await supabase
+      .from("student_subject_combinations")
+      .update({ is_active: false })
+      .eq("school_id", user.schoolId)
+      .eq("id", existing.id)
+      .select("id")
+      .single()
+    : await supabase
+      .from("student_subject_combinations")
+      .insert({
+        school_id: user.schoolId,
+        grade_id: values.gradeId,
+        combination_key: values.combinationKey,
+        name: "Hidden default combination",
+        is_active: false
+      })
+      .select("id")
+      .single();
+  if (result.error) throw new Error(result.error.message);
+
+  const combinationId = result.data.id as string;
+  const { error: clearLinksError } = await supabase
+    .from("student_subject_combination_classes")
+    .delete()
+    .eq("school_id", user.schoolId)
+    .eq("combination_id", combinationId);
+  if (clearLinksError) throw new Error(clearLinksError.message);
+
+  const classIds = (classes ?? []).map((classRow: any) => classRow.id as string);
+  if (classIds.length) {
+    const { error: classLinksError } = await supabase.from("student_subject_combination_classes").insert(classIds.map((classId) => ({
+      school_id: user.schoolId,
+      combination_id: combinationId,
+      class_id: classId
+    })));
+    if (classLinksError) throw new Error(classLinksError.message);
+  }
 }
 
 function formatClassName(classRow: any) {

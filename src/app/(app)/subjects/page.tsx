@@ -12,30 +12,28 @@ import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions } from "@/lib/services/academics";
 import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
 
-export default async function SubjectsPage({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
+export default async function SubjectsPage({ searchParams }: { searchParams: Promise<{ createCombination?: string }> }) {
   const user = await requireUser("classes:manage");
   const params = await searchParams;
   const [data, combinations] = await Promise.all([getAcademicOptions(user), getSubjectCombinationCatalog(user)]);
-  const selectedGrade = data.grades.find((grade: any) => grade.id === params.grade);
-  const defaultCombinations = selectedGrade ? combinations.defaultCombinations.filter((combination: any) => combination.gradeId === selectedGrade.id) : combinations.defaultCombinations;
-  const customCombinations = selectedGrade ? combinations.customCombinations.filter((combination: any) => combination.gradeIds.includes(selectedGrade.id)) : combinations.customCombinations;
+  const defaultCombinations = combinations.defaultCombinations;
+  const customCombinations = combinations.customCombinations;
   const totalCombinations = defaultCombinations.length + customCombinations.length;
-  const subjectIdsInCombinations = new Set([...defaultCombinations, ...customCombinations].flatMap((combination: any) => combination.subjectIds));
-  const visibleSubjects = selectedGrade ? data.subjects.filter((subject: any) => subjectIdsInCombinations.has(subject.id)) : data.subjects;
+  const visibleSubjects = data.subjects;
 
   return (
     <>
       <PageHeader
         eyebrow="Academic structure"
-        title={selectedGrade ? `${selectedGrade.name} subjects and combinations` : "Subjects and Combinations"}
-        description={selectedGrade ? `Manage the subject combinations and subjects available for ${selectedGrade.name}.` : "Maintain subjects and the subject combinations students can choose from."}
+        title="Subjects and Combinations"
+        description="Maintain subjects and the subject combinations students can choose from."
         actions={
           <>
             <ButtonLink href="/classes" variant="secondary" className="rounded-2xl">
               <ArrowLeft className="h-4 w-4" /> Back to classes
             </ButtonLink>
             <SubjectCreateModal />
-            <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} initialGradeId={selectedGrade?.id} />
+            <SubjectCombinationCreateForm classes={data.classes} subjects={data.subjects} openOnLoad={params.createCombination === "1"} />
           </>
         }
       />
@@ -45,7 +43,7 @@ export default async function SubjectsPage({ searchParams }: { searchParams: Pro
           icon={<BookOpenCheck className="h-5 w-5" />}
           title="Subject Catalog"
           value={visibleSubjects.length}
-          note={selectedGrade ? "Subjects used in this grade" : "Available school subjects"}
+          note="Available school subjects"
           tone="blue"
         />
         <MetricCard

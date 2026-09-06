@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Edit2, Layers3, Sparkles, Trash2, X } from "lucide-react";
-import { deleteStudentSubjectCombinationAction, updateDefaultStudentSubjectCombinationAction, updateStudentSubjectCombinationAction } from "@/app/(app)/classes/actions";
+import { deleteDefaultStudentSubjectCombinationAction, deleteStudentSubjectCombinationAction, updateDefaultStudentSubjectCombinationAction, updateStudentSubjectCombinationAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
@@ -88,14 +88,20 @@ export function SubjectCombinationEditModal({
   }
 
   function handleDelete() {
-    if (!combination.id || isDefaultCombination) return;
-    const combinationId = combination.id;
-    if (!confirm("Are you sure you want to delete this combination?")) return;
+    if (!combination.id && !isDefaultCombination) return;
+    const message = isDefaultCombination
+      ? "Delete this default combination for this school only? Other schools will not be affected."
+      : "Are you sure you want to delete this combination?";
+    if (!confirm(message)) return;
     startTransition(async () => {
       try {
-        await deleteStudentSubjectCombinationAction(combinationId);
+        if (isDefaultCombination) {
+          if (!combination.value || !combination.gradeId) throw new Error("This default combination could not be identified.");
+          await deleteDefaultStudentSubjectCombinationAction(combination.value, combination.gradeId);
+        } else {
+          await deleteStudentSubjectCombinationAction(combination.id!);
+        }
         pushToast("Combination deleted.", "success");
-        handleClose();
         router.refresh();
       } catch (error: any) {
         pushToast(error?.message ?? "Failed to delete combination.", "error");
@@ -105,14 +111,20 @@ export function SubjectCombinationEditModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-outline/60 bg-white px-3.5 text-sm font-semibold text-ink shadow-sm transition hover:border-primary/15 hover:bg-slate-50 hover:text-primary"
-      >
-        <Edit2 className="h-4 w-4" />
-        Edit
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-primary/15 bg-primary-soft/45 px-4 text-sm font-semibold text-primary shadow-none transition hover:bg-primary-soft"
+        >
+          <Edit2 className="h-4 w-4" />
+          Edit
+        </button>
+        <Button type="button" variant="danger" onClick={handleDelete} disabled={pending} className="rounded-2xl border border-red-200 bg-red-50 px-4 text-red-700 shadow-none hover:bg-red-100">
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </Button>
+      </div>
 
       {open
         ? createPortal(
@@ -200,15 +212,7 @@ export function SubjectCombinationEditModal({
                   </div>
                 </div>
 
-                <div className="flex flex-col-reverse gap-2 border-t border-outline/50 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                  <div>
-                    {!isDefaultCombination ? (
-                      <Button type="button" variant="danger" onClick={handleDelete} disabled={pending} className="w-full sm:w-auto">
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
+                <div className="flex flex-col-reverse gap-2 border-t border-outline/50 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <Button type="button" variant="secondary" onClick={handleClose} disabled={pending}>
                       Cancel

@@ -3,7 +3,7 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, BookCopy, Clock3, Users, Download } from "lucide-react";
+import { BookOpen, BookCopy, Clock3, Users, Download, Pencil, Plus, UserRound } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type { LibraryData, LibraryBook } from "@/lib/services/library";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
@@ -13,7 +13,7 @@ import { Field, Input, Select } from "@/components/ui/form-field";
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return <section className="rounded-2xl border border-outline/70 bg-white p-5 shadow-sm sm:p-6"><h2 className="mb-5 text-lg font-bold text-ink">{title}</h2>{children}</section>;
 }
-function Form({ action, children, label = "Save", id, reset = false }: { action: string; children?: ReactNode; label?: string; id?: string; reset?: boolean }) {
+function Form({ action, children, label = "Save", id, reset = false, buttonVariant = "primary" }: { action: string; children?: ReactNode; label?: string; id?: string; reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger" }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ error?: string; ok?: boolean } | null>(null);
@@ -31,7 +31,7 @@ function Form({ action, children, label = "Save", id, reset = false }: { action:
     });
   }} className="grid gap-3">
     <input type="hidden" name="action" value={action} />{id && <input type="hidden" name="id" value={id} />}
-    <fieldset disabled={pending} className="grid min-w-0 gap-3">{children}<Button type="submit" disabled={pending}>{pending ? "Saving…" : label}</Button></fieldset>
+    <fieldset disabled={pending} className="grid min-w-0 gap-3">{children}<Button type="submit" variant={buttonVariant} disabled={pending}>{pending ? "Saving…" : label}</Button></fieldset>
     {message && <p role={message.error ? "alert" : "status"} className={`text-sm ${message.error ? "text-red-700" : "text-green-700"}`}>{message.error || "Saved successfully."}</p>}
   </form>;
 }
@@ -47,6 +47,10 @@ function BookFields({ book }: { book?: LibraryBook }) {
     <Field label="Publisher"><Input name="publisher" maxLength={200} defaultValue={book?.publisher} /></Field>
     <Field label="Shelf / location"><Input name="shelf" maxLength={80} placeholder="A-03" defaultValue={book?.shelf} /></Field>
   </div>;
+}
+function AddBookModal() {
+  const [open, setOpen] = useState(false);
+  return <><Button type="button" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Add book</Button>{open ? <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]"><div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6"><div><h2 className="font-display text-2xl font-bold text-ink">Add a book</h2><p className="mt-1 text-sm text-muted">Add the title first, then register its physical copies.</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low">×</button></div><div className="p-5 sm:p-6"><Form action="book" label="Add book" reset><BookFields /></Form></div></div></div> : null}</>;
 }
 function exportCsv(rows: string[][], name: string) {
   const csv = rows.map(row => row.map(value => `"${(/^[=+\-@\t\r]/.test(value) ? "'" : "") + value.replaceAll('"', '""')}"`).join(",")).join("\r\n");
@@ -81,6 +85,7 @@ export function LibraryWorkspace({ data, canManage, canAdmin }: { data: LibraryD
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows / 20)));
 
   return <div className="space-y-6">
+    {(canManage || canAdmin) ? <div className="flex flex-wrap items-center justify-end gap-3">{canManage ? <AddBookModal /> : null}{canAdmin ? <Link href="/admin" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"><UserRound className="h-4 w-4" /> Assign librarian</Link> : null}</div> : null}
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[
       { label: "Available copies", value: available.length, icon: BookCopy }, { label: "On loan", value: activeLoans.length, icon: BookOpen },
       { label: "Overdue loans", value: overdue.length, icon: Clock3 }, { label: "Reservations", value: waiting.length, icon: Users }
@@ -88,19 +93,16 @@ export function LibraryWorkspace({ data, canManage, canAdmin }: { data: LibraryD
     <nav aria-label="Library sections" className="flex gap-2 overflow-x-auto border-b border-outline pb-3">{tabs.map(item => <button type="button" key={item} aria-current={tab === item ? "page" : undefined} onClick={() => { setTab(item); setQuery(""); setPage(1); }} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold ${tab === item ? "bg-primary text-white" : "bg-white text-muted hover:bg-slate-100"}`}>{item}</button>)}</nav>
 
     {tab === "Catalogue" && <>
-      {canManage && <details className="rounded-2xl border border-outline bg-white p-5"><summary className="cursor-pointer font-bold text-primary">Add a book title</summary><div className="mt-5"><Form action="book" label="Add title" reset><BookFields /></Form></div></details>}
       <div className="flex flex-col gap-3 sm:flex-row"><Input aria-label="Search catalogue" placeholder="Search title, author, ISBN, shelf or accession…" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} /><Select aria-label="Catalogue status" value={catalogFilter} onChange={event => { setCatalogFilter(event.target.value); setPage(1); }}><option value="active">Active titles</option><option value="archived">Archived titles</option><option value="all">All titles</option></Select></div>
       {!filteredBooks.length && <Panel title="No books found"><p className="text-muted">Add a title, then register each physical copy with its own accession number.</p></Panel>}
-      <div className="grid gap-4 xl:grid-cols-2">{filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
+      <div className="grid gap-3">{filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
         const stock = data.copies.filter(copy => copy.book_id === book.id);
-        return <Panel key={book.id} title={book.title}><div className="flex flex-wrap gap-2"><Tag>{book.author}</Tag><Tag>{book.category || "Uncategorised"}</Tag>{book.archived && <Tag>Archived</Tag>}</div><p className="mt-3 text-sm text-muted">ISBN: {book.isbn || "—"} · Shelf: {book.shelf || "—"} · {stock.filter(copy => copy.status === "available").length} available / {stock.length} copies</p>
-          <details className="mt-4"><summary className="cursor-pointer text-sm font-semibold text-primary">Copies & title details</summary><div className="mt-4 space-y-4">
+        return <section key={book.id} className="rounded-[24px] border border-outline/65 bg-white p-4 shadow-card sm:p-5"><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-display text-xl font-bold text-ink">{book.title}</h2>{book.archived ? <Tag>Archived</Tag> : null}</div><p className="mt-1 text-sm font-semibold text-primary">{book.author}</p><div className="mt-4 grid gap-x-6 gap-y-2 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3"><p><span className="font-semibold text-ink">Publisher:</span> {book.publisher || "—"}</p><p><span className="font-semibold text-ink">Category:</span> {book.category || "—"}</p><p><span className="font-semibold text-ink">ISBN:</span> {book.isbn || "—"}</p><p><span className="font-semibold text-ink">Location:</span> {book.shelf || "—"}</p><p><span className="font-semibold text-ink">Copies:</span> {stock.filter(copy => copy.status === "available").length} available / {stock.length} total</p></div></div>{canManage ? <div className="flex flex-wrap gap-2 xl:w-56 xl:justify-end"><details><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-3.5 text-sm font-semibold text-ink ring-1 ring-outline hover:bg-surface-low hover:text-primary"><Plus className="h-4 w-4" /> Add copy</summary><div className="absolute right-4 z-20 mt-2 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-outline bg-white p-4 shadow-xl"><Form action="copy" label="Register copy" reset><input type="hidden" name="book_id" value={book.id} /><Field label="Accession number"><Input name="accession" required maxLength={80} placeholder="LIB-0001" /></Field><Field label="Replacement cost (Rs)"><Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01" required defaultValue="0" /></Field></Form></div></details><details><summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-primary/15 bg-primary-soft/45 px-3.5 text-sm font-semibold text-primary hover:bg-primary-soft"><Pencil className="h-4 w-4" /> Edit</summary><div className="absolute right-4 z-20 mt-2 w-[min(34rem,calc(100vw-2rem))] rounded-2xl border border-outline bg-white p-4 shadow-xl"><Form action="edit_book" id={book.id}><BookFields book={book} /></Form></div></details><Form action="archive" id={book.id} label={book.archived ? "Restore" : "Delete"} buttonVariant={book.archived ? "secondary" : "danger"}><input type="hidden" name="archived" value={String(!book.archived)} /></Form></div> : null}</div>
+          <details className="mt-4 border-t border-outline/50 pt-4"><summary className="cursor-pointer text-sm font-semibold text-primary">View registered copies ({stock.length})</summary><div className="mt-4 space-y-4">
             {stock.length === 0 && <p className="text-sm text-muted">No copies registered yet.</p>}
             {stock.map(copy => <div key={copy.id} className="rounded-xl bg-slate-50 p-3"><div className="mb-2 flex flex-wrap justify-between gap-2"><strong className="text-sm">{copy.accession}</strong><Tag>{copy.status.replaceAll("_", " ")}</Tag></div><p className="mb-2 text-xs text-muted">Replacement: {money(copy.replacement_cost)}</p>{canManage && copy.status !== "on_loan" && <Form action="copy_status" id={copy.id} label="Update condition"><Select name="status" aria-label={`Condition for ${copy.accession}`} defaultValue={copy.status}>{["available", "damaged", "lost", "withdrawn"].map(status => <option key={status}>{status}</option>)}</Select></Form>}</div>)}
-            {canManage && !book.archived && <Form action="copy" label="Register copy" reset><input type="hidden" name="book_id" value={book.id} /><Field label="Accession number"><Input name="accession" required maxLength={80} placeholder="LIB-0001" /></Field><Field label="Replacement cost (Rs)"><Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01" required defaultValue="0" /></Field></Form>}
-            {canManage && <><details><summary className="cursor-pointer text-sm font-semibold">Edit title</summary><div className="mt-3"><Form action="edit_book" id={book.id}><BookFields book={book} /></Form></div></details><Form action="archive" id={book.id} label={book.archived ? "Restore title" : "Archive title"}><input type="hidden" name="archived" value={String(!book.archived)} /></Form></>}
           </div></details>
-        </Panel>;
+        </section>;
       })}</div>
     </>}
 

@@ -115,7 +115,7 @@ export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
     CORE("Physics"),
     CORE("Chemistry"),
     ELECTIVE("Biology"),
-    ELECTIVE("Computer")
+    ELECTIVE("Computer Science")
   ],
   "Grade 10": [
     CORE("English"),
@@ -126,7 +126,7 @@ export const GRADE_SUBJECT_DEFAULTS: Record<string, SubjectDefault[]> = {
     CORE("Physics"),
     CORE("Chemistry"),
     ELECTIVE("Biology"),
-    ELECTIVE("Computer")
+    ELECTIVE("Computer Science")
   ],
   "Grade 11": [
     CORE("English Compulsory"),
