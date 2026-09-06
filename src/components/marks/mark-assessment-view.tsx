@@ -6,6 +6,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/form-field";
+import { IntegerMarksInput } from "@/components/marks/integer-marks-input";
 import { requireUser } from "@/lib/auth/session";
 import { calculateGrade } from "@/lib/grades";
 import { formatExamType, getTeacherMarksWorkspace } from "@/lib/services/marks";
@@ -112,7 +113,7 @@ export async function MarkAssessmentView({
                           <td className="py-3 pr-3 font-semibold">{student.student_name}</td>
                           <td className="py-3 pr-3 text-muted">{student.admission_number}</td>
                           <td className="py-3 pr-3">
-                            <Input
+                            <IntegerMarksInput
                               name={`mark_${student.student_id}`}
                               type="number"
                               min="0"
@@ -121,14 +122,6 @@ export async function MarkAssessmentView({
                               defaultValue={value}
                               disabled={inputDisabled}
                               required
-                              onChange={(event) => {
-                                const rawValue = event.currentTarget.value;
-                                if (rawValue === "") return;
-                                const numericValue = Number(rawValue);
-                                if (Number.isFinite(numericValue)) {
-                                  event.currentTarget.value = String(Math.trunc(numericValue));
-                                }
-                              }}
                             />
                           </td>
                           <td className="py-3 pr-3">
