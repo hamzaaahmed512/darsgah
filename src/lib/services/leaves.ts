@@ -301,7 +301,7 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const monthEnd = `${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
-      let addedAnnual = daysRequested;
+      const addedAnnual = daysRequested;
       let addedMonthly = 0;
       let addedWeekly = 0;
 

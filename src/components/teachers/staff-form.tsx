@@ -203,7 +203,7 @@ export function StaffFormModal({
                         }}
                         className="h-3.5 w-3.5 rounded border-outline/70 text-primary focus:ring-primary/20"
                       />
-                      <span>Today's date</span>
+                      <span>Today&apos;s date</span>
                     </label>
                   </div>
                   <Input
