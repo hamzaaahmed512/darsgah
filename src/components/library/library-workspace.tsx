@@ -4,13 +4,20 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Download, Pencil, Plus, UserRound, X, Info,
+  BookOpen, BookCopy, Clock3, Users, Download, Pencil, Plus, UserRound, X, Info, ShieldCheck, UserCheck, AlertTriangle, ArrowRight, CheckCircle2, Bookmark
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
-import type { LibraryData, LibraryBook } from "@/lib/services/library";
+import type {
+  LibraryData, LibraryBook, LibraryLoan, LibraryCopy, LibraryReservation, SearchResultBorrower, SearchResultCopy
+} from "@/lib/services/library";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form-field";
+import { BorrowerSelector } from "./borrower-selector";
+import { CopySelector } from "./copy-selector";
+import { ReturnBookDialog } from "./return-book-dialog";
+import { RenewLoanDialog } from "./renew-loan-dialog";
+import { LibraryReports } from "./library-reports";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -24,10 +31,10 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Form({
-  action, children, label = "Save", id, reset = false, buttonVariant = "primary",
+  action, children, label = "Save", id, reset = false, buttonVariant = "primary", disabled = false
 }: {
   action: string; children?: ReactNode; label?: string; id?: string;
-  reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger";
+  reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; disabled?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -53,9 +60,9 @@ function Form({
     >
       <input type="hidden" name="action" value={action} />
       {id && <input type="hidden" name="id" value={id} />}
-      <fieldset disabled={pending} className="grid min-w-0 gap-3">
+      <fieldset disabled={pending || disabled} className="grid min-w-0 gap-3">
         {children}
-        <Button type="submit" variant={buttonVariant} disabled={pending}>
+        <Button type="submit" variant={buttonVariant} disabled={pending || disabled}>
           {pending ? "Saving…" : label}
         </Button>
       </fieldset>
@@ -71,7 +78,16 @@ function Form({
 
 const formatMoney = (value: number | null | undefined) =>
   value == null ? "not specified" : `Rs ${Number(value).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
-const formatDate = (value: string) => value.slice(0, 10);
+
+const formatDate = (value: string) => {
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return value.slice(0, 10);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  } catch {
+    return value.slice(0, 10);
+  }
+};
 
 /** Coloured status badge for copy condition. */
 function StatusBadge({ status }: { status: string }) {
@@ -237,23 +253,59 @@ export function LibraryWorkspace({
   const [loanFilter, setLoanFilter] = useState("active");
   const [catalogFilter, setCatalogFilter] = useState("active");
   const [page, setPage] = useState(1);
+
+  // Selected Borrower & Copy state for Issue form
+  const [selectedBorrower, setSelectedBorrower] = useState<SearchResultBorrower | null>(null);
+  const [selectedCopy, setSelectedCopy] = useState<SearchResultCopy | null>(null);
+  const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [customDueDate, setCustomDueDate] = useState<string>("");
+
+  // Reservation Creation state
+  const [reserveBookId, setReserveBookId] = useState<string>("");
+  const [reserveBorrower, setReserveBorrower] = useState<SearchResultBorrower | null>(null);
+
+  // Dialog state for Return and Renew workflows
+  const [activeReturnLoan, setActiveReturnLoan] = useState<LibraryLoan | null>(null);
+  const [activeRenewLoan, setActiveRenewLoan] = useState<LibraryLoan | null>(null);
+
   const today = libraryToday();
   const books = new Map(data.books.map(book => [book.id, book]));
   const copies = new Map(data.copies.map(copy => [copy.id, copy]));
 
-  // ── Inventory definitions ──────────────────────────────────────────────────
-  // Active copies: not permanently removed (lost / withdrawn copies are excluded).
   const activeCopies = data.copies.filter(c => c.status !== "lost" && c.status !== "withdrawn");
-  // Available now: can be issued.
-  const availableCopies = data.copies.filter(c => c.status === "available" && !books.get(c.book_id)?.archived);
-  // Titles with at least one active copy (for the "Across N titles" sub-line).
   const activeTitleIds = new Set(activeCopies.map(c => c.book_id));
   const activeTitleCount = data.books.filter(b => !b.archived && activeTitleIds.has(b.id)).length;
 
   const activeLoans = data.loans.filter(loan => !loan.returned_at);
   const overdue = activeLoans.filter(loan => loan.due_date < today);
   const balance = data.loans.reduce((sum, loan) => sum + Number(loan.fine_amount) - Number(loan.paid_amount) - Number(loan.waived_amount), 0);
-  const waiting = data.reservations.filter(item => item.status === "waiting");
+  
+  // Filter active waiting reservations ONLY (exclude fulfilled or cancelled)
+  const waitingReservations = data.reservations.filter(item => item.status === "waiting");
+
+  // Librarians team count
+  const librariansCount = data.team ? data.team.length : 0;
+
+  // Compute ready-to-fulfil reservations (FIFO queue position 1 AND eligible available copy exists)
+  const readyReservations = waitingReservations.filter((res) => {
+    if (res.is_ready_to_issue !== undefined) return res.is_ready_to_issue;
+    const bookCopies = data.copies.filter(c => c.book_id === res.book_id && c.status === "available");
+    const bookTitle = books.get(res.book_id);
+    if (!bookTitle || bookTitle.archived || bookCopies.length === 0) return false;
+    // Check if this reservation is at the front of the queue for this book_id
+    const queueForBook = waitingReservations.filter(r => r.book_id === res.book_id);
+    return queueForBook.length > 0 && queueForBook[0].id === res.id;
+  });
+
+  // Issue preview policy calculations
+  const defaultLoanDuration = selectedBorrower
+    ? (selectedBorrower.kind === "student"
+        ? (data.settings.student_loan_days ?? data.settings.loan_days ?? 14)
+        : (data.settings.staff_loan_days ?? 30))
+    : (data.settings.loan_days ?? 14);
+
+  const calculatedDueDate = libraryDueDate(defaultLoanDuration, today);
+  const isIssueBlocked = Boolean(selectedBorrower && !selectedBorrower.is_eligible);
 
   const matches = (...values: (string | undefined)[]) =>
     values.join(" ").toLowerCase().includes(query.toLowerCase().trim());
@@ -263,6 +315,7 @@ export function LibraryWorkspace({
     matches(book.title, book.author, book.isbn, book.category, book.shelf,
       ...data.copies.filter(c => c.book_id === book.id).map(c => c.accession))
   );
+
   const filteredLoans = [...data.loans].reverse().filter(loan => {
     const copy = copies.get(loan.copy_id);
     const book = books.get(copy?.book_id ?? "");
@@ -274,34 +327,56 @@ export function LibraryWorkspace({
         (loanFilter === "balance" && Number(loan.fine_amount) > Number(loan.paid_amount) + Number(loan.waived_amount)));
   });
 
-  const borrowerSelect = (
-    <Field label="Borrower">
-      <Select name="borrower" required defaultValue="">
-        <option value="" disabled>Select student or staff</option>
-        {data.borrowers.map(b => (
-          <option key={`${b.kind}:${b.id}`} value={`${b.kind}:${b.id}`}>
-            {b.name} · {b.kind} · {b.reference}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
-  const bookSelect = (
-    <Field label="Book title">
-      <Select name="book_id" required defaultValue="">
-        <option value="" disabled>Select title</option>
-        {data.books.filter(b => !b.archived).map(b => (
-          <option key={b.id} value={b.id}>{b.title}{b.author ? ` — ${b.author}` : ""}</option>
-        ))}
-      </Select>
-    </Field>
-  );
-
   const tabs = ["Catalogue", "Issue & return", "Reservations", "Reports", "Rules & team"];
   const rows = tab === "Catalogue" ? filteredBooks.length : filteredLoans.length;
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows / 20)));
 
-  // ── KPI card definitions ────────────────────────────────────────────────────
+  // Handle one-click issue prefill from a ready reservation
+  function handleOneClickFulfill(res: LibraryReservation) {
+    const firstAvailCopy = data.copies.find(c => c.book_id === res.book_id && c.status === "available");
+    const targetBook = books.get(res.book_id);
+
+    setSelectedReservationId(res.id);
+    setSelectedBorrower({
+      id: res.borrower_id,
+      kind: (res.borrower_kind as "student" | "staff") || "student",
+      name: res.borrower_name,
+      reference: res.registration_number || res.email || "Borrower",
+      grade_id: null,
+      grade_name: res.grade_name || null,
+      section_id: null,
+      section_name: res.section_name || null,
+      registration_number: res.registration_number || null,
+      email: res.email || null,
+      department: res.department || null,
+      job_title: res.job_title || null,
+      active_loans_count: 0,
+      max_loans_allowed: res.borrower_kind === "staff" ? (data.settings.staff_max_loans ?? 5) : (data.settings.student_max_loans ?? 3),
+      has_overdue: false,
+      is_eligible: true,
+      ineligibility_reason: null
+    });
+
+    if (firstAvailCopy && targetBook) {
+      setSelectedCopy({
+        id: firstAvailCopy.id,
+        accession: firstAvailCopy.accession,
+        status: firstAvailCopy.status,
+        book_id: targetBook.id,
+        book_title: targetBook.title,
+        author: targetBook.author,
+        isbn: targetBook.isbn,
+        shelf: targetBook.shelf,
+        is_eligible: true,
+        ineligibility_reason: null
+      });
+    } else {
+      setSelectedCopy(null);
+    }
+
+    setTab("Issue & return");
+  }
+
   const kpiCards = [
     {
       label: "Total books",
@@ -327,7 +402,8 @@ export function LibraryWorkspace({
     },
     {
       label: "Reservations",
-      value: waiting.length,
+      value: waitingReservations.length,
+      sub: readyReservations.length > 0 ? `${readyReservations.length} ready to issue` : undefined,
       icon: Users,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
@@ -336,20 +412,29 @@ export function LibraryWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* ── Top actions ── */}
-      {(canManage || canAdmin) && (
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {canManage && <AddBookModal />}
-          {canAdmin && (
-            <Link
-              href="/admin"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"
-            >
-              <UserRound className="h-4 w-4" /> Assign librarian
-            </Link>
-          )}
+      {/* ── Top Header & Team Status ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 text-xs font-bold text-slate-800">
+            <UserCheck className="h-4 w-4 text-primary" />
+            {librariansCount > 0 ? `Librarians: ${librariansCount}` : "No librarian assigned"}
+          </span>
         </div>
-      )}
+
+        {(canManage || canAdmin) && (
+          <div className="flex flex-wrap items-center gap-3">
+            {canManage && <AddBookModal />}
+            {canAdmin && (
+              <Link
+                href="/admin"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"
+              >
+                <UserRound className="h-4 w-4" /> Manage team
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── KPI cards ── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -414,10 +499,10 @@ export function LibraryWorkspace({
           <div className="grid gap-3">
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
               const stock = data.copies.filter(c => c.book_id === book.id);
-              // Counts per the inventory rules.
               const totalCopies  = stock.filter(c => c.status !== "lost" && c.status !== "withdrawn").length;
               const availableNow = stock.filter(c => c.status === "available").length;
               const onLoan       = stock.filter(c => c.status === "on_loan").length;
+              const activeWaitingCount = waitingReservations.filter(r => r.book_id === book.id).length;
 
               return (
                 <section
@@ -425,7 +510,6 @@ export function LibraryWorkspace({
                   className="rounded-[24px] border border-outline/65 bg-white p-4 shadow-card sm:p-5"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    {/* ── Title metadata ── */}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="font-display text-xl font-bold text-ink">{book.title}</h2>
@@ -438,7 +522,8 @@ export function LibraryWorkspace({
                         <p><span className="font-semibold text-ink">ISBN:</span> {book.isbn || "—"}</p>
                         <p><span className="font-semibold text-ink">Location:</span> {book.shelf || "—"}</p>
                       </div>
-                      {/* ── Per-book copy counts ── */}
+
+                      {/* Title Copy & Waiting Inventory Metrics */}
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         <span>
                           <span className="font-semibold text-ink">Total copies:</span>{" "}
@@ -452,10 +537,13 @@ export function LibraryWorkspace({
                           <span className="font-semibold text-ink">On loan:</span>{" "}
                           <span className="font-bold text-amber-700">{onLoan}</span>
                         </span>
+                        <span>
+                          <span className="font-semibold text-ink">Waiting:</span>{" "}
+                          <span className="font-bold text-primary">{activeWaitingCount}</span>
+                        </span>
                       </div>
                     </div>
 
-                    {/* ── Management actions ── */}
                     {canManage && (
                       <div className="flex flex-wrap gap-2 xl:w-56 xl:justify-end">
                         <AddCopiesModal book={book} />
@@ -481,7 +569,6 @@ export function LibraryWorkspace({
                     )}
                   </div>
 
-                  {/* ── Expandable copy list ── */}
                   <details className="mt-4 border-t border-outline/50 pt-4">
                     <summary className="cursor-pointer text-sm font-semibold text-primary">
                       View copies ({stock.length})
@@ -534,36 +621,160 @@ export function LibraryWorkspace({
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "Issue & return" && (
         <>
+          {/* Prominent Panel: Reservations Ready to Fulfil */}
+          {canManage && readyReservations.length > 0 && (
+            <div className="rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/70 to-teal-50/50 p-5 shadow-sm sm:p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-emerald-600 p-2.5 text-white shadow-sm">
+                    <Bookmark className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-lg font-bold text-ink">Reservations ready to fulfil</h2>
+                    <p className="text-xs text-muted">Available copies exist for these waiting-list requests (FIFO order)</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">
+                  {readyReservations.length} ready
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {readyReservations.map((res) => {
+                  const bookTitle = res.book_title || books.get(res.book_id)?.title || "Book";
+                  const availCount = res.available_copies ?? data.copies.filter(c => c.book_id === res.book_id && c.status === "available").length;
+                  return (
+                    <div key={res.id} className="flex flex-col justify-between rounded-xl border border-emerald-200 bg-white p-4 shadow-sm space-y-3">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <strong className="font-bold text-ink text-sm leading-tight">{bookTitle}</strong>
+                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                            Ready to issue
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-xs font-semibold text-ink">{res.borrower_name} <span className="font-normal text-muted capitalize">({res.borrower_kind})</span></p>
+                        <p className="text-[11px] text-muted">
+                          {res.borrower_kind === "student" ? (
+                            <>
+                              Grade {res.grade_name || "N/A"} {res.section_name ? `· Sec ${res.section_name}` : ""} {res.registration_number ? `· Reg #${res.registration_number}` : ""}
+                            </>
+                          ) : (
+                            <>
+                              {res.job_title || "Staff"} {res.department ? `· ${res.department}` : ""}
+                            </>
+                          )}
+                        </p>
+                        <p className="mt-1 text-[11px] text-muted">Waiting since {formatDate(res.created_at)}</p>
+                        <p className="mt-1 text-xs font-bold text-emerald-700">Available copies: {availCount}</p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => handleOneClickFulfill(res)}
+                        className="w-full text-xs font-bold py-2 bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        Issue to {res.borrower_name.split(" ")[0]} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {canManage && (
             <Panel title="Issue a copy">
               <p className="mb-4 text-sm text-muted">
-                Up to {data.settings.max_loans} active loans per borrower, for {data.settings.loan_days} days.
-                Overdue borrowers must return their books first.
+                Search and select an active borrower and eligible book copy below. Borrowing rules are applied automatically.
               </p>
-              <Form action="issue" label="Issue book" reset>
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <Field label="Available copy">
-                    <Select name="copy_id" required defaultValue="">
-                      <option value="" disabled>Select Copy ID / title</option>
-                      {availableCopies.map(copy => (
-                        <option key={copy.id} value={copy.id}>
-                          {copy.accession} · {books.get(copy.book_id)?.title}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  {borrowerSelect}
-                  <Field label="Due date">
-                    <Input name="due_date" type="date"
-                      min={libraryDueDate(1)}
-                      max={libraryDueDate(data.settings.loan_days)}
-                      defaultValue={libraryDueDate(data.settings.loan_days)}
-                      required />
-                  </Field>
+              <Form
+                action="issue"
+                label="Issue book"
+                reset
+                disabled={isIssueBlocked || !selectedBorrower || !selectedCopy}
+              >
+                {selectedReservationId && (
+                  <input type="hidden" name="reservation_id" value={selectedReservationId} />
+                )}
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <BorrowerSelector
+                    grades={data.grades}
+                    sections={data.sections}
+                    selectedBorrower={selectedBorrower}
+                    onSelect={setSelectedBorrower}
+                  />
+
+                  <CopySelector
+                    borrowerKind={selectedBorrower?.kind}
+                    borrowerId={selectedBorrower?.id}
+                    selectedCopy={selectedCopy}
+                    onSelect={setSelectedCopy}
+                  />
                 </div>
+
+                {/* Issue Preview & Policy Summary */}
+                {selectedBorrower && (
+                  <div className="mt-4 rounded-2xl border border-primary/25 bg-slate-50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Loan Policy Summary</h3>
+                      {selectedReservationId && (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Fulfilling Waiting Reservation
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+                      <div>
+                        <span className="text-muted block">Borrower identity</span>
+                        <strong className="text-ink">{selectedBorrower.name}</strong>
+                      </div>
+
+                      <div>
+                        <span className="text-muted block">Active loans</span>
+                        <strong className={selectedBorrower.active_loans_count >= selectedBorrower.max_loans_allowed ? "text-red-600" : "text-ink"}>
+                          {selectedBorrower.active_loans_count} of {selectedBorrower.max_loans_allowed}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="text-muted block">Loan period</span>
+                        <strong className="text-ink">{defaultLoanDuration} days</strong>
+                      </div>
+
+                      <div>
+                        <span className="text-muted block">Calculated due date</span>
+                        <strong className="text-primary font-bold">{customDueDate || calculatedDueDate}</strong>
+                      </div>
+                    </div>
+
+                    {isIssueBlocked && (
+                      <div className="flex items-center gap-2 rounded-xl bg-red-100 p-3 text-xs font-semibold text-red-700">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>{selectedBorrower.ineligibility_reason || "Borrower is currently restricted from taking new loans."}</span>
+                      </div>
+                    )}
+
+                    <Field label="Return by due date">
+                      <Input
+                        name="due_date"
+                        type="date"
+                        min={libraryDueDate(1)}
+                        max={libraryDueDate(90)}
+                        value={customDueDate || calculatedDueDate}
+                        onChange={(e) => setCustomDueDate(e.target.value)}
+                        required
+                      />
+                    </Field>
+                  </div>
+                )}
               </Form>
             </Panel>
           )}
+
           <div className="flex flex-col gap-3 sm:flex-row">
             <Input
               aria-label="Search loans"
@@ -579,63 +790,82 @@ export function LibraryWorkspace({
               <option value="all">Full history</option>
             </Select>
           </div>
+
           {!filteredLoans.length && (
             <Panel title="No matching loans">
               <p className="text-muted">Issued books and their return history will appear here.</p>
             </Panel>
           )}
+
           <div className="grid gap-4 xl:grid-cols-2">
             {filteredLoans.slice((currentPage - 1) * 20, currentPage * 20).map(loan => {
               const copy = copies.get(loan.copy_id);
               const remaining = Number(loan.fine_amount) - Number(loan.paid_amount) - Number(loan.waived_amount);
               const days = overdueDays(loan.due_date, today);
+              const maxAllowedRenewals = loan.borrower_kind === "student"
+                ? (data.settings.student_max_renewals ?? data.settings.max_renewals ?? 2)
+                : (data.settings.staff_max_renewals ?? 3);
+
               return (
                 <Panel key={loan.id} title={books.get(copy?.book_id ?? "")?.title || "Book"}>
-                  <p className="font-semibold">
-                    {loan.borrower_name}{" "}
-                    <span className="text-sm font-normal text-muted">({loan.borrower_kind})</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-bold text-ink">
+                      {loan.borrower_name}{" "}
+                      <span className="text-xs font-normal text-muted capitalize">({loan.borrower_kind})</span>
+                    </p>
+                    <Tag>Copy {copy?.accession || "N/A"}</Tag>
+                  </div>
+
+                  <p className="mt-1 text-xs text-muted">
+                    Issued: <strong>{formatDate(loan.issued_at)}</strong> · Due date: <strong className={days > 0 ? "text-red-700 font-bold" : "text-ink"}>{formatDate(loan.due_date)}</strong>
                   </p>
-                  <p className="mt-1 text-sm text-muted">
-                    Copy ID {copy?.accession} · Issued {formatDate(loan.issued_at)} · Due {loan.due_date}
-                  </p>
+
                   <div className="my-3 flex flex-wrap gap-2">
                     <Tag>
                       {loan.returned_at
                         ? `${loan.outcome} · ${formatDate(loan.returned_at)}`
                         : days ? `${days} days overdue` : "On loan"}
                     </Tag>
-                    <Tag>{loan.renewals} renewals</Tag>
+                    <Tag>Renewals: {loan.renewals} of {maxAllowedRenewals}</Tag>
                   </div>
+
                   {!loan.returned_at && days > 0 && (
-                    <p className="mb-3 text-sm text-red-700">
+                    <p className="mb-3 text-xs font-semibold text-red-700">
                       Estimated overdue fine: {formatMoney(days * Number(loan.fine_per_day))}
                     </p>
                   )}
+
                   {canManage && !loan.returned_at && (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Form action="return" id={loan.id} label="Close loan">
-                        <Field label="Return condition">
-                          <Select name="outcome">
-                            <option value="returned">Returned in good condition</option>
-                            <option value="damaged">Returned damaged</option>
-                            <option value="lost">Lost — charge replacement cost</option>
-                          </Select>
-                        </Field>
-                      </Form>
-                      {days === 0 && loan.renewals < data.settings.max_renewals && (
-                        <Form action="renew" id={loan.id} label={`Renew +${data.settings.loan_days} days`} />
-                      )}
+                    <div className="mt-4 flex flex-wrap gap-2.5">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => setActiveReturnLoan(loan)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Return book
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setActiveRenewLoan(loan)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Renew loan
+                      </Button>
                     </div>
                   )}
+
                   {loan.returned_at && (
-                    <p className="text-sm text-muted">
+                    <p className="mt-2 text-xs text-muted">
                       Fine: {formatMoney(loan.fine_amount)} · Paid: {formatMoney(loan.paid_amount)} ·
                       Waived: {formatMoney(loan.waived_amount)} · Balance: {formatMoney(remaining)}
                     </p>
                   )}
+
                   {canManage && remaining > 0 && (
                     <details className="mt-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-primary">
+                      <summary className="cursor-pointer text-xs font-semibold text-primary">
                         Record payment {canAdmin ? "or waiver" : ""}
                       </summary>
                       <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -664,6 +894,27 @@ export function LibraryWorkspace({
         </>
       )}
 
+      {/* Return & Renew Dialog Modals */}
+      {activeReturnLoan && (
+        <ReturnBookDialog
+          loan={activeReturnLoan}
+          copy={copies.get(activeReturnLoan.copy_id)}
+          bookTitle={books.get(copies.get(activeReturnLoan.copy_id)?.book_id ?? "")?.title}
+          onClose={() => setActiveReturnLoan(null)}
+        />
+      )}
+
+      {activeRenewLoan && (
+        <RenewLoanDialog
+          loan={activeRenewLoan}
+          copy={copies.get(activeRenewLoan.copy_id)}
+          bookTitle={books.get(copies.get(activeRenewLoan.copy_id)?.book_id ?? "")?.title}
+          settings={data.settings}
+          waitingReservations={waitingReservations}
+          onClose={() => setActiveRenewLoan(null)}
+        />
+      )}
+
       {/* Pagination (Catalogue + Issue & return) */}
       {(tab === "Catalogue" || tab === "Issue & return") && rows > 20 && (
         <div className="flex items-center justify-center gap-4">
@@ -677,42 +928,166 @@ export function LibraryWorkspace({
           RESERVATIONS TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "Reservations" && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {canManage && (
-            <Panel title="Reserve a title">
-              <p className="mb-4 text-sm text-muted">
-                Reservations are served in order for each title. Issue any available copy to the first borrower
-                in its queue to fulfil the reservation.
-              </p>
-              <Form action="reserve" label="Add reservation" reset>
-                {bookSelect}
-                {borrowerSelect}
-              </Form>
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Create Reservation Form */}
+            {canManage && (
+              <Panel title="Reserve a title">
+                <p className="mb-4 text-xs text-muted">
+                  Add a borrower to a title&apos;s waiting queue. Reservations are served in FIFO order.
+                </p>
+
+                <Form action="reserve" label="Join waiting list" reset>
+                  <Field label="Book title">
+                    <Select
+                      name="book_id"
+                      required
+                      value={reserveBookId}
+                      onChange={(e) => setReserveBookId(e.target.value)}
+                    >
+                      <option value="" disabled>Select title</option>
+                      {data.books.filter(b => !b.archived).map(b => (
+                        <option key={b.id} value={b.id}>{b.title}{b.author ? ` — ${b.author}` : ""}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  {/* Title Metrics & Recommendation Banner */}
+                  {reserveBookId && (() => {
+                    const targetBook = books.get(reserveBookId);
+                    const bookCopies = data.copies.filter(c => c.book_id === reserveBookId);
+                    const totalC = bookCopies.filter(c => c.status !== "lost" && c.status !== "withdrawn").length;
+                    const availC = bookCopies.filter(c => c.status === "available").length;
+                    const waitingC = waitingReservations.filter(r => r.book_id === reserveBookId).length;
+
+                    return (
+                      <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-2 border border-outline/60">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 font-semibold">
+                          <span>Total copies: <strong className="text-ink">{totalC}</strong></span>
+                          <span>Available now: <strong className={availC > 0 ? "text-emerald-700" : "text-amber-700"}>{availC}</strong></span>
+                          <span>Waiting queue: <strong className="text-primary">{waitingC}</strong></span>
+                        </div>
+
+                        {availC > 0 && (
+                          <div className="rounded-lg bg-emerald-50 p-2.5 text-emerald-800 border border-emerald-200 flex flex-col gap-2">
+                            <p className="font-semibold">
+                              💡 Copy is available now! We recommend issuing directly instead of adding to the waiting queue.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                const availCopy = bookCopies.find(c => c.status === "available");
+                                if (availCopy && targetBook) {
+                                  setSelectedCopy({
+                                    id: availCopy.id,
+                                    accession: availCopy.accession,
+                                    status: availCopy.status,
+                                    book_id: targetBook.id,
+                                    book_title: targetBook.title,
+                                    author: targetBook.author,
+                                    isbn: targetBook.isbn,
+                                    shelf: targetBook.shelf,
+                                    is_eligible: true,
+                                    ineligibility_reason: null
+                                  });
+                                }
+                                if (reserveBorrower) setSelectedBorrower(reserveBorrower);
+                                setTab("Issue & return");
+                              }}
+                              className="self-start text-xs font-bold"
+                            >
+                              Issue now instead →
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <BorrowerSelector
+                    grades={data.grades}
+                    sections={data.sections}
+                    selectedBorrower={reserveBorrower}
+                    onSelect={setReserveBorrower}
+                  />
+                </Form>
+              </Panel>
+            )}
+
+            {/* Detailed Waiting Queue Management */}
+            <Panel title="Waiting queue management">
+              <div className="mb-4 flex gap-3 rounded-xl bg-blue-50 p-3 text-xs text-blue-800">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                <p>
+                  Reservations are <strong>waiting-list requests</strong>. They do not hold a specific physical copy.
+                  When a copy becomes available, issue it to the first borrower in that title&apos;s queue.
+                </p>
+              </div>
+
+              {!waitingReservations.length && <p className="text-xs text-muted">No waiting reservations currently queued.</p>}
+
+              <div className="space-y-3">
+                {waitingReservations.map((item, index) => {
+                  const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
+                  const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
+                  const queuePos = item.queue_position ?? (index + 1);
+                  const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
+
+                  return (
+                    <div key={item.id} className="rounded-xl border border-outline p-4 space-y-3 bg-white shadow-none">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
+                            #{queuePos}
+                          </span>
+                          <h4 className="font-bold text-ink text-sm">{bookTitle}</h4>
+                        </div>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                          isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {isReady ? "Ready to issue" : "Waiting for a return"}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-muted space-y-0.5">
+                        <p className="font-semibold text-ink">{item.borrower_name} <span className="font-normal text-muted capitalize">({item.borrower_kind})</span></p>
+                        <p>
+                          {item.borrower_kind === "student" ? (
+                            <>
+                              Grade {item.grade_name || "N/A"} {item.section_name ? `· Sec ${item.section_name}` : ""} {item.registration_number ? `· Reg #${item.registration_number}` : ""}
+                            </>
+                          ) : (
+                            <>
+                              {item.job_title || "Staff"} {item.department ? `· ${item.department}` : ""}
+                            </>
+                          )}
+                        </p>
+                        <p>Requested: {formatDate(item.created_at)} · Available copies: <strong>{availCount}</strong></p>
+                      </div>
+
+                      {canManage && (
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-outline/50">
+                          {isReady && (
+                            <Button
+                              type="button"
+                              variant="primary"
+                              onClick={() => handleOneClickFulfill(item)}
+                              className="text-xs font-bold py-1.5 bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Issue to borrower
+                            </Button>
+                          )}
+
+                          <Form action="cancel_reservation" id={item.id} label="Cancel reservation" buttonVariant="secondary" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </Panel>
-          )}
-          <Panel title="Waiting queue">
-            {/* Reservation policy note */}
-            <div className="mb-4 flex gap-3 rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-              <p>
-                Reservations are <strong>waiting-list requests</strong>. The system does not allocate a specific
-                physical copy — issue any available copy to the first borrower in the queue to fulfil the
-                reservation. Available copy counts are not reduced by waiting requests.
-              </p>
-            </div>
-            {!waiting.length && <p className="text-muted">No waiting reservations.</p>}
-            <div className="space-y-4">
-              {waiting.map(item => (
-                <div key={item.id} className="rounded-xl border border-outline p-4">
-                  <p className="font-semibold">{books.get(item.book_id)?.title}</p>
-                  <p className="my-2 text-sm text-muted">{item.borrower_name} · {formatDate(item.created_at)}</p>
-                  {canManage && (
-                    <Form action="cancel_reservation" id={item.id} label="Cancel reservation" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </Panel>
+          </div>
         </div>
       )}
 
@@ -720,82 +1095,21 @@ export function LibraryWorkspace({
           REPORTS TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "Reports" && (
-        <>
-          <Panel title="Library summary">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <p>Total titles <strong className="block text-2xl">{data.books.length}</strong></p>
-              <p>Total copies <strong className="block text-2xl">{activeCopies.length}</strong></p>
-              <p>Outstanding fines <strong className="block text-2xl">{formatMoney(balance)}</strong></p>
-            </div>
-            <p className="mt-4 text-sm text-muted">
-              Fine payments are library records. They are not automatically posted to the school finance ledger.
-              Overdue estimates become charges when a loan is closed.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button
-                onClick={() => exportCsv(
-                  [["Copy ID", "Title", "Author", "ISBN", "Shelf", "Status", "Replacement cost"],
-                    ...data.copies.map(copy => {
-                      const book = books.get(copy.book_id);
-                      return [copy.accession, book?.title || "", book?.author || "", book?.isbn || "",
-                        book?.shelf || "", copy.status, copy.replacement_cost != null ? String(copy.replacement_cost) : ""];
-                    })],
-                  "library-inventory.csv"
-                )}
-              >
-                <Download className="mr-2 h-4 w-4" />Inventory CSV
-              </Button>
-              <Button
-                onClick={() => exportCsv(
-                  [["Borrower", "Type", "Copy ID", "Title", "Issued", "Due", "Returned", "Outcome", "Fine", "Paid", "Waived"],
-                    ...data.loans.map(loan => {
-                      const copy = copies.get(loan.copy_id);
-                      return [loan.borrower_name, loan.borrower_kind, copy?.accession || "",
-                        books.get(copy?.book_id || "")?.title || "", formatDate(loan.issued_at), loan.due_date,
-                        loan.returned_at ? formatDate(loan.returned_at) : "", loan.outcome || "on loan",
-                        String(loan.fine_amount), String(loan.paid_amount), String(loan.waived_amount)];
-                    })],
-                  "library-loans.csv"
-                )}
-              >
-                <Download className="mr-2 h-4 w-4" />Loan history CSV
-              </Button>
-              <Button
-                onClick={() => exportCsv(
-                  [["Borrower", "Copy ID", "Title", "Due", "Days overdue"],
-                    ...overdue.map(loan => {
-                      const copy = copies.get(loan.copy_id);
-                      return [loan.borrower_name, copy?.accession || "",
-                        books.get(copy?.book_id || "")?.title || "", loan.due_date,
-                        String(overdueDays(loan.due_date))];
-                    })],
-                  "library-overdue.csv"
-                )}
-              >
-                Overdue CSV
-              </Button>
-            </div>
-          </Panel>
-
-          <Panel title="Recent activity">
-            <p className="mb-4 text-sm text-muted">Latest 100 actions. Full audit records are retained.</p>
-            <div className="max-h-96 space-y-2 overflow-y-auto">
-              {data.events.map(event => (
-                <div key={event.id} className="rounded-lg bg-slate-50 p-3 text-sm">
-                  <strong className="capitalize">{event.action.replaceAll("_", " ")}</strong>
-                  <span className="ml-3 text-muted">
-                    {new Date(event.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}
-                  </span>
-                  {event.details.title && <span className="ml-3">{event.details.title}</span>}
-                  {event.details.accession && <span className="ml-3">{event.details.accession}</span>}
-                  {event.details.amount && <span className="ml-3">Rs {event.details.amount}</span>}
-                  {event.details.reason && <p className="mt-1">{event.details.reason}</p>}
-                </div>
-              ))}
-              {!data.events.length && <p className="text-muted">No activity yet.</p>}
-            </div>
-          </Panel>
-        </>
+        <LibraryReports
+          data={data}
+          canManage={canManage}
+          canAdmin={canAdmin}
+          onNavigateTab={(targetTab, targetId) => {
+            setTab(targetTab);
+            if (targetId) {
+              const bookTitle = books.get(targetId)?.title;
+              if (bookTitle) setQuery(bookTitle);
+            }
+          }}
+          formatMoney={formatMoney}
+          formatDate={formatDate}
+          overdueDays={overdueDays}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -803,52 +1117,134 @@ export function LibraryWorkspace({
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "Rules & team" && (
         <div className="grid gap-6 lg:grid-cols-2">
+          {/* Borrowing Rules */}
           <Panel title="Borrowing rules">
             <p className="mb-4 text-sm text-muted">
-              Changes apply to new issues and future renewals. Existing loans keep their original daily fine rate.
+              Configure separate loan policies for students and staff. Changes apply to new issues and future renewals.
             </p>
             {canAdmin && canManage ? (
               <Form action="settings" label="Save borrowing rules">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Loan period (days)">
-                    <Input name="loan_days" type="number" required min="1" max="90" defaultValue={data.settings.loan_days} />
-                  </Field>
-                  <Field label="Maximum active loans">
-                    <Input name="max_loans" type="number" required min="1" max="30" defaultValue={data.settings.max_loans} />
-                  </Field>
-                  <Field label="Maximum renewals">
-                    <Input name="max_renewals" type="number" required min="0" max="10" defaultValue={data.settings.max_renewals} />
-                  </Field>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Student Policy</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Loan period (days)">
+                      <Input name="student_loan_days" type="number" required min="1" max="90" defaultValue={data.settings.student_loan_days ?? data.settings.loan_days} />
+                    </Field>
+                    <Field label="Max active loans">
+                      <Input name="student_max_loans" type="number" required min="1" max="30" defaultValue={data.settings.student_max_loans ?? data.settings.max_loans} />
+                    </Field>
+                    <Field label="Max renewals">
+                      <Input name="student_max_renewals" type="number" required min="0" max="10" defaultValue={data.settings.student_max_renewals ?? data.settings.max_renewals} />
+                    </Field>
+                    <Field label="Renewal duration (days)">
+                      <Input name="student_renewal_days" type="number" required min="1" max="90" defaultValue={data.settings.student_renewal_days ?? data.settings.loan_days} />
+                    </Field>
+                  </div>
+
+                  <h3 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted border-t border-outline/50">Staff Policy</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Loan period (days)">
+                      <Input name="staff_loan_days" type="number" required min="1" max="90" defaultValue={data.settings.staff_loan_days ?? 30} />
+                    </Field>
+                    <Field label="Max active loans">
+                      <Input name="staff_max_loans" type="number" required min="1" max="30" defaultValue={data.settings.staff_max_loans ?? 5} />
+                    </Field>
+                    <Field label="Max renewals">
+                      <Input name="staff_max_renewals" type="number" required min="0" max="10" defaultValue={data.settings.staff_max_renewals ?? 3} />
+                    </Field>
+                    <Field label="Renewal duration (days)">
+                      <Input name="staff_renewal_days" type="number" required min="1" max="90" defaultValue={data.settings.staff_renewal_days ?? 30} />
+                    </Field>
+                  </div>
+
+                  <h3 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted border-t border-outline/50">Overdue Fines</h3>
                   <Field label="Overdue fine per day (Rs)">
                     <Input name="fine_per_day" type="number" required min="0" max="10000" step="0.01" defaultValue={data.settings.fine_per_day} />
                   </Field>
                 </div>
               </Form>
             ) : (
-              <ul className="space-y-3 text-sm">
-                <li>Loan period: {data.settings.loan_days} days</li>
-                <li>Active loans per borrower: {data.settings.max_loans}</li>
-                <li>Renewals allowed: {data.settings.max_renewals}</li>
-                <li>Daily fine: {formatMoney(data.settings.fine_per_day)}</li>
-              </ul>
+              <div className="space-y-4 text-sm">
+                <div>
+                  <h4 className="font-bold text-ink">Student Policy</h4>
+                  <ul className="mt-1 space-y-1 text-muted">
+                    <li>Loan period: {data.settings.student_loan_days ?? data.settings.loan_days} days</li>
+                    <li>Active loans limit: {data.settings.student_max_loans ?? data.settings.max_loans}</li>
+                    <li>Renewals allowed: {data.settings.student_max_renewals ?? data.settings.max_renewals}</li>
+                    <li>Renewal duration: {data.settings.student_renewal_days ?? data.settings.loan_days} days</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold text-ink">Staff Policy</h4>
+                  <ul className="mt-1 space-y-1 text-muted">
+                    <li>Loan period: {data.settings.staff_loan_days ?? 30} days</li>
+                    <li>Active loans limit: {data.settings.staff_max_loans ?? 5}</li>
+                    <li>Renewals allowed: {data.settings.staff_max_renewals ?? 3}</li>
+                    <li>Renewal duration: {data.settings.staff_renewal_days ?? 30} days</li>
+                  </ul>
+                </div>
+                <p className="pt-2 border-t border-outline/50 text-muted">
+                  Daily overdue fine: <strong>{formatMoney(data.settings.fine_per_day)}</strong>
+                </p>
+              </div>
             )}
           </Panel>
 
-          <Panel title="Library team & workflow">
-            <ol className="list-decimal space-y-3 pl-5 text-sm leading-6">
-              <li>The principal creates a staff account with the Librarian role, or assigns Librarian to an existing member in Admin Console.</li>
-              <li>The librarian adds titles and sets the number of copies — Copy IDs (e.g. LIB-0001) are generated automatically.</li>
-              <li>Issue a copy to an active student or staff member with a due date.</li>
-              <li>Renew eligible loans, process returns, or record damaged and lost copies.</li>
-              <li>Review overdue records and record fine payments. The principal or administrator can approve waivers.</li>
-            </ol>
-            <p className="mt-4 text-sm text-muted">
-              Assigning the Librarian role replaces the member's current role. New librarian accounts use the existing staff sign-in and password setup.
+          {/* Assigned Librarians Roster */}
+          <Panel title="Assigned Librarians">
+            <p className="mb-4 text-sm text-muted">
+              Staff members with the structured Librarian role automatically receive library permissions linked to their login accounts.
             </p>
-            {canAdmin && (
-              <div className="mt-5 flex gap-4 text-sm font-semibold text-primary">
-                <Link href="/staff">Create librarian account →</Link>
-                <Link href="/admin">Assign existing member →</Link>
+
+            {data.team && data.team.length > 0 ? (
+              <div className="space-y-3">
+                {data.team.map((member) => (
+                  <div key={member.member_id} className="flex flex-col gap-2 rounded-2xl border border-outline p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <span className="font-bold text-ink">{member.full_name}</span>
+                      <p className="text-xs text-muted">{member.email || "No email"}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        member.status === "active" && !member.must_change_password
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-700"
+                      }`}>
+                        {member.status === "active" && !member.must_change_password
+                          ? "Active"
+                          : member.must_change_password
+                          ? "Account setup required"
+                          : "Inactive"}
+                      </span>
+
+                      {canAdmin && (
+                        <Link
+                          href="/admin"
+                          className="rounded-xl border border-outline bg-white px-3 py-1.5 text-xs font-semibold text-muted hover:bg-slate-50 hover:text-ink"
+                        >
+                          Manage role
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-outline/80 p-6 text-center">
+                <ShieldCheck className="mx-auto h-8 w-8 text-muted" />
+                <p className="mt-2 text-sm font-semibold text-ink">No librarian assigned</p>
+                <p className="mt-1 text-xs text-muted">
+                  Assign the Librarian role to a staff member in Staff Management or Admin Console.
+                </p>
+                {canAdmin && (
+                  <Link
+                    href="/admin"
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90"
+                  >
+                    <Plus className="h-4 w-4" /> Assign librarian
+                  </Link>
+                )}
               </div>
             )}
           </Panel>

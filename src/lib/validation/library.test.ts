@@ -50,12 +50,12 @@ describe("library validation and dates", () => {
   it("treats empty replacement_cost as null (unknown), not Rs 0", () => {
     const result = libraryActionSchema.safeParse({ action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111", quantity: 1, replacement_cost: "" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.replacement_cost).toBeNull();
+    if (result.success) expect((result.data as any).replacement_cost).toBeNull();
   });
   it("accepts a numeric replacement_cost on add_copies", () => {
     const result = libraryActionSchema.safeParse({ action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111", quantity: 2, replacement_cost: "850.00" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.replacement_cost).toBe(850);
+    if (result.success) expect((result.data as any).replacement_cost).toBe(850);
   });
   it("accepts add_book_with_copies with optional author (empty is valid)", () => {
     expect(libraryActionSchema.safeParse({ action: "add_book_with_copies", title: "No Author Book", author: "", quantity: 1 }).success).toBe(true);

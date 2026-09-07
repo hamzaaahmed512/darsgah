@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { mutateLibrary } from "@/lib/services/library";
+import { mutateLibrary, searchBorrowers, searchCopies, type SearchResultBorrower, type SearchResultCopy } from "@/lib/services/library";
 
 export async function libraryAction(form: FormData): Promise<{ ok?: boolean; error?: string }> {
   const user = await requireUser("library:manage");
@@ -19,4 +19,23 @@ export async function libraryAction(form: FormData): Promise<{ ok?: boolean; err
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not save. Please try again." };
   }
+}
+
+export async function searchBorrowersAction(
+  kind: "student" | "staff",
+  query: string,
+  gradeId?: string,
+  sectionId?: string
+): Promise<SearchResultBorrower[]> {
+  const user = await requireUser("library:view");
+  return searchBorrowers(user, kind, query, gradeId, sectionId);
+}
+
+export async function searchCopiesAction(
+  query: string,
+  borrowerKind?: string,
+  borrowerId?: string
+): Promise<SearchResultCopy[]> {
+  const user = await requireUser("library:view");
+  return searchCopies(user, query, borrowerKind, borrowerId);
 }
