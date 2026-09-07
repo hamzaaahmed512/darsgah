@@ -93,6 +93,7 @@ export default function SignInPage() {
         </Button>
       </form>
       <p className="mt-7 text-center text-sm text-muted">Access is provided by your school administrator.</p>
+      <p className="mt-3 text-center text-sm"><Link className="font-semibold text-primary hover:text-primary-ink hover:underline" href="/parent-portal/sign-in">Parent or guardian? Open the Parent Portal</Link></p>
     </>
   );
 }

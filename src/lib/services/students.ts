@@ -444,6 +444,8 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
         school_id: user.schoolId,
         admission_number: admissionNumber,
         student_cnic: parsed.student_cnic || null,
+        guardian_cnic: parsed.father_cnic || null,
+        guardian_phone: guardianPhone ?? fatherPhone ?? null,
         first_name: studentName.firstName,
         last_name: studentName.lastName,
         name_en: parsed.name_en,
@@ -568,6 +570,8 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
     .update({
       admission_number: parsed.admission_number,
       student_cnic: parsed.student_cnic || null,
+      guardian_cnic: parsed.father_cnic || null,
+      guardian_phone: guardianPhone ?? fatherPhone ?? null,
       first_name: studentName.firstName,
       last_name: studentName.lastName,
       name_en: parsed.name_en,
