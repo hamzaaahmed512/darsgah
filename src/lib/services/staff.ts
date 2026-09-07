@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/services/activity";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { formatDisplayName } from "@/lib/student-name";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDaysInRangeWithin } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
 import { staffProfileUpdateSchema, type StaffProfileUpdateValues } from "@/lib/validation/staff";
 
@@ -151,7 +152,7 @@ export async function getStaffProfile(user: AppUser, staffId: string) {
       const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
       annualUsed += days;
       if (row.start_date >= monthStart && row.start_date <= monthEnd) monthlyUsed += days;
-      if (row.start_date >= weekStart && row.start_date <= weekEnd) weeklyUsed += days;
+      weeklyUsed += getDaysInRangeWithin(row.start_date, row.end_date, weekStart, weekEnd);
     }
     leaveStats = {
       annualUsed,

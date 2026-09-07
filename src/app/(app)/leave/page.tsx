@@ -53,7 +53,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all", range) : [];
   const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user, range);
   const { leaves, migrationRequired } = leaveCenter;
-  const leavePolicy = await getLeavePolicy(user).catch(() => ({ annualLimit: 36, monthlyLimit: 3, weeklyLimit: 1 }));
+  const leavePolicy = await getLeavePolicy(user).catch(() => ({ annualLimit: 36, monthlyLimit: 3, weeklyLimit: null }));
   const teacherLeaveStats = !canReviewLeaves ? await getTeacherLeaveStats(user, user.id).catch(() => null) : null;
   const teacherLeaveSummary = canReviewLeaves ? await getAllTeachersLeaveSummary(user).catch(() => ({ summaries: [], migrationRequired: false })) : { summaries: [], migrationRequired: false };
   const exportDate = new Date().toISOString().slice(0, 10);
@@ -100,7 +100,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                   </div>
                   <div>
                     <CardTitle className="text-[1.8rem]">Leave Policy</CardTitle>
-                    <p className="mt-1 text-base text-muted">Set the annual and monthly leave limits applied to all staff.</p>
+                    <p className="mt-1 text-base text-muted">Set the annual, monthly, and optional weekly leave limits applied to all staff.</p>
                   </div>
                 </div>
               </CardHeader>
@@ -173,7 +173,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                           <th className="px-5 py-4">Teacher Name</th>
                           <th className="px-5 py-4">Annual (Used/Limit)</th>
                           <th className="px-5 py-4">Monthly (Used/Limit)</th>
-                          <th className="px-5 py-4">Weekly (Used/Limit)</th>
+                          <th className="px-5 py-4">Weekly Limit</th>
+                          <th className="px-5 py-4">Weekly Used</th>
+                          <th className="px-5 py-4">Weekly Remaining</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -186,14 +188,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                             <td className="px-5 py-4">
                               <span className={s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit}
                             </td>
+                            <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">N/A</span>}</td>
+                            <td className="px-5 py-4">{s.weeklyUsed}</td>
                             <td className="px-5 py-4">
-                              {s.weeklyLimit === null ? (
-                                <span className="text-muted">N/A</span>
-                              ) : (
-                                <>
-                                  <span className={s.weeklyUsed > s.weeklyLimit ? "font-semibold text-red-600" : ""}>{s.weeklyUsed}</span> / {s.weeklyLimit}
-                                </>
-                              )}
+                              {s.weeklyRemaining ?? <span className="text-muted">N/A</span>}
                             </td>
                           </tr>
                         ))}

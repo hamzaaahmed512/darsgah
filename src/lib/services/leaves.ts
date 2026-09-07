@@ -9,6 +9,13 @@ import { formatDisplayName } from "@/lib/student-name";
 export const DEFAULT_ANNUAL_LEAVE_LIMIT = 36;
 export const DEFAULT_MONTHLY_LEAVE_LIMIT = 3;
 
+export function getDaysInRangeWithin(startDate: string, endDate: string, rangeStart: string, rangeEnd: string) {
+  const start = new Date(startDate < rangeStart ? rangeStart : startDate);
+  const end = new Date(endDate > rangeEnd ? rangeEnd : endDate);
+  if (start > end) return 0;
+  return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+}
+
 export interface LeavePolicy {
   annualLimit: number;
   monthlyLimit: number;
@@ -100,9 +107,7 @@ export async function getTeacherLeaveStats(user: AppUser, teacherId: string) {
     if (row.start_date >= monthStart && row.start_date <= monthEnd) {
       monthlyUsed += days;
     }
-    if (row.start_date >= weekStart && row.start_date <= weekEnd) {
-      weeklyUsed += days;
-    }
+    weeklyUsed += getDaysInRangeWithin(row.start_date, row.end_date, weekStart, weekEnd);
   }
   return { annualUsed, monthlyUsed, weeklyUsed, migrationRequired: false };
 }
@@ -158,7 +163,7 @@ export async function getAllTeachersLeaveSummary(user: AppUser) {
     
     acc[row.user_id].annualUsed += days;
     if (row.start_date >= monthStart && row.start_date <= monthEnd) acc[row.user_id].monthlyUsed += days;
-    if (row.start_date >= weekStart && row.start_date <= weekEnd) acc[row.user_id].weeklyUsed += days;
+    acc[row.user_id].weeklyUsed += getDaysInRangeWithin(row.start_date, row.end_date, weekStart, weekEnd);
     
     return acc;
   }, {});
@@ -301,7 +306,7 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
       let addedWeekly = 0;
 
       if (parsed.start_date >= monthStart && parsed.start_date <= monthEnd) addedMonthly = daysRequested;
-      if (parsed.start_date >= weekStart && parsed.start_date <= weekEnd) addedWeekly = daysRequested;
+      addedWeekly = getDaysInRangeWithin(parsed.start_date, parsed.end_date, weekStart, weekEnd);
 
       if (stats.annualUsed >= policy.annualLimit || stats.annualUsed + addedAnnual > policy.annualLimit) {
         throw new Error("You have reached your allowed leave limit. You cannot apply for additional leaves.");
@@ -309,8 +314,8 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
       if (stats.monthlyUsed >= policy.monthlyLimit || stats.monthlyUsed + addedMonthly > policy.monthlyLimit) {
         throw new Error("You have reached your allowed leave limit. You cannot apply for additional leaves.");
       }
-      if (policy.weeklyLimit !== null && (stats.weeklyUsed >= policy.weeklyLimit || stats.weeklyUsed + addedWeekly > policy.weeklyLimit)) {
-        throw new Error("You have reached your allowed leave limit. You cannot apply for additional leaves.");
+      if (policy.weeklyLimit !== null && addedWeekly > 0 && (stats.weeklyUsed >= policy.weeklyLimit || stats.weeklyUsed + addedWeekly > policy.weeklyLimit)) {
+        throw new Error("This request exceeds the configured weekly leave limit. You cannot apply for additional leave this week.");
       }
     }
   }
