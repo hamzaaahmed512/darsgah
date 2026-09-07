@@ -20,7 +20,10 @@ export default function ParentPortalSignInPage() {
     startTransition(async () => {
       const result = await parentSignInAction({ school: String(form.get("school") ?? ""), cnic: String(form.get("cnic") ?? ""), phone: String(form.get("phone") ?? "") });
       if (result.error) setError(result.error);
-      else router.replace("destination" in result ? result.destination : "/parent-portal");
+      else {
+        const destination = "destination" in result && result.destination ? result.destination : "/parent-portal";
+        router.replace(destination);
+      }
     });
   }
 
