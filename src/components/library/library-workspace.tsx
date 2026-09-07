@@ -4,11 +4,11 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Download, Pencil, Plus, UserRound, X, Info, ShieldCheck, UserCheck, AlertTriangle, ArrowRight, CheckCircle2, Bookmark
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, UserRound, X, Info, ShieldCheck, UserCheck, AlertTriangle, CheckCircle2
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
-  LibraryData, LibraryBook, LibraryLoan, LibraryCopy, LibraryReservation, SearchResultBorrower, SearchResultCopy
+  LibraryData, LibraryBook, LibraryLoan, LibraryReservation, SearchResultBorrower, SearchResultCopy
 } from "@/lib/services/library";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
 import { Button } from "@/components/ui/button";
@@ -31,10 +31,11 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Form({
-  action, children, label = "Save", id, reset = false, buttonVariant = "primary", disabled = false
+  action, children, label = "Save", id, reset = false, buttonVariant = "primary", disabled = false, onSuccess
 }: {
   action: string; children?: ReactNode; label?: string; id?: string;
   reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; disabled?: boolean;
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -43,6 +44,7 @@ function Form({
     <form
       onSubmit={(event) => {
         event.preventDefault();
+        if (pending || disabled) return;
         const element = event.currentTarget;
         const payload = new FormData(element);
         setMessage(null);
@@ -50,7 +52,7 @@ function Form({
           try {
             const result = await libraryAction(payload);
             setMessage(result);
-            if (result.ok) { if (reset) element.reset(); router.refresh(); }
+            if (result.ok) { if (reset) element.reset(); onSuccess?.(); router.refresh(); }
           } catch {
             setMessage({ error: "Connection interrupted. Refresh to check whether the change saved before retrying." });
           }
@@ -60,7 +62,7 @@ function Form({
     >
       <input type="hidden" name="action" value={action} />
       {id && <input type="hidden" name="id" value={id} />}
-      <fieldset disabled={pending || disabled} className="grid min-w-0 gap-3">
+      <fieldset disabled={pending} className="grid min-w-0 gap-3">
         {children}
         <Button type="submit" variant={buttonVariant} disabled={pending || disabled}>
           {pending ? "Saving…" : label}
@@ -121,7 +123,7 @@ function BookFields({ book }: { book?: LibraryBook }) {
       <Field label="Publisher"><Input name="publisher" maxLength={200} defaultValue={book?.publisher} /></Field>
       <Field label="Shelf / location"><Input name="shelf" maxLength={80} placeholder="A-03" defaultValue={book?.shelf} /></Field>
       <Field label="Default replacement cost (Rs)"
-        hint="Estimated cost to replace a lost or irreparably damaged copy. This is separate from late-return fines.">
+        hint="Optional. Used for new copies and added to the library balance if a loan is closed as lost. Separate from late fines.">
         <Input name="default_replacement_cost" type="number" min="0" max="1000000" step="0.01"
           placeholder="e.g. 850"
           defaultValue={book?.default_replacement_cost != null ? String(book.default_replacement_cost) : ""} />
@@ -163,12 +165,7 @@ function AddBookModal() {
                 <BookFields />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Number of copies" hint="A unique Copy ID is generated for each.">
-                    <Input name="quantity" type="number" required min="1" max="50" defaultValue="1" />
-                  </Field>
-                  <Field label="Replacement cost (Rs)"
-                    hint="Estimated cost to replace a lost or irreparably damaged copy. This is separate from late-return fines.">
-                    <Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01"
-                      placeholder="Optional" />
+                    <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
                   </Field>
                 </div>
               </Form>
@@ -213,11 +210,11 @@ function AddCopiesModal({ book }: { book: LibraryBook }) {
             <div className="p-5 sm:p-6">
               <Form action="add_copies" label="Add copies" reset>
                 <input type="hidden" name="book_id" value={book.id} />
-                <Field label="Quantity to add" hint="Copy IDs are generated automatically.">
-                  <Input name="quantity" type="number" required min="1" max="50" defaultValue="1" />
+                <Field label="Quantity to add" hint="Up to 1,000 copies per batch. Copy IDs are generated automatically.">
+                  <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
                 </Field>
                 <Field label="Replacement cost (Rs)"
-                  hint="Estimated cost to replace a lost or irreparably damaged copy. Leave blank to use the book default.">
+                  hint="Optional override for these copies. Added to the library balance if lost. Leave blank to use the book default.">
                   <Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01"
                     placeholder={book.default_replacement_cost != null ? String(book.default_replacement_cost) : "Optional"}
                     defaultValue="" />
@@ -231,15 +228,6 @@ function AddCopiesModal({ book }: { book: LibraryBook }) {
   );
 }
 
-// ─── CSV export helper ────────────────────────────────────────────────────────
-
-function exportCsv(rows: string[][], name: string) {
-  const csv = rows.map(row =>
-    row.map(value => `"${(/^[=+\-@\t\r]/.test(value) ? "'" : "") + value.replaceAll('"', '""')}"`).join(",")
-  ).join("\r\n");
-  const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
-}
 
 // ─── Main workspace ───────────────────────────────────────────────────────────
 
@@ -259,6 +247,16 @@ export function LibraryWorkspace({
   const [selectedCopy, setSelectedCopy] = useState<SearchResultCopy | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
   const [customDueDate, setCustomDueDate] = useState<string>("");
+  const [issueVersion, setIssueVersion] = useState(0);
+  const [reservationVersion, setReservationVersion] = useState(0);
+  const [circulationNotice, setCirculationNotice] = useState("");
+  function clearIssue() {
+    setSelectedBorrower(null);
+    setSelectedCopy(null);
+    setSelectedReservationId(null);
+    setCustomDueDate("");
+    setIssueVersion(value => value + 1);
+  }
 
   // Reservation Creation state
   const [reserveBookId, setReserveBookId] = useState<string>("");
@@ -278,7 +276,6 @@ export function LibraryWorkspace({
 
   const activeLoans = data.loans.filter(loan => !loan.returned_at);
   const overdue = activeLoans.filter(loan => loan.due_date < today);
-  const balance = data.loans.reduce((sum, loan) => sum + Number(loan.fine_amount) - Number(loan.paid_amount) - Number(loan.waived_amount), 0);
   
   // Filter active waiting reservations ONLY (exclude fulfilled or cancelled)
   const waitingReservations = data.reservations.filter(item => item.status === "waiting");
@@ -327,12 +324,17 @@ export function LibraryWorkspace({
         (loanFilter === "balance" && Number(loan.fine_amount) > Number(loan.paid_amount) + Number(loan.waived_amount)));
   });
 
-  const tabs = ["Catalogue", "Issue & return", "Reservations", "Reports", "Rules & team"];
+  const tabs = ["Catalogue", "Issue & return", "Reports", "Rules & team"];
   const rows = tab === "Catalogue" ? filteredBooks.length : filteredLoans.length;
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows / 20)));
 
   // Handle one-click issue prefill from a ready reservation
   function handleOneClickFulfill(res: LibraryReservation) {
+    setCustomDueDate("");
+    const borrowerLoans = activeLoans.filter(loan => loan.borrower_id === res.borrower_id && loan.borrower_kind === res.borrower_kind);
+    const maximum = res.borrower_kind === "staff" ? data.settings.staff_max_loans : data.settings.student_max_loans;
+    const hasOverdue = borrowerLoans.some(loan => loan.due_date < today);
+    const restriction = hasOverdue ? "Return overdue books before issuing another copy." : borrowerLoans.length >= maximum ? "Borrower has reached the active loan limit." : null;
     const firstAvailCopy = data.copies.find(c => c.book_id === res.book_id && c.status === "available");
     const targetBook = books.get(res.book_id);
 
@@ -350,11 +352,11 @@ export function LibraryWorkspace({
       email: res.email || null,
       department: res.department || null,
       job_title: res.job_title || null,
-      active_loans_count: 0,
+      active_loans_count: borrowerLoans.length,
       max_loans_allowed: res.borrower_kind === "staff" ? (data.settings.staff_max_loans ?? 5) : (data.settings.student_max_loans ?? 3),
-      has_overdue: false,
-      is_eligible: true,
-      ineligibility_reason: null
+      has_overdue: hasOverdue,
+      is_eligible: !restriction,
+      ineligibility_reason: restriction
     });
 
     if (firstAvailCopy && targetBook) {
@@ -375,6 +377,7 @@ export function LibraryWorkspace({
     }
 
     setTab("Issue & return");
+    requestAnimationFrame(() => document.getElementById("library-issue-form")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   const kpiCards = [
@@ -425,12 +428,13 @@ export function LibraryWorkspace({
           <div className="flex flex-wrap items-center gap-3">
             {canManage && <AddBookModal />}
             {canAdmin && (
-              <Link
-                href="/admin"
+              <button
+                type="button"
+                onClick={() => setTab("Rules & team")}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"
               >
                 <UserRound className="h-4 w-4" /> Manage team
-              </Link>
+              </button>
             )}
           </div>
         )}
@@ -621,79 +625,28 @@ export function LibraryWorkspace({
       ══════════════════════════════════════════════════════════════════════ */}
       {tab === "Issue & return" && (
         <>
-          {/* Prominent Panel: Reservations Ready to Fulfil */}
-          {canManage && readyReservations.length > 0 && (
-            <div className="rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/70 to-teal-50/50 p-5 shadow-sm sm:p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-emerald-600 p-2.5 text-white shadow-sm">
-                    <Bookmark className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-lg font-bold text-ink">Reservations ready to fulfil</h2>
-                    <p className="text-xs text-muted">Available copies exist for these waiting-list requests (FIFO order)</p>
-                  </div>
-                </div>
-                <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">
-                  {readyReservations.length} ready
-                </span>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {readyReservations.map((res) => {
-                  const bookTitle = res.book_title || books.get(res.book_id)?.title || "Book";
-                  const availCount = res.available_copies ?? data.copies.filter(c => c.book_id === res.book_id && c.status === "available").length;
-                  return (
-                    <div key={res.id} className="flex flex-col justify-between rounded-xl border border-emerald-200 bg-white p-4 shadow-sm space-y-3">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <strong className="font-bold text-ink text-sm leading-tight">{bookTitle}</strong>
-                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                            Ready to issue
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-xs font-semibold text-ink">{res.borrower_name} <span className="font-normal text-muted capitalize">({res.borrower_kind})</span></p>
-                        <p className="text-[11px] text-muted">
-                          {res.borrower_kind === "student" ? (
-                            <>
-                              Grade {res.grade_name || "N/A"} {res.section_name ? `· Sec ${res.section_name}` : ""} {res.registration_number ? `· Reg #${res.registration_number}` : ""}
-                            </>
-                          ) : (
-                            <>
-                              {res.job_title || "Staff"} {res.department ? `· ${res.department}` : ""}
-                            </>
-                          )}
-                        </p>
-                        <p className="mt-1 text-[11px] text-muted">Waiting since {formatDate(res.created_at)}</p>
-                        <p className="mt-1 text-xs font-bold text-emerald-700">Available copies: {availCount}</p>
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => handleOneClickFulfill(res)}
-                        className="w-full text-xs font-bold py-2 bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        Issue to {res.borrower_name.split(" ")[0]} <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-sm">
+            <p>Issue books directly, process returns, or manage the waiting list here.</p>
+            <a href="#library-waiting-list" className="font-semibold text-primary underline">Waiting list ({waitingReservations.length})</a>
+          </div>
+          {circulationNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{circulationNotice}</p>}
 
           {canManage && (
-            <Panel title="Issue a copy">
+            <div id="library-issue-form" className="scroll-mt-24"><Panel title="Issue a book">
               <p className="mb-4 text-sm text-muted">
                 Search and select an active borrower and eligible book copy below. Borrowing rules are applied automatically.
               </p>
+              <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
+                <p>Students: up to {data.settings.student_max_loans} books for {data.settings.student_loan_days} days; {data.settings.student_max_renewals} renewals of {data.settings.student_renewal_days} days.</p>
+                <p>Staff: up to {data.settings.staff_max_loans} books for {data.settings.staff_loan_days} days; {data.settings.staff_max_renewals} renewals of {data.settings.staff_renewal_days} days.</p>
+              </div>
               <Form
+                key={issueVersion}
                 action="issue"
                 label="Issue book"
                 reset
-                disabled={isIssueBlocked || !selectedBorrower || !selectedCopy}
+                onSuccess={() => { clearIssue(); setCirculationNotice("Book issued successfully. You can select the next borrower."); }}
+                disabled={isIssueBlocked || !selectedBorrower || !selectedCopy || !selectedCopy.is_eligible}
               >
                 {selectedReservationId && (
                   <input type="hidden" name="reservation_id" value={selectedReservationId} />
@@ -704,14 +657,14 @@ export function LibraryWorkspace({
                     grades={data.grades}
                     sections={data.sections}
                     selectedBorrower={selectedBorrower}
-                    onSelect={setSelectedBorrower}
+                    onSelect={(borrower) => { setSelectedBorrower(borrower); setSelectedCopy(null); setSelectedReservationId(null); setCustomDueDate(""); }}
                   />
 
                   <CopySelector
                     borrowerKind={selectedBorrower?.kind}
                     borrowerId={selectedBorrower?.id}
                     selectedCopy={selectedCopy}
-                    onSelect={setSelectedCopy}
+                    onSelect={(copy) => { setSelectedCopy(copy); if (copy && selectedReservationId && data.reservations.find(r => r.id === selectedReservationId)?.book_id !== copy.book_id) setSelectedReservationId(null); }}
                   />
                 </div>
 
@@ -772,7 +725,8 @@ export function LibraryWorkspace({
                   </div>
                 )}
               </Form>
-            </Panel>
+              <Button type="button" variant="secondary" onClick={clearIssue} className="mt-3">Clear selection</Button>
+            </Panel></div>
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -927,8 +881,8 @@ export function LibraryWorkspace({
       {/* ══════════════════════════════════════════════════════════════════════
           RESERVATIONS TAB
       ══════════════════════════════════════════════════════════════════════ */}
-      {tab === "Reservations" && (
-        <div className="space-y-6">
+      {tab === "Issue & return" && (
+        <div id="library-waiting-list" className="scroll-mt-24 space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Create Reservation Form */}
             {canManage && (
@@ -937,7 +891,7 @@ export function LibraryWorkspace({
                   Add a borrower to a title&apos;s waiting queue. Reservations are served in FIFO order.
                 </p>
 
-                <Form action="reserve" label="Join waiting list" reset>
+                <Form key={reservationVersion} action="reserve" label="Join waiting list" reset disabled={!reserveBookId || !reserveBorrower} onSuccess={() => { setReserveBookId(""); setReserveBorrower(null); setReservationVersion(value => value + 1); }}>
                   <Field label="Book title">
                     <Select
                       name="book_id"
@@ -968,7 +922,7 @@ export function LibraryWorkspace({
                           <span>Waiting queue: <strong className="text-primary">{waitingC}</strong></span>
                         </div>
 
-                        {availC > 0 && (
+                        {availC > 0 && waitingC === 0 && (
                           <div className="rounded-lg bg-emerald-50 p-2.5 text-emerald-800 border border-emerald-200 flex flex-col gap-2">
                             <p className="font-semibold">
                               💡 Copy is available now! We recommend issuing directly instead of adding to the waiting queue.
@@ -977,6 +931,8 @@ export function LibraryWorkspace({
                               type="button"
                               variant="secondary"
                               onClick={() => {
+                                setSelectedReservationId(null);
+                                setCustomDueDate("");
                                 const availCopy = bookCopies.find(c => c.status === "available");
                                 if (availCopy && targetBook) {
                                   setSelectedCopy({
@@ -992,8 +948,9 @@ export function LibraryWorkspace({
                                     ineligibility_reason: null
                                   });
                                 }
-                                if (reserveBorrower) setSelectedBorrower(reserveBorrower);
+                                setSelectedBorrower(reserveBorrower);
                                 setTab("Issue & return");
+                                document.getElementById("library-issue-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
                               }}
                               className="self-start text-xs font-bold"
                             >
@@ -1028,10 +985,10 @@ export function LibraryWorkspace({
               {!waitingReservations.length && <p className="text-xs text-muted">No waiting reservations currently queued.</p>}
 
               <div className="space-y-3">
-                {waitingReservations.map((item, index) => {
+                {waitingReservations.map((item) => {
                   const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
                   const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
-                  const queuePos = item.queue_position ?? (index + 1);
+                  const queuePos = item.queue_position ?? (waitingReservations.filter(r => r.book_id === item.book_id).findIndex(r => r.id === item.id) + 1);
                   const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
 
                   return (
@@ -1075,7 +1032,7 @@ export function LibraryWorkspace({
                               onClick={() => handleOneClickFulfill(item)}
                               className="text-xs font-bold py-1.5 bg-emerald-600 hover:bg-emerald-700"
                             >
-                              Issue to borrower
+                              Select for issue
                             </Button>
                           )}
 
@@ -1100,7 +1057,7 @@ export function LibraryWorkspace({
           canManage={canManage}
           canAdmin={canAdmin}
           onNavigateTab={(targetTab, targetId) => {
-            setTab(targetTab);
+            setTab(targetTab === "Reservations" ? "Issue & return" : targetTab);
             if (targetId) {
               const bookTitle = books.get(targetId)?.title;
               if (bookTitle) setQuery(bookTitle);
@@ -1122,8 +1079,14 @@ export function LibraryWorkspace({
             <p className="mb-4 text-sm text-muted">
               Configure separate loan policies for students and staff. Changes apply to new issues and future renewals.
             </p>
+            <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900" aria-label="Saved borrowing rules">
+              <p className="font-bold">Currently saved rules</p>
+              <p>Students: {data.settings.student_max_loans} books · {data.settings.student_loan_days} days · {data.settings.student_max_renewals} renewals of {data.settings.student_renewal_days} days</p>
+              <p>Staff: {data.settings.staff_max_loans} books · {data.settings.staff_loan_days} days · {data.settings.staff_max_renewals} renewals of {data.settings.staff_renewal_days} days</p>
+              <p>Overdue fine: {formatMoney(data.settings.fine_per_day)} per day</p>
+            </div>
             {canAdmin && canManage ? (
-              <Form action="settings" label="Save borrowing rules">
+              <Form key={JSON.stringify(data.settings)} action="settings" label="Save borrowing rules">
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Student Policy</h3>
                   <div className="grid gap-3 sm:grid-cols-2">

@@ -6,7 +6,7 @@ import { X, BookCheck, AlertCircle } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Select, Input } from "@/components/ui/form-field";
-import type { LibraryLoan, LibraryCopy, LibraryBook } from "@/lib/services/library";
+import type { LibraryLoan, LibraryCopy } from "@/lib/services/library";
 
 interface ReturnBookDialogProps {
   loan: LibraryLoan;
@@ -46,7 +46,7 @@ export function ReturnBookDialog({
         }
         onClose();
         router.refresh();
-      } catch (err) {
+      } catch {
         setError("Connection error. Please try again.");
       }
     });
@@ -111,7 +111,9 @@ export function ReturnBookDialog({
 
           {outcome === "lost" && (
             <p className="text-xs text-red-700 font-medium bg-red-50 p-2.5 rounded-xl border border-red-200">
-              ⚠️ Missing or lost copies will be marked as lost. Replacement cost of {copy?.replacement_cost != null ? `Rs ${copy.replacement_cost}` : "configured cost"} will apply.
+              {copy?.replacement_cost != null
+                ? `This copy will be marked lost. Rs ${copy.replacement_cost} replacement cost will be added to the library balance, plus any overdue fine.`
+                : "This copy will be marked lost. No replacement cost is recorded, so only any overdue fine will apply."}
             </p>
           )}
 

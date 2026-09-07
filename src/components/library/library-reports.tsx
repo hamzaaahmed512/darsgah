@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
+import { libraryToday } from "@/lib/validation/library";
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -41,13 +42,12 @@ type LibraryReportsProps = {
 
 export function LibraryReports({
   data,
-  canManage,
-  canAdmin,
   onNavigateTab,
   formatMoney,
   formatDate,
   overdueDays
 }: LibraryReportsProps) {
+  const [report, setReport] = useState("Overview");
   // Filter States
   const [dateRangePreset, setDateRangePreset] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
@@ -65,7 +65,7 @@ export function LibraryReports({
   const ACTIVITY_PER_PAGE = 10;
 
   // Derive today string in local PK time
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayStr = libraryToday();
 
   // Compute unique categories from books
   const categories = useMemo(() => {
@@ -129,9 +129,8 @@ export function LibraryReports({
       if (dateStart || dateEnd) {
         const issuedTime = new Date(loan.issued_at).getTime();
         const returnedTime = loan.returned_at ? new Date(loan.returned_at).getTime() : null;
-        const matchesDate =
-          (dateStart ? (issuedTime >= dateStart.getTime() || (returnedTime && returnedTime >= dateStart.getTime())) : true) &&
-          (dateEnd ? (issuedTime <= dateEnd.getTime() || (returnedTime && returnedTime <= dateEnd.getTime())) : true);
+        const inRange = (time: number) => (!dateStart || time >= dateStart.getTime()) && (!dateEnd || time <= dateEnd.getTime());
+        const matchesDate = inRange(issuedTime) || (returnedTime !== null && inRange(returnedTime));
         if (!matchesDate) return false;
       }
 
@@ -581,10 +580,10 @@ export function LibraryReports({
           <div>
             <h2 className="font-display text-xl font-bold text-ink flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5 text-primary" />
-              Library Decision & Operational Reports
+              Library reports
             </h2>
             <p className="text-xs text-muted">
-              Real-time circulation metrics, inventory health, overdue monitoring, and financial compliance summary.
+              Choose a report to view or download. Inventory totals show the current position; date filters apply to activity.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -595,6 +594,13 @@ export function LibraryReports({
           </div>
         </div>
 
+        <div role="group" aria-label="Report type" className="flex flex-wrap gap-2">
+          {["Overview", "Inventory", "Loans & waiting list", "Fines", "Activity"].map(item => (
+            <Button key={item} type="button" variant={report === item ? "primary" : "secondary"} aria-pressed={report === item} onClick={() => setReport(item)}>{item}</Button>
+          ))}
+        </div>
+        <details><summary className="cursor-pointer text-sm font-semibold text-primary">Filter reports</summary>
+        <p className="my-2 text-xs text-muted">Date and borrower filters apply to loans; inventory uses the category filter. Activity uses its own action and date filters.</p>
         {/* Filter Toolbar Controls */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           {/* Date Range Preset */}
@@ -720,13 +726,15 @@ export function LibraryReports({
             </div>
           </div>
         )}
+        </details>
       </div>
 
+      {report === "Overview" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           2. KPI OVERVIEW (8 CARDS)
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="space-y-3">
-        <h3 className="font-display text-base font-bold text-ink">System Overview KPIs</h3>
+        <h3 className="font-display text-base font-bold text-ink">Current library totals</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Card 1: Total Titles */}
           <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
@@ -881,7 +889,9 @@ export function LibraryReports({
           </div>
         </div>
       </div>
+      </>}
 
+      {report === "Inventory" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           3. INVENTORY HEALTH
       ══════════════════════════════════════════════════════════════════════ */}
@@ -979,7 +989,9 @@ export function LibraryReports({
           </div>
         </Panel>
       </div>
+      </>}
 
+      {report === "Overview" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           4. CIRCULATION INSIGHTS
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1065,7 +1077,9 @@ export function LibraryReports({
           </div>
         </div>
       </Panel>
+      </>}
 
+      {report === "Loans & waiting list" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           5. OVERDUE & RESERVATIONS FOCUSED LISTS
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1149,11 +1163,13 @@ export function LibraryReports({
           </div>
         </Panel>
       </div>
+      </>}
 
+      {report === "Fines" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           6. FINES SUMMARY
       ══════════════════════════════════════════════════════════════════════ */}
-      <Panel title="Fines & Financial Compliance Summary">
+      <Panel title="Fines summary">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-4">
           <div className="rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-semibold text-muted">Est. Overdue Fines</p>
@@ -1180,11 +1196,13 @@ export function LibraryReports({
           Note: Fine payments and waivers are library internal records. They are managed independently and are not automatically posted to the general school finance ledger.
         </p>
       </Panel>
+      </>}
 
+      {report === "Activity" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           7. RECENT ACTIVITY & AUDIT LOG
       ══════════════════════════════════════════════════════════════════════ */}
-      <Panel title={`Recent Activity Audit Log (${filteredEvents.length} records)`}>
+      <Panel title={`Recent activity (${filteredEvents.length} records)`}>
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Filter pills */}
@@ -1274,13 +1292,14 @@ export function LibraryReports({
           )}
         </div>
       </Panel>
+      </>}
 
       {/* ══════════════════════════════════════════════════════════════════════
           8. FILTERED CSV EXPORTS TOOLBAR
       ══════════════════════════════════════════════════════════════════════ */}
       <Panel title="Export Filtered CSV Reports">
         <p className="text-xs text-muted mb-4">
-          All exports below respect your currently active date range, borrower, grade, section, category, and status filters.
+          Download the report you need. Loan exports use loan filters; inventory uses category; activity uses date and action filters.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button type="button" variant="secondary" onClick={exportInventoryReport} className="text-xs">

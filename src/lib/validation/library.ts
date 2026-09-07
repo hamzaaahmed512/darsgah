@@ -70,9 +70,9 @@ export const libraryActionSchema = z.discriminatedUnion("action", [
   }),
   // ── New actions ───────────────────────────────────────────────────────────
   // Create a book title AND atomically generate N physical copies.
-  z.object({ action: z.literal("add_book_with_copies"), ...book, quantity: z.coerce.number().int().min(1).max(50), replacement_cost: makeOptionalMoney() }),
+  z.object({ action: z.literal("add_book_with_copies"), ...book, quantity: z.coerce.number().int().min(1).max(1000), replacement_cost: makeOptionalMoney() }),
   // Add more copies to an existing book without creating a duplicate title record.
-  z.object({ action: z.literal("add_copies"), book_id: id, quantity: z.coerce.number().int().min(1).max(50), replacement_cost: makeOptionalMoney() }),
+  z.object({ action: z.literal("add_copies"), book_id: id, quantity: z.coerce.number().int().min(1).max(1000), replacement_cost: makeOptionalMoney() }),
 ]);
 
 export function libraryToday(now = new Date()) {

@@ -31,9 +31,9 @@ describe("library validation and dates", () => {
   it("rejects add_book_with_copies when quantity is out of bounds", () => {
     const base = { action: "add_book_with_copies", title: "Test Book" };
     expect(libraryActionSchema.safeParse({ ...base, quantity: 0 }).success).toBe(false);
-    expect(libraryActionSchema.safeParse({ ...base, quantity: 51 }).success).toBe(false);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 1001 }).success).toBe(false);
     expect(libraryActionSchema.safeParse({ ...base, quantity: 1 }).success).toBe(true);
-    expect(libraryActionSchema.safeParse({ ...base, quantity: 50 }).success).toBe(true);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 1000 }).success).toBe(true);
   });
   it("accepts add_copies for an existing book", () => {
     expect(libraryActionSchema.safeParse({
@@ -45,7 +45,7 @@ describe("library validation and dates", () => {
   it("rejects add_copies when quantity is out of bounds", () => {
     const base = { action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111" };
     expect(libraryActionSchema.safeParse({ ...base, quantity: 0 }).success).toBe(false);
-    expect(libraryActionSchema.safeParse({ ...base, quantity: 51 }).success).toBe(false);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 1001 }).success).toBe(false);
   });
   it("treats empty replacement_cost as null (unknown), not Rs 0", () => {
     const result = libraryActionSchema.safeParse({ action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111", quantity: 1, replacement_cost: "" });

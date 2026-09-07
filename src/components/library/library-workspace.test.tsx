@@ -4,12 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { LibraryWorkspace } from "./library-workspace";
 import type { LibraryData } from "@/lib/services/library";
 
-const { save, refresh } = vi.hoisted(() => ({ save: vi.fn(), refresh: vi.fn() }));
+const { save, refresh, searchBorrowers, searchCopies } = vi.hoisted(() => ({ save: vi.fn(), refresh: vi.fn(), searchBorrowers: vi.fn().mockResolvedValue([]), searchCopies: vi.fn().mockResolvedValue([]) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/(app)/library/actions", () => ({
   libraryAction: save,
-  searchBorrowersAction: vi.fn().mockResolvedValue([]),
-  searchCopiesAction: vi.fn().mockResolvedValue([])
+  searchBorrowersAction: searchBorrowers,
+  searchCopiesAction: searchCopies
 }));
 
 vi.stubGlobal("React", React);
@@ -37,6 +37,38 @@ const data: LibraryData = {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("library workspace", () => {
+  it("issues without a reservation and clears controlled selections after success", async () => {
+    searchBorrowers.mockResolvedValue([{ id: "student", kind: "student", name: "Ali Test", reference: "S-001", grade_name: "7", section_name: "A", is_eligible: true, active_loans_count: 0, max_loans_allowed: 3 }]);
+    searchCopies.mockResolvedValue([{ id: "copy", book_id: "book", book_title: "School Science", accession: "LIB-001", shelf: "A1", status: "available", is_eligible: true }]);
+    save.mockResolvedValue({ ok: true });
+    render(<LibraryWorkspace data={data} canManage canAdmin />);
+    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    const borrowerSearch = screen.getAllByPlaceholderText(/Search by student name/)[0];
+    expect((borrowerSearch.closest("fieldset") as HTMLFieldSetElement).disabled).toBe(false);
+    fireEvent.focus(borrowerSearch);
+    fireEvent.click(await screen.findByRole("button", { name: /Ali Test.*Eligible/ }));
+    fireEvent.focus(screen.getByPlaceholderText(/Search by book title/));
+    fireEvent.click(await screen.findByRole("button", { name: /School Science.*Available/ }));
+    const submit = screen.getByRole("button", { name: "Issue book" }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(false);
+    fireEvent.submit(submit.closest("form")!);
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    const payload = save.mock.calls[0][0] as FormData;
+    expect(payload.get("borrower_id")).toBe("student");
+    expect(payload.get("copy_id")).toBe("copy");
+    expect(payload.get("reservation_id")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Change borrower" })).toBeNull());
+    expect(screen.queryByRole("button", { name: "Change copy" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Issue book" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("opens the library roster from the single Manage team entry", () => {
+    render(<LibraryWorkspace data={data} canManage canAdmin />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage team" }));
+    expect(screen.getByText("Assigned Librarians")).toBeTruthy();
+    expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Assign librarian" }).getAttribute("href")).toBe("/admin");
+  });
   it("shows catalogue search and hides writes for a viewer", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
     expect(screen.getByText("School Science")).toBeTruthy();
@@ -77,8 +109,9 @@ describe("library workspace", () => {
     expect(issueForm).toBeTruthy();
 
     if (issueForm) {
+      expect((issueForm.querySelector("fieldset") as HTMLFieldSetElement).disabled).toBe(false);
       fireEvent.submit(issueForm);
-      await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("This copy is no longer available"));
+      expect(save).not.toHaveBeenCalled();
     }
   });
 
@@ -101,11 +134,13 @@ describe("library workspace", () => {
 
   it("shows reservation waiting-request policy note", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Reservations" }));
+    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
     expect(screen.getByText(/waiting-list requests/)).toBeTruthy();
   });
 
-  it("renders ready to fulfil panel on issue & return tab when active ready reservations exist", () => {
+  it("fulfils a reservation in the same circulation tab with one issue submit button", async () => {
+    save.mockResolvedValue({ ok: true });
+    Element.prototype.scrollIntoView = vi.fn();
     const dataWithReservations: LibraryData = {
       ...data,
       reservations: [
@@ -130,8 +165,18 @@ describe("library workspace", () => {
 
     render(<LibraryWorkspace data={dataWithReservations} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
-    expect(screen.getByText("Reservations ready to fulfil")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Issue to Ali/ })).toBeTruthy();
+    expect(screen.getByText("Waiting queue management")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Select for issue/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Select for issue/ }));
+    expect(screen.getAllByRole("button", { name: "Issue book" })).toHaveLength(1);
+    expect(screen.getByText("Fulfilling Waiting Reservation")).toBeTruthy();
+    fireEvent.submit(screen.getByRole("button", { name: "Issue book" }).closest("form")!);
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    const payload = save.mock.calls[0][0] as FormData;
+    expect(payload.get("reservation_id")).toBe("res1");
+    expect(payload.get("borrower_id")).toBe("student");
+    expect(payload.get("copy_id")).toBe("copy");
+    await waitFor(() => expect(screen.queryByText("Fulfilling Waiting Reservation")).toBeNull());
   });
 
   it("shows ready to issue badge and cancel option in reservations tab", () => {
@@ -154,7 +199,7 @@ describe("library workspace", () => {
     };
 
     render(<LibraryWorkspace data={dataWithReservations} canManage canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Reservations" }));
+    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
     expect(screen.getByText("Ready to issue")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel reservation" })).toBeTruthy();
   });
@@ -163,11 +208,12 @@ describe("library workspace", () => {
     render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Reports" }));
 
-    expect(screen.getByText("Library Decision & Operational Reports")).toBeTruthy();
-    expect(screen.getByText("System Overview KPIs")).toBeTruthy();
-    expect(screen.getByText("Inventory copy status breakdown")).toBeTruthy();
+    expect(screen.getByText("Library reports")).toBeTruthy();
+    expect(screen.getByText("Current library totals")).toBeTruthy();
+    expect(screen.queryByText("Inventory copy status breakdown")).toBeNull();
     expect(screen.getByText("Circulation Insights")).toBeTruthy();
-    expect(screen.getByText("Fines & Financial Compliance Summary")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Fines" }));
+    expect(screen.getByText("Fines summary")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Inventory CSV" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Loan History CSV" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Overdue Loans CSV" })).toBeTruthy();
