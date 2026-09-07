@@ -11,13 +11,15 @@ interface BorrowerSelectorProps {
   sections?: LibrarySection[];
   onSelect: (borrower: SearchResultBorrower | null) => void;
   selectedBorrower: SearchResultBorrower | null;
+  keepSearchVisible?: boolean;
 }
 
 export function BorrowerSelector({
   grades = [],
   sections = [],
   onSelect,
-  selectedBorrower
+  selectedBorrower,
+  keepSearchVisible = true
 }: BorrowerSelectorProps) {
   const [kind, setKind] = useState<"student" | "staff">("student");
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
@@ -119,6 +121,7 @@ export function BorrowerSelector({
       e.preventDefault();
       if (focusedIndex >= 0 && focusedIndex < results.length) {
         onSelect(results[focusedIndex]);
+        setQuery(results[focusedIndex].name);
         setIsOpen(false);
       }
     } else if (e.key === "Escape") {
@@ -136,7 +139,7 @@ export function BorrowerSelector({
         Borrower <span className="text-red-500">*</span>
       </label>
 
-      {selectedBorrower ? (
+      {selectedBorrower && !keepSearchVisible ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-primary/30 bg-primary-soft/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl bg-primary/10 p-2.5 text-primary">
@@ -285,6 +288,7 @@ export function BorrowerSelector({
                     type="button"
                     onClick={() => {
                       onSelect(b);
+                      setQuery(b.name);
                       setIsOpen(false);
                     }}
                     onMouseEnter={() => setFocusedIndex(index)}

@@ -42,8 +42,8 @@ export function ReturnApprovedResult({ examId, compact = false }: { examId: stri
 
   return (
     <>
-      <Button type="button" variant="secondary" size={compact ? "sm" : "md"} className="text-warning hover:bg-warning-soft" onClick={() => setOpen(true)}>
-        <Undo2 className="h-4 w-4" /> Return for Revision
+      <Button type="button" variant="secondary" size={compact ? "sm" : "md"} className="text-warning hover:bg-warning-soft" onClick={() => setOpen(true)} aria-label="Return for revision" title="Return for revision">
+        <Undo2 className="h-4 w-4" /> Return
       </Button>
 
       {open ? (

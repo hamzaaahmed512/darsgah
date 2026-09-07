@@ -1,18 +1,16 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { LeaveApplicationDialog } from "@/components/leave/leave-application-dialog";
 import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
 import { LeaveReviewActions } from "@/components/leave/leave-review-actions";
+import { LeavePolicyModal } from "@/components/leave/leave-policy-modal";
 import { CsvExport } from "@/components/reports/csv-export";
 import { requireUser } from "@/lib/auth/session";
 import { getLeavePolicy, getLeaveRequestsForReview, getMyLeaveCenter, getTeacherLeaveStats, getAllTeachersLeaveSummary } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
-import { submitLeaveAction, updateLeavePolicyAction } from "@/app/(app)/leave/actions";
-import { CalendarRange, FileText, Settings2, Users } from "lucide-react";
+import { CalendarRange, FileText, Users } from "lucide-react";
 
 const statusTone = {
   pending: "yellow",
@@ -83,71 +81,15 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         title="Leave Center"
         description={canReviewLeaves ? "Review staff leave requests and make approval decisions." : "Submit leave requests and track Principal review status."}
         actions={
-          !canReviewLeaves ? (
-            <LeaveApplicationDialog migrationRequired={migrationRequired} />
-          ) : null
+          !canReviewLeaves ? <LeaveApplicationDialog migrationRequired={migrationRequired} /> : <LeavePolicyModal annualLimit={leavePolicy.annualLimit} monthlyLimit={leavePolicy.monthlyLimit} weeklyLimit={leavePolicy.weeklyLimit} />
         }
       />
 
       {canReviewLeaves ? (
-        <>
-          {/* Leave Policy Card */}
-          <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
-              <CardHeader className="gap-4 border-b border-outline/50 pb-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
-                    <Settings2 className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-[1.8rem]">Leave Policy</CardTitle>
-                    <p className="mt-1 text-base text-muted">Set the annual, monthly, and optional weekly leave limits applied to all staff.</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <form action={updateLeavePolicyAction} className="flex flex-wrap items-end gap-4">
-                  <Field label="Annual leave limit (days)">
-                    <Input
-                      name="annual_limit"
-                      type="number"
-                      min="0"
-                      defaultValue={leavePolicy.annualLimit}
-                      className="w-32"
-                      required
-                    />
-                  </Field>
-                  <Field label="Monthly leave limit (days)">
-                    <Input
-                      name="monthly_limit"
-                      type="number"
-                      min="0"
-                      defaultValue={leavePolicy.monthlyLimit}
-                      className="w-32"
-                      required
-                    />
-                  </Field>
-                  <Field label="Weekly leave limit (days) [Optional]">
-                    <Input
-                      name="weekly_limit"
-                      type="number"
-                      min="0"
-                      defaultValue={leavePolicy.weeklyLimit ?? ""}
-                      placeholder="e.g. 1 (Leave blank for no limit)"
-                      className="w-[260px]"
-                    />
-                  </Field>
-                  <div className="pb-[2px]">
-                    <Button type="submit">Save limits</Button>
-                  </div>
-                </form>
-                <p className="mt-3 text-xs text-muted">
-                  Current limits: <strong>{leavePolicy.annualLimit}</strong> days/year &middot; <strong>{leavePolicy.monthlyLimit}</strong> days/month &middot; <strong>{leavePolicy.weeklyLimit ?? "N/A"}</strong> days/week.
-                </p>
-              </CardContent>
-            </Card>
+        <div className="flex flex-col gap-6">
 
           {/* Teacher Leave Usage Table (Principal/Admin) */}
-          <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <Card className="order-3 rounded-[30px] border border-outline/70 bg-white shadow-card">
             <CardHeader className="gap-4 border-b border-outline/50 pb-5">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
@@ -174,8 +116,6 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                           <th className="px-5 py-4">Annual (Used/Limit)</th>
                           <th className="px-5 py-4">Monthly (Used/Limit)</th>
                           <th className="px-5 py-4">Weekly Limit</th>
-                          <th className="px-5 py-4">Weekly Used</th>
-                          <th className="px-5 py-4">Weekly Remaining</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -186,13 +126,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                               <span className={s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit}
                             </td>
                             <td className="px-5 py-4">
-                              <span className={s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit}
+                              <span className={s.monthlyLimit !== null && s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit ?? <span className="text-muted">No limit</span>}
                             </td>
                             <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">N/A</span>}</td>
-                            <td className="px-5 py-4">{s.weeklyUsed}</td>
-                            <td className="px-5 py-4">
-                              {s.weeklyRemaining ?? <span className="text-muted">N/A</span>}
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -204,7 +140,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Card>
 
           {/* Staff Leave Requests Card */}
-          <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <Card className="order-2 rounded-[30px] border border-outline/70 bg-white shadow-card">
             <CardHeader className="gap-4 border-b border-outline/50 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
@@ -287,7 +223,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             )}
           </CardContent>
         </Card>
-        </>
+        </div>
       ) : (
         <>
           {/* Leave Balance Card for employees */}

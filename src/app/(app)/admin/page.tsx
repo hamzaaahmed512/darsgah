@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
 import { getStaff } from "@/lib/services/staff";
 import { StaffFormModal } from "@/components/teachers/staff-form";
@@ -36,6 +37,7 @@ export default async function AdminPage() {
         actions={
           <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" />
+            {user.role === "principal" ? <ButtonLink href="/admin/roles" variant="secondary">View Roles</ButtonLink> : null}
             <CreateRoleModal currentUserRole={user.role} />
           </div>
         }

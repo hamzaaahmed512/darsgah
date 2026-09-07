@@ -4,8 +4,10 @@ import { Archive, X, AlertTriangle } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { checkSubjectDeletionAction, deleteSubjectAction } from "@/app/(app)/subjects/actions";
+import { useToast } from "@/components/ui/toast";
 
 export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: string; subjectName: string }) {
+  const { pushToast } = useToast();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
           setError(result.error);
           return;
         }
-        alert(result.archived ? "Subject archived. Historical assessments and results were preserved." : "Subject archived successfully.");
+        pushToast(result.archived ? "Subject archived. Historical assessments and results were preserved." : "Subject archived successfully.", "success");
         close();
       } catch (err: any) {
         setError(err?.message ?? "Failed to delete subject.");

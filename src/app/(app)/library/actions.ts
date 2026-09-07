@@ -21,6 +21,17 @@ export async function libraryAction(form: FormData): Promise<{ ok?: boolean; err
   }
 }
 
+export async function updateCopyStatusAction(form: FormData) {
+  const user = await requireUser("library:manage");
+  const copyId = form.get("id")?.toString();
+  const status = form.get("status")?.toString();
+  const bookId = form.get("book_id")?.toString();
+  if (!copyId || !status || !bookId) return;
+  await mutateLibrary(user, { action: "copy_status", id: copyId, status });
+  revalidatePath("/library");
+  revalidatePath(`/library/${bookId}`);
+}
+
 export async function searchBorrowersAction(
   kind: "student" | "staff",
   query: string,
