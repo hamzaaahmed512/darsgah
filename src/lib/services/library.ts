@@ -3,8 +3,28 @@ import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
 import { libraryActionSchema } from "@/lib/validation/library";
 
-export type LibraryBook = { id: string; title: string; author: string; isbn: string; category: string; publisher: string; shelf: string; archived: boolean };
-export type LibraryCopy = { id: string; book_id: string; accession: string; status: string; replacement_cost: number };
+export type LibraryBook = {
+  id: string;
+  title: string;
+  /** Empty string when not provided. */
+  author: string;
+  isbn: string;
+  category: string;
+  publisher: string;
+  shelf: string;
+  archived: boolean;
+  /** Default replacement cost for new copies. NULL = not specified. */
+  default_replacement_cost: number | null;
+};
+export type LibraryCopy = {
+  id: string;
+  book_id: string;
+  /** Stored identifier; labelled "Copy ID" in the UI. */
+  accession: string;
+  status: string;
+  /** NULL means the replacement cost has not been specified for this copy. */
+  replacement_cost: number | null;
+};
 export type LibraryLoan = { id: string; copy_id: string; borrower_name: string; borrower_kind: string; borrower_id: string; issued_at: string; due_date: string; returned_at: string | null; outcome: string | null; renewals: number; fine_per_day: number; fine_amount: number; paid_amount: number; waived_amount: number };
 export type LibraryBorrower = { id: string; kind: string; name: string; reference: string };
 export type LibraryReservation = { id: string; book_id: string; borrower_name: string; status: string; created_at: string };

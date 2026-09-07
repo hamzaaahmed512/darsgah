@@ -22,7 +22,49 @@ describe("library validation and dates", () => {
     expect(libraryActionSchema.safeParse({ action: "settings", loan_days: 0, max_loans: 3, max_renewals: 2, fine_per_day: 0 }).success).toBe(false);
     expect(libraryActionSchema.safeParse({ action: "settings", loan_days: 14, max_loans: 3, max_renewals: 0, fine_per_day: 0 }).success).toBe(true);
   });
+
+  // ── New schema additions ──────────────────────────────────────────────────
+  it("accepts add_book_with_copies with a valid quantity", () => {
+    const base = { action: "add_book_with_copies", title: "Test Book", quantity: 3 };
+    expect(libraryActionSchema.safeParse(base).success).toBe(true);
+  });
+  it("rejects add_book_with_copies when quantity is out of bounds", () => {
+    const base = { action: "add_book_with_copies", title: "Test Book" };
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 0 }).success).toBe(false);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 51 }).success).toBe(false);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 1 }).success).toBe(true);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 50 }).success).toBe(true);
+  });
+  it("accepts add_copies for an existing book", () => {
+    expect(libraryActionSchema.safeParse({
+      action: "add_copies",
+      book_id: "11111111-1111-4111-8111-111111111111",
+      quantity: 5,
+    }).success).toBe(true);
+  });
+  it("rejects add_copies when quantity is out of bounds", () => {
+    const base = { action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111" };
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 0 }).success).toBe(false);
+    expect(libraryActionSchema.safeParse({ ...base, quantity: 51 }).success).toBe(false);
+  });
+  it("treats empty replacement_cost as null (unknown), not Rs 0", () => {
+    const result = libraryActionSchema.safeParse({ action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111", quantity: 1, replacement_cost: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.replacement_cost).toBeNull();
+  });
+  it("accepts a numeric replacement_cost on add_copies", () => {
+    const result = libraryActionSchema.safeParse({ action: "add_copies", book_id: "11111111-1111-4111-8111-111111111111", quantity: 2, replacement_cost: "850.00" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.replacement_cost).toBe(850);
+  });
+  it("accepts add_book_with_copies with optional author (empty is valid)", () => {
+    expect(libraryActionSchema.safeParse({ action: "add_book_with_copies", title: "No Author Book", author: "", quantity: 1 }).success).toBe(true);
+  });
+  it("rejects add_book_with_copies when title is missing", () => {
+    expect(libraryActionSchema.safeParse({ action: "add_book_with_copies", title: "", quantity: 1 }).success).toBe(false);
+  });
 });
+
 describe("librarian access", () => {
   it("routes librarians to their workspace with limited permissions", () => {
     expect(roleHome("librarian")).toBe("/library");
