@@ -254,7 +254,7 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
   if (!canUseTeacherWorkspace) throw new Error("Only assigned teachers can manage marks.");
 
   const supabase = await createClient();
-  const [assignments, headClassSubjects] = await Promise.all([
+  const [assignments, headClassSubjects, principalClassSubjects] = await Promise.all([
     supabase
       .from("teacher_assignments")
       .select("class_id,subject_id,classes(id,name,room,grades(name),sections(name)),subjects(id,name,code)")
@@ -266,11 +266,18 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
       .from("class_subjects")
       .select("class_id,subject_id,classes!inner(id,name,room,head_teacher_id,grades(name),sections(name)),subjects(id,name,code)")
       .eq("school_id", user.schoolId)
-      .eq("classes.head_teacher_id", user.id)
+      .eq("classes.head_teacher_id", user.id),
+    user.role === "principal"
+      ? supabase
+          .from("class_subjects")
+          .select("class_id,subject_id,classes!inner(id,name,room,head_teacher_id,grades(name),sections(name)),subjects(id,name,code)")
+          .eq("school_id", user.schoolId)
+      : Promise.resolve({ data: [], error: null })
   ]);
 
   if (assignments.error) throw new Error(assignments.error.message);
   if (headClassSubjects.error) throw new Error(headClassSubjects.error.message);
+  if (principalClassSubjects.error) throw new Error(principalClassSubjects.error.message);
 
   const optionMap = new Map<string, any>();
   for (const row of assignments.data ?? []) {
@@ -298,6 +305,20 @@ export async function getTeacherMarksWorkspace(user: AppUser, filters: { classId
       subject_id: item.subjects.id,
       subject_name: item.subjects.name,
       is_head_teacher: true
+    });
+  }
+  for (const row of principalClassSubjects.data ?? []) {
+    const item: any = row;
+    if (!item.classes?.id || !item.subjects?.id) continue;
+    optionMap.set(`${item.classes.id}:${item.subjects.id}`, {
+      ...(optionMap.get(`${item.classes.id}:${item.subjects.id}`) ?? {}),
+      class_id: item.classes.id,
+      class_name: formatClassDisplayName(item.classes.grades?.name, item.classes.name, item.classes.sections?.name),
+      grade_name: item.classes.grades?.name,
+      section_name: item.classes.sections?.name,
+      subject_id: item.subjects.id,
+      subject_name: item.subjects.name,
+      is_head_teacher: false
     });
   }
 
