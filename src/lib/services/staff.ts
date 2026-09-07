@@ -71,21 +71,103 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
 
 export async function getStaffProfile(user: AppUser, staffId: string) {
   const supabase = await createClient();
-  const [{ data: member, error: memberError }, assignments, headClasses, employment] = await Promise.all([
+  const now = new Date();
+  const yearStart = `${now.getFullYear()}-01-01`;
+  const yearEnd = `${now.getFullYear()}-12-31`;
+
+  const [{ data: member, error: memberError }, assignments, headClasses, employment, attendanceResult, leavesResult] = await Promise.all([
     supabase.from("staff_directory").select("*").eq("school_id", user.schoolId).eq("user_id", staffId).maybeSingle(),
     supabase.from("teacher_assignments").select("id,classes(id,name,room,grades(name),sections(name)),subjects(name)").eq("school_id", user.schoolId).eq("teacher_id", staffId),
     supabase.from("classes").select("id,name,room,grades(name),sections(name)").eq("school_id", user.schoolId).eq("head_teacher_id", staffId),
-    supabase.from("teacher_employment_details").select("*").eq("school_id", user.schoolId).eq("teacher_id", staffId).maybeSingle()
+    supabase.from("teacher_employment_details").select("*").eq("school_id", user.schoolId).eq("teacher_id", staffId).maybeSingle(),
+    supabase
+      .from("teacher_attendance_records")
+      .select("attendance_date,status")
+      .eq("school_id", user.schoolId)
+      .eq("teacher_id", staffId)
+      .gte("attendance_date", yearStart)
+      .lte("attendance_date", yearEnd)
+      .order("attendance_date", { ascending: false }),
+    supabase
+      .from("staff_leaves")
+      .select("start_date,end_date,status,leave_type")
+      .eq("school_id", user.schoolId)
+      .eq("user_id", staffId)
+      .gte("start_date", yearStart)
+      .lte("start_date", yearEnd)
+      .order("start_date", { ascending: false })
   ]);
+
   if (memberError) throw new Error(memberError.message);
   if (assignments.error) throw new Error(assignments.error.message);
   if (headClasses.error) throw new Error(headClasses.error.message);
   if (employment.error && employment.error.code !== "PGRST116") throw new Error(employment.error.message);
+
+  // Compute teacher attendance stats (ignore migration errors)
+  const isMissingAttendanceTable = (e: any) => e?.code === "PGRST205" || e?.code === "42P01" || Boolean(e?.message?.includes("teacher_attendance_records"));
+  const isMissingLeavesTable = (e: any) => e?.code === "PGRST205" || Boolean(e?.message?.includes("public.staff_leaves"));
+
+  const attendanceRows = isMissingAttendanceTable(attendanceResult.error) ? null : (attendanceResult.data ?? []);
+  const leaveRows = isMissingLeavesTable(leavesResult.error) ? null : (leavesResult.data ?? []);
+
+  let attendanceStats: { present: number; absent: number; late: number; total: number; recentRecords: Array<{ date: string; status: string }> } | null = null;
+  if (attendanceRows !== null) {
+    const counts = { present: 0, absent: 0, late: 0 };
+    for (const row of attendanceRows) {
+      if (row.status === "present") counts.present++;
+      else if (row.status === "absent") counts.absent++;
+      else if (row.status === "late") counts.late++;
+    }
+    attendanceStats = {
+      ...counts,
+      total: attendanceRows.length,
+      recentRecords: attendanceRows.slice(0, 10).map((r: any) => ({ date: r.attendance_date, status: r.status }))
+    };
+  }
+
+  let leaveStats: { annualUsed: number; monthlyUsed: number; weeklyUsed: number; recentLeaves: Array<{ start: string; end: string; type: string; status: string }> } | null = null;
+  if (leaveRows !== null) {
+    const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const monthStart = `${monthStr}-01`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthEnd = `${monthStr}-${String(lastDay).padStart(2, "0")}`;
+
+    const currentDay = now.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const weekStartObj = new Date(now);
+    weekStartObj.setDate(now.getDate() + distanceToMonday);
+    const weekStart = weekStartObj.toISOString().slice(0, 10);
+    const weekEndObj = new Date(weekStartObj);
+    weekEndObj.setDate(weekStartObj.getDate() + 6);
+    const weekEnd = weekEndObj.toISOString().slice(0, 10);
+
+    let annualUsed = 0;
+    let monthlyUsed = 0;
+    let weeklyUsed = 0;
+    const approvedLeaves = leaveRows.filter((r: any) => r.status === "approved");
+    for (const row of approvedLeaves) {
+      const start = new Date(row.start_date);
+      const end = new Date(row.end_date);
+      const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+      annualUsed += days;
+      if (row.start_date >= monthStart && row.start_date <= monthEnd) monthlyUsed += days;
+      if (row.start_date >= weekStart && row.start_date <= weekEnd) weeklyUsed += days;
+    }
+    leaveStats = {
+      annualUsed,
+      monthlyUsed,
+      weeklyUsed,
+      recentLeaves: leaveRows.slice(0, 5).map((r: any) => ({ start: r.start_date, end: r.end_date, type: r.leave_type, status: r.status }))
+    };
+  }
+
   return {
     member: member ? { ...member, full_name: formatDisplayName(member.full_name) } : member,
     assignments: assignments.data ?? [],
     headClasses: headClasses.data ?? [],
-    employment: employment.data ?? null
+    employment: employment.data ?? null,
+    attendanceStats,
+    leaveStats
   };
 }
 
@@ -130,6 +212,7 @@ export async function createOtherStaffRecord(user: AppUser, values: {
   jobTitle?: string;
   phone?: string;
   monthlySalary?: number | null;
+  joiningDate?: string | null;
 }) {
   if (!canManageOtherStaff(user)) throw new Error("Only administrators and principals can add other staff records.");
   const fullName = values.fullName.trim();
@@ -147,7 +230,8 @@ export async function createOtherStaffRecord(user: AppUser, values: {
       job_title: values.jobTitle?.trim() || OTHER_STAFF_CATEGORY_LABELS[category],
       phone,
       monthly_salary: values.monthlySalary ?? null,
-      status: "active"
+      status: "active",
+      ...(values.joiningDate ? { joining_date: values.joiningDate } : {})
     })
     .select("id")
     .single();

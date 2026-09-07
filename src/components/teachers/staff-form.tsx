@@ -39,6 +39,7 @@ export function StaffFormModal({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [useToday, setUseToday] = useState(false);
   const standardRoleOptions = allowedRoles.map((role) => ({ value: `base:${role}`, label: roleLabels[role], role, customRoleId: "" }));
   const customRoleOptions = customRoles
     .filter((role) => allowedRoles.includes(role.base_role) && role.base_role !== "principal")
@@ -182,6 +183,41 @@ export function StaffFormModal({
                   <Input {...register("salary")} type="number" min="0" step="0.01" placeholder="Optional" />
                   {errors.salary?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.salary.message}</p> : null}
                 </div>
+
+                <div className="sm:col-span-2">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label htmlFor="user-account-joining-date" className="block text-sm font-semibold text-ink">Joining Date</label>
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted hover:text-ink select-none">
+                      <input
+                        type="checkbox"
+                        checked={useToday}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setUseToday(checked);
+                          if (checked) {
+                            const today = getTodayDateString();
+                            setValue("joining_date", today, { shouldDirty: true, shouldValidate: true });
+                          } else {
+                            setValue("joining_date", "", { shouldDirty: true, shouldValidate: true });
+                          }
+                        }}
+                        className="h-3.5 w-3.5 rounded border-outline/70 text-primary focus:ring-primary/20"
+                      />
+                      <span>Today's date</span>
+                    </label>
+                  </div>
+                  <Input
+                    id="user-account-joining-date"
+                    type="date"
+                    {...register("joining_date")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setValue("joining_date", val, { shouldDirty: true, shouldValidate: true });
+                      setUseToday(val === getTodayDateString());
+                    }}
+                  />
+                  {errors.joining_date?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.joining_date.message}</p> : null}
+                </div>
               </div>
 
               <div className="sticky bottom-0 -mx-4 mt-8 flex flex-col-reverse gap-2 border-t border-outline bg-white px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:p-0">
@@ -198,4 +234,12 @@ export function StaffFormModal({
       ) : null, document.body) : null}
     </>
   );
+}
+
+function getTodayDateString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
