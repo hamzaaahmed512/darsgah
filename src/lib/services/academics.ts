@@ -4,7 +4,7 @@ import { logActivity } from "@/lib/services/activity";
 import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 import { isSubjectExcludedForMajor } from "@/lib/student-majors";
 import { formatDisplayName, formatStudentName } from "@/lib/student-name";
-import { formatClassDisplayName, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatGradeSection, sortClasses } from "@/lib/utils";
 import { getCombinationOptionsForClass, getCustomCombinationOptionsForClass } from "@/lib/services/student-combinations";
 
 const SUBJECT_ASSIGNABLE_MEMBER_ROLES = ["teacher", "head_teacher", "principal", "administrator"] as const;
@@ -53,7 +53,7 @@ export async function getAcademicOptions(user: AppUser) {
     grades: grades.data ?? [],
     sections: sections.data ?? [],
     subjects: subjectCatalog,
-    classes: (classes.data ?? []).map((row: any) => ({
+    classes: sortClasses((classes.data ?? []).map((row: any) => ({
       id: row.id,
       name: row.name,
       room: row.room,
@@ -69,7 +69,7 @@ export async function getAcademicOptions(user: AppUser) {
       ,major_count: row.major_count ?? 0
       ,default_major: row.default_major ?? null
       ,allowed_majors: (row.class_allowed_majors ?? []).map((item: any) => item.major_key as string)
-    }))
+    }))),
   };
 }
 

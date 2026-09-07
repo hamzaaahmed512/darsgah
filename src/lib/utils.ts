@@ -122,6 +122,7 @@ export function formatDateNumericPK(value: string | Date | null | undefined): st
 const GRADE_ORDER = [
   "PG",
   "Nursery",
+  "KG",
   "Prep",
   "Grade 1",
   "Grade 2",
@@ -150,6 +151,28 @@ export function sortGrades(a: string, b: string): number {
   if (indexA === -1) return 1;
   if (indexB === -1) return -1;
   return indexA - indexB;
+}
+
+/**
+ * Sort a list of class objects by academic progression:
+ * grade order (PG → Nursery → KG → Prep → Grade 1 … Grade 12),
+ * then section name, then class name.
+ */
+export function sortClasses<
+  T extends {
+    name?: string | null;
+    grade_name?: string | null;
+    section_name?: string | null;
+  }
+>(classes: T[]): T[] {
+  return [...classes].sort((a, b) => {
+    const gradeComparison = sortGrades(a.grade_name ?? "", b.grade_name ?? "");
+    if (gradeComparison !== 0) return gradeComparison;
+    const sectionA = a.section_name ?? "";
+    const sectionB = b.section_name ?? "";
+    if (sectionA !== sectionB) return sectionA.localeCompare(sectionB);
+    return (a.name ?? "").localeCompare(b.name ?? "");
+  });
 }
 
 function escapeRegExp(string: string) {
