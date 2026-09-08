@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, UserRound, X, Info, ShieldCheck, UserCheck, AlertTriangle, CheckCircle2
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, ShieldCheck, UserCheck, AlertTriangle, CheckCircle2
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
@@ -18,6 +18,7 @@ import { CopySelector } from "./copy-selector";
 import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
 import { LibraryReports } from "./library-reports";
+import { useToast } from "@/components/ui/toast";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ function Form({
   onSuccess?: () => void;
 }) {
   const router = useRouter();
+  const { pushToast } = useToast();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ error?: string; ok?: boolean } | null>(null);
   return (
@@ -52,7 +54,7 @@ function Form({
           try {
             const result = await libraryAction(payload);
             setMessage(result);
-            if (result.ok) { if (reset) element.reset(); onSuccess?.(); router.refresh(); }
+            if (result.ok) { if (reset) element.reset(); pushToast("Saved successfully.", "success"); onSuccess?.(); router.refresh(); }
           } catch {
             setMessage({ error: "Connection interrupted. Refresh to check whether the change saved before retrying." });
           }
@@ -91,24 +93,13 @@ const formatDate = (value: string) => {
   }
 };
 
-/** Coloured status badge for copy condition. */
-function StatusBadge({ status }: { status: string }) {
-  const label = status.replaceAll("_", " ");
-  const colour =
-    status === "available" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
-    status === "on_loan"   ? "bg-amber-50 text-amber-700 ring-amber-200" :
-    status === "damaged"   ? "bg-orange-50 text-orange-700 ring-orange-200" :
-    status === "lost"      ? "bg-red-50 text-red-700 ring-red-200" :
-                             "bg-slate-100 text-slate-600 ring-slate-200";
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${colour}`}>
-      {label}
-    </span>
-  );
-}
-
 function Tag({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{children}</span>;
+}
+
+function BookMeta({ label, value }: { label: string; value?: string | null }) {
+  const display = value?.trim() || "—";
+  return <div className="min-w-0">{label ? <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">{label}</p> : null}<p title={display} className={`${label ? "mt-1 " : ""}truncate text-sm font-semibold text-ink`}>{display}</p></div>;
 }
 
 // ─── Book fields (shared by add-book and edit-book forms) ─────────────────────
@@ -116,12 +107,24 @@ function Tag({ children }: { children: ReactNode }) {
 function BookFields({ book }: { book?: LibraryBook }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label="Title"><Input name="title" required maxLength={200} defaultValue={book?.title} /></Field>
-      <Field label="Author"><Input name="author" maxLength={200} defaultValue={book?.author} /></Field>
-      <Field label="ISBN"><Input name="isbn" maxLength={32} defaultValue={book?.isbn} /></Field>
-      <Field label="Category"><Input name="category" maxLength={80} placeholder="Science, Fiction…" defaultValue={book?.category} /></Field>
-      <Field label="Publisher"><Input name="publisher" maxLength={200} defaultValue={book?.publisher} /></Field>
-      <Field label="Shelf / location"><Input name="shelf" maxLength={80} placeholder="A-03" defaultValue={book?.shelf} /></Field>
+      <Field label="Title">
+<Input name="title" required maxLength={200} defaultValue={book?.title} />
+</Field>
+      <Field label="Author">
+<Input name="author" maxLength={200} defaultValue={book?.author} />
+</Field>
+      <Field label="ISBN">
+<Input name="isbn" maxLength={32} defaultValue={book?.isbn} />
+</Field>
+      <Field label="Category">
+<Input name="category" maxLength={80} placeholder="Science, Fiction…" defaultValue={book?.category} />
+</Field>
+      <Field label="Publisher">
+<Input name="publisher" maxLength={200} defaultValue={book?.publisher} />
+</Field>
+      <Field label="Shelf / location">
+<Input name="shelf" maxLength={80} placeholder="A-03" defaultValue={book?.shelf} />
+</Field>
       <Field label="Default replacement cost (Rs)"
         hint="Optional. Used for new copies and added to the library balance if a loan is closed as lost. Separate from late fines.">
         <Input name="default_replacement_cost" type="number" min="0" max="1000000" step="0.01"
@@ -179,16 +182,18 @@ function AddBookModal() {
 
 // ─── Add copies modal (per book) ──────────────────────────────────────────────
 
-function AddCopiesModal({ book }: { book: LibraryBook }) {
+function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-3.5 text-sm font-semibold text-ink ring-1 ring-outline hover:bg-surface-low hover:text-primary"
+        className={iconOnly ? "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-outline/70 bg-white text-primary transition hover:bg-primary-soft" : "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-3.5 text-sm font-semibold text-ink ring-1 ring-outline hover:bg-surface-low hover:text-primary"}
+        aria-label="Add copies"
+        title="Add copies"
       >
-        <Plus className="h-4 w-4" /> Add copies
+        <Plus className="h-4 w-4" />{!iconOnly ? " Add copies" : null}
       </button>
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
@@ -226,6 +231,26 @@ function AddCopiesModal({ book }: { book: LibraryBook }) {
       )}
     </>
   );
+}
+
+function EditBookModal({ book }: { book: LibraryBook }) {
+  const [open, setOpen] = useState(false);
+  return <><button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft" aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" /></button>{open ? <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]"><div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6"><div><h2 className="font-display text-2xl font-bold text-ink">Edit book</h2><p className="mt-1 text-sm text-muted">Update the details for {book.title}.</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6"><Form action="edit_book" id={book.id}><BookFields book={book} /></Form></div></div></div> : null}</>;
+}
+
+function ArchiveBookButton({ book }: { book: LibraryBook }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const archive = !book.archived;
+  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Delete" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) router.refresh(); else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition disabled:opacity-50 ${archive ? "border-red-100 bg-red-50 text-red-600 hover:bg-red-100" : "border-outline/70 bg-white text-primary hover:bg-primary-soft"}`} aria-label={archive ? `Delete ${book.title}` : `Restore ${book.title}`} title={archive ? "Delete book" : "Restore book"}><Trash2 className="h-4 w-4" /></button>;
+}
+
+function IssueBookModal({ book, availableCopies, grades, sections, onIssued, onReserved }: { book: LibraryBook; availableCopies: SearchResultCopy[]; grades: LibraryData["grades"]; sections: LibraryData["sections"]; onIssued: () => void; onReserved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [borrower, setBorrower] = useState<SearchResultBorrower | null>(null);
+  const [copyId, setCopyId] = useState(availableCopies[0]?.id ?? "");
+  const dueDate = libraryDueDate(borrower?.kind === "staff" ? 30 : 14);
+  return <><button type="button" disabled={book.archived} onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45" aria-label={`${availableCopies.length ? "Issue" : "Reserve"} ${book.title}`} title={availableCopies.length ? "Issue book" : "Reserve book"}><BookOpen className="h-4 w-4" /></button>{open && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]"><div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6"><div><h2 className="font-display text-2xl font-bold text-ink">{availableCopies.length ? "Issue book" : "Reserve book"}</h2><p className="mt-1 text-sm text-muted">{book.title}</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6">{availableCopies.length ? <Form action="issue" label="Issue book" reset disabled={!borrower || !copyId || !borrower.is_eligible} onSuccess={() => { setOpen(false); setBorrower(null); onIssued(); }}><BorrowerSelector grades={grades} sections={sections} selectedBorrower={borrower} onSelect={setBorrower} /><Field label="Available copy"><Select name="copy_id" value={copyId} onChange={(event) => setCopyId(event.target.value)}>{availableCopies.map(copy => <option key={copy.id} value={copy.id}>Copy {copy.accession}</option>)}</Select></Field><Field label="Return by due date"><Input name="due_date" type="date" min={libraryDueDate(1)} max={libraryDueDate(90)} defaultValue={dueDate} required /></Field>{borrower && !borrower.is_eligible && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{borrower.ineligibility_reason || "This borrower cannot take another book right now."}</p>}</Form> : <Form action="reserve" label="Reserve this book" reset disabled={!borrower} onSuccess={() => { setOpen(false); setBorrower(null); onReserved(); }}><input type="hidden" name="book_id" value={book.id} /><p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No copy is available right now. Select a borrower below to add them to the waiting list.</p><BorrowerSelector grades={grades} sections={sections} selectedBorrower={borrower} onSelect={setBorrower} /></Form>}</div></div></div>}</>;
 }
 
 
@@ -324,7 +349,7 @@ export function LibraryWorkspace({
         (loanFilter === "balance" && Number(loan.fine_amount) > Number(loan.paid_amount) + Number(loan.waived_amount)));
   });
 
-  const tabs = ["Catalogue", "Issue & return", "Reports", "Rules & team"];
+  const tabs = ["Catalogue", "Loans & reservations", "Reports", "Rules & team"];
   const rows = tab === "Catalogue" ? filteredBooks.length : filteredLoans.length;
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows / 20)));
 
@@ -376,7 +401,7 @@ export function LibraryWorkspace({
       setSelectedCopy(null);
     }
 
-    setTab("Issue & return");
+    setTab("Loans & reservations");
     requestAnimationFrame(() => document.getElementById("library-issue-form")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -388,6 +413,7 @@ export function LibraryWorkspace({
       icon: BookCopy,
       bg: "bg-blue-50",
       fg: "text-blue-600",
+      accent: "border-t-blue-500",
     },
     {
       label: "On loan",
@@ -395,6 +421,7 @@ export function LibraryWorkspace({
       icon: BookOpen,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
+      accent: "border-t-emerald-500",
     },
     {
       label: "Overdue loans",
@@ -402,6 +429,7 @@ export function LibraryWorkspace({
       icon: Clock3,
       bg: "bg-red-50",
       fg: "text-red-600",
+      accent: "border-t-red-500",
     },
     {
       label: "Reservations",
@@ -410,6 +438,7 @@ export function LibraryWorkspace({
       icon: Users,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
+      accent: "border-t-amber-500",
     },
   ];
 
@@ -442,9 +471,9 @@ export function LibraryWorkspace({
 
       {/* ── KPI cards ── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg }) => (
-          <div key={label} className="flex items-center gap-4 rounded-2xl border border-outline/70 bg-white p-5">
-            <span className={`rounded-xl p-3 ${bg} ${fg}`}>
+        {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg, accent }) => (
+          <div key={label} className={`flex items-center gap-4 rounded-2xl border border-outline/70 border-t-4 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md ${accent}`}>
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${bg} ${fg}`}>
               <Icon className="h-5 w-5" />
             </span>
             <div>
@@ -500,122 +529,49 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <div className="grid gap-3">
+          <div className="overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card">
+            <table className="min-w-[1050px] w-full table-fixed text-left">
+              <colgroup><col className="w-[23%]" /><col className="w-[14%]" /><col className="w-[14%]" /><col className="w-[11%]" /><col className="w-[13%]" /><col className="w-[10%]" /><col className="w-[15%]" /></colgroup>
+              <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr><th className="px-5 py-3">Book / author</th><th className="px-5 py-3">Publisher</th><th className="px-5 py-3">Category</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">ISBN</th><th className="px-5 py-3">Total copies</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+              <tbody>
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
               const stock = data.copies.filter(c => c.book_id === book.id);
-              const totalCopies  = stock.filter(c => c.status !== "lost" && c.status !== "withdrawn").length;
-              const availableNow = stock.filter(c => c.status === "available").length;
-              const onLoan       = stock.filter(c => c.status === "on_loan").length;
-              const activeWaitingCount = waitingReservations.filter(r => r.book_id === book.id).length;
+              const totalCopies = stock.length;
 
               return (
-                <section
+                <tr
                   key={book.id}
-                  className="rounded-[24px] border border-outline/65 bg-white p-4 shadow-card sm:p-5"
+                  className="border-t border-outline/50 transition hover:bg-primary-soft/20"
                 >
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-display text-xl font-bold text-ink">{book.title}</h2>
-                        {book.archived && <Tag>Archived</Tag>}
-                      </div>
-                      {book.author && <p className="mt-1 text-sm font-semibold text-primary">{book.author}</p>}
-                      <div className="mt-3 grid gap-x-6 gap-y-2 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3">
-                        <p><span className="font-semibold text-ink">Publisher:</span> {book.publisher || "—"}</p>
-                        <p><span className="font-semibold text-ink">Category:</span> {book.category || "—"}</p>
-                        <p><span className="font-semibold text-ink">ISBN:</span> {book.isbn || "—"}</p>
-                        <p><span className="font-semibold text-ink">Location:</span> {book.shelf || "—"}</p>
-                      </div>
-
-                      {/* Title Copy & Waiting Inventory Metrics */}
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        <span>
-                          <span className="font-semibold text-ink">Total copies:</span>{" "}
-                          <span className="font-bold text-ink">{totalCopies}</span>
-                        </span>
-                        <span>
-                          <span className="font-semibold text-ink">Available now:</span>{" "}
-                          <span className="font-bold text-emerald-700">{availableNow}</span>
-                        </span>
-                        <span>
-                          <span className="font-semibold text-ink">On loan:</span>{" "}
-                          <span className="font-bold text-amber-700">{onLoan}</span>
-                        </span>
-                        <span>
-                          <span className="font-semibold text-ink">Waiting:</span>{" "}
-                          <span className="font-bold text-primary">{activeWaitingCount}</span>
-                        </span>
-                      </div>
+                  <td className="min-w-0 px-5 py-4">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <h2 title={book.title} className="truncate font-display text-base font-bold text-ink">{book.title}</h2>
+                      {book.archived && <Tag>Archived</Tag>}
                     </div>
+                    <p title={book.author || ""} className="mt-1 truncate text-sm font-semibold text-primary">{book.author || "Unknown author"}</p>
+                  </td>
+                  <td className="px-5 py-4"><BookMeta label="" value={book.publisher} /></td>
+                  <td className="px-5 py-4"><BookMeta label="" value={book.category} /></td>
+                  <td className="px-5 py-4"><BookMeta label="" value={book.shelf} /></td>
+                  <td className="px-5 py-4"><BookMeta label="" value={book.isbn} /></td>
+                  <td className="px-5 py-4"><BookMeta label="" value={String(totalCopies)} /></td>
 
-                    {canManage && (
-                      <div className="flex flex-wrap gap-2 xl:w-56 xl:justify-end">
-                        <AddCopiesModal book={book} />
-                        <details>
-                          <summary className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-primary/15 bg-primary-soft/45 px-3.5 text-sm font-semibold text-primary hover:bg-primary-soft">
-                            <Pencil className="h-4 w-4" /> Edit
-                          </summary>
-                          <div className="absolute right-4 z-20 mt-2 w-[min(34rem,calc(100vw-2rem))] rounded-2xl border border-outline bg-white p-4 shadow-xl">
-                            <Form action="edit_book" id={book.id}>
-                              <BookFields book={book} />
-                            </Form>
-                          </div>
-                        </details>
-                        <Form
-                          action="archive"
-                          id={book.id}
-                          label={book.archived ? "Restore" : "Delete"}
-                          buttonVariant={book.archived ? "secondary" : "danger"}
-                        >
-                          <input type="hidden" name="archived" value={String(!book.archived)} />
-                        </Form>
-                      </div>
-                    )}
-                  </div>
-
-                  <details className="mt-4 border-t border-outline/50 pt-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-primary">
-                      View copies ({stock.length})
-                    </summary>
-                    <div className="mt-4 space-y-3">
-                      {stock.length === 0 && (
-                        <p className="text-sm text-muted">No copies registered yet.</p>
-                      )}
-                      {stock.map(copy => (
-                        <div key={copy.id} className="rounded-xl bg-slate-50 p-3">
-                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                              <span className="text-xs font-semibold uppercase tracking-wide text-muted">Copy ID</span>
-                              <strong className="ml-2 text-sm text-ink">{copy.accession}</strong>
-                            </div>
-                            <StatusBadge status={copy.status} />
-                          </div>
-                          <p className="mb-2 text-xs text-muted">
-                            Replacement cost:{" "}
-                            <span className={copy.replacement_cost == null ? "italic" : ""}>
-                              {formatMoney(copy.replacement_cost)}
-                            </span>
-                          </p>
-                          {canManage && copy.status !== "on_loan" && (
-                            <Form action="copy_status" id={copy.id} label="Update condition">
-                              <Select
-                                name="status"
-                                aria-label={`Condition for ${copy.accession}`}
-                                defaultValue={copy.status}
-                              >
-                                {["available", "damaged", "lost", "withdrawn"].map(s => (
-                                  <option key={s}>{s}</option>
-                                ))}
-                              </Select>
-                            </Form>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                </section>
+                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-2">
+                    <Link href={`/library/${book.id}`} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-outline/70 bg-white text-primary transition hover:bg-primary-soft" aria-label={`View inventory for ${book.title}`} title="View inventory">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                    {canManage && <>
+                      <IssueBookModal book={book} availableCopies={stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }))} grades={data.grades} sections={data.sections} onIssued={() => {}} onReserved={() => {}} />
+                      <AddCopiesModal book={book} iconOnly />
+                      <EditBookModal book={book} />
+                      <ArchiveBookButton book={book} />
+                    </>}
+                  </div></td>
+                </tr>
               );
             })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
@@ -623,7 +579,7 @@ export function LibraryWorkspace({
       {/* ══════════════════════════════════════════════════════════════════════
           ISSUE & RETURN TAB
       ══════════════════════════════════════════════════════════════════════ */}
-      {tab === "Issue & return" && (
+      {tab === "Loans & reservations" && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-sm">
             <p>Issue books directly, process returns, or manage the waiting list here.</p>
@@ -632,7 +588,8 @@ export function LibraryWorkspace({
           {circulationNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{circulationNotice}</p>}
 
           {canManage && (
-            <div id="library-issue-form" className="scroll-mt-24"><Panel title="Issue a book">
+            <div id="library-issue-form" className="hidden scroll-mt-24">
+<Panel title="Issue a book">
               <p className="mb-4 text-sm text-muted">
                 Search and select an active borrower and eligible book copy below. Borrowing rules are applied automatically.
               </p>
@@ -726,7 +683,8 @@ export function LibraryWorkspace({
                 )}
               </Form>
               <Button type="button" variant="secondary" onClick={clearIssue} className="mt-3">Clear selection</Button>
-            </Panel></div>
+            </Panel>
+</div>
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -751,99 +709,30 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card">
+            <table className="min-w-[900px] w-full text-left text-sm">
+              <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr><th className="px-5 py-3">Book / copy</th><th className="px-5 py-3">Borrower</th><th className="px-5 py-3">Issued</th><th className="px-5 py-3">Due date</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+              <tbody>
             {filteredLoans.slice((currentPage - 1) * 20, currentPage * 20).map(loan => {
               const copy = copies.get(loan.copy_id);
-              const remaining = Number(loan.fine_amount) - Number(loan.paid_amount) - Number(loan.waived_amount);
               const days = overdueDays(loan.due_date, today);
               const maxAllowedRenewals = loan.borrower_kind === "student"
                 ? (data.settings.student_max_renewals ?? data.settings.max_renewals ?? 2)
                 : (data.settings.staff_max_renewals ?? 3);
 
               return (
-                <Panel key={loan.id} title={books.get(copy?.book_id ?? "")?.title || "Book"}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-bold text-ink">
-                      {loan.borrower_name}{" "}
-                      <span className="text-xs font-normal text-muted capitalize">({loan.borrower_kind})</span>
-                    </p>
-                    <Tag>Copy {copy?.accession || "N/A"}</Tag>
-                  </div>
-
-                  <p className="mt-1 text-xs text-muted">
-                    Issued: <strong>{formatDate(loan.issued_at)}</strong> · Due date: <strong className={days > 0 ? "text-red-700 font-bold" : "text-ink"}>{formatDate(loan.due_date)}</strong>
-                  </p>
-
-                  <div className="my-3 flex flex-wrap gap-2">
-                    <Tag>
-                      {loan.returned_at
-                        ? `${loan.outcome} · ${formatDate(loan.returned_at)}`
-                        : days ? `${days} days overdue` : "On loan"}
-                    </Tag>
-                    <Tag>Renewals: {loan.renewals} of {maxAllowedRenewals}</Tag>
-                  </div>
-
-                  {!loan.returned_at && days > 0 && (
-                    <p className="mb-3 text-xs font-semibold text-red-700">
-                      Estimated overdue fine: {formatMoney(days * Number(loan.fine_per_day))}
-                    </p>
-                  )}
-
-                  {canManage && !loan.returned_at && (
-                    <div className="mt-4 flex flex-wrap gap-2.5">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => setActiveReturnLoan(loan)}
-                        className="flex-1 sm:flex-none text-xs"
-                      >
-                        Return book
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setActiveRenewLoan(loan)}
-                        className="flex-1 sm:flex-none text-xs"
-                      >
-                        Renew loan
-                      </Button>
-                    </div>
-                  )}
-
-                  {loan.returned_at && (
-                    <p className="mt-2 text-xs text-muted">
-                      Fine: {formatMoney(loan.fine_amount)} · Paid: {formatMoney(loan.paid_amount)} ·
-                      Waived: {formatMoney(loan.waived_amount)} · Balance: {formatMoney(remaining)}
-                    </p>
-                  )}
-
-                  {canManage && remaining > 0 && (
-                    <details className="mt-4">
-                      <summary className="cursor-pointer text-xs font-semibold text-primary">
-                        Record payment {canAdmin ? "or waiver" : ""}
-                      </summary>
-                      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                        <Form action="payment" id={loan.id} label="Record payment">
-                          <Field label="Amount received (Rs)">
-                            <Input name="amount" type="number" required min="0.01" max={remaining} step="0.01" />
-                          </Field>
-                        </Form>
-                        {canAdmin && (
-                          <Form action="waive" id={loan.id} label="Waive amount">
-                            <Field label="Waiver amount (Rs)">
-                              <Input name="amount" type="number" required min="0.01" max={remaining} step="0.01" />
-                            </Field>
-                            <Field label="Reason">
-                              <Input name="reason" required minLength={3} maxLength={500} />
-                            </Field>
-                          </Form>
-                        )}
-                      </div>
-                    </details>
-                  )}
-                </Panel>
+                <tr key={loan.id} className="border-t border-outline/50">
+                  <td className="px-5 py-4"><p className="font-semibold text-ink">{books.get(copy?.book_id ?? "")?.title || "Book"}</p><p className="mt-1 text-xs text-muted">Copy {copy?.accession || "N/A"} · Renewals {loan.renewals}/{maxAllowedRenewals}</p></td>
+                  <td className="px-5 py-4"><p className="font-semibold text-ink">{loan.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{loan.borrower_kind}</p></td>
+                  <td className="px-5 py-4 text-muted">{formatDate(loan.issued_at)}</td>
+                  <td className={`px-5 py-4 font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</td>
+                  <td className="px-5 py-4"><Tag>{loan.returned_at ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}` : days ? `${days} days overdue` : "On loan"}</Tag></td>
+                  <td className="px-5 py-4"><div className="flex justify-end gap-2">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
+                </tr>
               );
             })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
@@ -869,8 +758,8 @@ export function LibraryWorkspace({
         />
       )}
 
-      {/* Pagination (Catalogue + Issue & return) */}
-      {(tab === "Catalogue" || tab === "Issue & return") && rows > 20 && (
+      {/* Pagination (Catalogue + loans) */}
+      {(tab === "Catalogue" || tab === "Loans & reservations") && rows > 20 && (
         <div className="flex items-center justify-center gap-4">
           <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</Button>
           <span className="text-sm">Page {currentPage} of {Math.ceil(rows / 20)}</span>
@@ -881,12 +770,12 @@ export function LibraryWorkspace({
       {/* ══════════════════════════════════════════════════════════════════════
           RESERVATIONS TAB
       ══════════════════════════════════════════════════════════════════════ */}
-      {tab === "Issue & return" && (
+      {tab === "Loans & reservations" && (
         <div id="library-waiting-list" className="scroll-mt-24 space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
             {/* Create Reservation Form */}
             {canManage && (
-              <Panel title="Reserve a title">
+              <div className="hidden"><Panel title="Reserve a title">
                 <p className="mb-4 text-xs text-muted">
                   Add a borrower to a title&apos;s waiting queue. Reservations are served in FIFO order.
                 </p>
@@ -917,9 +806,12 @@ export function LibraryWorkspace({
                     return (
                       <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-2 border border-outline/60">
                         <div className="flex flex-wrap gap-x-4 gap-y-1 font-semibold">
-                          <span>Total copies: <strong className="text-ink">{totalC}</strong></span>
-                          <span>Available now: <strong className={availC > 0 ? "text-emerald-700" : "text-amber-700"}>{availC}</strong></span>
-                          <span>Waiting queue: <strong className="text-primary">{waitingC}</strong></span>
+                          <span>Total copies: <strong className="text-ink">{totalC}</strong>
+</span>
+                          <span>Available now: <strong className={availC > 0 ? "text-emerald-700" : "text-amber-700"}>{availC}</strong>
+</span>
+                          <span>Waiting queue: <strong className="text-primary">{waitingC}</strong>
+</span>
                         </div>
 
                         {availC > 0 && waitingC === 0 && (
@@ -949,7 +841,7 @@ export function LibraryWorkspace({
                                   });
                                 }
                                 setSelectedBorrower(reserveBorrower);
-                                setTab("Issue & return");
+                                setTab("Loans & reservations");
                                 document.getElementById("library-issue-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
                               }}
                               className="self-start text-xs font-bold"
@@ -969,7 +861,7 @@ export function LibraryWorkspace({
                     onSelect={setReserveBorrower}
                   />
                 </Form>
-              </Panel>
+              </Panel></div>
             )}
 
             {/* Detailed Waiting Queue Management */}
@@ -984,7 +876,10 @@ export function LibraryWorkspace({
 
               {!waitingReservations.length && <p className="text-xs text-muted">No waiting reservations currently queued.</p>}
 
-              <div className="space-y-3">
+              <div className="overflow-x-auto rounded-2xl border border-outline/60">
+                <table className="min-w-[800px] w-full text-left text-sm">
+                  <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Book</th><th className="px-5 py-3">Borrower</th><th className="px-5 py-3">Requested</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+                  <tbody>
                 {waitingReservations.map((item) => {
                   const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
                   const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
@@ -992,56 +887,11 @@ export function LibraryWorkspace({
                   const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
 
                   return (
-                    <div key={item.id} className="rounded-xl border border-outline p-4 space-y-3 bg-white shadow-none">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
-                            #{queuePos}
-                          </span>
-                          <h4 className="font-bold text-ink text-sm">{bookTitle}</h4>
-                        </div>
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                        }`}>
-                          {isReady ? "Ready to issue" : "Waiting for a return"}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-muted space-y-0.5">
-                        <p className="font-semibold text-ink">{item.borrower_name} <span className="font-normal text-muted capitalize">({item.borrower_kind})</span></p>
-                        <p>
-                          {item.borrower_kind === "student" ? (
-                            <>
-                              Grade {item.grade_name || "N/A"} {item.section_name ? `· Sec ${item.section_name}` : ""} {item.registration_number ? `· Reg #${item.registration_number}` : ""}
-                            </>
-                          ) : (
-                            <>
-                              {item.job_title || "Staff"} {item.department ? `· ${item.department}` : ""}
-                            </>
-                          )}
-                        </p>
-                        <p>Requested: {formatDate(item.created_at)} · Available copies: <strong>{availCount}</strong></p>
-                      </div>
-
-                      {canManage && (
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-outline/50">
-                          {isReady && (
-                            <Button
-                              type="button"
-                              variant="primary"
-                              onClick={() => handleOneClickFulfill(item)}
-                              className="text-xs font-bold py-1.5 bg-emerald-600 hover:bg-emerald-700"
-                            >
-                              Select for issue
-                            </Button>
-                          )}
-
-                          <Form action="cancel_reservation" id={item.id} label="Cancel reservation" buttonVariant="secondary" />
-                        </div>
-                      )}
-                    </div>
+                    <tr key={item.id} className="border-t border-outline/50"><td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td><td className="px-5 py-4"><p className="font-semibold text-ink">{bookTitle}</p><p className="mt-1 text-xs text-muted">{availCount} available</p></td><td className="px-5 py-4"><p className="font-semibold text-ink">{item.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p></td><td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{isReady ? "Ready to issue" : "Waiting for a return"}</span></td><td className="px-5 py-4 text-right">{canManage && <Form action="cancel_reservation" id={item.id} label="Cancel" buttonVariant="secondary" />}</td></tr>
                   );
                 })}
+                  </tbody>
+                </table>
               </div>
             </Panel>
           </div>
@@ -1057,7 +907,7 @@ export function LibraryWorkspace({
           canManage={canManage}
           canAdmin={canAdmin}
           onNavigateTab={(targetTab, targetId) => {
-            setTab(targetTab === "Reservations" ? "Issue & return" : targetTab);
+            setTab(targetTab === "Reservations" ? "Loans & reservations" : targetTab);
             if (targetId) {
               const bookTitle = books.get(targetId)?.title;
               if (bookTitle) setQuery(bookTitle);

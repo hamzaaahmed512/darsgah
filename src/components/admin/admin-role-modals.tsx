@@ -13,6 +13,7 @@ import {
 import { AVAILABLE_PERMISSIONS } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-field";
+import { useToast } from "@/components/ui/toast";
 
 type CustomRoleRecord = {
   id: string;
@@ -85,6 +86,7 @@ export function CreateRoleModal({
   triggerLabel?: string;
 }) {
   const router = useRouter();
+  const { pushToast } = useToast();
   const [mounted, setMounted] = useState(false);
   const canManageCustomRoles = currentUserRole === "principal";
   const [open, setOpen] = useState(false);
@@ -120,6 +122,7 @@ export function CreateRoleModal({
       setBaseRole("teacher");
       setPermissions([]);
       setOpen(false);
+      pushToast("Role created successfully.", "success");
       router.refresh();
     });
   }

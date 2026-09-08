@@ -15,5 +15,17 @@ export const leaveReviewSchema = z.object({
   principal_remarks: z.string().trim().max(500).optional().nullable()
 });
 
+export const leavePolicySchema = z.object({
+  yearly_limit: z.preprocess(
+    (val) => (val === "" || val == null ? null : val),
+    z.coerce.number().int("Yearly limit must be an integer").min(0, "Limit cannot be negative").max(365, "Yearly limit cannot exceed 365").nullable()
+  ),
+  monthly_limit: z.preprocess(
+    (val) => (val === "" || val == null ? null : val),
+    z.coerce.number().int("Monthly limit must be an integer").min(0, "Limit cannot be negative").max(31, "Monthly limit cannot exceed 31").nullable()
+  )
+});
+
 export type LeaveRequestValues = z.infer<typeof leaveRequestSchema>;
 export type LeaveReviewValues = z.infer<typeof leaveReviewSchema>;
+export type LeavePolicyValues = z.infer<typeof leavePolicySchema>;

@@ -16,6 +16,17 @@ export type StudentFilters = {
   pageSize?: number;
 };
 
+export async function getStudentGenderCounts(user: AppUser) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("students").select("gender").eq("school_id", user.schoolId).eq("status", "active");
+  if (error) throw error;
+  const rows = data ?? [];
+  return {
+    male: rows.filter((student) => student.gender?.toLowerCase() === "male").length,
+    female: rows.filter((student) => student.gender?.toLowerCase() === "female").length
+  };
+}
+
 export class StudentIdentifierValidationError extends Error {
   fieldErrors: Record<string, string>;
 

@@ -60,7 +60,7 @@ export function formatWorkflowStatus(status: ResultWorkflowStatus) {
   const labels: Record<ResultWorkflowStatus, string> = {
     draft: "Draft",
     uploaded: "Uploaded",
-    pending_approval: "Pending Approval",
+    pending_approval: "Pending",
     approved: "Approved",
     rejected: "Returned"
   };

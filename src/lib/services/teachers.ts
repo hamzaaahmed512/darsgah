@@ -181,13 +181,14 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
     throw new Error(memberError.message);
   }
 
-  if (parsed.salary != null) {
+  if (parsed.salary != null || parsed.joining_date != null) {
     const { error: salaryError } = await adminClient.from("teacher_employment_details").upsert({
       teacher_id: userId,
       school_id: user.schoolId,
-      monthly_salary: parsed.salary,
+      monthly_salary: parsed.salary ?? 0,
       payment_method: "bank_transfer",
-      employment_status: "active"
+      employment_status: "active",
+      ...(parsed.joining_date ? { joining_date: parsed.joining_date } : {})
     });
     if (salaryError) throw new Error(salaryError.message);
   }

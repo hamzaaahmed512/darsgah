@@ -1,18 +1,16 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Select, Textarea } from "@/components/ui/form-field";
 import { LeaveApplicationDialog } from "@/components/leave/leave-application-dialog";
 import { LeavePeriodFilters } from "@/components/leave/leave-period-filters";
 import { LeaveReviewActions } from "@/components/leave/leave-review-actions";
+import { LeavePolicyModal } from "@/components/leave/leave-policy-modal";
 import { CsvExport } from "@/components/reports/csv-export";
 import { requireUser } from "@/lib/auth/session";
-import { getLeaveRequestsForReview, getMyLeaveCenter } from "@/lib/services/leaves";
+import { getLeavePolicy, getLeaveRequestsForReview, getMyLeaveCenter, getTeacherLeaveStats, getAllTeachersLeaveSummary } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
-import { submitLeaveAction } from "@/app/(app)/leave/actions";
-import { CalendarRange, FileText } from "lucide-react";
+import { CalendarRange, FileText, Users } from "lucide-react";
 
 const statusTone = {
   pending: "yellow",
@@ -53,6 +51,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all", range) : [];
   const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user, range);
   const { leaves, migrationRequired } = leaveCenter;
+  const leavePolicy = await getLeavePolicy(user).catch(() => ({ annualLimit: 36, monthlyLimit: 3, weeklyLimit: null }));
+  const teacherLeaveStats = !canReviewLeaves ? await getTeacherLeaveStats(user, user.id).catch(() => null) : null;
+  const teacherLeaveSummary = canReviewLeaves ? await getAllTeachersLeaveSummary(user).catch(() => ({ summaries: [], migrationRequired: false })) : { summaries: [], migrationRequired: false };
   const exportDate = new Date().toISOString().slice(0, 10);
   const reviewExportRows = reviewLeaves.map((leave) => ({
     Staff: (leave as any).applicant_name ?? "Employee",
@@ -80,17 +81,67 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         title="Leave Center"
         description={canReviewLeaves ? "Review staff leave requests and make approval decisions." : "Submit leave requests and track Principal review status."}
         actions={
-          !canReviewLeaves ? (
-            <LeaveApplicationDialog>
-              <LeaveRequestForm migrationRequired={migrationRequired} />
-            </LeaveApplicationDialog>
-          ) : null
+          !canReviewLeaves ? <LeaveApplicationDialog migrationRequired={migrationRequired} /> : <LeavePolicyModal annualLimit={leavePolicy.annualLimit} monthlyLimit={leavePolicy.monthlyLimit} weeklyLimit={leavePolicy.weeklyLimit} />
         }
       />
 
       {canReviewLeaves ? (
-        <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
-          <CardHeader className="gap-4 border-b border-outline/50 pb-5">
+        <div className="flex flex-col gap-6">
+
+          {/* Teacher Leave Usage Table (Principal/Admin) */}
+          <Card className="order-3 rounded-[30px] border border-outline/70 bg-white shadow-card">
+            <CardHeader className="gap-4 border-b border-outline/50 pb-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                  <Users className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <div>
+                  <CardTitle className="text-[1.8rem]">Teacher Leave Usage</CardTitle>
+                  <p className="mt-1 text-base text-muted">Monitor leave limits and usage across all teaching staff.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {teacherLeaveSummary.migrationRequired ? (
+                <EmptyState title="Leave data unavailable" description="The hosted database does not have the staff leave table yet." />
+              ) : !teacherLeaveSummary.summaries.length ? (
+                <EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." />
+              ) : (
+                <div className="overflow-hidden rounded-[24px] border border-outline/50">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
+                        <tr>
+                          <th className="px-5 py-4">Teacher Name</th>
+                          <th className="px-5 py-4">Annual (Used/Limit)</th>
+                          <th className="px-5 py-4">Monthly (Used/Limit)</th>
+                          <th className="px-5 py-4">Weekly Limit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacherLeaveSummary.summaries.map((s) => (
+                          <tr key={s.teacherId} className="border-t border-outline/50">
+                            <td className="px-5 py-4 font-semibold">{s.teacherName}</td>
+                            <td className="px-5 py-4">
+                              <span className={s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className={s.monthlyLimit !== null && s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit ?? <span className="text-muted">No limit</span>}
+                            </td>
+                            <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">N/A</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Staff Leave Requests Card */}
+          <Card className="order-2 rounded-[30px] border border-outline/70 bg-white shadow-card">
+            <CardHeader className="gap-4 border-b border-outline/50 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
                 <CalendarRange className="h-6 w-6" aria-hidden="true" />
@@ -172,8 +223,34 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             )}
           </CardContent>
         </Card>
+        </div>
       ) : (
-        <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+        <>
+          {/* Leave Balance Card for employees */}
+          {teacherLeaveStats && !teacherLeaveStats.migrationRequired ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <LeaveBalanceCard
+                label="Annual leave"
+                used={teacherLeaveStats.annualUsed}
+                limit={leavePolicy.annualLimit}
+                description={`${new Date().getFullYear()} total`}
+              />
+              <LeaveBalanceCard
+                label="Monthly leave"
+                used={teacherLeaveStats.monthlyUsed}
+                limit={leavePolicy.monthlyLimit}
+                description={new Date().toLocaleString("en", { month: "long", year: "numeric" })}
+              />
+              <LeaveBalanceCard
+                label="Weekly leave"
+                used={teacherLeaveStats.weeklyUsed}
+                limit={leavePolicy.weeklyLimit}
+                description="This week"
+              />
+            </div>
+          ) : null}
+
+          <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
           <CardHeader className="gap-4 border-b border-outline/50 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
@@ -220,6 +297,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             )}
           </CardContent>
         </Card>
+        </>
       )}
     </>
   );
@@ -245,39 +323,57 @@ function getAvatarToneClasses(name: string) {
   return tones[hash % tones.length];
 }
 
-function LeaveRequestForm({ migrationRequired }: { migrationRequired: boolean }) {
-  if (migrationRequired) {
-    return (
-      <EmptyState
-        title="Database migration required"
-        description="Apply the latest School OS migration to enable staff leave requests."
-      />
-    );
-  }
 
+function LeaveBalanceCard({
+  label,
+  used,
+  limit,
+  description
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+  description: string;
+}) {
+  const isUnlimited = limit === null;
+  const remaining = isUnlimited ? "N/A" : Math.max(0, limit - used);
+  const over = !isUnlimited && used > limit;
+  const pct = isUnlimited ? 0 : Math.min(100, limit > 0 ? (used / limit) * 100 : 0);
   return (
-    <form action={submitLeaveAction} className="grid gap-4">
-      <Field label="Leave type">
-        <Select name="leave_type" required defaultValue="casual">
-          <option value="casual">Casual</option>
-          <option value="medical">Medical</option>
-          <option value="annual">Annual</option>
-          <option value="unpaid">Unpaid</option>
-          <option value="other">Other</option>
-        </Select>
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Start date">
-          <Input name="start_date" type="date" required />
-        </Field>
-        <Field label="End date">
-          <Input name="end_date" type="date" required />
-        </Field>
+    <div className="rounded-[24px] border border-outline/70 bg-white p-5 shadow-card">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p>
+          <div className="mt-1 flex items-end gap-1.5">
+            <span className={`font-display text-3xl font-bold ${over ? "text-red-600" : "text-ink"}`}>
+              {remaining}
+            </span>
+            <span className="mb-0.5 text-sm text-muted">/ {isUnlimited ? "N/A" : limit} remaining</span>
+          </div>
+          <p className="mt-0.5 text-xs text-muted">{used} days taken &middot; {description}</p>
+        </div>
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-lg font-bold ${
+            isUnlimited
+              ? "border-slate-100 bg-slate-50 text-slate-400"
+              : over
+              ? "border-red-100 bg-red-50 text-red-600"
+              : remaining === 0
+              ? "border-amber-100 bg-amber-50 text-amber-600"
+              : "border-emerald-100 bg-emerald-50 text-emerald-600"
+          }`}
+        >
+          {remaining}
+        </div>
       </div>
-      <Field label="Reason">
-        <Textarea name="reason" required placeholder="Briefly explain the leave request" />
-      </Field>
-      <Button type="submit">Submit Request</Button>
-    </form>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full transition-all ${
+            isUnlimited ? "bg-slate-200" : over ? "bg-red-400" : remaining === 0 ? "bg-amber-400" : "bg-primary"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
   );
 }

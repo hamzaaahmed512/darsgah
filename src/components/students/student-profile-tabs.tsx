@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { CalendarDays, Download, Mail, MapPin, Phone, TrendingUp, UserRound, UsersRound, WalletCards } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,15 +100,9 @@ function AttendanceTab({ rows }: { rows: any[] }) {
     return (preset === "all" || day >= presetStart) && (!from || row.attendance_date >= from) && (!to || row.attendance_date <= to) && (status === "all" || row.status === status);
   }), [rows, preset, from, to, status]);
   const distribution = ["present", "absent", "excused", "late"].map((name) => ({ name: labelize(name), value: filtered.filter((row) => row.status === name).length }));
-  const trend = useMemo(() => {
-    const buckets = new Map<string, { label: string; present: number; absent: number; excused: number; late: number }>();
-    [...filtered].reverse().forEach((row) => { const date = new Date(`${row.attendance_date}T00:00:00`); const key = `${date.getFullYear()}-${date.getMonth()}`; const value = buckets.get(key) ?? { label: date.toLocaleDateString("en-PK", { month: "short", year: "2-digit" }), present: 0, absent: 0, excused: 0, late: 0 }; value[row.status as "present"] = (value[row.status as "present"] || 0) + 1; buckets.set(key, value); });
-    return [...buckets.values()].slice(-8);
-  }, [filtered]);
   const colors = ["#22c55e", "#ef4444", "#f59e0b", "#eab308"];
   return <div className="space-y-5"><FilterCard><Select label="Preset" value={preset} onChange={setPreset} options={[["all","All Time"],["yearly","Yearly"],["monthly","Monthly"],["weekly","Weekly"]]} /><DateField label="From date" value={from} onChange={setFrom} /><DateField label="To date" value={to} onChange={setTo} /><Select label="Status" value={status} onChange={setStatus} options={[["all","All"],["present","Present"],["absent","Absent"],["excused","Excused"],["late","Late"]]} /><button type="button" className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white" onClick={() => { setFrom(from); setTo(to); }}>Apply</button></FilterCard>
-    <div className="grid gap-5 xl:grid-cols-2"><ChartCard title="Attendance percentage" description={`${filtered.length} attendance records in this view`}><div className="h-64"><ResponsiveContainer><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>{distribution.map((_, i) => <Cell key={i} fill={colors[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><div className="flex flex-wrap justify-center gap-4">{distribution.map((item, i) => <span key={item.name} className="flex items-center gap-2 text-xs font-medium text-muted"><i className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i] }} />{item.name}: {item.value}</span>)}</div></ChartCard>
-    <ChartCard title="Attendance trend" description="Monthly status breakdown"><div className="h-72"><ResponsiveContainer><BarChart data={trend}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="label" tick={{ fontSize: 12 }} /><YAxis allowDecimals={false} tick={{ fontSize: 12 }} /><Tooltip /><Bar dataKey="present" stackId="a" fill="#22c55e" /><Bar dataKey="late" stackId="a" fill="#eab308" /><Bar dataKey="excused" stackId="a" fill="#f59e0b" /><Bar dataKey="absent" stackId="a" fill="#ef4444" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></div></ChartCard></div>
+    <ChartCard title="Attendance percentage" description={`${filtered.length} attendance records in this view`}><div className="h-64"><ResponsiveContainer><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>{distribution.map((_, i) => <Cell key={i} fill={colors[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><div className="flex flex-wrap justify-center gap-4">{distribution.map((item, i) => <span key={item.name} className="flex items-center gap-2 text-xs font-medium text-muted"><i className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i] }} />{item.name}: {item.value}</span>)}</div></ChartCard>
     <DataCard title="Attendance records"><HistoryTable headers={["Date","Class","Status","Note"]} rows={filtered.map((row) => [formatDate(row.attendance_date), formatGradeSection(row.classes?.grades?.name, row.classes?.sections?.name) || row.classes?.name || "—", <StatusBadge key="s" status={row.status} />, row.note || "—"])} empty="No attendance records match these filters." /></DataCard></div>;
 }
 

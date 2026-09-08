@@ -72,6 +72,7 @@ export async function createOtherStaffAction(values: {
   jobTitle?: string;
   phone?: string;
   monthlySalary?: number | null;
+  joiningDate?: string | null;
 }) {
   const user = await requireUser("teachers:manage");
   const parsed = otherStaffRecordSchema.parse(values);
@@ -79,7 +80,8 @@ export async function createOtherStaffAction(values: {
     ...parsed,
     department: parsed.department ?? undefined,
     jobTitle: parsed.jobTitle ?? undefined,
-    phone: parsed.phone ?? undefined
+    phone: parsed.phone ?? undefined,
+    joiningDate: parsed.joiningDate ?? undefined
   });
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");

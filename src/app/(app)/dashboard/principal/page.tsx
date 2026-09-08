@@ -12,14 +12,11 @@ import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-c
 import { formatCompactPKR, formatPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { getStudentGenderCounts } from "@/lib/services/students";
+import { GenderCounts } from "@/components/students/gender-counts";
 
 const statTones = {
-  green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-  red: "bg-red-50 text-red-600 ring-red-100",
-  blue: "bg-blue-50 text-blue-600 ring-blue-100",
-  purple: "bg-purple-50 text-purple-600 ring-purple-100",
-  amber: "bg-amber-50 text-amber-600 ring-amber-100",
-  slate: "bg-slate-50 text-slate-600 ring-slate-100"
+  green: { tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", accent: "!border-t-emerald-500" }, red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-red-500" }, blue: { tile: "bg-blue-50 text-blue-600 ring-blue-100", accent: "!border-t-blue-500" }, purple: { tile: "bg-purple-50 text-purple-600 ring-purple-100", accent: "!border-t-purple-500" }, amber: { tile: "bg-amber-50 text-amber-600 ring-amber-100", accent: "!border-t-amber-500" }, slate: { tile: "bg-slate-50 text-slate-600 ring-slate-100", accent: "!border-t-slate-400" }
 } as const;
 
 function OverviewFinanceStatCard({
@@ -28,6 +25,7 @@ function OverviewFinanceStatCard({
   icon: Icon,
   tone,
   trend,
+  detail,
   trendTone = "neutral"
 }: {
   label: string;
@@ -36,19 +34,21 @@ function OverviewFinanceStatCard({
   tone: keyof typeof statTones;
   trend?: string;
   trendTone?: "positive" | "negative" | "neutral";
+  detail?: React.ReactNode;
 }) {
   const trendClass = trendTone === "positive" ? "text-emerald-600" : trendTone === "negative" ? "text-red-600" : "text-slate-500";
 
   return (
-    <Card className="h-full p-5 shadow-sm sm:p-6">
+    <Card className={`h-full !border-t-4 p-5 shadow-sm sm:p-6 ${statTones[tone].accent}`}>
       <div className="flex h-full items-start gap-5">
-        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-1 sm:h-16 sm:w-16 ${statTones[tone]}`}>
+        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-16 sm:w-16 ${statTones[tone].tile}`}>
           <Icon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
         </span>
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
           <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.55rem,2vw,1.875rem)] font-bold leading-none tracking-tight text-ink">{value}</p>
           {trend ? <p className={`mt-3 text-sm font-bold ${trendClass}`}>{trend}</p> : null}
+          {detail ? <div className="mt-3 flex items-center gap-3">{detail}</div> : null}
         </div>
       </div>
     </Card>
@@ -70,11 +70,12 @@ export default async function PrincipalDashboardPage() {
     throw new Error("Unauthorized access to Principal Dashboard");
   }
 
-  const [dashboard, operations, finance, studentRequests] = await Promise.all([
+  const [dashboard, operations, finance, studentRequests, genderCounts] = await Promise.all([
     getDashboardData(user),
     getDailyOperationsCenter(user),
     getFinanceDashboard(user),
-    getApprovalRequests(user, { status: "pending" })
+    getApprovalRequests(user, { status: "pending" }),
+    getStudentGenderCounts(user)
   ]);
 
   const pendingAdmissionsCount = studentRequests.filter((request) => request.request_type === "admission").length;
@@ -117,7 +118,7 @@ export default async function PrincipalDashboardPage() {
 
       {/* Stats Grid */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        <OverviewFinanceStatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" trend={`${dashboard.recentAdmissions.length} new admission${dashboard.recentAdmissions.length === 1 ? "" : "s"}`} trendTone={dashboard.recentAdmissions.length > 0 ? "positive" : "neutral"} />
+        <OverviewFinanceStatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" detail={<GenderCounts male={genderCounts.male} female={genderCounts.female} compact />} />
         <OverviewFinanceStatCard label="Staff" value={dashboard.totalStaff.toLocaleString()} icon={Users} tone="purple" trend={`${dashboard.totalTeachers.toLocaleString()} teacher${dashboard.totalTeachers === 1 ? "" : "s"}`} />
         <OverviewFinanceStatCard label="Total income" value={formatFinanceAmount(finance.lifetimeIncome)} icon={ArrowDownCircle} tone="green" trend={incomeContribution} trendTone="positive" />
         <OverviewFinanceStatCard label="Total expenses" value={formatFinanceAmount(finance.lifetimeExpenses)} icon={ArrowUpCircle} tone="red" trend={expenseContribution} trendTone="positive" />

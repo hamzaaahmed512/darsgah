@@ -17,6 +17,10 @@ export const staffFormSchema = z.object({
     (value) => value === "" || value == null ? undefined : value,
     z.coerce.number().positive("Salary must be greater than 0").optional()
   ),
+  joining_date: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.string().trim().optional().nullable()
+  ),
 });
 
 export const otherStaffRecordSchema = z.object({
@@ -25,7 +29,11 @@ export const otherStaffRecordSchema = z.object({
   department: z.string().trim().max(100).optional().nullable(),
   jobTitle: z.string().trim().max(100).optional().nullable(),
   phone: z.string().trim().optional().nullable(),
-  monthlySalary: z.number().finite().nonnegative().optional().nullable()
+  monthlySalary: z.number().finite().nonnegative().optional().nullable(),
+  joiningDate: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.string().trim().optional().nullable()
+  )
 });
 
 export const staffProfileUpdateSchema = z.object({

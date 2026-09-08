@@ -28,10 +28,10 @@ type ResultRow = {
   subjects?: { name?: string };
 };
 
-import { formatClassDisplayName, formatDateTimePK, formatGradeSection } from "@/lib/utils";
+import { formatClassDisplayName, formatDatePK } from "@/lib/utils";
 
-function formatDateTime(value: string | null) {
-  return formatDateTimePK(value);
+function formatDate(value: string | null) {
+  return formatDatePK(value);
 }
 
 export function ResultsTable({
@@ -48,53 +48,49 @@ export function ResultsTable({
   return (
     <div className="min-w-0 overflow-hidden rounded-[24px] border border-outline/50">
       <div className="scrollbar-thin max-w-full overflow-x-auto">
-      <table className="w-max min-w-[1180px] text-left text-sm">
+      <table className="w-max min-w-[1020px] text-left text-sm">
         <thead className="bg-slate-50/80">
           <tr className="border-b border-outline/40 text-xs uppercase tracking-[0.14em] text-muted">
             <th className="px-5 py-4">Exam Type</th>
             <th className="px-5 py-4">Subject</th>
             <th className="px-5 py-4">Class</th>
-            <th className="px-5 py-4">Section</th>
             <th className="px-5 py-4">Uploaded By</th>
             <th className="px-5 py-4">Upload Date</th>
             <th className="px-5 py-4">Status</th>
             {showApprovalColumns ? (
               <>
                 <th className="px-5 py-4">Approved By</th>
-                <th className="px-5 py-4">Approval Date</th>
               </>
             ) : null}
-            <th className="min-w-[220px] px-5 py-4">Actions</th>
+            <th className="min-w-[160px] px-5 py-4">Actions</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-outline/25 align-top last:border-b-0">
-              <td className="min-w-[220px] px-5 py-4">
+              <td className="min-w-[155px] px-5 py-4">
                 <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p>
                 <p className="text-xs text-muted">{row.title}</p>
               </td>
               <td className="px-5 py-4">{row.subjects?.name ?? "—"}</td>
               <td className="px-5 py-4">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</td>
-              <td className="px-5 py-4">{formatGradeSection(null, row.classes?.sections?.name) || "—"}</td>
               <td className="px-5 py-4">
                 <p className="font-semibold">{row.uploadedByTeacherName}</p>
                 {row.uploadedByTeacherId ? <p className="text-xs text-muted">{row.uploadedByTeacherId.slice(0, 8)}…</p> : null}
               </td>
-              <td className="px-5 py-4">{formatDateTime(row.uploaded_at)}</td>
+              <td className="px-5 py-4">{formatDate(row.uploaded_at)}</td>
               <td className="px-5 py-4">
                 <WorkflowStatusBadge status={row.workflowStatus} />
               </td>
               {showApprovalColumns ? (
                 <>
                   <td className="px-5 py-4">{row.approved_by_principal_name ?? "—"}</td>
-                  <td className="px-5 py-4">{formatDateTime(row.approved_at)}</td>
                 </>
               ) : null}
               <td className="px-5 py-4">
                 <div className="flex flex-wrap items-start gap-2">
                   <div className="flex flex-wrap gap-2">
-                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl">
+                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl" aria-label="View result" title="View result">
                       <Eye className="h-4 w-4" /> View
                     </ButtonLink>
                     {showPrint && row.canPrint ? (
@@ -103,13 +99,15 @@ export function ResultsTable({
                         target="_blank"
                         size="sm"
                         className="rounded-xl"
+                        aria-label="Print result"
+                        title="Print result"
                       >
                         <Printer className="h-4 w-4" /> Print
                       </ButtonLink>
                     ) : null}
                     {showPrint && !row.canPrint ? (
-                      <span className="inline-flex min-h-8 items-center rounded-lg bg-surface-low px-3 text-xs font-semibold text-muted">
-                        Print disabled
+                      <span title="Printing is unavailable until all required results are approved" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-low px-3 text-xs font-semibold text-muted">
+                        <Printer className="h-4 w-4" /> Print
                       </span>
                     ) : null}
                     {row.canReturn ? <ReturnApprovedResult examId={row.id} compact /> : null}

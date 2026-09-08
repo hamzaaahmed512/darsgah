@@ -284,7 +284,7 @@ export function StudentForm({
               <option value="cancelled">Cancelled</option>
             </Select>
           </Field>
-          <Field label="CNIC" required={false} error={errors.student_cnic?.message}>
+          <Field label="CNIC" required error={errors.student_cnic?.message}>
             <Input
               {...register("student_cnic")}
               value={formatCnic(studentCnic)}

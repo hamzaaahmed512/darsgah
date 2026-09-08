@@ -49,8 +49,11 @@ export function StaffCreateModal({
     department: "Others",
     jobTitle: "",
     phone: "",
-    monthlySalary: ""
+    monthlySalary: "",
+    joiningDate: ""
   });
+  const [useTodayAccount, setUseTodayAccount] = useState(false);
+  const [useTodayRecord, setUseTodayRecord] = useState(false);
 
   const standardRoleOptions = allowedRoles.map((role) => ({
     value: `base:${role}`,
@@ -91,6 +94,8 @@ export function StaffCreateModal({
   function closeModal() {
     setOpen(false);
     setError(null);
+    setUseTodayAccount(false);
+    setUseTodayRecord(false);
   }
 
   function resetRecordForm() {
@@ -100,8 +105,10 @@ export function StaffCreateModal({
       department: "Others",
       jobTitle: "",
       phone: "",
-      monthlySalary: ""
+      monthlySalary: "",
+      joiningDate: ""
     });
+    setUseTodayRecord(false);
   }
 
   function handleRoleChange(value: string) {
@@ -151,7 +158,8 @@ export function StaffCreateModal({
           department: recordForm.department,
           jobTitle: recordForm.jobTitle,
           phone: recordForm.phone,
-          monthlySalary: recordForm.monthlySalary ? Number(recordForm.monthlySalary) : null
+          monthlySalary: recordForm.monthlySalary ? Number(recordForm.monthlySalary) : null,
+          joiningDate: recordForm.joiningDate || null
         });
         resetRecordForm();
         closeModal();
@@ -297,7 +305,7 @@ export function StaffCreateModal({
                           title="Work Details"
                           description="Add optional information for directory display and payroll setup."
                         >
-                          <div className="grid gap-4 md:grid-cols-3">
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <Field label="Department" error={errors.department?.message}>
                               <Input {...register("department")} placeholder="e.g. Science" />
                             </Field>
@@ -307,6 +315,44 @@ export function StaffCreateModal({
                             <Field label="Monthly Salary" error={errors.salary?.message}>
                               <Input {...register("salary")} type="number" min="0" step="0.01" placeholder="Optional" />
                             </Field>
+                            <div className="grid gap-2">
+                              <div className="flex items-center justify-between">
+                                <label htmlFor="account-joining-date" className="text-sm font-semibold text-ink">
+                                  Joining Date
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted hover:text-ink select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={useTodayAccount}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setUseTodayAccount(checked);
+                                      if (checked) {
+                                        const today = getTodayDateString();
+                                        setValue("joining_date", today, { shouldDirty: true, shouldValidate: true });
+                                      } else {
+                                        setValue("joining_date", "", { shouldDirty: true, shouldValidate: true });
+                                      }
+                                    }}
+                                    className="h-3.5 w-3.5 rounded border-outline/70 text-primary focus:ring-primary/20"
+                                  />
+                                  <span>Today&apos;s date</span>
+                                </label>
+                              </div>
+                              <Input
+                                id="account-joining-date"
+                                type="date"
+                                {...register("joining_date")}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setValue("joining_date", val, { shouldDirty: true, shouldValidate: true });
+                                  setUseTodayAccount(val === getTodayDateString());
+                                }}
+                              />
+                              {errors.joining_date?.message ? (
+                                <span className="text-sm font-medium text-danger">{errors.joining_date.message}</span>
+                              ) : null}
+                            </div>
                           </div>
                         </FormBlock>
 
@@ -350,6 +396,40 @@ export function StaffCreateModal({
                             <Field label="Monthly Salary">
                               <Input type="number" min="0" step="0.01" value={recordForm.monthlySalary} onChange={(event) => updateRecordForm("monthlySalary", event.target.value)} placeholder="Optional" />
                             </Field>
+                            <div className="grid gap-2 md:col-span-2">
+                              <div className="flex items-center justify-between">
+                                <label htmlFor="record-joining-date" className="text-sm font-semibold text-ink">
+                                  Joining Date
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted hover:text-ink select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={useTodayRecord}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setUseTodayRecord(checked);
+                                      if (checked) {
+                                        updateRecordForm("joiningDate", getTodayDateString());
+                                      } else {
+                                        updateRecordForm("joiningDate", "");
+                                      }
+                                    }}
+                                    className="h-3.5 w-3.5 rounded border-outline/70 text-primary focus:ring-primary/20"
+                                  />
+                                  <span>Today&apos;s date</span>
+                                </label>
+                              </div>
+                              <Input
+                                id="record-joining-date"
+                                type="date"
+                                value={recordForm.joiningDate}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateRecordForm("joiningDate", val);
+                                  setUseTodayRecord(val === getTodayDateString());
+                                }}
+                              />
+                            </div>
                           </div>
                         </FormBlock>
 
@@ -384,4 +464,12 @@ function FormBlock({ title, description, children }: { title: string; descriptio
       {children}
     </section>
   );
+}
+
+function getTodayDateString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

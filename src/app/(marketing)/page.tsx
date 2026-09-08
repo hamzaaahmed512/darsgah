@@ -4,6 +4,7 @@ import { ArrowRight, BarChart3, CalendarCheck, CheckCircle2, Coins, GraduationCa
 import { CTA, Eyebrow, SectionHeading } from "@/components/marketing/shared";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { PricingSection } from "@/components/marketing/pricing-section";
+import { ScrollReveal } from "@/components/marketing/scroll-reveal";
 
 export const metadata: Metadata = {
   title: "GetDarsgah | School management, made clear",
@@ -21,8 +22,9 @@ const features = [
 
 export default function OverviewPage() {
   return (
-    <>
-      <section className="marketing-grid relative overflow-hidden pb-20 pt-20 sm:pt-28">
+    <div className="marketing-home">
+      <ScrollReveal />
+      <section data-reveal className="marketing-grid relative overflow-hidden pb-20 pt-20 sm:pt-28">
         <div className="marketing-orb left-[15%] top-[-100px]" />
         <div className="marketing-container relative text-center">
           <Eyebrow><Sparkles className="h-3.5 w-3.5" /> One workspace for your whole school</Eyebrow>
@@ -41,7 +43,7 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-slate-50/70">
+      <section data-reveal className="border-y border-slate-200 bg-slate-50/70">
         <div className="marketing-container grid gap-5 py-8 sm:grid-cols-3">
           <TrustPoint title="One source of truth" text="No duplicate records across departments." />
           <TrustPoint title="Role-aware by design" text="The right access for every responsibility." />
@@ -49,11 +51,11 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      <section className="marketing-container py-24">
+      <section data-reveal className="marketing-container py-24">
         <SectionHeading eyebrow="Everything connected" title="A complete operating system for your school" description="Darsgah replaces disconnected tools with focused modules that work together, giving every team a clearer day." centered />
         <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, text }, index) => (
-            <article key={title} className="marketing-card group rounded-[20px] border border-slate-200 bg-white p-6">
+            <article data-reveal key={title} className={`marketing-card marketing-feature-card group rounded-[22px] border border-slate-200 bg-white p-6 feature-tone-${index % 3}`}>
               <div className="flex items-start justify-between"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Icon className="h-5 w-5" /></span><span className="text-xs font-bold text-slate-300">0{index + 1}</span></div>
               <h3 className="mt-6 text-lg font-bold tracking-tight text-ink">{title}</h3><p className="mt-2 text-sm leading-6 text-muted">{text}</p>
             </article>
@@ -62,7 +64,7 @@ export default function OverviewPage() {
         <div className="mt-8 text-center"><Link href="/features" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-ink">Explore every feature <ArrowRight className="h-4 w-4" /></Link></div>
       </section>
 
-      <section className="overflow-hidden bg-[#f8fafc] py-24">
+      <section data-reveal className="overflow-hidden bg-[#f8fafc] py-24">
         <div className="marketing-container grid items-center gap-14 lg:grid-cols-2">
           <div>
             <SectionHeading eyebrow="Built for focus" title="Less admin friction. More confident decisions." description="Every screen is designed to make the next action obvious, from the classroom register to the principal's approval queue." />
@@ -78,13 +80,13 @@ export default function OverviewPage() {
           </div>
         </div>
       </section>
-      <section className="marketing-container py-20 sm:py-24">
+      <section data-reveal className="marketing-container py-20 sm:py-24">
         <div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pricing</p><h2 className="mt-4 font-display text-3xl font-bold tracking-[-0.035em] text-ink sm:text-4xl">Simple pricing. Room to grow.</h2><p className="mt-4 text-base leading-7 text-muted">Choose a plan that fits your school, with clear pricing and room to grow.</p></div>
         <PricingSection compact />
         <div className="mt-8 text-center"><Link href="/pricing" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-ink">Compare all features <ArrowRight className="h-4 w-4" /></Link></div>
       </section>
-      <CTA />
-    </>
+      <div data-reveal><CTA /></div>
+    </div>
   );
 }
 

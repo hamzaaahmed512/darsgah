@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { requireUser } from "@/lib/auth/session";
-import { reviewLeaveRequest, submitLeaveRequest } from "@/lib/services/leaves";
+import { reviewLeaveRequest, submitLeaveRequest, updateLeavePolicy } from "@/lib/services/leaves";
 
 function isMigrationRequiredError(error: unknown) {
   return error instanceof Error && error.message.includes("latest School OS database migration");
@@ -21,10 +21,13 @@ export async function submitLeaveAction(formData: FormData) {
     });
   } catch (error) {
     if (isMigrationRequiredError(error)) redirect("/leave");
+    if (error instanceof Error && error.message.includes("leave limit")) {
+      return { error: error.message };
+    }
     throw error;
   }
   revalidatePath("/leave");
-  redirect("/leave");
+  return { success: true };
 }
 
 export async function reviewLeaveAction(formData: FormData) {
@@ -44,4 +47,15 @@ export async function reviewLeaveAction(formData: FormData) {
   }
   revalidatePath("/leave");
   return { success: true };
+}
+
+export async function updateLeavePolicyAction(formData: FormData) {
+  const user = await requireUser("leave:manage");
+  const annualLimit = Number(formData.get("annual_limit") ?? 36);
+  const monthlyStr = formData.get("monthly_limit")?.toString().trim();
+  const monthlyLimit = monthlyStr ? Number(monthlyStr) : null;
+  const weeklyStr = formData.get("weekly_limit")?.toString().trim();
+  const weeklyLimit = weeklyStr ? Number(weeklyStr) : null;
+  await updateLeavePolicy(user, { annualLimit, monthlyLimit, weeklyLimit });
+  revalidatePath("/leave");
 }
