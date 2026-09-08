@@ -1,6 +1,8 @@
 "use server";
 
+import { challanDiscountSchema, challanEditSchema } from "@/lib/validation/finance";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import {
   createFeeStructure,
@@ -8,6 +10,7 @@ import {
   updateFeeStructure,
   deleteFeeStructure,
   applyDiscount,
+  editFeeChallan,
   recordPayment,
   voidPayment,
   generateFeeChallans,
@@ -41,7 +44,6 @@ export async function createFeeStructureAction(formData: FormData) {
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
-  revalidatePath("/finance/student-fees");
 }
 
 export async function createFeeStructuresForClassesAction(formData: FormData) {
@@ -63,7 +65,6 @@ export async function createFeeStructuresForClassesAction(formData: FormData) {
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
-  revalidatePath("/finance/student-fees");
 }
 
 export async function updateFeeStructureAction(id: string, formData: FormData) {
@@ -85,7 +86,6 @@ export async function updateFeeStructureAction(id: string, formData: FormData) {
 
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
-  revalidatePath("/finance/student-fees");
 }
 
 export async function deleteFeeStructureAction(id: string) {
@@ -94,33 +94,40 @@ export async function deleteFeeStructureAction(id: string) {
 
   revalidatePath("/finance/fees");
   revalidatePath("/finance/dashboard");
-  revalidatePath("/finance/student-fees");
 }
 
-export async function applyDiscountAction(accountId: string, formData: FormData) {
+export async function applyDiscountAction(challanId: string, formData: FormData) {
   const user = await requireUser("finance:manage");
-  
-  const values = {
-    discount_type: formData.get("discount_type") as string,
-    discount_value: numberOrZero(formData, "discount_value"),
-    discount_reason: formData.get("discount_reason") as string,
-    discount_remarks: formData.get("discount_remarks") as string || undefined,
-    discount_approved_by: formData.get("discount_approved_by") as string
-  };
+  const values = challanDiscountSchema.parse(Object.fromEntries(formData));
+  await applyDiscount(user, challanId, values);
+  revalidatePath("/finance/challans");
+}
 
-  await applyDiscount(user, accountId, values);
+export async function editFeeChallanAction(challanId: string, formData: FormData) {
+  const user = await requireUser("finance:manage");
+  const values = challanEditSchema.parse({
+    updated_at: formData.get("updated_at"), due_date: formData.get("due_date"),
+    line_items: JSON.parse(String(formData.get("line_items")))
+  });
+  await editFeeChallan(user, challanId, values);
+  revalidatePath("/finance/challans");
+}
 
-  revalidatePath("/finance/fees");
-  revalidatePath("/finance/student-fees");
-  revalidatePath(`/finance/student-fees/${accountId}`);
-  revalidatePath("/finance/dashboard");
+export async function assignLegacyPaymentAction(challanId: string, paymentId: string) {
+  const user = await requireUser("finance:manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_legacy_challan_payment", {
+    p_school_id: user.schoolId, p_challan_id: challanId, p_payment_id: paymentId
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/finance/challans");
 }
 
 export async function recordPaymentAction(formData: FormData) {
-  const user = await requireUser("finance:view"); // both manager & registrar can record payment
+  const user = await requireUser("finance:manage");
 
   const values = {
-    student_fee_account_id: formData.get("student_fee_account_id") as string,
+    challan_id: formData.get("challan_id") as string,
     amount: Number(formData.get("amount")),
     payment_method: formData.get("payment_method") as string,
     transaction_number: formData.get("transaction_number") as string || undefined,
@@ -130,10 +137,8 @@ export async function recordPaymentAction(formData: FormData) {
 
   const payment = await recordPayment(user, values);
 
-  revalidatePath("/finance/payments");
+  revalidatePath("/finance/challans");
   revalidatePath("/finance/fees");
-  revalidatePath("/finance/student-fees");
-  revalidatePath(`/finance/student-fees/${values.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
   
@@ -142,12 +147,10 @@ export async function recordPaymentAction(formData: FormData) {
 
 export async function voidPaymentAction(paymentId: string, reason: string) {
   const user = await requireUser("finance:manage");
-  const payment = await voidPayment(user, paymentId, reason);
+  await voidPayment(user, paymentId, reason);
 
-  revalidatePath("/finance/payments");
   revalidatePath("/finance/fees");
-  revalidatePath("/finance/student-fees");
-  revalidatePath(`/finance/student-fees/${payment.student_fee_account_id}`);
+  revalidatePath("/finance/challans");
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
 }
@@ -156,6 +159,7 @@ export async function generateFeeChallansAction(values: { month: string; student
   try {
     const user = await requireUser("finance:manage");
     const result = await generateFeeChallans(user, values);
+    revalidatePath("/finance/challans");
     revalidatePath("/finance/fees");
     return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
   } catch (err: any) {

@@ -1,4 +1,4 @@
--- Trigger to automatically enroll students into the class's subjects when they are enrolled in the class.
+ -- Trigger to automatically enroll students into the class's subjects when they are enrolled in the class.
 create or replace function public.auto_enroll_class_subjects()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin

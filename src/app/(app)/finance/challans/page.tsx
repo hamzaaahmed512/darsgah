@@ -1,89 +1,30 @@
 import Link from "next/link";
-import { ArrowLeft, Settings } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { getStudentFees, getFeeChallans } from "@/lib/services/finance";
+import { getFeeChallans, getUnassignedFeePayments } from "@/lib/services/finance";
 import { getAcademicOptions } from "@/lib/services/academics";
+import { createClient } from "@/lib/supabase/server";
+import { formatFullName } from "@/lib/student-name";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChallanGeneration } from "@/components/finance/challan-generation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatDatePK, formatPKR } from "@/lib/utils";
+import { FeeManagementClient } from "@/components/finance/fee-management-client";
 
-export default async function FinanceChallansPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+export default async function FinanceChallansPage() {
   const user = await requireUser("finance:view");
-  const month = (await searchParams).month ?? new Date().toISOString().slice(0, 7);
-  const [accounts, academics, challans] = await Promise.all([
-    getStudentFees(user, {}),
-    getAcademicOptions(user),
-    getFeeChallans(user, month)
+  const supabase = await createClient();
+  const [challans, academics, students, unassignedPayments] = await Promise.all([
+    getFeeChallans(user), getAcademicOptions(user),
+    supabase.from("students").select("id, first_name, last_name, admission_number").eq("school_id", user.schoolId).order("first_name"),
+    getUnassignedFeePayments(user)
   ]);
-
-  return (
-    <>
-      <PageHeader
-        eyebrow="Finance"
-        title="Fee Challans"
-        description="Generate monthly challans and review issued billing records for the selected month."
-        actions={
-          <>
-            <Link href="/finance/fees" className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Fee Management
-            </Link>
-            <Link href="/finance/fees/structures" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-soft hover:brightness-105">
-              <Settings className="h-4 w-4" aria-hidden="true" />
-              Fee Structures
-            </Link>
-          </>
-        }
-      />
-
-      <ChallanGeneration user={user} month={month} accounts={accounts} classes={academics.classes} />
-
-      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm font-semibold text-muted" htmlFor="challan-month">Challan month</label>
-        <input id="challan-month" name="month" type="month" defaultValue={month} className="rounded-lg border border-outline/60 bg-surface-low px-3 py-2 text-sm text-ink" />
-        <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Apply</button>
-      </form>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Fee Collection Challans — {month}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
-                <tr>
-                  <th className="px-4 py-3">Student</th>
-                  <th className="px-4 py-3">Class</th>
-                  <th className="px-4 py-3">Challan Amount</th>
-                  <th className="px-4 py-3">Paid This Month</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Generated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {challans.map((row: any) => (
-                  <tr key={row.id} className="border-t border-outline/60">
-                    <td className="px-4 py-3 font-semibold">{row.student_name}<span className="ml-2 text-xs text-muted">{row.admission_number}</span></td>
-                    <td className="px-4 py-3">{row.class_name}</td>
-                    <td className="px-4 py-3">{formatPKR(row.amount)}</td>
-                    <td className="px-4 py-3 font-semibold text-success">{formatPKR(row.amount_paid_for_month)}</td>
-                    <td className="px-4 py-3"><Badge tone={row.payment_status === "paid" ? "green" : row.payment_status === "partially paid" ? "blue" : "yellow"}>{row.payment_status}</Badge></td>
-                    <td className="px-4 py-3 text-muted">{formatDatePK(row.created_at)}</td>
-                  </tr>
-                ))}
-                {!challans.length && (
-                  <tr>
-                    <td className="px-4 py-4 text-muted" colSpan={6}>No challans generated for this month.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </>
-  );
+  if (students.error) throw new Error(students.error.message);
+  return <>
+    <PageHeader eyebrow="Finance" title="Fee Challans" description="Manage each issued challan, its charges, payments, and receipts."
+      actions={<Link href="/finance/fees/structures" className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white">Fee Structures</Link>} />
+    <FeeManagementClient user={user} challans={challans} classes={academics.classes} sessions={academics.years} unassignedPayments={unassignedPayments} />
+    <details className="mt-6 print:hidden">
+      <summary className="mb-4 cursor-pointer font-semibold text-primary">Generate Monthly Challans</summary>
+      <ChallanGeneration user={user} month={new Date().toISOString().slice(0, 7)} classes={academics.classes}
+        accounts={(students.data ?? []).map(s => ({ student_id: s.id, student_name: formatFullName(s.first_name, s.last_name), admission_number: s.admission_number }))} />
+    </details>
+  </>;
 }
