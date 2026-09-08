@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { hasPermission } from "@/lib/permissions";
-import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
-import { AddCashModal } from "@/components/finance/add-cash-modal";
+import { redirect } from "next/navigation";
 import { ArrowDownCircle, ArrowUpCircle, FileText, Search } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -19,17 +17,29 @@ function canViewFinancialReports(role: string) {
   return role !== "administrator";
 }
 
+function financeDashboardHref(params: Record<string, string | undefined>) {
+  const nextParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) nextParams.set(key, value);
+  });
+  const query = nextParams.toString();
+  return query ? `/finance/dashboard?${query}` : "/finance/dashboard";
+}
+
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("finance:view");
   const showTotals = canViewFinancialReports(user.role);
+  if (!showTotals) {
+    redirect(financeDashboardHref(params));
+  }
   const period = (["month", "year", "lifetime", "custom"].includes(params.period ?? "") ? params.period : "month") as "month" | "year" | "lifetime" | "custom";
   const direction = (["income", "expense"].includes(params.direction ?? "") ? params.direction : "all") as TransactionDirection | "all";
   const data = await getFinanceTransactions(user, { period, direction, dateFrom: params.dateFrom, dateTo: params.dateTo, q: params.q, page: Number(params.page ?? 1), includeTotals: showTotals });
   const pageCount = Math.max(1, Math.ceil(data.count / data.pageSize));
 
   return <>
-    <PageHeader eyebrow="Operations" title="Transactions" description="Review income, challan payments, payroll, and expenses." actions={hasPermission(user.role, "finance:manage", user.permissions) ? <><AddCashModal /><TransactionFormModal direction="income" /><TransactionFormModal direction="expense" /></> : undefined} />
+    <PageHeader eyebrow="Operations" title="Transactions" description="A read-only ledger of income, student-fee payments, payroll, and expenses. Record new entries from the Finance dashboard." />
 
     {showTotals ? (
       <section className="mb-5 grid gap-4 sm:grid-cols-3">

@@ -26,8 +26,8 @@ export const discountSchema = z.object({
 export type DiscountFormValues = z.infer<typeof discountSchema>;
 
 export const paymentSchema = z.object({
-  challan_id: z.string().uuid("Select a valid challan"),
-  amount: z.coerce.number().finite().positive("Payment amount must be greater than 0").multipleOf(0.01),
+  student_fee_account_id: z.string().uuid("Invalid Fee Account ID"),
+  amount: z.coerce.number().positive("Payment amount must be greater than 0"),
   payment_method: z.enum(["cash", "bank_transfer", "cheque", "online_payment"]),
   transaction_number: z.string().optional(),
   reference_number: z.string().optional(),
@@ -35,18 +35,6 @@ export const paymentSchema = z.object({
 });
 
 export type PaymentFormValues = z.infer<typeof paymentSchema>;
-
-const money = z.coerce.number().finite().min(0).multipleOf(0.01);
-export const challanDiscountSchema = z.object({
-  updated_at: z.string().datetime({ offset: true }),
-  discount_amount: money,
-  discount_reason: z.string().trim().min(1, "Enter an adjustment reason").max(500)
-});
-export const challanEditSchema = z.object({
-  updated_at: z.string().datetime({ offset: true }),
-  due_date: z.string().date(),
-  line_items: z.array(z.object({ description: z.string().trim().min(1).max(200), amount: money })).min(1).max(100)
-});
 
 export const voidPaymentSchema = z.object({
   void_reason: z.string().min(4, "Void reason must be at least 4 characters long")

@@ -1,129 +1,516 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Search, Percent, X, Printer, Receipt, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
-import { applyDiscountAction, editFeeChallanAction, recordPaymentAction, assignLegacyPaymentAction } from "@/app/(app)/finance/actions";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  applyDiscountAction,
+  recordPaymentAction,
+} from "@/app/(app)/finance/actions";
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
-import { formatClassDisplayName, formatPKR, formatDatePK } from "@/lib/utils";
-import { challanStatusLabels, filterChallans, type Challan, type ChallanPayment, type UnassignedPayment } from "@/lib/challans";
+import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 
-type Mode = "view" | "collect" | "discount" | "edit";
-const button = "rounded-lg border border-outline px-3 py-2 text-xs font-semibold text-primary hover:bg-primary-soft disabled:opacity-40";
-const initialFilters = { q: "", classId: "", session: "", status: "", from: "", to: "" };
+interface FeeManagementClientProps {
+  user: AppUser;
+  accounts: any[];
+  classes: any[];
+  sessions: any[];
+  payments: any[];
+}
 
-export function FeeManagementClient({ user, challans, classes, sessions, unassignedPayments = [] }: {
-  user: AppUser; challans: Challan[];
-  unassignedPayments?: UnassignedPayment[];
-  classes: { id: string; grade_name?: string; name: string; section_name?: string | null }[];
-  sessions: { id: string; name: string }[];
-}) {
+const statusTone = {
+  paid: "green",
+  partially_paid: "blue",
+  pending: "yellow",
+  overdue: "red"
+} as const;
+
+function canViewFinancialReports(role: string) {
+  return role !== "administrator";
+}
+
+export function FeeManagementClient({ user, accounts, classes, sessions, payments }: FeeManagementClientProps) {
   const router = useRouter();
-  const [filters, setFilters] = useState(initialFilters);
-  const [selected, setSelected] = useState<{ id: string; mode: Mode; updatedAt: string } | null>(null);
-  const [receipt, setReceipt] = useState<ChallanPayment | null>(null);
-  const [items, setItems] = useState<Challan["line_items"]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [classId, setClassId] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [session, setSession] = useState("all");
+  const [onlyDiscounted, setOnlyDiscounted] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [isCollectOpen, setIsCollectOpen] = useState(false);
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "cheque" | "online_payment">("cash");
+  const [transactionNumber, setTransactionNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed" | "none">("none");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountReason, setDiscountReason] = useState<"scholarship" | "sibling_discount" | "merit" | "need_based" | "special_approval">("scholarship");
+  const [discountRemarks, setDiscountRemarks] = useState("");
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
-  const row = challans.find(c => c.id === selected?.id);
-  const legacyPayments = unassignedPayments.filter(p => p.student_fee_account_id === row?.student_fee_account_id);
-  const filtered = filterChallans(challans, filters);
-  const invalidDates = !!filters.from && !!filters.to && filters.from > filters.to;
-  function filter(key: keyof typeof filters, value: string) { setFilters(current => ({ ...current, [key]: value })); }
-  function open(c: Challan, mode: Mode) {
-    setSelected({ id: c.id, mode, updatedAt: c.updated_at }); setReceipt(null); setError(null);
-    setItems(c.line_items.map(i => ({ ...i, amount: Number(i.amount) })));
+  const showReports = canViewFinancialReports(user.role);
+
+  const latestReceiptByAccount = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const payment of payments) {
+      if (payment.is_voided) continue;
+      if (!map.has(payment.student_fee_account_id)) {
+        map.set(payment.student_fee_account_id, payment);
+      }
+    }
+    return map;
+  }, [payments]);
+
+  const filtered = accounts.filter((acc) => {
+    const matchesQ =
+      !q ||
+      acc.student_name.toLowerCase().includes(q.toLowerCase()) ||
+      acc.admission_number.toLowerCase().includes(q.toLowerCase());
+    const matchesClass = classId === "all" || acc.class_id === classId;
+    const matchesStatus = status === "all"
+      || ((status === "pending") ? (acc.payment_status === "pending" || acc.payment_status === "unpaid" || acc.payment_status === "partially_paid") : acc.payment_status === status);
+    const matchesSession = session === "all" || acc.academic_year_id === session;
+    const matchesDiscount = !onlyDiscounted || acc.discount_type !== "none";
+    return matchesQ && matchesClass && matchesStatus && matchesSession && matchesDiscount;
+  });
+
+  const selectedLedgerAccount = accounts.find((acc) => acc.id === selectedAccountId) ?? null;
+  const totals = filtered.reduce(
+    (acc, row) => ({
+      payable: acc.payable + Number(row.total_payable || 0),
+      paid: acc.paid + Number(row.amount_paid || 0),
+      outstanding: acc.outstanding + Number(row.remaining_balance || 0)
+    }),
+    { payable: 0, paid: 0, outstanding: 0 }
+  );
+
+  function resetCollectForm() {
+    setAmount("");
+    setPaymentMethod("cash");
+    setTransactionNumber("");
+    setReferenceNumber("");
+    setRemarks("");
+    setFormError(null);
   }
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!row || !selected || pending) return;
-    const data = new FormData(event.currentTarget);
-    data.set("challan_id", row.id); data.set("updated_at", selected.updatedAt);
-    data.set("line_items", JSON.stringify(items));
-    const id = row.id, mode = selected.mode;
+
+  function handleOpenCollect(accountId: string) {
+    setSelectedAccountId(accountId);
+    resetCollectForm();
+    setIsCollectOpen(true);
+  }
+
+  function handleCloseCollect() {
+    setIsCollectOpen(false);
+    resetCollectForm();
+  }
+
+  function handleOpenDiscount(acc: any) {
+    setSelectedAccount(acc);
+    setDiscountType(acc.discount_type);
+    setDiscountValue(acc.discount_type === "none" ? "" : String(acc.discount_value ?? ""));
+    setDiscountReason(acc.discount_reason || "scholarship");
+    setDiscountRemarks(acc.discount_remarks || "");
     setError(null);
+    setIsDiscountOpen(true);
+  }
+
+  async function handleApplyDiscount(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData();
+    formData.append("discount_type", discountType);
+    formData.append("discount_value", discountValue.trim() === "" ? "0" : discountValue);
+    formData.append("discount_reason", discountReason);
+    formData.append("discount_remarks", discountRemarks);
+    formData.append("discount_approved_by", user.fullName);
+
     startTransition(async () => {
       try {
-        if (mode === "collect") await recordPaymentAction(data);
-        if (mode === "discount") await applyDiscountAction(id, data);
-        if (mode === "edit") await editFeeChallanAction(id, data);
-        setSelected(null); router.refresh();
-      } catch (err) { setError(err instanceof Error ? err.message : "Unable to save challan"); }
+        await applyDiscountAction(selectedAccount.id, formData);
+        setIsDiscountOpen(false);
+        router.refresh();
+      } catch (err: any) {
+        setError(err.message || "Failed to apply discount.");
+      }
     });
   }
-  return <>
-    <Card className="overflow-hidden print:hidden">
-      <div className="space-y-4 border-b border-outline p-5">
-        <h2 className="text-xl font-bold">Challan List</h2>
-        {unassignedPayments.length > 0 && <p className="text-sm text-muted">Historical payments need challan assignment. Open the relevant challan to review and assign a receipt; unassigned payments are not included in its balance.</p>}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Student / Admission / Challan Search"><Input aria-label="Search challans" value={filters.q} onChange={e => filter("q", e.target.value)} placeholder="Search issued challans" /></Field>
-          <Field label="Challan Status"><Select aria-label="Challan Status" value={filters.status} onChange={e => filter("status", e.target.value)}><option value="">All Statuses</option>{Object.entries(challanStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></Field>
-          <Field label="Class"><Select aria-label="Class" value={filters.classId} onChange={e => filter("classId", e.target.value)}><option value="">All Classes</option>{classes.map(c => <option key={c.id} value={c.id}>{formatClassDisplayName(c.grade_name, c.name, c.section_name)}</option>)}</Select></Field>
-          <Field label="Session"><Select aria-label="Session" value={filters.session} onChange={e => filter("session", e.target.value)}><option value="">All Sessions</option>{sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
-          <Field label="Issue Date From"><Input aria-label="Issue Date From" type="date" value={filters.from} onChange={e => filter("from", e.target.value)} /></Field>
-          <Field label="Issue Date To"><Input aria-label="Issue Date To" type="date" min={filters.from} value={filters.to} onChange={e => filter("to", e.target.value)} /></Field>
-          <div className="flex items-end"><button className={button} onClick={() => setFilters(initialFilters)}>Clear Filters</button></div>
+
+  async function handleRecordPayment(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFormError(null);
+    if (!selectedLedgerAccount) return;
+
+    const remaining = Number(selectedLedgerAccount.remaining_balance);
+    const payAmount = Number(amount);
+    if (payAmount <= 0) {
+      setFormError("Amount must be greater than 0");
+      return;
+    }
+    if (payAmount > remaining) {
+      setFormError(`Amount cannot exceed remaining balance of ${formatPKR(remaining)}`);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("student_fee_account_id", selectedLedgerAccount.id);
+    formData.append("amount", amount);
+    formData.append("payment_method", paymentMethod);
+    formData.append("transaction_number", transactionNumber);
+    formData.append("reference_number", referenceNumber);
+    formData.append("remarks", remarks);
+
+    startTransition(async () => {
+      try {
+        await recordPaymentAction(formData);
+        handleCloseCollect();
+        router.refresh();
+      } catch (err: any) {
+        setFormError(err.message || "Failed to record payment.");
+      }
+    });
+  }
+
+  return (
+    <>
+      <div id="fee-management-report" className="pb-24">
+        <Card className="overflow-hidden rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <div className="border-b border-outline/60 px-5 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[1.5rem] font-bold text-ink">Student Fee Accounts</h2>
+                <p className="text-sm text-muted">Search, filter, collect payments, and apply discounts.</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-5">
+              <div className="relative md:col-span-2">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-outline/70 pl-11 shadow-none" placeholder="Search student or admission..." />
+              </div>
+              <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+                <option value="all">All Classes</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {formatClassDisplayName(c.grade_name, c.name, c.section_name)}
+                  </option>
+                ))}
+              </Select>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="partially_paid">Partially Paid</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </Select>
+              <Select value={session} onChange={(e) => setSession(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+                <option value="all">All Sessions</option>
+                {sessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink">
+              <input
+                type="checkbox"
+                checked={onlyDiscounted}
+                onChange={(e) => setOnlyDiscounted(e.target.checked)}
+                className="h-4 w-4 rounded border-outline text-primary focus:ring-0"
+              />
+              <span>Show discounted accounts only</span>
+            </label>
+          </div>
+
+          {!filtered.length ? (
+            <div className="p-5">
+              <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
+            </div>
+          ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
+                <tr>
+                  <th className="px-5 py-4">Student</th>
+                  <th className="px-5 py-4">Class</th>
+                  <th className="px-5 py-4">Payable</th>
+                  <th className="px-5 py-4">Paid</th>
+                  <th className="px-5 py-4">Remaining</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Receipt</th>
+                  {canManage && <th className="px-5 py-4 text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((acc) => {
+                  const receipt = latestReceiptByAccount.get(acc.id);
+                  const isSelected = selectedAccountId === acc.id;
+                  return (
+                    <tr
+                      key={acc.id}
+                      className={`border-t border-outline/50 ${isSelected ? "bg-primary-soft/30" : "hover:bg-surface-low/40"}`}
+                    >
+                      <td className="px-5 py-4">
+                        <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="text-left">
+                          <p className="font-semibold text-ink">{acc.student_name}</p>
+                          <p className="text-xs text-muted">Adm: {acc.admission_number}</p>
+                        </button>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="text-xs text-muted">{formatGradeSection(acc.grade_name, acc.section_name)}</div>
+                      </td>
+                      <td className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
+                      <td className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
+                      <td className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
+                      <td className="px-5 py-4">
+                        <Badge tone={statusTone[acc.payment_status as keyof typeof statusTone] ?? "gray"}>
+                          {(acc.payment_status === "pending" || acc.payment_status === "unpaid") ? "Pending" : acc.payment_status.replace("_", " ")}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4">
+                        {receipt ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceipt(receipt)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                          >
+                            <Receipt className="h-3.5 w-3.5" /> View/Print
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted">No receipt yet</span>
+                        )}
+                      </td>
+                      {canManage && (
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCollect(acc.id)}
+                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary hover:brightness-95"
+                            >
+                              <Wallet className="h-3 w-3" /> Collect
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDiscount(acc)}
+                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success hover:brightness-95"
+                            >
+                              <Percent className="h-3 w-3" /> Discount
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          )}
+        </Card>
+
+      </div>
+
+      {showReports ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:left-[292px]">
+          <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-button hover:brightness-105"
+            >
+              <Printer className="h-4 w-4" /> Print Report
+            </button>
+          </div>
         </div>
-        {invalidDates && <p role="alert" className="text-sm text-danger">End date must be on or after the start date.</p>}
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-surface-low text-xs uppercase text-muted"><tr>{["Challan ID", "Student / Admission ID", "Class", "Issue / Due Date", "Total Amount", "Amount Paid", "Balance Due", "Challan Status", "Actions"].map(h => <th key={h} className="px-4 py-4">{h}</th>)}</tr></thead>
-          <tbody>{!invalidDates && filtered.map(c => <tr key={c.id} className="border-t border-outline/60 hover:bg-surface-low/40">
-            <td className="max-w-48 break-all px-4 py-4 font-mono text-xs"><button className="text-left text-primary underline" onClick={() => open(c, "view")}>{c.id}</button></td>
-            <td className="px-4 py-4"><p className="font-semibold">{c.student_name}</p><p className="text-xs text-muted">{c.admission_number}</p></td>
-            <td className="px-4 py-4">{c.class_name}</td>
-            <td className="whitespace-nowrap px-4 py-4"><p>Issued {formatDatePK(c.issue_date)}</p><p className="text-xs text-muted">Due {formatDatePK(c.due_date)}</p></td>
-            <td className="whitespace-nowrap px-4 py-4">{formatPKR(c.amount)}</td><td className="whitespace-nowrap px-4 py-4 text-success">{formatPKR(c.amount_paid)}</td><td className="whitespace-nowrap px-4 py-4 font-semibold">{formatPKR(c.balance_due)}</td>
-            <td className="px-4 py-4"><Badge tone={c.payment_status === "paid" ? "green" : c.payment_status === "unpaid" ? "yellow" : "blue"}>{challanStatusLabels[c.payment_status]}</Badge></td>
-            <td className="px-4 py-4"><div className="flex min-w-56 flex-wrap gap-2"><button className={button} onClick={() => open(c, "view")}>View / Receipts</button>{canManage && <>
-              <button className={button} disabled={c.balance_due <= 0 || !c.student_fee_account_id} onClick={() => open(c, "collect")}>Collect Payment</button>
-              <button className={button} onClick={() => open(c, "discount")}>Apply Discount</button><button className={button} onClick={() => open(c, "edit")}>Edit</button>
-            </>}</div></td>
-          </tr>)}{(invalidDates || !filtered.length) && <tr><td colSpan={9} className="p-8 text-center text-muted">No challans match these filters.</td></tr>}</tbody>
-        </table>
-      </div>
-    </Card>
-    {row && selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:bg-white print:p-0">
-      <section role="dialog" aria-modal="true" aria-label="Challan details" className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl print:max-h-none print:shadow-none" id="challan-document">
-        <div className="mb-4 flex justify-between gap-3 print:hidden"><h2 className="text-lg font-bold">{selected.mode === "view" ? receipt ? "Payment Receipt" : "Challan Details" : selected.mode === "collect" ? "Collect Payment" : selected.mode === "edit" ? "Edit Challan" : "Apply Discount"}</h2><button className={button} disabled={pending} onClick={() => setSelected(null)}>Close</button></div>
-        <div className="mb-5 space-y-1 border-b border-outline pb-4"><p className="break-all font-mono text-sm">Challan ID: {row.id}</p><p className="font-bold">{row.student_name} · {row.admission_number}</p><p className="text-sm">{row.class_name} · {sessions.find(s => s.id === row.academic_year_id)?.name ?? "Session unavailable"}</p><p className="text-sm">Issued {formatDatePK(row.issue_date)} · Due {formatDatePK(row.due_date)}</p></div>
-        {selected.mode === "view" ? <>
-          {receipt ? <div className="space-y-3"><h3 className="text-xl font-bold">Receipt {receipt.receipt_number}</h3><p>{formatDatePK(receipt.payment_date)} · {receipt.payment_method.replaceAll("_", " ")}</p><p className="text-xl">Amount Paid: {formatPKR(receipt.amount)}</p><p>Reference: {receipt.reference_number || receipt.transaction_number || "—"}</p>{receipt.remarks && <p>{receipt.remarks}</p>}{receipt.is_voided && <p className="font-bold text-danger">VOIDED</p>}<button className={`${button} print:hidden`} onClick={() => setReceipt(null)}>Back to Challan</button></div> : <>
-            <table className="w-full text-sm"><thead><tr><th className="py-2 text-left">Line Item</th><th className="text-right">Amount</th></tr></thead><tbody>{row.line_items.map((i, index) => <tr key={index} className="border-t border-outline"><td className="py-2">{i.description}</td><td className="text-right">{formatPKR(Number(i.amount))}</td></tr>)}</tbody></table>
-            <div className="my-4 space-y-1 text-right text-sm"><p>Discount: {formatPKR(row.discount_amount)}</p>{row.discount_reason && <p>{row.discount_reason}</p>}<p>Total Amount: {formatPKR(row.amount)}</p><p>Amount Paid: {formatPKR(row.amount_paid)}</p><p className="font-bold">Balance Due: {formatPKR(row.balance_due)} · {challanStatusLabels[row.payment_status]}</p></div>
-            <h3 className="mb-2 font-bold">Payment History</h3>{!row.payments.length && <p className="text-sm text-muted">No payments recorded for this challan.</p>}
-            {legacyPayments.length > 0 && <div className="my-4 rounded-lg border border-outline p-3 print:hidden"><h4 className="font-semibold">Unassigned Historical Receipts</h4><p className="my-2 text-xs text-muted">Assign only a receipt that paid this challan. Receipts exceeding its balance need separate reconciliation.</p>{legacyPayments.map(p => <div key={p.id} className="flex items-center justify-between gap-2 py-2 text-sm"><span>{p.receipt_number} · {formatDatePK(p.payment_date)} · {formatPKR(p.amount)}</span>{canManage && <button className={button} disabled={pending || p.amount > row.balance_due} onClick={() => {
-              setError(null);
-              startTransition(async () => { try { await assignLegacyPaymentAction(row.id, p.id); router.refresh(); } catch (err) { setError(err instanceof Error ? err.message : "Unable to assign receipt"); } });
-            }}>Assign to This Challan</button>}</div>)}</div>}
-            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-            {row.payments.map(p => <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-outline py-3 text-sm"><div><p>{p.receipt_number} · {formatDatePK(p.payment_date)}</p><p>{formatPKR(p.amount)} · {p.payment_method.replaceAll("_", " ")}{p.is_voided ? " · Voided" : ""}</p></div><button className={`${button} print:hidden`} onClick={() => setReceipt(p)}>View / Print Receipt</button></div>)}
-          </>}
-          <button className={`${button} mt-5 print:hidden`} onClick={() => window.print()}>Print {receipt ? "Receipt" : "Challan"}</button>
-        </> : <form onSubmit={submit} className="space-y-4">
-          <p className="text-sm">Challan total {formatPKR(row.amount)} · Paid {formatPKR(row.amount_paid)} · Balance {formatPKR(row.balance_due)}</p>
-          {selected.mode === "collect" && <>
-            <Field label="Payment Amount" required><Input name="amount" type="number" min="0.01" max={row.balance_due} step="0.01" required /></Field>
-            <Field label="Payment Method"><Select name="payment_method"><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option><option value="online_payment">Online Payment</option></Select></Field>
-            <Field label="Reference Number"><Input name="reference_number" /></Field><Field label="Transaction Number"><Input name="transaction_number" /></Field><Field label="Remarks"><Textarea name="remarks" /></Field>
-          </>}
-          {selected.mode === "discount" && <><Field label="Discount Amount (PKR)" required><Input name="discount_amount" type="number" min="0" max={row.amount + row.discount_amount - row.amount_paid} step="0.01" defaultValue={row.discount_amount} required /></Field><p className="text-xs text-muted">Replaces this challan’s discount. Enter 0 to remove it.</p><Field label="Reason" required><Textarea name="discount_reason" defaultValue={row.discount_reason ?? ""} required /></Field></>}
-          {selected.mode === "edit" && <>
-            <Field label="Due Date" required><Input name="due_date" type="date" min={row.issue_date} defaultValue={row.due_date} required /></Field>
-            {items.map((item, index) => <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={`Line Item ${index + 1}`}><Input aria-label={`Line item ${index + 1} description`} value={item.description} required onChange={e => setItems(items.map((v, i) => i === index ? { ...v, description: e.target.value } : v))} /></Field></div><div className="w-32"><Field label="Amount"><Input aria-label={`Line item ${index + 1} amount`} type="number" min="0" step="0.01" value={item.amount} required onChange={e => setItems(items.map((v, i) => i === index ? { ...v, amount: Number(e.target.value) } : v))} /></Field></div><button type="button" className={button} disabled={items.length === 1} onClick={() => setItems(items.filter((_, i) => i !== index))}>Remove</button></div>)}
-            <button type="button" className={button} onClick={() => setItems([...items, { description: "", amount: 0 }])}>Add Line Item</button>
-          </>}
-          {error && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{error}</p>}
-          <button disabled={pending} className="rounded-lg bg-primary px-4 py-3 font-semibold text-white disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
-        </form>}
-      </section>
-      <style>{`@media print { body * { visibility: hidden; } #challan-document, #challan-document * { visibility: visible; } #challan-document { position: absolute; left: 0; top: 0; width: 100%; } }`}</style>
-    </div>}
-  </>;
+      ) : null}
+
+      {isCollectOpen && selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
+            <div className="flex items-center justify-between border-b border-outline/40 p-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Record Payment</h3>
+                <p className="text-xs text-muted">{selectedLedgerAccount.student_name} • Remaining {formatPKR(Number(selectedLedgerAccount.remaining_balance))}</p>
+              </div>
+              <button onClick={handleCloseCollect} className="rounded p-1 text-muted hover:bg-surface-low">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleRecordPayment} className="p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {formError ? (
+                  <div className="md:col-span-2 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{formError}</div>
+                ) : null}
+                <Field label="Amount" required>
+                  <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                </Field>
+                <Field label="Payment Method" required>
+                  <Select value={paymentMethod} onChange={(e: any) => setPaymentMethod(e.target.value)}>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="online_payment">Online Payment</option>
+                  </Select>
+                </Field>
+                <Field label="Transaction Number">
+                  <Input value={transactionNumber} onChange={(e) => setTransactionNumber(e.target.value)} />
+                </Field>
+                <Field label="Reference Number">
+                  <Input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Remarks">
+                    <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2 border-t border-outline/40 pt-4">
+                <button type="button" onClick={handleCloseCollect} className="rounded-lg bg-surface-low px-4 py-2 text-sm font-semibold text-muted">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:brightness-105 disabled:bg-outline"
+                >
+                  {pending ? "Recording..." : "Post Payment"}
+                </button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
+
+      {isDiscountOpen && selectedAccount ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
+            <div className="flex items-center justify-between border-b border-outline/40 p-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Apply Fee Discount</h3>
+                <p className="text-xs text-muted">Student: {selectedAccount.student_name}</p>
+              </div>
+              <button onClick={() => setIsDiscountOpen(false)} className="rounded p-1 hover:bg-surface-low text-muted">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleApplyDiscount}>
+              <div className="space-y-4 p-4">
+                {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
+                <Field label="Discount Type">
+                  <Select
+                    value={discountType}
+                    onChange={(e) => {
+                      setDiscountType(e.target.value as any);
+                      if (e.target.value === "none") setDiscountValue("");
+                    }}
+                  >
+                    <option value="none">No Discount</option>
+                    <option value="percentage">Percentage Discount (%)</option>
+                    <option value="fixed">Fixed Amount Discount</option>
+                  </Select>
+                </Field>
+                {discountType !== "none" ? (
+                  <>
+                    <Field label={discountType === "percentage" ? "Percentage Value (%)" : "Fixed Amount"}>
+                      <Input type="number" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
+                    </Field>
+                    <Field label="Reason">
+                      <Select value={discountReason} onChange={(e) => setDiscountReason(e.target.value as any)}>
+                        <option value="scholarship">Scholarship Program</option>
+                        <option value="sibling_discount">Sibling Discount</option>
+                        <option value="merit">Academic Merit</option>
+                        <option value="need_based">Need-Based Financial Aid</option>
+                        <option value="special_approval">Special Board Approval</option>
+                      </Select>
+                    </Field>
+                    <Field label="Remarks">
+                      <Textarea value={discountRemarks} onChange={(e) => setDiscountRemarks(e.target.value)} />
+                    </Field>
+                  </>
+                ) : null}
+              </div>
+              <div className="flex justify-end gap-2 border-t border-outline/40 p-4">
+                <button type="button" onClick={() => setIsDiscountOpen(false)} className="rounded-lg bg-surface-low px-4 py-2 text-sm font-semibold text-muted">
+                  Cancel
+                </button>
+                <button type="submit" disabled={pending} className="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white">
+                  {pending ? "Saving..." : "Apply Adjustment"}
+                </button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
+
+      {selectedReceipt ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm print:static print:block print:bg-white print:p-0">
+          <Card className="w-full max-w-2xl p-6 print:shadow-none print:ring-0">
+            <div className="mb-5 flex items-start justify-between gap-4 border-b border-outline/60 pb-4 print:hidden">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Payment Receipt</h3>
+                <p className="text-xs text-muted">{selectedReceipt.receipt_number}</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => window.print()} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">
+                  Print
+                </button>
+                <button type="button" onClick={() => setSelectedReceipt(null)} className="rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-muted">
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="space-y-5 text-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-primary">Fee Receipt</h2>
+                  <p className="text-muted">Official payment record</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono font-bold text-ink">{selectedReceipt.receipt_number}</p>
+                  <p className="text-muted">{formatDatePK(selectedReceipt.payment_date)}</p>
+                </div>
+              </div>
+              <div className="grid gap-3 rounded-lg bg-surface-low p-4 sm:grid-cols-2">
+                <ReceiptLine label="Student" value={selectedReceipt.student_name} />
+                <ReceiptLine label="Admission" value={selectedReceipt.admission_number} />
+                <ReceiptLine label="Class" value={formatGradeSection(selectedReceipt.grade_name, selectedReceipt.section_name)} />
+                <ReceiptLine label="Session" value={selectedReceipt.academic_year_name} />
+              </div>
+              <div className="grid gap-3 rounded-lg border border-outline/60 p-4 sm:grid-cols-2">
+                <ReceiptLine label="Amount Paid" value={formatPKR(Number(selectedReceipt.amount))} strong />
+                <ReceiptLine label="Method" value={selectedReceipt.payment_method.replace("_", " ")} />
+                <ReceiptLine label="Reference" value={selectedReceipt.reference_number || selectedReceipt.transaction_number || "-"} />
+                <ReceiptLine label="Received By" value={selectedReceipt.received_by_name || "-"} />
+              </div>
+              {selectedReceipt.remarks ? <p className="text-muted">Remarks: {selectedReceipt.remarks}</p> : null}
+            </div>
+          </Card>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ReceiptLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p>
+      <p className={strong ? "mt-1 font-display text-xl font-bold text-ink" : "mt-1 font-semibold text-ink"}>{value}</p>
+    </div>
+  );
 }

@@ -1,8 +1,7 @@
-import { challanBalance, type Challan, type ChallanPayment, type UnassignedPayment } from "@/lib/challans";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
-import { feeStructureSchema, paymentSchema, monthlyGenerationSchema, manualTransactionSchema } from "@/lib/validation/finance";
+import { feeStructureSchema, discountSchema, paymentSchema, monthlyGenerationSchema, manualTransactionSchema } from "@/lib/validation/finance";
 import { startOfMonth, subMonths, format } from "date-fns";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
@@ -188,47 +187,132 @@ export async function deleteFeeStructure(user: AppUser, id: string) {
 }
 
 // -------------------------------------------------------------
-// Issued Challans
+// Student Fee Accounts
 // -------------------------------------------------------------
 
-export async function getFeeChallans(user: AppUser, month?: string): Promise<Challan[]> {
+export async function getStudentFees(user: AppUser, filters: {
+  q?: string;
+  classId?: string;
+  status?: string;
+  session?: string;
+  discounted?: boolean;
+}) {
   const supabase = await createClient();
-  let query = supabase.from("fee_challans")
-    .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), fee_payments!fee_payments_challan_id_fkey(*)")
+  let query = supabase
+    .from("student_fee_directory")
+    .select("*")
     .eq("school_id", user.schoolId);
-  if (month) query = query.eq("fee_month", month + "-01");
-  const rows: any[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await query.order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
-    if (!data || data.length < 1000) break;
+
+  if (filters.classId && filters.classId !== "all") {
+    query = query.eq("class_id", filters.classId);
   }
-  return rows.map((row) => {
-    const payments: ChallanPayment[] = (row.fee_payments ?? []).map((p: ChallanPayment) => ({ ...p, amount: Number(p.amount) }))
-      .sort((a: ChallanPayment, b: ChallanPayment) => b.payment_date.localeCompare(a.payment_date));
+  if (filters.status && filters.status !== "all") {
+    query = query.eq("payment_status", filters.status);
+  }
+  if (filters.session && filters.session !== "all") {
+    query = query.eq("academic_year_id", filters.session);
+  }
+  if (filters.discounted) {
+    query = query.neq("discount_type", "none");
+  }
+  if (filters.q) {
+    query = query.or(`student_name.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  }
+
+  const [{ data, error }, { data: challansData, error: challansError }] = await Promise.all([
+    query.order("student_name"),
+    supabase
+      .from("fee_challans")
+      .select("student_id, amount")
+      .eq("school_id", user.schoolId)
+      .gt("amount", 0)
+  ]);
+
+  if (error) throw new Error(error.message);
+  if (challansError) throw new Error(challansError.message);
+
+  const accountByStudent = new Map<string, any>();
+  for (const row of data ?? []) accountByStudent.set(String(row.student_id), row);
+
+  const pendingByStudent = new Map<string, number>();
+  for (const challan of challansData ?? []) {
+    const studentId = String(challan.student_id);
+    const account = accountByStudent.get(studentId);
+    const amount = Number(challan.amount ?? 0) > 0
+      ? Number(challan.amount)
+      : Number(account?.total_payable ?? 0);
+    pendingByStudent.set(studentId, (pendingByStudent.get(studentId) ?? 0) + amount);
+  }
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0,
+    remaining_balance: Math.max(
+      Number(row.remaining_balance ?? 0),
+      (pendingByStudent.get(String(row.student_id)) ?? 0) - Number(row.amount_paid ?? 0),
+      Number(row.total_payable ?? 0) - Number(row.amount_paid ?? 0)
+    ),
+    payment_status: normalizeStudentFeeStatus({
+      ...row,
+      pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0
+    })
+  }));
+}
+
+export function resolveChallanAmount(row: { amount?: number | string | null; student_fee_accounts?: { total_payable?: number | string | null } | null }) {
+  const generatedAmount = Number(row.amount ?? 0);
+  const accountAmount = Number(row.student_fee_accounts?.total_payable ?? 0);
+  return generatedAmount > 0 ? generatedAmount : accountAmount;
+}
+
+export function normalizeStudentFeeStatus(row: {
+  total_payable?: number | string | null;
+  amount_paid?: number | string | null;
+  due_date?: string | null;
+  payment_status?: string | null;
+  pending_challan_amount?: number | string | null;
+}) {
+  const totalPayable = Number(row.total_payable ?? 0);
+  const amountPaid = Number(row.amount_paid ?? 0);
+  const pendingChallanAmount = Number(row.pending_challan_amount ?? 0);
+  const dueDate = row.due_date ? new Date(row.due_date) : null;
+
+  if (pendingChallanAmount > 0 && amountPaid < pendingChallanAmount) return "pending";
+  if (totalPayable <= 0) return "paid";
+  if (amountPaid >= totalPayable) return "paid";
+  if (dueDate && dueDate.getTime() < Date.now()) return "overdue";
+  if (amountPaid > 0) return "partially_paid";
+  return "pending";
+}
+
+export async function getFeeChallans(user: AppUser, month: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fee_challans")
+    .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), student_fee_accounts(total_payable, amount_paid, fee_payments(amount, payment_date, is_voided))")
+    .eq("school_id", user.schoolId)
+    .eq("fee_month", `${month}-01`)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: any) => {
+    const monthlyPaid = (row.student_fee_accounts?.fee_payments ?? [])
+      .filter((payment: any) => !payment.is_voided && String(payment.payment_date).startsWith(month))
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount ?? 0), 0);
+    const challanAmount = resolveChallanAmount(row);
     return {
       ...row,
       student_name: formatFullName(row.students?.first_name, row.students?.last_name),
       admission_number: row.students?.admission_number ?? "—",
       class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
-      amount: Number(row.amount), discount_amount: Number(row.discount_amount), payments,
-      ...challanBalance(row.id, Number(row.amount), payments)
+      amount: challanAmount,
+      amount_paid_for_month: monthlyPaid,
+      payment_status: challanAmount > 0 && monthlyPaid >= challanAmount
+        ? "paid"
+        : monthlyPaid > 0
+          ? "partially paid"
+          : "pending"
     };
   });
-}
-
-export async function getUnassignedFeePayments(user: AppUser): Promise<UnassignedPayment[]> {
-  const supabase = await createClient();
-  const rows: UnassignedPayment[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase.from("fee_payments").select("*").eq("school_id", user.schoolId)
-      .is("challan_id", null).eq("is_voided", false).order("id").range(offset, offset + 999);
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []).map(p => ({ ...p, amount: Number(p.amount) })));
-    if (!data || data.length < 1000) break;
-  }
-  return rows;
 }
 
 export async function generateFeeChallans(user: AppUser, values: { month: string; student_id?: string; class_id?: string }) {
@@ -243,44 +327,149 @@ export async function generateFeeChallans(user: AppUser, values: { month: string
   return Array.isArray(data) ? data[0] : data;
 }
 
-export async function applyDiscount(user: AppUser, challanId: string, values: any) {
-  if (!hasPermission(user.role, "finance:manage", user.permissions)) throw new Error("Unauthorized");
+export async function getStudentFeeAccount(user: AppUser, id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("adjust_fee_challan", {
-    p_challan_id: challanId, p_school_id: user.schoolId, p_expected_updated_at: values.updated_at,
-    p_discount: values.discount_amount, p_reason: values.discount_reason, p_items: null, p_due_date: null
-  });
+  
+  // Single account details
+  const { data: account, error } = await supabase
+    .from("student_fee_directory")
+    .select("*")
+    .eq("school_id", user.schoolId)
+    .eq("id", id)
+    .single();
+
   if (error) throw new Error(error.message);
-  return data;
+
+  // Get payments
+  const { data: payments } = await supabase
+    .from("payment_history_view")
+    .select("*")
+    .eq("school_id", user.schoolId)
+    .eq("student_fee_account_id", id)
+    .order("created_at", { ascending: false });
+
+  // Get structure detail
+  let structure = null;
+  if (account.fee_structure_id) {
+    const { data } = await supabase
+      .from("fee_structures")
+      .select("*")
+      .eq("school_id", user.schoolId)
+      .eq("id", account.fee_structure_id)
+      .single();
+    structure = data;
+  }
+
+  return { account, payments: payments || [], structure };
 }
 
-export async function editFeeChallan(user: AppUser, challanId: string, values: {
-  updated_at: string; line_items: { description: string; amount: number }[]; due_date: string;
-}) {
-  if (!hasPermission(user.role, "finance:manage", user.permissions)) throw new Error("Unauthorized");
+export async function applyDiscount(user: AppUser, accountId: string, values: any) {
+  if (!hasPermission(user.role, "finance:manage")) {
+    throw new Error("Unauthorized to apply discounts");
+  }
+  const parsed = discountSchema.parse(values);
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("adjust_fee_challan", {
-    p_challan_id: challanId, p_school_id: user.schoolId, p_expected_updated_at: values.updated_at,
-    p_items: values.line_items, p_due_date: values.due_date, p_discount: null, p_reason: null
-  });
+
+  // Get current account and structure
+  const { data: account } = await supabase
+    .from("student_fee_accounts")
+    .select("*, fee_structures(*)")
+    .eq("school_id", user.schoolId)
+    .eq("id", accountId)
+    .single<any>();
+
+  if (!account) throw new Error("Fee account not found");
+  if (!account.fee_structure_id) throw new Error("No fee structure is mapped to this account yet");
+
+  const fs = account.fee_structures;
+  const baseTotal = Number(fs.tuition_fee) + Number(fs.admission_fee) + Number(fs.examination_fee) +
+                    Number(fs.library_fee) + Number(fs.laboratory_fee) + Number(fs.transport_fee) +
+                    Number(fs.miscellaneous_charges);
+
+  let newPayable = baseTotal;
+  if (parsed.discount_type === "percentage") {
+    newPayable = baseTotal * (1 - parsed.discount_value / 100);
+  } else if (parsed.discount_type === "fixed") {
+    newPayable = Math.max(0, baseTotal - parsed.discount_value);
+  }
+
+  const { data: updated, error } = await supabase
+    .from("student_fee_accounts")
+    .update({
+      discount_type: parsed.discount_type,
+      discount_value: parsed.discount_value,
+      discount_reason: parsed.discount_type === "none" ? null : (parsed.discount_reason as string),
+      discount_remarks: parsed.discount_remarks || null,
+      discount_approved_by: parsed.discount_approved_by,
+      discount_applied_date: new Date().toISOString().slice(0, 10),
+      total_payable: newPayable
+    })
+    .eq("school_id", user.schoolId)
+    .eq("id", accountId)
+    .select()
+    .single();
+
   if (error) throw new Error(error.message);
-  return data;
+
+  await logFinanceAction(user, "discount_applied", account.student_id, account, updated);
+  return updated;
 }
+
+// -------------------------------------------------------------
+// Payments
+// -------------------------------------------------------------
 
 export async function recordPayment(user: AppUser, values: any) {
-  if (!hasPermission(user.role, "finance:manage", user.permissions)) throw new Error("Unauthorized");
   const parsed = paymentSchema.parse(values);
   const supabase = await createClient();
-  const { data: challan, error: challanError } = await supabase.from("fee_challans")
-    .select("id, student_fee_account_id, student_id").eq("school_id", user.schoolId).eq("id", parsed.challan_id).single();
-  if (challanError || !challan) throw new Error("Challan not found");
-  if (!challan.student_fee_account_id) throw new Error("This challan needs its billing account restored before collecting payment");
-  const { data, error } = await supabase.from("fee_payments").insert({
-    ...parsed, school_id: user.schoolId, student_fee_account_id: challan.student_fee_account_id,
-    received_by: user.id, payment_date: new Date().toISOString().slice(0, 10)
-  }).select().single();
+
+  // Get account info
+  const { data: account } = await supabase
+    .from("student_fee_accounts")
+    .select("*")
+    .eq("school_id", user.schoolId)
+    .eq("id", parsed.student_fee_account_id)
+    .single();
+
+  if (!account) throw new Error("Student fee account not found");
+
+  const { data: challans } = await supabase
+    .from("fee_challans")
+    .select("amount")
+    .eq("school_id", user.schoolId)
+    .eq("student_id", account.student_id);
+
+  const generatedTotal = (challans ?? []).reduce(
+    (sum, challan) => sum + (Number(challan.amount ?? 0) > 0 ? Number(challan.amount) : Number(account.total_payable)),
+    0
+  );
+  const remaining = Math.max(
+    Number(account.total_payable) - Number(account.amount_paid),
+    generatedTotal - Number(account.amount_paid)
+  );
+  if (parsed.amount > remaining) {
+    throw new Error(`Payment amount (${parsed.amount}) exceeds the remaining balance (${remaining})`);
+  }
+
+  const { data, error } = await supabase
+    .from("fee_payments")
+    .insert({
+      school_id: user.schoolId,
+      student_fee_account_id: parsed.student_fee_account_id,
+      amount: parsed.amount,
+      payment_method: parsed.payment_method,
+      transaction_number: parsed.transaction_number || null,
+      reference_number: parsed.reference_number || null,
+      remarks: parsed.remarks || null,
+      received_by: user.id,
+      payment_date: new Date().toISOString().slice(0, 10)
+    })
+    .select()
+    .single();
+
   if (error) throw new Error(error.message);
-  await logFinanceAction(user, "challan_payment_recorded", challan.student_id, null, data);
+
+  await logFinanceAction(user, "payment_recorded", account.student_id, null, data);
   return data;
 }
 
