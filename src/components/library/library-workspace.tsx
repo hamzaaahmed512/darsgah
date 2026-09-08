@@ -413,6 +413,7 @@ export function LibraryWorkspace({
       icon: BookCopy,
       bg: "bg-blue-50",
       fg: "text-blue-600",
+      accent: "border-t-blue-500",
     },
     {
       label: "On loan",
@@ -420,6 +421,7 @@ export function LibraryWorkspace({
       icon: BookOpen,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
+      accent: "border-t-emerald-500",
     },
     {
       label: "Overdue loans",
@@ -427,6 +429,7 @@ export function LibraryWorkspace({
       icon: Clock3,
       bg: "bg-red-50",
       fg: "text-red-600",
+      accent: "border-t-red-500",
     },
     {
       label: "Reservations",
@@ -435,6 +438,7 @@ export function LibraryWorkspace({
       icon: Users,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
+      accent: "border-t-amber-500",
     },
   ];
 
@@ -467,9 +471,9 @@ export function LibraryWorkspace({
 
       {/* ── KPI cards ── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg }) => (
-          <div key={label} className="flex items-center gap-4 rounded-2xl border border-outline/70 bg-white p-5">
-            <span className={`rounded-xl p-3 ${bg} ${fg}`}>
+        {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg, accent }) => (
+          <div key={label} className={`flex items-center gap-4 rounded-2xl border border-outline/70 border-t-4 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md ${accent}`}>
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${bg} ${fg}`}>
               <Icon className="h-5 w-5" />
             </span>
             <div>

@@ -17,21 +17,21 @@ export function DailyOperationsCenter({ items, compact = false }: { items: Daily
 
   if (compact) {
     return (
-      <Card className="mb-6">
-        <CardHeader>
+      <Card className="mb-6 overflow-hidden border border-primary-ink !bg-gradient-to-br !from-primary !to-[#16478f] text-white shadow-[0_18px_44px_rgba(37,99,235,0.22)]">
+        <CardHeader className="border-b border-white/15">
           <div>
-            <p className="font-label text-xs font-bold uppercase tracking-wide text-primary">Today</p>
-            <CardTitle>Daily Operations</CardTitle>
+            <p className="font-label text-xs font-bold uppercase tracking-wide text-blue-100">Today</p>
+            <CardTitle className="text-white">Daily Operations</CardTitle>
           </div>
-          <Link href="/operations" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white">
+          <Link href="/operations" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/20 hover:bg-white/25">
             Open Center
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-white/5 pt-4">
           <div className="flex flex-wrap gap-2">
             {items.map((item) => (
-              <span key={item.id} className={cn("rounded-lg px-3 py-2 text-xs font-bold", item.value ? "bg-warning-soft text-warning" : "bg-success-soft text-success")}>
+              <span key={item.id} className={cn("rounded-lg bg-white px-3 py-2 text-xs font-bold shadow-sm", item.value ? "text-amber-700" : "text-emerald-700")}>
                 {item.label}: {item.value}
               </span>
             ))}
@@ -42,17 +42,17 @@ export function DailyOperationsCenter({ items, compact = false }: { items: Daily
   }
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
+    <Card className="mb-6 overflow-hidden border border-primary-ink !bg-gradient-to-br !from-primary !to-[#16478f] text-white shadow-[0_18px_44px_rgba(37,99,235,0.22)]">
+      <CardHeader className="border-b border-white/15">
         <div>
-          <p className="font-label text-xs font-bold uppercase tracking-wide text-primary">Today</p>
-          <CardTitle>Daily Operations Center</CardTitle>
+          <p className="font-label text-xs font-bold uppercase tracking-wide text-blue-100">Today</p>
+          <CardTitle className="text-white">Daily Operations Center</CardTitle>
         </div>
-        <div className={cn("rounded-lg px-3 py-1.5 text-xs font-bold", totalAttention ? "bg-warning-soft text-warning" : "bg-success-soft text-success")}>
+        <div className={cn("rounded-lg bg-white px-3 py-1.5 text-xs font-bold shadow-sm", totalAttention ? "text-warning" : "text-success")}>
           {totalAttention ? `${totalAttention} needs attention` : "All clear"}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="bg-white/5 pt-4">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => {
             const tone = toneClasses[item.tone];
@@ -61,7 +61,7 @@ export function DailyOperationsCenter({ items, compact = false }: { items: Daily
               <Link
                 key={item.id}
                 href={item.href}
-                className="group grid min-h-[142px] gap-3 rounded-xl border border-outline/50 bg-white p-4 transition hover:border-primary/40 hover:bg-surface-low/60"
+                className="group grid min-h-[142px] gap-3 rounded-xl border border-white/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:bg-white hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className={cn("flex h-10 w-10 items-center justify-center rounded-lg", tone.bg, tone.icon)}>

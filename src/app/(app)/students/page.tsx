@@ -9,23 +9,25 @@ import { StudentActions } from "@/components/students/student-actions";
 import { ApprovalQueue } from "@/components/approvals/approval-queue";
 import { Badge } from "@/components/ui/badge";
 import { requireUser } from "@/lib/auth/session";
-import { getStudents } from "@/lib/services/students";
+import { getStudentGenderCounts, getStudents } from "@/lib/services/students";
 import { getApprovalRequests } from "@/lib/services/approvals";
 import { getAcademicOptions, getTeacherHeadClasses } from "@/lib/services/academics";
 import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
 import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
+import { GenderCounts } from "@/components/students/gender-counts";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("students:view");
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   const canReviewStudentRequests = hasPermission(user.role, "approvals:review", user.permissions);
-  const [students, academics, pendingRequests, combinations] = await Promise.all([
+  const [students, academics, pendingRequests, combinations, genderCounts] = await Promise.all([
     getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1), pageSize: Number(params.pageSize ?? 10) }),
     isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user),
     canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([]),
-    getSubjectCombinationCatalog(user).catch(() => ({ customCombinations: [] }))
+    getSubjectCombinationCatalog(user).catch(() => ({ customCombinations: [] })),
+    getStudentGenderCounts(user)
   ]);
   const pendingStudentRequests = pendingRequests.filter((request) => request.request_type === "admission" || request.request_type === "cancellation");
 
@@ -55,10 +57,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <div className="mb-5 flex items-center gap-3 text-sm font-semibold text-slate-600">
+      <div className="mb-2 flex items-center gap-3 text-sm font-semibold text-slate-600">
         <Users className="h-4 w-4 text-slate-500" />
         <span>{students.count} students enrolled</span>
       </div>
+      <div className="mb-5 text-sm"><GenderCounts male={genderCounts.male} female={genderCounts.female} /></div>
 
       <Card className="mb-5 min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
         <Suspense>

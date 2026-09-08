@@ -21,12 +21,7 @@ function canViewFinancialReports(role: string) {
 }
 
 const statTones = {
-  green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-  red: "bg-red-50 text-red-600 ring-red-100",
-  blue: "bg-blue-50 text-blue-600 ring-blue-100",
-  purple: "bg-purple-50 text-purple-600 ring-purple-100",
-  amber: "bg-amber-50 text-amber-600 ring-amber-100",
-  slate: "bg-slate-50 text-slate-600 ring-slate-100"
+  green: { tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", accent: "!border-t-emerald-500" }, red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-red-500" }, blue: { tile: "bg-blue-50 text-blue-600 ring-blue-100", accent: "!border-t-blue-500" }, purple: { tile: "bg-purple-50 text-purple-600 ring-purple-100", accent: "!border-t-purple-500" }, amber: { tile: "bg-amber-50 text-amber-600 ring-amber-100", accent: "!border-t-amber-500" }, slate: { tile: "bg-slate-50 text-slate-600 ring-slate-100", accent: "!border-t-slate-400" }
 } as const;
 
 function FinanceStatCard({
@@ -47,9 +42,9 @@ function FinanceStatCard({
   const trendClass = trendTone === "positive" ? "text-emerald-600" : trendTone === "negative" ? "text-red-600" : "text-slate-500";
 
   return (
-    <Card className="h-full p-5 shadow-sm sm:p-6">
+    <Card className={`h-full !border-t-4 p-5 shadow-sm sm:p-6 ${statTones[tone].accent}`}>
       <div className="flex h-full items-start gap-5">
-        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-1 sm:h-16 sm:w-16 ${statTones[tone]}`}>
+        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-16 sm:w-16 ${statTones[tone].tile}`}>
           <Icon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
         </span>
         <div className="min-w-0">
