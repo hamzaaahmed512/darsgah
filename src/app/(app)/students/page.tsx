@@ -63,12 +63,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       </div>
       <div className="mb-5 text-sm"><GenderCounts male={genderCounts.male} female={genderCounts.female} /></div>
 
-      <Card className="mb-5 min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
-        <Suspense>
-          <StudentFilterForm classes={academics.classes} limitedView={isTeacher} />
-        </Suspense>
-      </Card>
-
       {pendingStudentRequests.length ? (
         <Card className="mb-5">
           <CardHeader>
@@ -83,6 +77,12 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="mb-5 min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
+        <Suspense>
+          <StudentFilterForm classes={academics.classes} limitedView={isTeacher} />
+        </Suspense>
+      </Card>
 
       <StudentTable
         rows={students.rows}
