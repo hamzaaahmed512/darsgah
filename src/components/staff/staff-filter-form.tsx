@@ -54,7 +54,7 @@ export function StaffFilterForm({ customRoles = [] }: Props) {
           name="q"
           defaultValue={currentQ}
           onChange={handleSearchChange}
-          className="h-14 rounded-2xl border-outline/70 bg-white pl-12 text-base shadow-none"
+          className="h-14 rounded-2xl border-blue-100 bg-blue-50/70 pl-12 text-base shadow-none placeholder:text-slate-400 focus:border-primary/30 focus:bg-white"
           placeholder="Search staff by name, email, or department"
         />
       </div>

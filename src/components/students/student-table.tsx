@@ -1,20 +1,9 @@
 import Link from "next/link";
 import { formatGradeSection } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatStudentName } from "@/lib/student-name";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Eye, UsersRound } from "lucide-react";
 import { StudentPagination } from "@/components/students/student-pagination";
-
-const statusTone = {
-  active: "green",
-  graduated: "blue",
-  transferred: "yellow",
-  archived: "gray",
-  cancelled: "red",
-  pending_approval: "yellow",
-  pending_cancellation: "yellow"
-} as const;
 
 export function StudentTable({
   rows,
@@ -41,9 +30,13 @@ export function StudentTable({
 
   return (
     <div className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+        <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Students List</h2>
+        {pagination ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{pagination.count} students</span> : null}
+      </div>
       <div className="hidden overflow-x-auto lg:block">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-white font-label text-xs uppercase tracking-[0.12em] text-slate-500">
+          <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
             <tr>
               <th className="px-6 py-4">
                 <span className="inline-flex items-center gap-2">Student <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" /></span>
@@ -52,12 +45,13 @@ export function StudentTable({
               <th className="px-6 py-4">Class</th>
               <th className="px-6 py-4">Admission No.</th>
               <th className="px-6 py-4">Gender</th>
+              <th className="px-6 py-4">Status</th>
               {!limitedView ? <th className="px-6 py-4">Action</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.map((student) => (
-              <tr key={student.id} className="border-t border-slate-200/80 transition hover:bg-slate-50/70">
+              <tr key={student.id} className="border-t border-slate-100 transition hover:bg-blue-50/30">
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
                     {student.photo_url ? (
@@ -79,20 +73,21 @@ export function StudentTable({
                   {student.father_phone && <div className="text-xs text-slate-400">{student.father_phone}</div>}
                 </td> : null}
                 <td className="px-6 py-5">
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
+                  <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
                     {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
                   </span>
                 </td>
                 <td className="px-6 py-5 font-semibold text-slate-900">{student.admission_number}</td>
                 <td className="px-6 py-5 text-slate-600 capitalize">{student.gender || "-"}</td>
+                <td className="px-6 py-5"><StudentStatus status={student.status} /></td>
                 {!limitedView ? <td className="px-6 py-5">
                   <Link
                     data-navigation-progress="immediate"
                     href={`/students/${student.id}`}
                     prefetch={false}
-                    className="inline-flex min-h-9 items-center justify-center rounded-lg px-2 text-sm font-semibold text-primary hover:text-primary-ink"
+                    className="inline-flex min-h-9 items-center gap-1.5 justify-center rounded-xl bg-blue-50 px-3 text-sm font-semibold text-primary transition hover:bg-blue-100"
                   >
-                    View Profile
+                    <Eye className="h-4 w-4" />View Profile<ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </td> : null}
               </tr>
@@ -119,10 +114,10 @@ export function StudentTable({
                   <p className="text-xs text-slate-500">{student.admission_number}</p>
                 </div>
               </div>
-              <Badge tone={statusTone[student.status as keyof typeof statusTone] ?? "gray"}>{student.status}</Badge>
+              <StudentStatus status={student.status} />
             </div>
             <div className="mt-4 flex items-center justify-between gap-3">
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
                 {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
               </span>
               <span className="text-sm font-semibold text-primary">View Profile</span>
@@ -133,6 +128,12 @@ export function StudentTable({
       {pagination ? <StudentPagination {...pagination} /> : null}
     </div>
   );
+}
+
+function StudentStatus({ status }: { status: string }) {
+  const normalized = status.replaceAll("_", " ");
+  const styles = status === "active" ? "bg-emerald-50 text-emerald-700" : status === "cancelled" || status === "withdrawn" ? "bg-rose-50 text-rose-700" : status.includes("pending") || status === "transferred" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600";
+  return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold capitalize ${styles}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{normalized}</span>;
 }
 
 function getStudentAvatarTone(name: string) {

@@ -10,7 +10,7 @@ import { updateProfileAction } from "@/app/(app)/profile/actions";
 import { profileFormSchema, type ProfileFormValues } from "@/lib/validation/profile";
 import type { ProfileDetails } from "@/lib/services/profile";
 import { initials } from "@/lib/utils";
-import { formatPakistaniPhone } from "@/lib/pakistan-format";
+import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 import { normalizeEmail } from "@/lib/email";
 import { sanitizeEnglishNameInput } from "@/lib/validation/names";
 
@@ -37,6 +37,8 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       fullName: profile.fullName,
+      cnic: formatCnic(profile.cnic),
+      gender: profile.gender ?? "male",
       phone: profile.phone ?? "",
       personalEmail: profile.personalEmail ?? "",
       department: profile.department ?? "",
@@ -53,6 +55,8 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
   function handleCancel() {
     reset({
       fullName: profile.fullName,
+      cnic: formatCnic(profile.cnic),
+      gender: profile.gender ?? "male",
       phone: profile.phone ?? "",
       personalEmail: profile.personalEmail ?? "",
       department: profile.department ?? "",
@@ -160,6 +164,14 @@ export function ProfileForm({ profile }: { profile: ProfileDetails }) {
                 inputMode="numeric"
                 maxLength={12}
               />
+            </Field>
+
+            <Field label="CNIC" error={errors.cnic?.message}>
+              <Input {...register("cnic")} value={formatCnic(watch("cnic"))} onChange={(event) => setValue("cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} inputMode="numeric" maxLength={15} placeholder="00000-0000000-0" />
+            </Field>
+
+            <Field label="Gender" error={errors.gender?.message}>
+              <select {...register("gender")} className="min-h-10 w-full rounded-xl border border-outline bg-white px-3 text-sm text-ink"><option value="male">Male</option><option value="female">Female</option></select>
             </Field>
 
             <Field label="Personal Email" error={errors.personalEmail?.message}>

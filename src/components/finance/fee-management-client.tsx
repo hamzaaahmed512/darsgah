@@ -2,10 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Percent, X, Printer, Receipt, Wallet } from "lucide-react";
+import { Search, Percent, X, Printer, Receipt, Wallet, UsersRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   applyDiscountAction,
@@ -22,13 +21,6 @@ interface FeeManagementClientProps {
   sessions: any[];
   payments: any[];
 }
-
-const statusTone = {
-  paid: "green",
-  partially_paid: "blue",
-  pending: "yellow",
-  overdue: "red"
-} as const;
 
 function canViewFinancialReports(role: string) {
   return role !== "administrator";
@@ -185,8 +177,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   return (
     <>
       <div id="fee-management-report" className="pb-24">
-        <Card className="overflow-hidden rounded-[30px] border border-outline/70 bg-white shadow-card">
-          <div className="border-b border-outline/60 px-5 py-5">
+        <Card className="overflow-hidden rounded-[30px] border border-blue-100 bg-white shadow-[0_16px_44px_rgba(37,99,235,0.06)]">
+          <div className="border-b border-blue-100 px-5 py-5 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-[1.5rem] font-bold text-ink">Student Fee Accounts</h2>
@@ -196,7 +188,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <div className="relative md:col-span-2">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-outline/70 pl-11 shadow-none" placeholder="Search student or admission..." />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 pl-11 shadow-none placeholder:text-slate-400 focus:bg-white" placeholder="Search student or admission..." />
               </div>
               <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Classes</option>
@@ -238,6 +230,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
             </div>
           ) : (
+          <>
+          <div className="border-b border-blue-100 px-5 py-4 sm:px-6"><div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Student Fee Accounts</h3><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filtered.length} account{filtered.length === 1 ? "" : "s"}</span></div></div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
@@ -259,24 +253,21 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   return (
                     <tr
                       key={acc.id}
-                      className={`border-t border-outline/50 ${isSelected ? "bg-primary-soft/30" : "hover:bg-surface-low/40"}`}
+                      className={`border-t border-blue-100/70 ${isSelected ? "bg-blue-50/70" : "hover:bg-blue-50/35"}`}
                     >
                       <td className="px-5 py-4">
-                        <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="text-left">
-                          <p className="font-semibold text-ink">{acc.student_name}</p>
-                          <p className="text-xs text-muted">Adm: {acc.admission_number}</p>
+                        <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="flex items-center gap-3 text-left">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-primary">{acc.student_name.slice(0, 1).toUpperCase()}</span><span><p className="font-semibold text-ink">{acc.student_name}</p><p className="text-xs text-muted">Adm: {acc.admission_number}</p></span>
                         </button>
                       </td>
                       <td className="px-5 py-4">
-                        <div className="text-xs text-muted">{formatGradeSection(acc.grade_name, acc.section_name)}</div>
+                        <span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span>
                       </td>
                       <td className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
                       <td className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
                       <td className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
                       <td className="px-5 py-4">
-                        <Badge tone={statusTone[acc.payment_status as keyof typeof statusTone] ?? "gray"}>
-                          {(acc.payment_status === "pending" || acc.payment_status === "unpaid") ? "Pending" : acc.payment_status.replace("_", " ")}
-                        </Badge>
+                        <FeeStatus status={acc.payment_status} />
                       </td>
                       <td className="px-5 py-4">
                         {receipt ? (
@@ -317,6 +308,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               </tbody>
             </table>
           </div>
+          </>
           )}
         </Card>
 
@@ -504,6 +496,12 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       ) : null}
     </>
   );
+}
+
+function FeeStatus({ status }: { status: string }) {
+  const label = status === "pending" || status === "unpaid" ? "Pending" : status.replace("_", " ");
+  const style = status === "paid" ? "bg-emerald-50 text-emerald-700" : status === "overdue" ? "bg-rose-50 text-rose-700" : status === "partially_paid" ? "bg-blue-50 text-primary" : "bg-amber-50 text-amber-700";
+  return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold capitalize ${style}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{label}</span>;
 }
 
 function ReceiptLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

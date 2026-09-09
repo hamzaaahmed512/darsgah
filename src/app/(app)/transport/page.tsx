@@ -65,8 +65,8 @@ export default async function TransportPage() {
               const pct = capacity ? Math.min(100, Math.round((passengers / capacity) * 100)) : 0;
               const roster = data.assignments.filter((item) => item.vehicle_id === vehicle.id);
               return (
-                <details key={vehicle.id} className="group overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card">
-                  <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-surface-low/60 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <details key={vehicle.id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
+                  <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-blue-50/35 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display text-[1.35rem] font-semibold text-ink">{vehicle.plate_number}</h3>
@@ -79,7 +79,7 @@ export default async function TransportPage() {
                       <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
                     </div>
                   </summary>
-                  <div className="grid gap-5 border-t border-outline/60 p-5">
+                  <div className="grid gap-5 border-t border-blue-100 bg-slate-50/30 p-5">
                     <div className="grid gap-3 md:grid-cols-4">
                       <TransportInfo icon={<Bus className="h-4 w-4" />} label="Vehicle" value={vehicle.plate_number} />
                       <TransportInfo icon={<Users className="h-4 w-4" />} label="Driver" value={vehicle.driver_name ?? "Unassigned"} hint={vehicle.driver_phone ?? undefined} />

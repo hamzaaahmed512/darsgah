@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { normalizeOptionalEmail } from "@/lib/email";
-import { formatPakistaniPhoneForStorage, isValidPakistaniPhone } from "@/lib/pakistan-format";
+import { formatCnic, formatPakistaniPhoneForStorage, isValidPakistaniPhone } from "@/lib/pakistan-format";
 import { englishNameSchema } from "@/lib/validation/names";
 
 const optionalText = (max: number) =>
@@ -33,6 +33,8 @@ const pakistaniPhone = z
 
 export const profileFormSchema = z.object({
   fullName: englishNameSchema("Full name", 100, 2),
+  cnic: z.string().trim().transform(formatCnic).pipe(z.string().regex(/^\d{5}-\d{7}-\d$/, "CNIC must be exactly 13 digits")),
+  gender: z.enum(["male", "female"]),
   phone: pakistaniPhone,
   personalEmail: optionalEmail,
   department: optionalText(100),

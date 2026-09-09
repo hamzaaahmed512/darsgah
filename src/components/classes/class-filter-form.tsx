@@ -67,7 +67,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
           name="q"
           defaultValue={currentQ}
           onChange={handleSearchChange}
-          className="h-14 w-full rounded-2xl border border-outline/65 bg-white px-4 pl-12 text-sm font-medium shadow-none focus:outline-none focus:ring-4 focus:ring-primary/10"
+          className="h-14 w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-4 pl-12 text-sm font-medium shadow-none placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10"
           placeholder="Search classes by name, section, room..."
         />
       </div>

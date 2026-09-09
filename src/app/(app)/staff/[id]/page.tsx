@@ -110,6 +110,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                 initial={{
                   fullName: member.full_name,
                   phone: member.phone,
+                  cnic: member.cnic,
+                  gender: member.gender,
                   personalEmail: member.personal_email,
                   department: member.department,
                   jobTitle: member.job_title

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { GraduationCap } from "lucide-react";
+import { CircleMinus, GraduationCap, UserCheck, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
@@ -16,20 +16,32 @@ import { getSubjectCombinationCatalog } from "@/lib/services/student-combination
 import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
 import { GenderCounts } from "@/components/students/gender-counts";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const user = await requireUser("students:view");
   const isTeacher = user.role === "teacher" || user.role === "head_teacher";
   const canReviewStudentRequests = hasPermission(user.role, "approvals:review", user.permissions);
-  const [students, academics, pendingRequests, combinations, genderCounts] = await Promise.all([
+  const supabase = await createClient();
+  const [students, academics, pendingRequests, combinations, genderCounts, studentMetricResult] = await Promise.all([
     getStudents(user, { q: params.q, status: params.status ?? "active", classId: params.classId, page: Number(params.page ?? 1), pageSize: Number(params.pageSize ?? 10) }),
     isTeacher ? getTeacherHeadClasses(user).then((classes) => ({ classes })) : getAcademicOptions(user),
     canReviewStudentRequests ? getApprovalRequests(user, { status: "pending" }) : Promise.resolve([]),
     getSubjectCombinationCatalog(user).catch(() => ({ customCombinations: [] })),
-    getStudentGenderCounts(user)
+    getStudentGenderCounts(user),
+    supabase.from("students").select("status,admission_date").eq("school_id", user.schoolId)
   ]);
   const pendingStudentRequests = pendingRequests.filter((request) => request.request_type === "admission" || request.request_type === "cancellation");
+  if (studentMetricResult.error) throw new Error(studentMetricResult.error.message);
+  const studentMetrics = studentMetricResult.data ?? [];
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const newThisMonth = studentMetrics.filter((student) => student.admission_date && new Date(student.admission_date) >= monthStart).length;
+  const withdrawn = studentMetrics.filter((student) => student.status === "withdrawn" || student.status === "cancelled").length;
+  const activeStudents = studentMetrics.filter((student) => student.status === "active").length;
 
   return (
     <div className="min-w-0 max-w-full overflow-x-clip">
@@ -57,24 +69,21 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <Card className="mb-5 overflow-hidden rounded-[24px] border border-blue-100 bg-gradient-to-br from-white via-white to-blue-50/70 shadow-[0_16px_45px_rgba(37,99,235,0.08)]">
-        <CardContent className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-[0_10px_25px_rgba(37,99,235,0.24)] sm:h-16 sm:w-16">
-              <GraduationCap className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
-            </div>
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="h-full rounded-[24px] !border-t-4 !border-t-blue-500 p-5 shadow-sm sm:p-6">
+          <div className="flex h-full items-start gap-5">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 sm:h-16 sm:w-16"><GraduationCap className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" /></span>
             <div className="min-w-0">
-              <p className="font-label text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Student enrollment</p>
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{students.count.toLocaleString()}</span>
-                <span className="text-sm font-semibold text-slate-600">{students.count === 1 ? "student enrolled" : "students enrolled"}</span>
-              </div>
-              <p className="mt-1 text-sm text-muted">Active student records in the current view</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Total students</p>
+              <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.55rem,2vw,1.875rem)] font-bold leading-none tracking-tight text-ink">{studentMetrics.length.toLocaleString()}</p>
+              <div className="mt-3"><GenderCounts male={genderCounts.male} female={genderCounts.female} compact /></div>
             </div>
           </div>
-          <GenderCounts male={genderCounts.male} female={genderCounts.female} />
-        </CardContent>
-      </Card>
+        </Card>
+        <StatCard label="Active students" value={activeStudents} hint="Currently enrolled and active" icon={UsersRound} tone="purple" trend="Active records" trendTone="positive" />
+        <StatCard label="New admissions" value={newThisMonth} hint="Students added this month" icon={UserCheck} tone="green" trend="This month" trendTone="positive" />
+        <StatCard label="Withdrawn" value={withdrawn} hint="Cancelled or withdrawn records" icon={CircleMinus} tone="red" trend="School records" trendTone="negative" />
+      </section>
 
       {pendingStudentRequests.length ? (
         <Card className="mb-5">
@@ -97,11 +106,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         </Suspense>
       </Card>
 
-      <StudentTable
-        rows={students.rows}
-        limitedView={isTeacher}
-        pagination={{ count: students.count, page: students.page, pageSize: students.pageSize }}
-      />
+      <StudentTable rows={students.rows} limitedView={isTeacher} pagination={{ count: students.count, page: students.page, pageSize: students.pageSize }} />
     </div>
   );
 }

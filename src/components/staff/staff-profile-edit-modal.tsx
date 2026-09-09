@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { BriefcaseBusiness, Pencil, X } from "lucide-react";
 import { updateStaffProfileAction } from "@/app/(app)/teachers/actions";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/form-field";
+import { Field, Input, Select } from "@/components/ui/form-field";
 import { FormSectionCard } from "@/components/ui/form-section-card";
+import { formatCnic } from "@/lib/pakistan-format";
 
 type StaffDetails = {
   fullName: string;
   phone?: string | null;
+  cnic?: string | null;
+  gender?: "male" | "female" | null;
   personalEmail?: string | null;
   department?: string | null;
   jobTitle?: string | null;
@@ -28,6 +31,8 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
       const result = await updateStaffProfileAction(staffId, {
         fullName: String(formData.get("full_name") ?? ""),
         phone: String(formData.get("phone") ?? ""),
+        cnic: String(formData.get("cnic") ?? ""),
+        gender: (String(formData.get("gender") ?? "") || undefined) as "male" | "female" | undefined,
         personalEmail: String(formData.get("personal_email") ?? ""),
         department: String(formData.get("department") ?? ""),
         jobTitle: String(formData.get("job_title") ?? "")
@@ -59,6 +64,8 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name" hint="Use the full display name that should appear in staff records."><Input name="full_name" defaultValue={initial.fullName} required /></Field>
               <Field label="Phone" hint="Add a direct contact number if one is available."><Input name="phone" defaultValue={initial.phone ?? ""} /></Field>
+              <Field label="CNIC"><Input name="cnic" inputMode="numeric" maxLength={15} defaultValue={formatCnic(initial.cnic)} placeholder="00000-0000000-0" onChange={(event) => { event.currentTarget.value = formatCnic(event.currentTarget.value); }} /></Field>
+              <Field label="Gender"><Select name="gender" defaultValue={initial.gender ?? ""}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></Select></Field>
               <div className="sm:col-span-2">
                 <Field label="Personal email" hint="Optional email for personal contact outside the school login."><Input name="personal_email" type="email" defaultValue={initial.personalEmail ?? ""} /></Field>
               </div>

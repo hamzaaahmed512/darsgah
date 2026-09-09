@@ -13,6 +13,8 @@ type ProfileDetailsRow = {
   address: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
+  cnic: string | null;
+  gender: "male" | "female" | null;
 };
 
 type MemberDetailsRow = {
@@ -20,7 +22,9 @@ type MemberDetailsRow = {
   job_title: string | null;
 };
 
-export type ProfileDetails = ProfileFormValues & {
+export type ProfileDetails = Omit<ProfileFormValues, "cnic" | "gender"> & {
+  cnic: string | null;
+  gender: "male" | "female" | null;
   email: string | null;
   avatarUrl: string | null;
   role: AppUser["role"];
@@ -33,7 +37,7 @@ export async function getProfileDetails(user: AppUser): Promise<ProfileDetails> 
   const [profileResult, memberResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name,email,avatar_url,phone,personal_email,address,emergency_contact_name,emergency_contact_phone")
+      .select("full_name,email,avatar_url,phone,personal_email,address,emergency_contact_name,emergency_contact_phone,cnic,gender")
       .eq("id", user.id)
       .maybeSingle<ProfileDetailsRow>(),
     supabase
@@ -61,6 +65,8 @@ export async function getProfileDetails(user: AppUser): Promise<ProfileDetails> 
     address: profile?.address ?? null,
     emergencyContactName: profile?.emergency_contact_name ?? null,
     emergencyContactPhone: profile?.emergency_contact_phone ?? null,
+    cnic: profile?.cnic ?? null,
+    gender: profile?.gender ?? null,
     role: user.role,
     schoolName: user.schoolName
   };
@@ -77,6 +83,8 @@ export async function updateProfileDetails(user: AppUser, values: ProfileFormVal
     address: parsed.address,
     emergency_contact_name: parsed.emergencyContactName,
     emergency_contact_phone: parsed.emergencyContactPhone
+    ,cnic: parsed.cnic,
+    gender: parsed.gender
   };
 
   const memberUpdate: Record<string, unknown> = {};

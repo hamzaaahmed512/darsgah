@@ -130,10 +130,10 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
             </div>
           </CardHeader>
           <CardContent>
-            <form className="mb-5 grid gap-3 rounded-[24px] border border-outline/60 bg-slate-50/60 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
+            <form className="mb-5 grid gap-3 rounded-[24px] border border-blue-100 bg-white p-4 shadow-[0_8px_24px_rgba(37,99,235,0.035)] md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
               {user.role === "student_staff" ? <input type="hidden" name="view" value="management" /> : null}
               <Field label="Term">
-                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" className="h-12 rounded-2xl border-outline/70 shadow-none" />
+                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 shadow-none focus:bg-white" />
               </Field>
               <Field label="Status">
                 <Select name="status" defaultValue={status} className="h-12 rounded-2xl border-outline/70 shadow-none">
