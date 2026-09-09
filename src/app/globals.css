@@ -238,6 +238,69 @@ tbody tr {
   background-color: #ffffff;
 }
 
+@media screen and (max-width: 1023px) {
+  .app-workspace .responsive-table-cards {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app-workspace .responsive-table-cards > table,
+  .app-workspace .responsive-table-cards table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-workspace .responsive-table-cards thead {
+    display: none;
+  }
+
+  .app-workspace .responsive-table-cards tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .app-workspace .responsive-table-cards tbody tr {
+    display: grid;
+    gap: 0.65rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 1rem;
+    background: #ffffff;
+    padding: 1rem;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  }
+
+  .app-workspace .responsive-table-cards tbody td {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 0;
+    padding: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .app-workspace .responsive-table-cards tbody td::before {
+    flex: 0 0 38%;
+    color: #64748b;
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.25rem;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .app-workspace .responsive-table-cards tbody td > * {
+    max-width: 62%;
+  }
+}
+
 
 input,
 select,

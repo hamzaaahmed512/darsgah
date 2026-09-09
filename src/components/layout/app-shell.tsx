@@ -78,6 +78,37 @@ export function AppShell({
   }, [pathname]);
 
   useEffect(() => {
+    function enhanceTables() {
+      const workspace = document.querySelector("main.app-workspace");
+      if (!workspace) return;
+
+      workspace.querySelectorAll("table").forEach((table) => {
+        const wrapper = table.closest<HTMLElement>(".overflow-x-auto");
+        if (!wrapper) return;
+
+        const labels = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent?.trim().replace(/\s+/g, " ") ?? "");
+        if (!labels.length) return;
+
+        wrapper.classList.add("responsive-table-cards");
+        table.querySelectorAll("tbody tr").forEach((row) => {
+          row.querySelectorAll("td").forEach((cell, index) => {
+            if (labels[index]) cell.setAttribute("data-label", labels[index]);
+          });
+        });
+      });
+
+      return workspace;
+    }
+
+    const workspace = enhanceTables();
+    if (!workspace) return;
+
+    const observer = new MutationObserver(enhanceTables);
+    observer.observe(workspace, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [pathname]);
+
+  useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1024px)");
     function closeOnDesktop() { if (desktop.matches) setOpen(false); }
     function closeOnEscape(event: KeyboardEvent) {
