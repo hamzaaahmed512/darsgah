@@ -188,9 +188,21 @@ tbody tr {
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.035);
 }
 
-.app-workspace .overflow-x-auto:has(table) > table,
-.app-workspace .overflow-x-auto:has(table) table {
+.overflow-x-auto:has(table) > table,
+.overflow-x-auto:has(table) table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
   overflow: hidden;
+}
+
+.overflow-x-auto:has(table) {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.overflow-x-auto:has(table) th {
+  white-space: nowrap;
 }
 
 .app-workspace .results-table-scroll.overflow-x-auto {
