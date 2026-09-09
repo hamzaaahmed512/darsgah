@@ -301,6 +301,44 @@ tbody tr {
   }
 }
 
+@media screen and (max-width: 639px) {
+  .class-grade-header {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .class-grade-header > :first-child {
+    grid-row: 1 / span 2;
+  }
+
+  .class-grade-toggle {
+    grid-column: 2 / 4;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .class-grade-toggle h3 {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  .class-grade-manage {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .class-grade-expand {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: center;
+  }
+}
+
 
 input,
 select,

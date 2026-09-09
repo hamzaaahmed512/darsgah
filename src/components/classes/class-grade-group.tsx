@@ -22,18 +22,18 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
-      <div className="flex items-center gap-3 bg-gradient-to-r from-blue-50/60 via-white to-white px-5 py-4 transition hover:bg-blue-50/80">
+      <div className="class-grade-header flex items-center gap-3 bg-gradient-to-r from-blue-50/60 via-white to-white px-5 py-4 transition hover:bg-blue-50/80">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-600">
           <Layers3 className="h-6 w-6" aria-hidden="true" />
         </span>
-        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onExpandedChange(!expanded)}>
+        <button type="button" className="class-grade-toggle min-w-0 flex-1 text-left" onClick={() => onExpandedChange(!expanded)}>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-display text-[1.55rem] font-bold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3><span className="rounded-lg bg-blue-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary">{classes.length} {classes.length === 1 ? "Section" : "Sections"}</span></div>
             <p className="mt-1.5 text-sm text-muted">{totalStudents} students across this grade</p>
           </div>
         </button>
-        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
-        <button type="button" onClick={() => onExpandedChange(!expanded)} className="rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
+        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="class-grade-manage min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
+        <button type="button" onClick={() => onExpandedChange(!expanded)} className="class-grade-expand rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
       </div>
 
       {expanded ? (
