@@ -43,7 +43,7 @@ export function AddCashModal() {
       Add cash
     </Button>
     {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[20px] bg-white shadow-lift">
+      <div className="dialog-panel w-full max-w-md rounded-[20px] bg-white shadow-lift">
         <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
           <h2 className="font-display text-xl font-bold text-ink">Add cash</h2>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close">
@@ -66,7 +66,7 @@ export function AddCashModal() {
               </Field>
             </div>
           </FormSectionCard>
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
             <Button disabled={pending}>{pending ? "Saving..." : "Add cash"}</Button>
           </div>

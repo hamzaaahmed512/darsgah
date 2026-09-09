@@ -72,9 +72,28 @@ export function AppShell({
   const schoolDisplayName = branding.shortName ?? branding.fullName;
 
   useEffect(() => {
+    setOpen(false);
     setProfileOpen(false);
     setAnnouncementsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    function closeOnDesktop() { if (desktop.matches) setOpen(false); }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setProfileOpen(false);
+        setAnnouncementsOpen(false);
+      }
+    }
+    desktop.addEventListener("change", closeOnDesktop);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   useEffect(() => {
     setNavDate(formatNavDate(new Date()));
@@ -204,7 +223,7 @@ export function AppShell({
   }, []);
 
   const sidebar = (
-    <aside className="flex h-full min-h-0 w-[292px] flex-col bg-white">
+    <aside className="flex h-full min-h-0 w-full flex-col bg-white">
       {/* Brand header */}
       <div className="flex h-[92px] items-center gap-3 border-b border-slate-200 px-7 py-5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white shadow-sm">
@@ -342,7 +361,7 @@ export function AppShell({
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
       {attentionAnnouncements[0] ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="attention-announcement-title">
-          <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-outline sm:p-7">
+          <div className="dialog-panel w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-outline sm:p-7">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger">
               <X className="h-6 w-6" aria-hidden="true" />
             </div>
@@ -369,6 +388,7 @@ export function AppShell({
         aria-hidden="true"
       />
       <div
+        inert={!open}
         className={cn(
           "fixed inset-y-0 left-0 z-[60] flex h-dvh w-[min(292px,calc(100vw-2rem))] flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
@@ -419,8 +439,9 @@ export function AppShell({
             </button>
 
             <div
+              inert={!profileOpen}
               className={cn(
-                "absolute right-0 top-[calc(100%+0.75rem)] z-50 w-72 rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
+                "absolute right-0 top-[calc(100%+0.75rem)] z-50 max-h-[calc(100dvh-6rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
                 profileOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1"
               )}
               role="menu"

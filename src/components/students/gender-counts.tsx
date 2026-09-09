@@ -12,7 +12,7 @@ export function GenderCounts({ male, female, compact = false }: { male: number; 
   }
 
   return (
-    <div className="grid w-full grid-cols-2 gap-3 lg:w-auto">
+    <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-3 lg:w-auto">
       <div aria-label={`${male} male students`} className="flex min-w-0 items-center gap-3 rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-sm sm:min-w-40">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><MaleIcon /></span>
         <span className="min-w-0">

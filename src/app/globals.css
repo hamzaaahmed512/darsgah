@@ -16,10 +16,6 @@
   box-sizing: border-box;
 }
 
-html {
-  min-width: 320px;
-}
-
 body {
   min-height: 100vh;
   background: #ffffff;
@@ -110,7 +106,65 @@ select:not([multiple]) {
 .card-surface:hover {
   border-color: rgba(203, 213, 225, 0.88);
   box-shadow: var(--app-shadow-lift);
-  transform: translateY(-1px);
+}
+
+/* Screen layout foundations: allow grid/flex content to shrink, without hiding overflow. */
+@media screen {
+  :where(main, section, article, form, fieldset, .grid > *, .flex > *) {
+    min-width: 0;
+  }
+
+  :where(h1, h2, h3, h4, p, dd, dt, label, .card-surface) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .overflow-x-auto, .table-scroll {
+    max-width: 100%;
+    min-width: 0;
+    overscroll-behavior-x: contain;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  .dialog-panel {
+    min-width: 0;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-panel > :first-child {
+    flex-shrink: 0;
+  }
+
+  .dialog-panel button[aria-label] {
+    flex-shrink: 0;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  /* Prevent focus zoom in mobile browsers and keep text fields readable. */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 1rem;
+  }
+}
+
+@media screen and (pointer: coarse) {
+  button, a[role="button"], summary, select {
+    min-height: 2.75rem;
+  }
+
+  button[aria-label] {
+    min-width: 2.75rem;
+  }
 }
 
 table {
@@ -313,7 +367,8 @@ a {
     padding: 0 !important;
   }
 
-  .lg\:pl-\[280px\] {
+  .lg\:pl-\[280px\],
+  .lg\:pl-\[292px\] {
     padding-left: 0 !important;
   }
 }

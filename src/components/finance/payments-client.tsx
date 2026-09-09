@@ -412,7 +412,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
       {/* Void payment dialog */}
       {voidingPaymentId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md">
+          <Card className="dialog-panel w-full max-w-md">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <h3 className="text-lg font-bold text-ink">Void Transaction</h3>
               <button onClick={() => setVoidingPaymentId(null)} className="rounded p-1 hover:bg-surface-low text-muted">

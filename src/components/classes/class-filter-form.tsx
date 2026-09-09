@@ -56,7 +56,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
   }
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_260px]">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_260px]">
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"

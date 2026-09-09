@@ -158,6 +158,7 @@ export function AnnouncementBell({
       </button>
 
       <div
+        inert={!open}
         className={cn(
           "fixed inset-x-3 bottom-3 top-[4.5rem] z-50 flex max-h-[calc(100dvh-5.25rem)] w-auto max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[20px] bg-white shadow-lift ring-1 ring-outline transition-all duration-200 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:block sm:max-h-none sm:w-[360px] sm:overflow-visible",
           open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"

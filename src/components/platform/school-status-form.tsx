@@ -40,7 +40,7 @@ export function SchoolStatusForm({
           {state.errors?.reason && <span className="text-danger">{state.errors.reason[0]}</span>}
         </label>
         
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3">
           <button 
             name="status" 
             value={platformStatus === "suspended" ? "active" : "suspended"} 

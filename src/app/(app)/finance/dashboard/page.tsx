@@ -139,7 +139,7 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
         />
 
         <Card className="mb-5 p-4">
-          <form method="get" className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_160px_160px_150px_150px_auto]">
+          <form method="get" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input name="q" defaultValue={params.q ?? ""} placeholder="Receipt, person, reference..." className="pl-9" /></div>
             <Select name="period" defaultValue={period}><option value="month">This month</option><option value="year">This year</option><option value="lifetime">Lifetime</option><option value="custom">Custom dates</option></Select>
             <Select name="direction" defaultValue={direction}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></Select>

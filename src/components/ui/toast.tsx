@@ -38,7 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              "pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold shadow-lift",
+              "pointer-events-auto max-w-full break-words rounded-2xl px-4 py-2 text-sm font-semibold shadow-lift",
               toast.tone === "success" && "bg-success/10 text-success",
               toast.tone === "error" && "bg-danger-soft text-danger",
               toast.tone === "info" && "bg-primary-soft text-primary"

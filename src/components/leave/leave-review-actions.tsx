@@ -81,7 +81,7 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
             if (event.target === event.currentTarget && !pending) setRejecting(false);
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
               <div className="min-w-0">
                 <h2 id={`reject-leave-${leaveId}`} className="font-display text-lg font-bold text-ink">Reject Leave Request</h2>

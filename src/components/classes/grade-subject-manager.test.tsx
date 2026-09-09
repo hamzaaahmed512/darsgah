@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { GradeSubjectManager } from "./grade-subject-manager";
 import { addGradeSubjectAction } from "@/app/(app)/classes/actions";
-import { getActiveGradeNames } from "./add-grade-modal";
+import { getActiveGradeNames } from "@/lib/class-sort";
 
 const { refresh, pushToast } = vi.hoisted(() => ({ refresh: vi.fn(), pushToast: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));

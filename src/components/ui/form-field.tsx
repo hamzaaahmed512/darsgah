@@ -25,7 +25,7 @@ export function Field({
     : children;
 
   return (
-    <label className={cn("grid gap-2.5 text-sm font-semibold text-ink", className)}>
+    <label className={cn("grid min-w-0 gap-2.5 text-sm font-semibold text-ink", className)}>
       <span className="flex min-h-6 items-center">
         {label}
         {isRequired ? <span className="ml-0.5 text-danger" aria-hidden="true">*</span> : null}
@@ -47,7 +47,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       className={cn(
-        "min-h-12 w-full rounded-2xl border border-outline/70 bg-white px-4 py-3 text-sm font-medium text-ink shadow-none placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted",
+        "min-h-12 min-w-0 w-full rounded-2xl border border-outline/70 bg-white px-4 py-3 text-sm font-medium text-ink shadow-none placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted",
         isDateInput &&
           "pr-10 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70",
         className
@@ -62,11 +62,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   ref
 ) {
   return (
-    <div className="relative w-full">
+    <div className="relative min-w-0 w-full">
       <select
         ref={ref}
         className={cn(
-          "min-h-12 w-full appearance-none rounded-2xl border border-outline/70 bg-white px-4 py-3 pr-11 text-sm font-medium text-ink shadow-none focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted cursor-pointer",
+          "min-h-12 min-w-0 w-full appearance-none rounded-2xl border border-outline/70 bg-white px-4 py-3 pr-11 text-sm font-medium text-ink shadow-none focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted cursor-pointer",
           className
         )}
         {...props}
@@ -86,7 +86,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
     <textarea
       ref={ref}
       className={cn(
-        "min-h-28 w-full rounded-2xl border border-outline/70 bg-white px-4 py-3 text-sm font-medium text-ink shadow-none placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted",
+        "min-h-28 min-w-0 w-full rounded-2xl border border-outline/70 bg-white px-4 py-3 text-sm font-medium text-ink shadow-none placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted",
         className
       )}
       {...props}

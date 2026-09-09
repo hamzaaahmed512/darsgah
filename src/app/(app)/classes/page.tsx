@@ -7,7 +7,8 @@ import { ClassFilterForm } from "@/components/classes/class-filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { sortGrades } from "@/lib/utils";
 import { ClassGradeGroup } from "@/components/classes/class-grade-group";
-import { AddGradeModal, getActiveGradeNames } from "@/components/classes/add-grade-modal";
+import { AddGradeModal } from "@/components/classes/add-grade-modal";
+import { getActiveGradeNames } from "@/lib/class-sort";
 import { ButtonLink } from "@/components/ui/button";
 
 export default async function ClassesPage({

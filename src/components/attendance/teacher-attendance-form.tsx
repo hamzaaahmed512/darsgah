@@ -172,7 +172,7 @@ export function TeacherAttendanceForm({
             <EmptyState title="No teachers found" description="Active teachers and head teachers will appear here once they are added to staff." />
           ) : (
             <div className="overflow-hidden rounded-[24px] border border-outline/50">
-              <div className="hidden grid-cols-[52px_minmax(220px,1.15fr)_minmax(320px,0.9fr)_minmax(220px,0.8fr)] items-center gap-4 border-b border-outline/40 bg-slate-50/80 px-5 py-3.5 text-xs font-bold uppercase tracking-[0.12em] text-muted lg:grid">
+              <div className="hidden grid-cols-[40px_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-center gap-4 border-b border-outline/40 bg-slate-50/80 px-5 py-3.5 text-xs font-bold uppercase tracking-[0.12em] text-muted 2xl:grid">
                 <span>#</span>
                 <span>Teacher</span>
                 <span>Status</span>
@@ -182,7 +182,7 @@ export function TeacherAttendanceForm({
               {teachers.map((teacher) => {
                 const record = records.find((item) => item.teacher_id === teacher.teacher_id);
                 return (
-                  <div key={teacher.teacher_id} className="grid gap-3 border-b border-outline/35 px-4 py-3.5 last:border-b-0 lg:grid-cols-[52px_minmax(220px,1.15fr)_minmax(320px,0.9fr)_minmax(220px,0.8fr)] lg:items-center lg:px-5">
+                  <div key={teacher.teacher_id} className="grid gap-3 border-b border-outline/35 px-4 py-3.5 last:border-b-0 2xl:grid-cols-[40px_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center lg:px-5">
                     <div className="text-lg font-medium text-ink">{teachers.findIndex((item) => item.teacher_id === teacher.teacher_id) + 1}</div>
                     <div className="flex items-center gap-4">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses(teacher.teacher_name)}`}>

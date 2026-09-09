@@ -42,7 +42,7 @@ export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor
     });
   }
 
-  return <Select value={value} onChange={(event) => change(event.target.value)} disabled={pending || automatic} className="h-9 min-w-52 text-xs">
+  return <Select value={value} onChange={(event) => change(event.target.value)} disabled={pending || automatic} className="h-9 w-full min-w-0 sm:min-w-52 text-xs">
     {!automatic ? <option value="">Select combination...</option> : null}
     {options.map((option) => <option key={option.value} value={option.value}>{option.label}{option.sectionCustomized ? " (Custom)" : ""}</option>)}
   </Select>;

@@ -77,7 +77,7 @@ export function ClassStudentRosterModal({
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
+          <div className="flex max-h-[85dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 px-6 py-4">
               <div>
                 <h2 className="font-display text-xl font-bold text-ink">Student Roster</h2>

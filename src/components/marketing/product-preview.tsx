@@ -8,7 +8,7 @@ export function ProductPreview() {
       <div className="marketing-card overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.14)]">
         <div className="flex h-10 items-center gap-1.5 border-b border-slate-200 bg-slate-50 px-4">
           <span className="h-2.5 w-2.5 rounded-full bg-slate-300" /><span className="h-2.5 w-2.5 rounded-full bg-slate-300" /><span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-          <span className="mx-auto rounded-md border border-slate-200 bg-white px-12 py-1 text-[9px] text-slate-400 sm:px-24">app.getdarsgah.com</span>
+          <span className="mx-auto rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-slate-400 sm:px-12">app.getdarsgah.com</span>
         </div>
         <div className="grid min-h-[430px] grid-cols-[72px_1fr] sm:grid-cols-[190px_1fr]">
           <aside className="border-r border-slate-200 bg-white p-3 sm:p-4">
@@ -27,7 +27,7 @@ export function ProductPreview() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200"><Bell className="h-3.5 w-3.5 text-muted" /></span>
             </div>
             <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Metric label="Total students" value="1,248" detail="+32 this term" />
                 <Metric label="Present today" value="94.6%" detail="1,181 students" />
                 <Metric label="Teaching staff" value="76" detail="8 departments" />

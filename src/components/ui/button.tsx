@@ -13,7 +13,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "min-h-9 px-3.5 py-1.5 text-xs",
+  sm: "min-h-11 sm:min-h-9 px-3.5 py-1.5 text-xs",
   md: "min-h-11 px-5 py-2.5 text-sm"
 };
 
@@ -26,7 +26,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed",
+        "relative inline-flex max-w-full whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed",
         variants[variant],
         sizes[size],
         className
@@ -45,7 +45,7 @@ export function ButtonLink({
   return (
     <Link
       className={cn(
-        "relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]",
+        "relative inline-flex max-w-full whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]",
         variants[variant],
         sizes[size],
         className

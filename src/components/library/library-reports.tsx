@@ -602,7 +602,7 @@ export function LibraryReports({
         <details><summary className="cursor-pointer text-sm font-semibold text-primary">Filter reports</summary>
         <p className="my-2 text-xs text-muted">Date and borrower filters apply to loans; inventory uses the category filter. Activity uses its own action and date filters.</p>
         {/* Filter Toolbar Controls */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {/* Date Range Preset */}
           <div>
             <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Date Range</label>
@@ -1264,7 +1264,7 @@ export function LibraryReports({
 
           {/* Pagination Controls */}
           {totalActivityPages > 1 && (
-            <div className="flex items-center justify-between pt-2 border-t border-outline/40">
+            <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-outline/40">
               <span className="text-xs text-muted">
                 Page {activityPage} of {totalActivityPages}
               </span>

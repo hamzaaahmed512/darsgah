@@ -9,14 +9,9 @@ import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
+import { getActiveGradeNames } from "@/lib/class-sort";
 
-export function getActiveGradeNames(classes: Array<{ grade_name: string; academic_year_id: string }>, activeAcademicYearId?: string) {
-  if (!activeAcademicYearId) return [];
-  return [...new Set(classes
-    .filter((cls) => cls.academic_year_id === activeAcademicYearId)
-    .map((cls) => cls.grade_name)
-    .filter(Boolean))];
-}
+export { getActiveGradeNames };
 
 export function AddGradeModal({ existingGradeNames }: { existingGradeNames: string[] }) {
   const router = useRouter();
@@ -61,44 +56,75 @@ export function AddGradeModal({ existingGradeNames }: { existingGradeNames: stri
       </Button>
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
-            <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
+          <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h2 className="font-display text-xl font-bold text-ink">Add grades</h2>
-                <p className="mt-1 text-sm text-muted">Each grade starts with Section A and its default subjects.</p>
+                <h3 className="text-lg font-semibold text-slate-900">Add classes by grade</h3>
+                <p className="text-xs text-slate-500">
+                  Select predefined grades to create standard classes (A, B, C) and default subjects automatically.
+                </p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low hover:text-ink" aria-label="Close">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={submit} className="grid gap-5 overflow-y-auto p-6">
-              {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
-              <div className="flex items-center gap-2 rounded-xl bg-primary/5 p-3 text-sm font-semibold text-ink">
-                <GraduationCap className="h-4 w-4 text-primary" /> Select every grade you want to add
+            <form onSubmit={submit} className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {error ? <div className="rounded-xl bg-rose-50 p-3 text-xs font-medium text-rose-700">{error}</div> : null}
+                <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+                  {DEFAULT_GRADE_NAMES.map((name) => {
+                    const isExisting = existing.has(name.toLocaleLowerCase());
+                    const isSelected = selected.includes(name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        disabled={isExisting}
+                        onClick={() => toggle(name)}
+                        className={`flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                          isExisting
+                            ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed"
+                            : isSelected
+                              ? "border-brand-500 bg-brand-50/50 ring-1 ring-brand-500"
+                              : "border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">{name}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {isExisting ? "Already added" : `${getDefaultSubjectsForGrade(name).length} subjects`}
+                          </div>
+                        </div>
+                        {isSelected ? (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="text-xs font-semibold text-slate-700">Add custom grade</label>
+                  <Input
+                    placeholder="e.g. O-Levels Prep"
+                    value={customGrade}
+                    onChange={(e) => setCustomGrade(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {DEFAULT_GRADE_NAMES.map((name) => {
-                  const alreadyAdded = existing.has(name.toLocaleLowerCase());
-                  const checked = selected.includes(name);
-                  return (
-                    <label key={name} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold ${alreadyAdded ? "cursor-not-allowed bg-surface-low text-muted opacity-60" : checked ? "cursor-pointer border-primary/40 bg-primary/5" : "cursor-pointer border-outline/60"}`}>
-                      <input type="checkbox" checked={checked || alreadyAdded} disabled={alreadyAdded} onChange={() => toggle(name)} className="h-4 w-4 accent-primary" />
-                      <span className="flex-1">{name}</span>
-                      {alreadyAdded ? <Check className="h-4 w-4" /> : <span className="text-[10px] text-primary">{getDefaultSubjectsForGrade(name).length} subjects</span>}
-                    </label>
-                  );
-                })}
-              </div>
-              <div className="rounded-xl border border-outline/60 bg-surface-low p-4">
-                <label className="grid gap-2 text-sm font-semibold text-ink">
-                  Create your own grade/class
-                  <Input value={customGrade} onChange={(event) => setCustomGrade(event.target.value)} placeholder="e.g. Montessori Senior" />
-                </label>
-                <p className="mt-2 text-xs text-muted">A custom grade also starts with Section A. You can link subjects afterward.</p>
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-                <Button type="submit" disabled={pending || (!selected.length && !customGrade.trim())}>{pending ? "Adding..." : "Add selected grades"}</Button>
+              <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4 bg-slate-50/50">
+                <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={pending || (!selected.length && !customGrade.trim())}>
+                  <GraduationCap className="h-4 w-4" /> {pending ? "Creating..." : "Create classes"}
+                </Button>
               </div>
             </form>
           </div>

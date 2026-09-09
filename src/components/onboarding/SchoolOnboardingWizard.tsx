@@ -123,7 +123,7 @@ export function SchoolOnboardingWizard({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
+      <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
         <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
           <div>
             <p className="font-label text-xs font-bold uppercase tracking-wide text-primary">School setup</p>
@@ -284,7 +284,7 @@ export function SchoolOnboardingWizard({
                 </Button>
               </div>
 
-              <div className="flex justify-between gap-3">
+              <div className="flex flex-wrap justify-between gap-3">
                 <Button type="button" variant="secondary" onClick={() => setStep(1)} disabled={pending}>
                   Back
                 </Button>

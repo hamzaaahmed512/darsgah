@@ -27,6 +27,27 @@ export function PlatformShell({ email, children }: { email: string; children: Re
   }, [pathname]);
 
   useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    function closeOnDesktop() { if (desktop.matches) setOpen(false); }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") { setOpen(false); setProfileOpen(false); }
+    }
+    desktop.addEventListener("change", closeOnDesktop);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+
+  useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) setProfileOpen(false);
     }
@@ -46,7 +67,7 @@ export function PlatformShell({ email, children }: { email: string; children: Re
   );
 
   const sidebar = (
-    <aside className="flex h-full w-[280px] flex-col bg-white p-5">
+    <aside className="flex h-full min-h-0 w-full flex-col bg-white p-5">
       <Link href="/platform" onClick={() => setOpen(false)} className="mb-10 flex items-center gap-3 px-1">
         <GetDarsgahLogo className="h-12 w-12" priority />
         <span className="min-w-0">
@@ -94,12 +115,13 @@ export function PlatformShell({ email, children }: { email: string; children: Re
 
       <div className={cn("fixed inset-0 z-50 bg-black/30 lg:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
       <div
+        inert={!open}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[280px] transform bg-white shadow-lift transition duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(280px,calc(100vw-2rem))] flex-col bg-white shadow-lift transition duration-200 lg:hidden",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex justify-end p-3">
+        <div className="flex shrink-0 justify-end p-3">
           <button className="rounded-xl p-2 hover:bg-surface-low" onClick={() => setOpen(false)} aria-label="Close navigation">
             <X className="h-5 w-5" />
           </button>
@@ -128,8 +150,9 @@ export function PlatformShell({ email, children }: { email: string; children: Re
             </button>
 
             <div
+              inert={!profileOpen}
               className={cn(
-                "absolute right-0 top-[calc(100%+0.75rem)] w-72 rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
+                "absolute right-0 top-[calc(100%+0.75rem)] max-h-[calc(100dvh-7rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[20px] bg-white p-2 opacity-0 shadow-lift ring-1 ring-outline transition duration-200",
                 profileOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1"
               )}
               role="menu"

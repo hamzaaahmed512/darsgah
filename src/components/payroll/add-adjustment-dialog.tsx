@@ -82,8 +82,8 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-[0_32px_80px_rgba(27,28,29,0.18)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="dialog-panel w-full max-w-md rounded-xl bg-white p-6 shadow-[0_32px_80px_rgba(27,28,29,0.18)]">
             <h2 className="mb-4 font-display text-xl font-bold text-ink">Add Salary Adjustment</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -144,7 +144,7 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
                   ) : null}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-ink">Type</label>
                   <select
@@ -193,7 +193,7 @@ export function AddAdjustmentDialog({ month, teachers }: Props) {
                 />
               </div>
               {error && <p className="text-sm font-semibold text-danger">{error}</p>}
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => {

@@ -93,7 +93,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
   return (
     <>
       <Card className="mb-6 p-4">
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <Input
@@ -145,7 +145,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
       {!filtered.length ? (
         <EmptyState title="No Fee Accounts Found" description="Try a different search or filter option." />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-outline bg-white">
+        <div className="overflow-x-auto rounded-lg border border-outline bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
               <tr>
@@ -229,7 +229,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
       {/* Discount modal */}
       {isDiscountOpen && selectedAccount && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md">
+          <Card className="dialog-panel w-full max-w-md">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Apply Fee Discount</h3>

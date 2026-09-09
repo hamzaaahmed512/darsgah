@@ -68,6 +68,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
               </div> : null}
             </section>
 
+            <div className="table-scroll">
             <table className="mt-5 w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-outline/50 text-xs uppercase tracking-wide text-muted">
@@ -90,6 +91,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
                 ))}
               </tbody>
             </table>
+            </div>
 
             <footer className="mt-6 grid gap-3 rounded-lg bg-surface-low p-4 sm:grid-cols-3">
               <div>
@@ -106,7 +108,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
               </div>
             </footer>
             {template.signatureLabels.length ? (
-              <section className="mt-12 flex justify-around gap-8">
+              <section className="mt-12 flex flex-wrap justify-around gap-8 print:flex-nowrap">
                 {template.signatureLabels.map((label: string) => (
                   <div key={label} className="min-w-32 border-t border-ink/50 pt-2 text-center text-xs font-semibold">{label}</div>
                 ))}

@@ -58,7 +58,7 @@ export function StudentFormModal({
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
+          <div className="flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">

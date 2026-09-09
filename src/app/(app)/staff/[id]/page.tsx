@@ -229,7 +229,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                 <p className="py-6 text-center text-sm text-muted">No attendance records this year.</p>
               ) : (
                 <>
-                  <div className="mb-5 grid grid-cols-3 gap-3">
+                  <div className="mb-5 grid sm:grid-cols-3 gap-3">
                     <StatPill label="Present" value={data.attendanceStats.present} colorClass="bg-emerald-50 text-emerald-700" />
                     <StatPill label="Absent" value={data.attendanceStats.absent} colorClass="bg-red-50 text-red-700" />
                     <StatPill label="Late" value={data.attendanceStats.late} colorClass="bg-amber-50 text-amber-700" />
@@ -272,7 +272,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                 </p>
               ) : (
                 <>
-                  <div className="mb-5 grid grid-cols-3 gap-3">
+                  <div className="mb-5 grid sm:grid-cols-3 gap-3">
                     <LeaveQuota label="Annual" used={data.leaveStats.annualUsed} limit={leavePolicy.annualLimit} />
                     <LeaveQuota label="This month" used={data.leaveStats.monthlyUsed} limit={leavePolicy.monthlyLimit} />
                     <LeaveQuota label="This week" used={data.leaveStats.weeklyUsed} limit={leavePolicy.weeklyLimit} />

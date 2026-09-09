@@ -34,7 +34,7 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
   const ready = readiness.complete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <Card className="rounded-[28px] border border-outline/70 bg-white shadow-card">
         <CardHeader className="border-b border-outline/50 pb-4">
           <div>
@@ -103,7 +103,7 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
 
 export function ResultCardsFilters({ workspace }: { workspace: ResultCardsWorkspace }) {
   return (
-    <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_180px_auto]" action="/results">
+    <form className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_220px_180px_auto]" action="/results">
       <input type="hidden" name="view" value="cards" />
       <Field label="Class">
         <Select name="classId" defaultValue={workspace.selectedClassId ?? ""} className="h-12 rounded-2xl border-outline/70 shadow-none">

@@ -171,7 +171,7 @@ export function ClassFormModal({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+          <div className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl">
             <div className="flex shrink-0 items-center justify-between border-b border-outline/40 px-6 py-4">
               <h2 className="text-xl font-display font-bold">{editing ? "Edit Class" : "Create New Class"}</h2>
               <button onClick={() => setOpen(false)} className="text-muted hover:text-ink">

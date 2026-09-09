@@ -59,7 +59,7 @@ export function OtherStaffFormModal() {
       </Button>
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
+          <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
               <div>
                 <h2 className="font-display text-lg font-bold text-ink">Add Other Staff</h2>

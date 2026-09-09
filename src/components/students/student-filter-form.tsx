@@ -62,7 +62,7 @@ export function StudentFilterForm({ classes, limitedView = false }: { classes: C
   }, [pushFilters]);
 
   return (
-    <div className={`grid min-w-0 gap-4 ${limitedView ? "md:grid-cols-[minmax(0,1fr)_260px]" : "md:grid-cols-[minmax(0,1.55fr)_320px_320px]"}`}>
+    <div className={`grid min-w-0 gap-4 ${limitedView ? "md:grid-cols-[minmax(0,1fr)_260px]" : "sm:grid-cols-2 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)]"}`}>
       <div className="relative min-w-0 self-end">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input ref={searchRef} defaultValue={currentQ} className="min-h-12 min-w-0 rounded-xl border-slate-200 pl-10 pr-3 text-sm shadow-none sm:min-h-14 sm:rounded-2xl sm:pl-12 sm:text-base" placeholder="Search by name, admission no. or father's name..." />

@@ -82,7 +82,7 @@ export function RenewLoanDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="w-full max-w-lg rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
+      <div className="dialog-panel w-full max-w-lg rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
         <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-primary/10 p-2.5 text-primary">

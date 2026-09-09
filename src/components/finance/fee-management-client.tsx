@@ -193,7 +193,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                 <p className="text-sm text-muted">Search, filter, collect payments, and apply discounts.</p>
               </div>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-5">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <div className="relative md:col-span-2">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-outline/70 pl-11 shadow-none" placeholder="Search student or admission..." />
@@ -323,8 +323,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       </div>
 
       {showReports ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden lg:left-[292px]">
-          <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-3">
+        <div className="sticky bottom-0 z-30 mt-4 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden">
+          <div className="mx-auto flex flex-wrap max-w-[1520px] items-center justify-between gap-3">
             <p className="text-sm text-muted">
               Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
             </p>
@@ -341,7 +341,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
 
       {isCollectOpen && selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
+          <Card className="dialog-panel w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Record Payment</h3>
@@ -398,7 +398,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
 
       {isDiscountOpen && selectedAccount ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
+          <Card className="dialog-panel w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Apply Fee Discount</h3>
@@ -459,7 +459,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
 
       {selectedReceipt ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm print:static print:block print:bg-white print:p-0">
-          <Card className="w-full max-w-2xl p-6 print:shadow-none print:ring-0">
+          <Card className="dialog-panel w-full max-w-2xl p-6 print:shadow-none print:ring-0">
             <div className="mb-5 flex items-start justify-between gap-4 border-b border-outline/60 pb-4 print:hidden">
               <div>
                 <h3 className="text-lg font-bold text-ink">Payment Receipt</h3>

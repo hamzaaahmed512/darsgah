@@ -67,7 +67,7 @@ export function SiteHeader() {
         </button>
       </div>
       {open ? (
-        <div className="border-t border-outline bg-white px-4 pb-5 pt-3 lg:hidden">
+        <div className="max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain border-t border-outline bg-white px-4 pb-5 pt-3 lg:hidden">
           <nav className="mx-auto grid max-w-7xl gap-1" aria-label="Mobile navigation">
             {navigation.map((item) => (
               <Link key={item.href} href={item.href} className="px-4 py-3 text-sm font-semibold text-muted hover:text-ink">

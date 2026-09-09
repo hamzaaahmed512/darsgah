@@ -38,7 +38,7 @@ export function LeavePolicyModal({ annualLimit, monthlyLimit, weeklyLimit }: { a
     </Button>
     {saved && <p role="status" className="text-sm font-semibold text-success">Leave policy saved.</p>}
     {open && <div role="dialog" aria-modal="true" aria-labelledby="leave-policy-title" className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
+      <div className="max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
         <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
           <div><h2 id="leave-policy-title" className="font-display text-2xl font-bold text-ink">Leave policy</h2><p className="mt-1 text-sm text-muted">Set limits applied to all staff. Leave optional limits empty for no restriction.</p></div>
           <button type="button" aria-label="Close leave policy" disabled={pending} onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>

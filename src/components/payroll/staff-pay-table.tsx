@@ -172,7 +172,7 @@ function StaffPayEditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-[0_32px_80px_rgba(27,28,29,0.18)]">
+      <div className="dialog-panel w-full max-w-lg rounded-xl bg-white shadow-[0_32px_80px_rgba(27,28,29,0.18)]">
         <div className="flex items-start justify-between gap-4 border-b border-outline/60 p-5">
           <div>
             <h2 className="font-display text-xl font-bold text-ink">Edit Staff Pay</h2>

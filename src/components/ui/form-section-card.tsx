@@ -16,7 +16,7 @@ export function FormSectionCard({
   badge?: string;
 }) {
   return (
-    <section className="rounded-[28px] border border-outline/70 bg-white p-5 shadow-card sm:p-6">
+    <section className="rounded-[28px] border border-outline/70 bg-white p-4 shadow-card sm:p-6">
       <div className="mb-5 flex items-start gap-4">
         {icon ? (
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-primary">

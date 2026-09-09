@@ -150,7 +150,7 @@ export function SettingsTabs({
 
 
   return (
-    <div className="grid gap-6 md:grid-cols-[220px_1fr]">
+    <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
       <div className="flex flex-col gap-1.5">
         <button
           onClick={() => selectTab("notifications")}

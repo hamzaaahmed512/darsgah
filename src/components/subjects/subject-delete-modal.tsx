@@ -80,7 +80,7 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-[20px] bg-white shadow-lift">
+          <div className="dialog-panel w-full max-w-lg  rounded-[20px] bg-white shadow-lift">
             <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
               <div className="flex items-center gap-3">
                 {step === "warning" ? (
@@ -130,7 +130,7 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
               )}
 
               {step !== "check" && (
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
                   <Button type="button" variant="secondary" onClick={close} disabled={pending}>
                     Cancel
                   </Button>

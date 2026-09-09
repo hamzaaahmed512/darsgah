@@ -6,7 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Line,
   LineChart,
   Pie,
@@ -234,8 +233,8 @@ export function ExpenseDistributionChart({ datasets, initialPeriod = "yearly" }:
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={90}
+                innerRadius="50%"
+                outerRadius="75%"
                 paddingAngle={4}
                 dataKey="value"
                 nameKey="name"
@@ -248,7 +247,6 @@ export function ExpenseDistributionChart({ datasets, initialPeriod = "yearly" }:
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
         ) : (
@@ -259,6 +257,24 @@ export function ExpenseDistributionChart({ datasets, initialPeriod = "yearly" }:
           />
         )}
       </div>
+      {hasData ? (
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="Expense categories">
+          {data.map((entry, index) => (
+            <li key={entry.name}>
+              <button
+                type="button"
+                aria-pressed={activeIndex === index}
+                onClick={() => setActiveIndex(activeIndex === index ? undefined : index)}
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-outline px-3 py-2 text-left text-sm hover:bg-surface-low"
+              >
+                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                <span className="min-w-0 flex-1 break-words">{entry.name}</span>
+                <span className="shrink-0 font-semibold">{formatCompactPKR(entry.value)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

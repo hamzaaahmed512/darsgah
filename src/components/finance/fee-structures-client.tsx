@@ -200,7 +200,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg">
+          <Card className="dialog-panel w-full max-w-lg">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <h3 className="text-lg font-bold text-ink">{editing ? "Edit Fee Structure" : "Add Fee Structure"}</h3>
               <button type="button" onClick={() => setOpen(false)} className="rounded p-1 text-muted hover:bg-surface-low" aria-label="Close fee structure form">

@@ -38,7 +38,7 @@ export function StatCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-label text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
-          <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight text-ink">
+          <p className="mt-2 break-words font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight text-ink">
             {value}
           </p>
           {hint ? <p className="mt-2 text-sm font-medium leading-5 text-muted">{hint}</p> : null}

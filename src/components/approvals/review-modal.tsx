@@ -36,8 +36,8 @@ export function ReviewModal({ request, onClose }: { request: ApprovalRequest; on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="dialog-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-6 flex flex-wrap gap-3 items-center justify-between">
           <h2 className="text-xl font-display font-bold">Review Request</h2>
           <Badge tone={request.request_type === "admission" ? "blue" : "yellow"}>
             {request.request_type}
@@ -64,7 +64,7 @@ export function ReviewModal({ request, onClose }: { request: ApprovalRequest; on
             {error && <p className="mt-2 text-sm font-semibold text-danger">{error}</p>}
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
               Cancel
             </Button>

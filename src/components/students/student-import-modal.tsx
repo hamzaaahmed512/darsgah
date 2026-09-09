@@ -124,7 +124,7 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-      <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="dialog-panel flex w-full max-w-4xl flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline/30 px-6 py-4">
           <h2 className="text-xl font-bold text-ink">Import Students</h2>
           <button onClick={handleReset} className="rounded-full p-1 text-muted hover:bg-surface-low hover:text-ink">
@@ -201,7 +201,7 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-outline/30 bg-surface-low px-6 py-4">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-outline/30 bg-surface-low px-6 py-4">
           <button onClick={handleReset} className="rounded-lg px-4 py-2 text-sm font-semibold text-muted hover:bg-outline/20">
             Cancel
           </button>

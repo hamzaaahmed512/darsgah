@@ -41,7 +41,7 @@ export function LeaveApplicationDialog({ migrationRequired }: { migrationRequire
             if (event.target === event.currentTarget && !pending) setOpen(false);
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
+          <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-5 py-4">
               <h2 className="font-display text-lg font-bold text-ink">Apply for Leave</h2>
               <button

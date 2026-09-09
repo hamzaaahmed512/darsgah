@@ -84,7 +84,7 @@ export function TransportActionPopover({
             if (event.target === event.currentTarget) setOpen(false);
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-[18px] bg-white shadow-lift ring-1 ring-outline">
             <div className="flex items-center justify-between gap-4 border-b border-outline/50 px-4 py-3">
               <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
               <button
