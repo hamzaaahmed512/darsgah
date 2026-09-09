@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { LibraryWorkspace } from "./library-workspace";
 import type { LibraryData } from "@/lib/services/library";
 
@@ -11,6 +11,7 @@ vi.mock("@/app/(app)/library/actions", () => ({
   searchBorrowersAction: searchBorrowers,
   searchCopiesAction: searchCopies
 }));
+vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ pushToast: vi.fn() }) }));
 
 vi.stubGlobal("React", React);
 
@@ -42,7 +43,7 @@ describe("library workspace", () => {
     searchCopies.mockResolvedValue([{ id: "copy", book_id: "book", book_title: "School Science", accession: "LIB-001", shelf: "A1", status: "available", is_eligible: true }]);
     save.mockResolvedValue({ ok: true });
     render(<LibraryWorkspace data={data} canManage canAdmin />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
     const borrowerSearch = screen.getAllByPlaceholderText(/Search by student name/)[0];
     expect((borrowerSearch.closest("fieldset") as HTMLFieldSetElement).disabled).toBe(false);
     fireEvent.focus(borrowerSearch);
@@ -75,22 +76,19 @@ describe("library workspace", () => {
     expect(screen.queryByText("Add a book")).toBeNull();
     fireEvent.change(screen.getByLabelText("Search catalogue"), { target: { value: "missing" } });
     expect(screen.getByText("No books found")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
     expect(screen.queryByRole("button", { name: "Issue book" })).toBeNull();
   });
 
-  it("displays per-book copy counts correctly", () => {
+  it("displays each title's total copy count", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
+    const bookRow = screen.getByRole("row", { name: /School Science/ });
+    expect(within(bookRow).getByText("2")).toBeTruthy();
   });
 
-  it("shows Copy ID label in expandable copy list and null replacement cost", () => {
+  it("links each catalogue title to its copy inventory", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    fireEvent.click(screen.getByText(/View copies/));
-    expect(screen.getAllByText("Copy ID").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("LIB-001")).toBeTruthy();
-    expect(screen.getAllByText(/not specified/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("link", { name: "View inventory for School Science" }).getAttribute("href")).toBe("/library/book");
   });
 
   it("KPI Total books counts active copies and shows title count subtitle", () => {
@@ -102,7 +100,7 @@ describe("library workspace", () => {
   it("submits selected copy and borrower and displays circulation errors", async () => {
     save.mockResolvedValue({ error: "This copy is no longer available" });
     render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
 
     const forms = document.querySelectorAll("form");
     const issueForm = Array.from(forms).find(f => (f as HTMLFormElement).querySelector("input[name='action'][value='issue']"));
@@ -134,7 +132,7 @@ describe("library workspace", () => {
 
   it("shows reservation waiting-request policy note", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
     expect(screen.getByText(/waiting-list requests/)).toBeTruthy();
   });
 
@@ -164,7 +162,7 @@ describe("library workspace", () => {
     };
 
     render(<LibraryWorkspace data={dataWithReservations} canManage canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
     expect(screen.getByText("Waiting queue management")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Select for issue/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Select for issue/ }));
@@ -199,7 +197,7 @@ describe("library workspace", () => {
     };
 
     render(<LibraryWorkspace data={dataWithReservations} canManage canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue & return" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loans & reservations" }));
     expect(screen.getByText("Ready to issue")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel reservation" })).toBeTruthy();
   });

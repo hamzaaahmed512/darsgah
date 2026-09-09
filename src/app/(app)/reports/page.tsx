@@ -7,7 +7,6 @@ import {
   Bus,
   CalendarCheck,
   ClipboardList,
-  Download,
   ExternalLink,
   FileText,
   GraduationCap,
@@ -23,13 +22,17 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission, type Permission } from "@/lib/permissions";
 import { currentMonthKey } from "@/lib/services/payroll";
+import { getResultCardsWorkspace } from "@/lib/services/marks";
 import { cn } from "@/lib/utils";
+import { ReportActionButton } from "@/components/reports/report-action-button";
+import type { ReportCsvKey } from "@/app/(app)/reports/actions";
 
 type ReportAction = {
   label: string;
   href: string;
   kind: "open" | "print" | "csv";
   external?: boolean;
+  exportKey?: ReportCsvKey;
 };
 
 type ReportItem = {
@@ -50,7 +53,7 @@ function todayKey() {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-function reportCatalog(month: string, today: string): ReportItem[] {
+function reportCatalog(month: string, today: string, resultCardsPrintHref: string): ReportItem[] {
   return [
     {
       title: "Daily Attendance Report",
@@ -85,7 +88,7 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       formats: ["CSV", "Screen"],
       actions: [
         { label: "Open", href: "/students", kind: "open" },
-        { label: "CSV", href: "/students", kind: "csv" }
+        { label: "CSV", href: "/students", kind: "csv", exportKey: "student_directory" }
       ]
     },
     {
@@ -97,7 +100,7 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       formats: ["CSV", "Screen"],
       actions: [
         { label: "Open", href: "/students?status=archived", kind: "open" },
-        { label: "CSV", href: "/students?status=archived", kind: "csv" }
+        { label: "CSV", href: "/students?status=archived", kind: "csv", exportKey: "archived_students" }
       ]
     },
     {
@@ -131,7 +134,7 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       formats: ["Print/PDF"],
       actions: [
         { label: "Open", href: "/results?view=cards", kind: "open" },
-        { label: "Print/PDF", href: "/results?view=cards", kind: "print" }
+        { label: "Print/PDF", href: resultCardsPrintHref, kind: "print" }
       ]
     },
     {
@@ -144,7 +147,7 @@ function reportCatalog(month: string, today: string): ReportItem[] {
       ownerOnly: true,
       actions: [
         { label: "Open", href: `/finance/challans?month=${month}`, kind: "open" },
-        { label: "CSV", href: `/finance/challans?month=${month}`, kind: "csv" },
+        { label: "CSV", href: `/finance/challans?month=${month}`, kind: "csv", exportKey: "fee_ledger" },
         { label: "Print/PDF", href: `/finance/challans?month=${month}`, kind: "print" }
       ]
     },
@@ -251,7 +254,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const user = await requireUser("reports:view");
   const params = await searchParams;
   const month = currentMonthKey();
-  const reports = reportCatalog(month, todayKey()).filter((report) => canSeeReport(user, report));
+  const resultCardsWorkspace = hasPermission(user.role, "results:generate", user.permissions)
+    ? await getResultCardsWorkspace(user, {}).catch(() => null)
+    : null;
+  const resultCardsPrintHref = resultCardsWorkspace?.selectedClassId
+    ? `/results/print?classId=${resultCardsWorkspace.selectedClassId}&examType=${resultCardsWorkspace.examType}${resultCardsWorkspace.month ? `&month=${resultCardsWorkspace.month}` : ""}`
+    : "/results?view=cards";
+  const reports = reportCatalog(month, todayKey(), resultCardsPrintHref).filter((report) => canSeeReport(user, report));
   const areas = Array.from(new Set(reports.map((report) => report.area)));
   const selectedArea = areas.includes(params.area ?? "") ? params.area! : "all";
   const visibleReports = selectedArea === "all" ? reports : reports.filter((report) => report.area === selectedArea);
@@ -284,13 +293,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
       <p className="mb-4 text-sm font-medium text-muted">Showing {visibleReports.length} report{visibleReports.length === 1 ? "" : "s"}</p>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-live="polite">
-        {visibleReports.map((report) => <ReportCard key={report.title} report={report} />)}
+        {visibleReports.map((report) => <ReportCard key={report.title} report={report} month={month} />)}
       </section>
     </>
   );
 }
 
-function ReportCard({ report }: { report: ReportItem }) {
+function ReportCard({ report, month }: { report: ReportItem; month: string }) {
   const Icon = report.icon;
   return (
     <Card className="flex min-w-0 flex-col overflow-hidden p-5 sm:p-6">
@@ -312,11 +321,13 @@ function ReportCard({ report }: { report: ReportItem }) {
         ))}
       </div>
       <div className="mt-5 grid gap-2 border-t border-outline/60 pt-4 min-[420px]:flex min-[420px]:flex-wrap">
-        {report.actions.map((action) => (
-          <ButtonLink key={`${report.title}-${action.label}`} href={action.href} variant={action.kind === "open" ? "secondary" : "primary"} size="sm" target={action.external ? "_blank" : undefined} className="w-full justify-center min-[420px]:w-auto">
-            {action.kind === "csv" ? <Download className="h-4 w-4" aria-hidden="true" /> : action.kind === "print" ? <Printer className="h-4 w-4" aria-hidden="true" /> : <ExternalLink className="h-4 w-4" aria-hidden="true" />}
+        {report.actions.map((action) => action.kind === "open" ? (
+          <ButtonLink key={`${report.title}-${action.label}`} href={action.href} variant="secondary" size="sm" target={action.external ? "_blank" : undefined} className="w-full justify-center min-[420px]:w-auto">
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
             {action.label}
           </ButtonLink>
+        ) : (
+          <ReportActionButton key={`${report.title}-${action.label}`} kind={action.kind} href={action.href} month={month} exportKey={action.exportKey} />
         ))}
       </div>
     </Card>

@@ -12,6 +12,7 @@ import { hasPermission } from "@/lib/permissions";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getResultCardsWorkspace, getResultsManagementWorkspace } from "@/lib/services/marks";
 import type { ResultWorkflowStatus, UserRole } from "@/types/database";
+import { AutoPrint } from "@/components/reports/auto-print";
 
 const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -52,6 +53,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      <AutoPrint enabled={params.print === "1"} />
       <PageHeader
         eyebrow="Results management"
         title={user.role === "teacher" ? "My Exams & Results" : user.role === "principal" ? "Exam & Result Approvals" : "Exams & Results"}

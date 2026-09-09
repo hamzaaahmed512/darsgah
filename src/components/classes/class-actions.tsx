@@ -1,11 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Trash2, X as XIcon } from "lucide-react";
 import { deleteClassAction, unassignTeacherClassAction } from "@/app/(app)/classes/actions";
 
 export function DeleteClassButton({ classId, className }: { classId: string; className: string }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
@@ -20,6 +22,8 @@ export function DeleteClassButton({ classId, className }: { classId: string; cla
         startTransition(async () => {
           try {
             await deleteClassAction(classId);
+            router.replace("/classes");
+            router.refresh();
           } catch (err: any) {
             alert(err.message || "Failed to delete class.");
           }

@@ -46,11 +46,12 @@ export async function updateLeavePolicy(user: AppUser, policy: { annualLimit: nu
   if (policy.monthlyLimit !== null && (!Number.isInteger(policy.monthlyLimit) || policy.monthlyLimit < 0)) throw new Error("Monthly limit must be a non-negative integer.");
   if (policy.weeklyLimit !== null && (!Number.isInteger(policy.weeklyLimit) || policy.weeklyLimit < 0)) throw new Error("Weekly limit must be a non-negative integer.");
   const adminClient = createAdminClient();
-  const { data: existing } = await adminClient
+  const { data: existing, error: readError } = await adminClient
     .from("school_settings")
     .select("settings")
     .eq("school_id", user.schoolId)
     .maybeSingle();
+  if (readError) throw new Error(readError.message);
   const merged = {
     ...(existing?.settings ?? {}),
     leave_annual_limit: policy.annualLimit,

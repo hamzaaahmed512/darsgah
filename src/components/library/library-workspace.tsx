@@ -275,6 +275,7 @@ export function LibraryWorkspace({
   const [issueVersion, setIssueVersion] = useState(0);
   const [reservationVersion, setReservationVersion] = useState(0);
   const [circulationNotice, setCirculationNotice] = useState("");
+  const [fulfilledReservationIds, setFulfilledReservationIds] = useState<Set<string>>(() => new Set());
   function clearIssue() {
     setSelectedBorrower(null);
     setSelectedCopy(null);
@@ -303,7 +304,7 @@ export function LibraryWorkspace({
   const overdue = activeLoans.filter(loan => loan.due_date < today);
   
   // Filter active waiting reservations ONLY (exclude fulfilled or cancelled)
-  const waitingReservations = data.reservations.filter(item => item.status === "waiting");
+  const waitingReservations = data.reservations.filter(item => item.status === "waiting" && !fulfilledReservationIds.has(item.id));
 
   // Librarians team count
   const librariansCount = data.team ? data.team.length : 0;
@@ -588,7 +589,7 @@ export function LibraryWorkspace({
           {circulationNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{circulationNotice}</p>}
 
           {canManage && (
-            <div id="library-issue-form" className="hidden scroll-mt-24">
+            <div id="library-issue-form" className="scroll-mt-24">
 <Panel title="Issue a book">
               <p className="mb-4 text-sm text-muted">
                 Search and select an active borrower and eligible book copy below. Borrowing rules are applied automatically.
@@ -602,7 +603,13 @@ export function LibraryWorkspace({
                 action="issue"
                 label="Issue book"
                 reset
-                onSuccess={() => { clearIssue(); setCirculationNotice("Book issued successfully. You can select the next borrower."); }}
+                onSuccess={() => {
+                  if (selectedReservationId) {
+                    setFulfilledReservationIds((current) => new Set(current).add(selectedReservationId));
+                  }
+                  clearIssue();
+                  setCirculationNotice("Book issued successfully. The waiting reservation has been fulfilled.");
+                }}
                 disabled={isIssueBlocked || !selectedBorrower || !selectedCopy || !selectedCopy.is_eligible}
               >
                 {selectedReservationId && (
@@ -887,7 +894,7 @@ export function LibraryWorkspace({
                   const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
 
                   return (
-                    <tr key={item.id} className="border-t border-outline/50"><td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td><td className="px-5 py-4"><p className="font-semibold text-ink">{bookTitle}</p><p className="mt-1 text-xs text-muted">{availCount} available</p></td><td className="px-5 py-4"><p className="font-semibold text-ink">{item.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p></td><td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{isReady ? "Ready to issue" : "Waiting for a return"}</span></td><td className="px-5 py-4 text-right">{canManage && <Form action="cancel_reservation" id={item.id} label="Cancel" buttonVariant="secondary" />}</td></tr>
+                    <tr key={item.id} className="border-t border-outline/50"><td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td><td className="px-5 py-4"><p className="font-semibold text-ink">{bookTitle}</p><p className="mt-1 text-xs text-muted">{availCount} available</p></td><td className="px-5 py-4"><p className="font-semibold text-ink">{item.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p></td><td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{isReady ? "Ready to issue" : "Waiting for a return"}</span></td><td className="px-5 py-4"><div className="flex justify-end gap-2">{canManage && isReady ? <Button type="button" onClick={() => handleOneClickFulfill(item)} className="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700">Select for issue</Button> : null}{canManage ? <Form action="cancel_reservation" id={item.id} label="Cancel reservation" buttonVariant="secondary" /> : null}</div></td></tr>
                   );
                 })}
                   </tbody>

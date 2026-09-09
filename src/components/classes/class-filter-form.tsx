@@ -3,12 +3,12 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useRef, useTransition } from "react";
 import { Building2, GraduationCap, Search } from "lucide-react";
-import { formatClassDisplayName } from "@/lib/utils";
+import { formatGradeSection } from "@/lib/utils";
 import { Select } from "@/components/ui/form-field";
 
 type Props = {
   grades: { id: string; name: string }[];
-  classes: { id: string; name: string; grade_name: string; section_name: string | null }[];
+  classes: { id: string; name: string; grade_id: string; grade_name: string; section_name: string | null }[];
 };
 
 export function ClassFilterForm({ grades, classes }: Props) {
@@ -33,9 +33,14 @@ export function ClassFilterForm({ grades, classes }: Props) {
   const currentGrade = searchParams.get("grade") ?? "all";
   const currentQ = searchParams.get("q") ?? "";
   const currentClass = searchParams.get("classId") ?? "all";
+  const sectionOptions = currentGrade === "all"
+    ? classes
+    : classes.filter((cls) => cls.grade_id === currentGrade);
+  const selectedClass = sectionOptions.some((cls) => cls.id === currentClass) ? currentClass : "all";
 
   function handleGradeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    pushFilters(e.target.value, searchRef.current?.value ?? currentQ, currentClass);
+    // A section belongs to one grade, so clear it whenever the grade changes.
+    pushFilters(e.target.value, searchRef.current?.value ?? currentQ, "all");
   }
 
   function handleClassChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -46,7 +51,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = e.target.value;
     debounceRef.current = setTimeout(() => {
-      pushFilters(currentGrade, q, currentClass);
+      pushFilters(currentGrade, q, selectedClass);
     }, 350);
   }
 
@@ -68,8 +73,8 @@ export function ClassFilterForm({ grades, classes }: Props) {
       </div>
       <div className="relative">
         <GraduationCap className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
-        <Select name="grade" defaultValue={currentGrade} onChange={handleGradeChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
-          <option value="all">All Grades</option>
+        <Select aria-label="Grade" name="grade" value={currentGrade} onChange={handleGradeChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
+          <option value="all">Select grade (all)</option>
           {grades.map((grade) => (
             <option key={grade.id} value={grade.id}>
               {grade.name}
@@ -79,11 +84,11 @@ export function ClassFilterForm({ grades, classes }: Props) {
       </div>
       <div className="relative">
         <Building2 className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
-        <Select name="classId" defaultValue={currentClass} onChange={handleClassChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
-          <option value="all">All Classes</option>
-          {classes.map((cls) => (
+        <Select aria-label="Section" name="classId" value={selectedClass} onChange={handleClassChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
+          <option value="all">Select section (all)</option>
+          {sectionOptions.map((cls) => (
             <option key={cls.id} value={cls.id}>
-              {formatClassDisplayName(cls.grade_name, cls.name, cls.section_name)}
+              {formatGradeSection(cls.grade_name, cls.section_name ?? cls.name)}
             </option>
           ))}
         </Select>

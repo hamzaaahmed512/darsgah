@@ -7,14 +7,20 @@ import { addGradeSubjectAction, removeGradeSubjectAction } from "@/app/(app)/cla
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
+import { canonicalSubjectName, getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 
-export function GradeSubjectManager({ gradeId, availableSubjects, linkedSubjectIds, linkedSubjects = [] }: { gradeId: string; availableSubjects: Array<{ id: string; name: string }>; linkedSubjectIds: string[]; linkedSubjects?: Array<{ id: string; name: string }> }) {
+type SubjectSuggestion = { id?: string; name: string };
+
+export function GradeSubjectManager({ gradeId, gradeName, availableSubjects, linkedSubjectIds, linkedSubjects = [] }: { gradeId: string; gradeName: string; availableSubjects: Array<{ id: string; name: string }>; linkedSubjectIds: string[]; linkedSubjects?: Array<{ id: string; name: string }> }) {
   const router = useRouter();
   const { pushToast } = useToast();
-  const [subjectId, setSubjectId] = useState("");
   const [name, setName] = useState("");
   const [pending, startTransition] = useTransition();
   const available = availableSubjects.filter((subject) => !linkedSubjectIds.includes(subject.id));
+  const suggestions = [...new Map<string, SubjectSuggestion>([
+    ...getDefaultSubjectsForGrade(gradeName).map((subject): [string, SubjectSuggestion] => [canonicalSubjectName(subject.name), { name: subject.name }]),
+    ...available.map((subject): [string, SubjectSuggestion] => [canonicalSubjectName(subject.name), subject])
+  ]).values()].sort((a, b) => a.name.localeCompare(b.name));
 
   function submit(values: { subjectId?: string; name?: string }) {
     const formData = new FormData();
@@ -25,7 +31,7 @@ export function GradeSubjectManager({ gradeId, availableSubjects, linkedSubjectI
       try {
         await addGradeSubjectAction(formData);
         pushToast("Subject added to every section in this grade.", "success");
-        setSubjectId(""); setName(""); router.refresh();
+        setName(""); router.refresh();
       } catch (error: any) { pushToast(error?.message ?? "Failed to add subject.", "error"); }
     });
   }
@@ -40,13 +46,16 @@ export function GradeSubjectManager({ gradeId, availableSubjects, linkedSubjectI
 
   return <div className="grid gap-3 rounded-[24px] border border-outline/60 bg-slate-50/60 p-4 sm:p-5">
     {linkedSubjects.length ? <div className="grid gap-3 sm:grid-cols-2">{linkedSubjects.map((subject, index) => <div key={subject.id} className="flex items-center gap-3 rounded-[20px] border border-outline/55 bg-white p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-xs font-bold ${tone(index)}`}>{initials(subject.name)}</div><p className="min-w-0 flex-1 truncate font-semibold text-ink">{subject.name}</p><button type="button" onClick={() => remove(subject)} disabled={pending} className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"><Trash2 className="h-4 w-4" /></button></div>)}</div> : null}
-    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-      <select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className="h-10 rounded-xl border border-outline bg-white px-3 text-sm text-ink">
-        <option value="">Select an existing subject...</option>
-        {available.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
-      </select>
-      <Button type="button" variant="secondary" onClick={() => submit({ subjectId })} disabled={pending || !subjectId}>Add subject</Button>
-    </div>
+    {suggestions.length ? <div>
+      <p className="mb-2 text-sm font-semibold text-ink">Available subjects</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {suggestions.map((subject) => <label key={canonicalSubjectName(subject.name)} className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline/60 bg-white px-3 py-2.5 text-sm font-semibold text-ink hover:border-primary/40 hover:bg-primary/5">
+          <input type="checkbox" checked={false} disabled={pending} onChange={() => submit(subject.id ? { subjectId: subject.id } : { name: subject.name })} className="h-4 w-4 accent-primary" />
+          <span>{subject.name}</span>
+        </label>)}
+      </div>
+      <p className="mt-2 text-xs text-muted">Tick a subject to add it to every section in this grade.</p>
+    </div> : <p className="text-sm text-muted">All available subjects are already linked to this grade.</p>}
     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
       <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Create a new subject" />
       <Button type="button" variant="secondary" onClick={() => submit({ name: name.trim() })} disabled={pending || !name.trim()}><Plus className="h-4 w-4" /> Create subject</Button>

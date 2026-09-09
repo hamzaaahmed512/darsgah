@@ -10,6 +10,7 @@ import { reopenAttendanceAction, submitAttendanceAction, submitTeacherAttendance
 import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance-card";
 import { ButtonLink } from "@/components/ui/button";
 import { BriefcaseBusiness, CalendarDays, House } from "lucide-react";
+import { AutoPrint } from "@/components/reports/auto-print";
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -35,6 +36,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <>
+      <AutoPrint enabled={params.print === "1"} />
       <PageHeader
         eyebrow="Daily workflow"
         title={teacherAttendanceView ? "Teacher Attendance" : "Attendance"}

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Users } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
@@ -57,11 +57,24 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <div className="mb-2 flex items-center gap-3 text-sm font-semibold text-slate-600">
-        <Users className="h-4 w-4 text-slate-500" />
-        <span>{students.count} students enrolled</span>
-      </div>
-      <div className="mb-5 text-sm"><GenderCounts male={genderCounts.male} female={genderCounts.female} /></div>
+      <Card className="mb-5 overflow-hidden rounded-[24px] border border-blue-100 bg-gradient-to-br from-white via-white to-blue-50/70 shadow-[0_16px_45px_rgba(37,99,235,0.08)]">
+        <CardContent className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-[0_10px_25px_rgba(37,99,235,0.24)] sm:h-16 sm:w-16">
+              <GraduationCap className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-label text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Student enrollment</p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{students.count.toLocaleString()}</span>
+                <span className="text-sm font-semibold text-slate-600">{students.count === 1 ? "student enrolled" : "students enrolled"}</span>
+              </div>
+              <p className="mt-1 text-sm text-muted">Active student records in the current view</p>
+            </div>
+          </div>
+          <GenderCounts male={genderCounts.male} female={genderCounts.female} />
+        </CardContent>
+      </Card>
 
       {pendingStudentRequests.length ? (
         <Card className="mb-5">

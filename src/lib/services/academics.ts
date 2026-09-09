@@ -653,10 +653,22 @@ export async function createSubject(user: AppUser, values: { name: string; code?
   const supabase = await createClient();
   const subjectName = values.name.trim().replace(/\s+/g, " ");
   if (!subjectName) throw new Error("Subject name is required.");
-  const { data: catalog, error: lookupError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null);
+  const { data: catalog, error: lookupError } = await supabase.from("subjects").select("id,name,archived_at").eq("school_id", user.schoolId);
   if (lookupError) throw new Error(lookupError.message);
-  if ((catalog ?? []).some((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(subjectName))) {
+  const matchingSubjects = (catalog ?? []).filter((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(subjectName));
+  if (matchingSubjects.some((subject) => !subject.archived_at)) {
     throw new Error(`“${subjectName}” already exists in the subject catalog.`);
+  }
+  const archived = matchingSubjects[0];
+  if (archived) {
+    const { error } = await supabase.from("subjects").update({
+      name: subjectName,
+      code: values.code?.trim() || null,
+      is_elective: Boolean(values.is_elective),
+      archived_at: null
+    }).eq("school_id", user.schoolId).eq("id", archived.id);
+    if (error) throw new Error(error.message);
+    return;
   }
   const { error } = await supabase.from("subjects").insert({
     school_id: user.schoolId,
@@ -800,13 +812,21 @@ export async function addGradeSubject(user: AppUser, values: { gradeId: string; 
   } else {
     const name = values.name?.trim().replace(/\s+/g, " ") ?? "";
     if (!name) throw new Error("Subject name is required.");
-    const { data: catalog, error: catalogError } = await supabase.from("subjects").select("id,name").eq("school_id", user.schoolId).is("archived_at", null);
+    const { data: catalog, error: catalogError } = await supabase.from("subjects").select("id,name,archived_at").eq("school_id", user.schoolId);
     if (catalogError) throw new Error(catalogError.message);
-    const existing = (catalog ?? []).find((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(name));
-    if (existing) throw new Error(`“${existing.name}” already exists. Select it from existing subjects instead.`);
-    const { data: created, error: createError } = await supabase.from("subjects").insert({ school_id: user.schoolId, name }).select("id").single();
-    if (createError) throw new Error(createError.message);
-    subjectId = created.id;
+    const matchingSubjects = (catalog ?? []).filter((subject) => canonicalSubjectName(subject.name) === canonicalSubjectName(name));
+    const active = matchingSubjects.find((subject) => !subject.archived_at);
+    if (active) throw new Error(`“${active.name}” already exists. Select it from existing subjects instead.`);
+    const archived = matchingSubjects[0];
+    if (archived) {
+      const { error: restoreError } = await supabase.from("subjects").update({ archived_at: null }).eq("school_id", user.schoolId).eq("id", archived.id);
+      if (restoreError) throw new Error(restoreError.message);
+      subjectId = archived.id;
+    } else {
+      const { data: created, error: createError } = await supabase.from("subjects").insert({ school_id: user.schoolId, name }).select("id").single();
+      if (createError) throw new Error(createError.message);
+      subjectId = created.id;
+    }
   }
 
   const { error: linkError } = await supabase.from("class_subjects").upsert(
@@ -908,20 +928,28 @@ export async function seedDefaultSubjectsForClass(user: AppUser, classId: string
   const supabase = await createClient();
   const { data: existingSubjects, error: subjectsError } = await supabase
     .from("subjects")
-    .select("id,name,is_elective")
-    .eq("school_id", user.schoolId)
-    .is("archived_at", null);
+    .select("id,name,is_elective,archived_at")
+    .eq("school_id", user.schoolId);
   if (subjectsError) throw new Error(subjectsError.message);
 
-  const subjectMap = new Map((existingSubjects ?? []).map((subject) => [canonicalSubjectName(subject.name), subject]));
+  const subjectMap = new Map<string, any>();
+  for (const subject of existingSubjects ?? []) {
+    const key = canonicalSubjectName(subject.name);
+    const current = subjectMap.get(key);
+    if (!current || (current.archived_at && !subject.archived_at)) subjectMap.set(key, subject);
+  }
   const subjectIds: string[] = [];
 
   for (const subjectDefault of defaults) {
     const key = canonicalSubjectName(subjectDefault.name);
     const existing = subjectMap.get(key);
     if (existing) {
-      if (subjectDefault.is_elective && !existing.is_elective) {
-        await supabase.from("subjects").update({ is_elective: true }).eq("school_id", user.schoolId).eq("id", existing.id);
+      if (existing.archived_at || (subjectDefault.is_elective && !existing.is_elective)) {
+        const { error } = await supabase.from("subjects").update({
+          archived_at: null,
+          is_elective: Boolean(subjectDefault.is_elective || existing.is_elective)
+        }).eq("school_id", user.schoolId).eq("id", existing.id);
+        if (error) throw new Error(error.message);
       }
       subjectIds.push(existing.id);
       continue;

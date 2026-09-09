@@ -3,6 +3,7 @@ import { formatExamType, getPrintableResultCards } from "@/lib/services/marks";
 import type { ExamType } from "@/types/database";
 import { formatClassDisplayName } from "@/lib/utils";
 import { PrintButton } from "@/app/(app)/results/print/print-button";
+import { AutoPrint } from "@/components/reports/auto-print";
 
 export default async function PrintableResultsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -17,6 +18,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6 bg-white p-6 text-ink print:max-w-none print:p-0">
+      <AutoPrint enabled={params.print === "1"} />
       <div className="flex items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="font-display text-3xl font-bold">Printable Result Cards</h1>

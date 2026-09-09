@@ -8,10 +8,12 @@ import { ChallanGeneration } from "@/components/finance/challan-generation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDatePK, formatPKR } from "@/lib/utils";
+import { AutoPrint } from "@/components/reports/auto-print";
 
-export default async function FinanceChallansPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+export default async function FinanceChallansPage({ searchParams }: { searchParams: Promise<{ month?: string; print?: string }> }) {
   const user = await requireUser("finance:view");
-  const month = (await searchParams).month ?? new Date().toISOString().slice(0, 7);
+  const params = await searchParams;
+  const month = params.month ?? new Date().toISOString().slice(0, 7);
   const [accounts, academics, challans] = await Promise.all([
     getStudentFees(user, {}),
     getAcademicOptions(user),
@@ -20,6 +22,7 @@ export default async function FinanceChallansPage({ searchParams }: { searchPara
 
   return (
     <>
+      <AutoPrint enabled={params.print === "1"} />
       <PageHeader
         eyebrow="Finance"
         title="Fee Challans"
@@ -38,9 +41,11 @@ export default async function FinanceChallansPage({ searchParams }: { searchPara
         }
       />
 
-      <ChallanGeneration user={user} month={month} accounts={accounts} classes={academics.classes} />
+      <div className="print:hidden">
+        <ChallanGeneration user={user} month={month} accounts={accounts} classes={academics.classes} />
+      </div>
 
-      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
+      <form method="get" className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
         <label className="text-sm font-semibold text-muted" htmlFor="challan-month">Challan month</label>
         <input id="challan-month" name="month" type="month" defaultValue={month} className="rounded-lg border border-outline/60 bg-surface-low px-3 py-2 text-sm text-ink" />
         <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Apply</button>

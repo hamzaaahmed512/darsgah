@@ -7,7 +7,7 @@ import { ClassFilterForm } from "@/components/classes/class-filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { sortGrades } from "@/lib/utils";
 import { ClassGradeGroup } from "@/components/classes/class-grade-group";
-import { AddGradeModal } from "@/components/classes/add-grade-modal";
+import { AddGradeModal, getActiveGradeNames } from "@/components/classes/add-grade-modal";
 import { ButtonLink } from "@/components/ui/button";
 
 export default async function ClassesPage({
@@ -54,7 +54,10 @@ export default async function ClassesPage({
         actions={
           <>
             <ButtonLink href="/subjects" variant="secondary" className="rounded-2xl">Subjects and Combinations</ButtonLink>
-            <AddGradeModal existingGradeNames={academicData.grades.map((grade: any) => grade.name)} />
+            <AddGradeModal existingGradeNames={getActiveGradeNames(
+              academicData.classes,
+              academicData.years.find((year: any) => year.is_active)?.id
+            )} />
           </>
         }
       />
