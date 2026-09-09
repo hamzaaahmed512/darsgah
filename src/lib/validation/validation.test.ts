@@ -89,10 +89,15 @@ describe("validation schemas", () => {
       full_name: "Jane Doe",
       email: "Jane.Doe@School.EDU",
       password: "secret123",
+      cnic: "3520212345671",
+      phone: "0300-0000000",
+      gender: "female",
       role: "teacher"
     });
     const profileResult = profileFormSchema.safeParse({
       fullName: "Jane Doe",
+      cnic: "3520212345671",
+      gender: "female",
       phone: "",
       personalEmail: "Jane.Personal@Gmail.COM",
       department: "",
@@ -163,14 +168,19 @@ describe("validation schemas", () => {
       full_name: "Andre d'Almeida",
       email: "andre@school.edu",
       password: "secret123",
+      cnic: "3520212345671",
+      phone: "0300-0000000",
+      gender: "male",
       role: "teacher"
     });
     const otherStaffResult = otherStaffRecordSchema.safeParse({
       fullName: "Jean-Luc Picard",
+      cnic: "3520212345671",
+      gender: "male",
       category: "office_assistant",
       department: "Admin",
       jobTitle: "Office Assistant",
-      phone: "",
+      phone: "0300-0000000",
       monthlySalary: null
     });
 

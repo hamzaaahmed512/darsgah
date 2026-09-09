@@ -67,6 +67,8 @@ export async function setStaffSalaryAction(staffId: string, salary: number) {
 
 export async function createOtherStaffAction(values: {
   fullName: string;
+  cnic: string;
+  gender: "male" | "female";
   category: OtherStaffCategory;
   department?: string;
   jobTitle?: string;

@@ -1,59 +1,61 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Layers3, MapPin, Settings, UserRound, Users } from "lucide-react";
+import { ChevronDown, GraduationCap, Layers3, MapPin, Settings, UserRound, Users } from "lucide-react";
 import { AddSectionModal } from "@/components/classes/add-section-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatGradeSection } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 
-export function ClassGradeGroup({ gradeName, classes, classDetails, defaultExpanded = false }: {
+export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, onExpandedChange }: {
   gradeName: string;
   classes: any[];
   classDetails: any;
-  defaultExpanded?: boolean;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   subjectsByClass?: any;
   academicData?: any;
   teachers?: any[];
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
   const sortedClasses = [...classes].sort((a, b) => (a.section_name || "").localeCompare(b.section_name || ""));
   const totalStudents = classes.reduce((sum, cls) => sum + (classDetails.studentsByClass[cls.id] || 0), 0);
   const gradeId = sortedClasses[0]?.grade_id;
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-outline/70 bg-white shadow-card">
-      <div className="flex items-center gap-3 px-5 py-4 transition hover:bg-surface-low/50">
-        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setExpanded((value) => !value)}>
+    <div className="overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
+      <div className="flex items-center gap-3 bg-gradient-to-r from-blue-50/60 via-white to-white px-5 py-4 transition hover:bg-blue-50/80">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-600">
+          <Layers3 className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onExpandedChange(!expanded)}>
           <div className="min-w-0">
-            <h3 className="truncate font-display text-[1.65rem] font-bold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3>
-            <p className="mt-1.5 text-sm text-muted">{classes.length} {classes.length === 1 ? "Section" : "Sections"} • {totalStudents} Students</p>
+            <div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-display text-[1.55rem] font-bold text-ink">{gradeName === "Unassigned" ? "Unassigned Grade" : gradeName}</h3><span className="rounded-lg bg-blue-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary">{classes.length} {classes.length === 1 ? "Section" : "Sections"}</span></div>
+            <p className="mt-1.5 text-sm text-muted">{totalStudents} students across this grade</p>
           </div>
         </button>
         {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
-        <button type="button" onClick={() => setExpanded((value) => !value)} className="rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
+        <button type="button" onClick={() => onExpandedChange(!expanded)} className="rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
       </div>
 
       {expanded ? (
-        <div className="border-t border-outline/60 bg-white p-4 pt-0">
+        <div className="border-t border-blue-100 bg-slate-50/30 p-4">
           <div className="grid gap-3">
             {sortedClasses.map((cls) => {
               const studentCount = classDetails.studentsByClass[cls.id] ?? 0;
               return (
-                <div key={cls.id} className="flex flex-col items-start gap-4 rounded-[22px] border border-outline/55 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
+                <div key={cls.id} className="flex flex-col items-start gap-4 rounded-[18px] border border-blue-100 bg-white p-4 shadow-[0_8px_20px_rgba(37,99,235,0.04)] transition hover:border-blue-200 hover:bg-blue-50/25 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border text-xl font-bold ${getSectionToneClasses(`${gradeName}-${cls.section_name ?? cls.name}`)}`}>
-                      {(cls.section_name ?? cls.name).slice(0, 2).toUpperCase()}
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-600">
+                      <GraduationCap className="h-6 w-6" aria-hidden="true" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <h4 className="font-display text-[1.35rem] font-bold text-ink">{formatGradeSection(gradeName, cls.section_name)}</h4>
-                        <Badge tone="gray" className="rounded-xl px-3 py-1 text-[11px] font-semibold">{cls.academic_year_name}</Badge>
+                        <Badge tone="blue" className="rounded-lg px-2.5 py-1 text-[11px] font-semibold">{cls.academic_year_name}</Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
                         <span className="flex items-center gap-1.5"><UserRound className="h-4 w-4" /> {cls.head_teacher_name || "No head teacher"}</span>
                         <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {studentCount} {studentCount === 1 ? "Student" : "Students"}</span>
-                        <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {cls.room || "Room not set"}</span>
+                        <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {cls.room ? `Room ${cls.room}` : "Room not set"}</span>
                       </div>
                     </div>
                   </div>
@@ -87,15 +89,4 @@ function AddSectionCard({ gradeId, gradeName }: { gradeId: string; gradeName: st
       />
     </div>
   );
-}
-
-function getSectionToneClasses(value: string) {
-  const tones = [
-    "border-blue-100 bg-blue-50 text-blue-600",
-    "border-indigo-100 bg-indigo-50 text-indigo-600",
-    "border-amber-100 bg-amber-50 text-amber-600",
-    "border-emerald-100 bg-emerald-50 text-emerald-600"
-  ];
-  const hash = [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[hash % tones.length];
 }

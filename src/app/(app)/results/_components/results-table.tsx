@@ -1,4 +1,4 @@
-import { Eye, Printer } from "lucide-react";
+import { ClipboardCheck, Eye, Printer, UserRound } from "lucide-react";
 import { ApprovalActions } from "@/app/(app)/results/_components/approval-actions";
 import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
 import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
@@ -46,11 +46,15 @@ export function ResultsTable({
   inlineApproval?: boolean;
 }) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-[24px] border border-outline/50">
-      <div className="scrollbar-thin max-w-full overflow-x-auto">
-      <table className="w-max min-w-[1020px] text-left text-sm">
-        <thead className="bg-slate-50/80">
-          <tr className="border-b border-outline/40 text-xs uppercase tracking-[0.14em] text-muted">
+    <div className="min-w-0 overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
+      <div className="flex items-center justify-between gap-4 border-b border-blue-100 px-5 py-4 sm:px-6">
+        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><ClipboardCheck className="h-5 w-5 text-primary" />Result Register</h3>
+        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{rows.length} result{rows.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className="results-table-scroll scrollbar-thin max-w-full overflow-x-auto">
+      <table className="w-full min-w-[1020px] text-left text-sm">
+        <thead className="bg-slate-50/90">
+          <tr className="border-b border-blue-100 text-xs uppercase tracking-[0.14em] text-muted">
             <th className="px-5 py-4">Exam Type</th>
             <th className="px-5 py-4">Subject</th>
             <th className="px-5 py-4">Class</th>
@@ -67,16 +71,14 @@ export function ResultsTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-outline/25 align-top last:border-b-0">
+            <tr key={row.id} className="border-b border-blue-100/70 align-top last:border-b-0 hover:bg-blue-50/35">
               <td className="min-w-[155px] px-5 py-4">
-                <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p>
-                <p className="text-xs text-muted">{row.title}</p>
+                <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p><p className="mt-0.5 text-xs text-muted">{row.title}</p>
               </td>
-              <td className="px-5 py-4">{row.subjects?.name ?? "—"}</td>
-              <td className="px-5 py-4">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</td>
+              <td className="px-5 py-4"><span title={row.subjects?.name ?? "—"} className="inline-flex max-w-[150px] truncate rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-bold text-violet-700">{row.subjects?.name ?? "—"}</span></td>
+              <td className="px-5 py-4"><span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</span></td>
               <td className="px-5 py-4">
-                <p className="font-semibold">{row.uploadedByTeacherName}</p>
-                {row.uploadedByTeacherId ? <p className="text-xs text-muted">{row.uploadedByTeacherId.slice(0, 8)}…</p> : null}
+                <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><UserRound className="h-4 w-4" /></span><div><p className="font-semibold">{row.uploadedByTeacherName}</p><p className="text-xs text-muted">Teacher</p></div></div>
               </td>
               <td className="px-5 py-4">{formatDate(row.uploaded_at)}</td>
               <td className="px-5 py-4">
@@ -90,7 +92,7 @@ export function ResultsTable({
               <td className="px-5 py-4">
                 <div className="flex flex-wrap items-start gap-2">
                   <div className="flex flex-wrap gap-2">
-                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl" aria-label="View result" title="View result">
+                    <ButtonLink href={`/results/${row.id}`} variant="secondary" size="sm" className="rounded-xl bg-blue-50 text-primary hover:bg-blue-100" aria-label="View result" title="View result">
                       <Eye className="h-4 w-4" /> View
                     </ButtonLink>
                     {showPrint && row.canPrint ? (

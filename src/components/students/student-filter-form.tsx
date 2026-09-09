@@ -65,7 +65,7 @@ export function StudentFilterForm({ classes, limitedView = false }: { classes: C
     <div className={`grid min-w-0 gap-4 ${limitedView ? "md:grid-cols-[minmax(0,1fr)_260px]" : "md:grid-cols-[minmax(0,1.55fr)_320px_320px]"}`}>
       <div className="relative min-w-0 self-end">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-        <Input ref={searchRef} defaultValue={currentQ} className="min-h-12 min-w-0 rounded-xl border-slate-200 pl-10 pr-3 text-sm shadow-none sm:min-h-14 sm:rounded-2xl sm:pl-12 sm:text-base" placeholder="Search by name, admission no. or father's name..." />
+        <Input ref={searchRef} defaultValue={currentQ} className="min-h-12 min-w-0 rounded-xl border-blue-100 bg-blue-50/70 pl-10 pr-3 text-sm shadow-none placeholder:text-slate-400 focus:border-primary/30 focus:bg-white sm:min-h-14 sm:rounded-2xl sm:pl-12 sm:text-base" placeholder="Search by name, admission no. or father's name..." />
       </div>
       {!limitedView ? <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-600"><span>Status</span><Select value={currentStatus} onChange={(event) => pushFilters({ status: event.target.value })} aria-label="Student status" className="min-h-12 min-w-0 rounded-xl border-slate-200 text-sm shadow-none sm:min-h-14 sm:text-base">
           <option value="all">All statuses</option><option value="active">Active</option><option value="pending_approval">Pending approval</option><option value="pending_cancellation">Pending cancellation</option><option value="graduated">Graduated</option><option value="transferred">Transferred</option><option value="cancelled">Cancelled</option><option value="archived">Archived</option>

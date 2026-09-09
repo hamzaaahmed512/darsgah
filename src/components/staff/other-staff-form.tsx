@@ -8,6 +8,7 @@ import { Field, Input, Select } from "@/components/ui/form-field";
 import { PakistaniPhoneInput } from "@/components/ui/pakistani-phone-input";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { sanitizeEnglishNameInput } from "@/lib/validation/names";
+import { formatCnic } from "@/lib/pakistan-format";
 
 export function OtherStaffFormModal() {
   const [open, setOpen] = useState(false);
@@ -16,6 +17,8 @@ export function OtherStaffFormModal() {
   const [useToday, setUseToday] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
+    cnic: "",
+    gender: "" as "" | "male" | "female",
     category: "peon" as OtherStaffCategory,
     department: "Others",
     jobTitle: "",
@@ -35,6 +38,8 @@ export function OtherStaffFormModal() {
       try {
         await createOtherStaffAction({
           fullName: form.fullName,
+          cnic: form.cnic,
+          gender: form.gender as "male" | "female",
           category: form.category,
           department: form.department,
           jobTitle: form.jobTitle,
@@ -42,7 +47,7 @@ export function OtherStaffFormModal() {
           monthlySalary: form.monthlySalary ? Number(form.monthlySalary) : null,
           joiningDate: form.joiningDate || null
         });
-        setForm({ fullName: "", category: "peon", department: "Others", jobTitle: "", phone: "", monthlySalary: "", joiningDate: "" });
+        setForm({ fullName: "", cnic: "", gender: "", category: "peon", department: "Others", jobTitle: "", phone: "", monthlySalary: "", joiningDate: "" });
         setUseToday(false);
         setOpen(false);
       } catch (err) {
@@ -72,6 +77,8 @@ export function OtherStaffFormModal() {
             <form onSubmit={submit} className="grid gap-4 overflow-y-auto bg-slate-50/30 p-5">
               {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
               <Field label="Full name"><Input required value={form.fullName} onChange={(event) => update("fullName", sanitizeEnglishNameInput(event.target.value))} /></Field>
+              <Field label="CNIC" required><Input required inputMode="numeric" maxLength={15} value={formatCnic(form.cnic)} onChange={(event) => update("cnic", formatCnic(event.target.value))} placeholder="00000-0000000-0" /></Field>
+              <Field label="Gender" required><Select required value={form.gender} onChange={(event) => update("gender", event.target.value as "" | "male" | "female")}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></Select></Field>
               <Field label="Category" required>
                 <Select value={form.category} onChange={(event) => update("category", event.target.value as OtherStaffCategory)}>
                   {OTHER_STAFF_CATEGORIES.map((category) => <option key={category} value={category}>{OTHER_STAFF_CATEGORY_LABELS[category]}</option>)}
@@ -79,7 +86,7 @@ export function OtherStaffFormModal() {
               </Field>
               <Field label="Department"><Input value={form.department} onChange={(event) => update("department", event.target.value)} placeholder="Others" /></Field>
               <Field label="Job title"><Input value={form.jobTitle} onChange={(event) => update("jobTitle", event.target.value)} placeholder="Peon, Guard, Cleaner..." /></Field>
-              <Field label="Phone"><PakistaniPhoneInput value={form.phone} onChange={(event) => update("phone", event.target.value)} /></Field>
+              <Field label="Phone" required><PakistaniPhoneInput required value={form.phone} onChange={(event) => update("phone", event.target.value)} /></Field>
               <Field label="Monthly salary"><Input type="number" min="0" step="0.01" value={form.monthlySalary} onChange={(event) => update("monthlySalary", event.target.value)} placeholder="Optional" /></Field>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">

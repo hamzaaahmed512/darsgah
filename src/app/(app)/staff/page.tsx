@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { ReactNode } from "react";
-import { AtSign, Building2, ChevronDown, KeyRound, Mail, Phone, ShieldCheck, Users } from "lucide-react";
+import { AtSign, Building2, ChevronDown, KeyRound, Mail, Phone, ShieldCheck, UserCheck, UserCog, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StaffCreateModal } from "@/components/staff/staff-create-modal";
 import { ButtonLink } from "@/components/ui/button";
 import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
+import { StatCard } from "@/components/dashboard/stat-card";
 
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
@@ -46,7 +47,10 @@ export default async function StaffPage({
     .eq("school_id", user.schoolId)
     .order("name");
 
-  const staff = await getStaff(user, params.role ?? "all", params.q ?? "");
+  const [staff, allStaff] = await Promise.all([
+    getStaff(user, params.role ?? "all", params.q ?? ""),
+    getStaff(user)
+  ]);
   const canCreateUsers = hasPermission(user.role, "teachers:manage", user.permissions);
   const allowedRoles =
     user.role === "administrator"
@@ -54,6 +58,9 @@ export default async function StaffPage({
       : user.role === "principal"
         ? (["administrator", "teacher", "staff", "student_staff", "cashier", "librarian"] as const)
         : (["teacher", "staff", "student_staff", "cashier", "librarian"] as const);
+  const activeStaff = allStaff.filter((member: any) => member.status === "active");
+  const teacherCount = allStaff.filter((member: any) => member.role === "teacher" || member.role === "head_teacher").length;
+  const accountStaff = allStaff.filter((member: any) => !member.is_record_only).length;
 
   return (
     <>
@@ -63,6 +70,13 @@ export default async function StaffPage({
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
         actions={canCreateUsers ? <StaffCreateModal allowedRoles={[...allowedRoles]} customRoles={customRoles ?? []} /> : null}
       />
+
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Total staff" value={allStaff.length} hint={`${teacherCount} teacher${teacherCount === 1 ? "" : "s"} in the directory`} icon={Users} tone="blue" />
+        <StatCard label="Active staff" value={activeStaff.length} hint="Currently active staff records" icon={UserCheck} tone="purple" trend="Active directory" trendTone="positive" />
+        <StatCard label="Teachers" value={teacherCount} hint={`Out of ${allStaff.length} total staff`} icon={UserCog} tone="green" />
+        <StatCard label="Account staff" value={accountStaff} hint="Staff with app login access" icon={UserPlus} tone="red" />
+      </section>
 
       <Card className="mb-5 rounded-[28px] border border-outline/70 bg-white p-4 shadow-card">
         <Suspense>
@@ -76,17 +90,22 @@ export default async function StaffPage({
           description="Try a different search or role filter, or add a new staff record from this page."
         />
       ) : (
+        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-4 px-1">
+            <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Users className="h-5 w-5 text-primary" />Staff List</h2>
+            <Badge tone="blue">{staff.length} staff</Badge>
+          </div>
         <div className="grid gap-4">
           {staff.map((member: any) => (
-            <details key={member.member_id} className="group overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card">
-              <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-surface-low/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
+            <details key={member.member_id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
+              <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-blue-50/35 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
                 <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
                   {getInitials(member.full_name)}
                 </div>
                 <div className="min-w-0">
                   <div className="mb-3 flex flex-wrap gap-2">
                     <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
-                    <Badge tone={member.status === "active" ? "green" : "gray"}>{member.status}</Badge>
+                    <StaffStatus status={member.status} />
                     {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                   </div>
@@ -108,7 +127,7 @@ export default async function StaffPage({
                 </div>
               </summary>
 
-              <div className="grid gap-4 border-t border-outline/60 px-5 py-5 md:px-6">
+              <div className="grid gap-4 border-t border-blue-100 bg-slate-50/30 px-5 py-5 md:px-6">
                 <div className="grid gap-3 md:grid-cols-4">
                   <StaffInfo icon={<ShieldCheck className="h-4 w-4" />} label="Role" value={getRoleLabel(member.role, member.custom_role_name, member.other_category)} />
                   <StaffInfo icon={<Building2 className="h-4 w-4" />} label="Department" value={[member.department, member.job_title].filter(Boolean).join(" / ") || "Not set"} />
@@ -147,6 +166,7 @@ export default async function StaffPage({
             </details>
           ))}
         </div>
+        </section>
       )}
     </>
   );
@@ -154,7 +174,7 @@ export default async function StaffPage({
 
 function StaffInfo({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-[22px] border border-outline/50 bg-white p-5 text-sm shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[16px] border border-blue-100 bg-white p-4 text-sm shadow-[0_8px_20px_rgba(37,99,235,0.035)]">
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
         <span className="text-primary">{icon}</span>
         {label}
@@ -162,6 +182,11 @@ function StaffInfo({ icon, label, value }: { icon: ReactNode; label: string; val
       <p className="truncate text-base font-semibold text-ink">{value}</p>
     </div>
   );
+}
+
+function StaffStatus({ status }: { status: string }) {
+  const active = status === "active";
+  return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold capitalize ${active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{status}</span>;
 }
 
 function getInitials(fullName: string) {

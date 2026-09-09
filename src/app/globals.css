@@ -126,6 +126,52 @@ tbody tr {
   transition: background-color var(--app-transition);
 }
 
+/* Shared directory and data-table language for the protected school app. */
+.app-workspace .overflow-x-auto:has(table) {
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.035);
+}
+
+.app-workspace .overflow-x-auto:has(table) > table,
+.app-workspace .overflow-x-auto:has(table) table {
+  overflow: hidden;
+}
+
+.app-workspace .results-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-workspace table thead {
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
+}
+
+.app-workspace table thead th {
+  color: #526b98;
+  font-weight: 800;
+}
+
+.app-workspace table tbody tr {
+  border-color: rgba(219, 234, 254, 0.9);
+}
+
+.app-workspace table tbody tr:hover {
+  background: rgba(239, 246, 255, 0.68);
+}
+
+.app-workspace input[placeholder*="Search" i] {
+  border-color: rgba(191, 219, 254, 0.85);
+  background-color: rgba(239, 246, 255, 0.68);
+}
+
+.app-workspace input[placeholder*="Search" i]:focus {
+  border-color: rgba(37, 99, 235, 0.34);
+  background-color: #ffffff;
+}
+
 
 input,
 select,

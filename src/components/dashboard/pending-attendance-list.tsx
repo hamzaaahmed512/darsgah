@@ -73,7 +73,7 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
         return (
           <div
             key={item.id}
-            className="flex flex-col gap-3 rounded-[20px] border border-outline/60 bg-white p-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between sm:p-4"
+            className="flex flex-col gap-3 rounded-[18px] border border-blue-100 bg-white p-3.5 shadow-[0_8px_20px_rgba(37,99,235,0.04)] transition hover:border-blue-200 hover:bg-blue-50/25 sm:flex-row sm:items-center sm:justify-between sm:p-4"
           >
             <div className="flex min-w-0 flex-1 items-start gap-4">
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border ${item.head_teacher_id ? "border-primary/20 bg-blue-50 text-primary" : "border-warning/20 bg-amber-50 text-warning"}`}>
@@ -84,9 +84,7 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="font-display text-[1.25rem] font-bold leading-tight text-ink">{formatClassDisplayName(item.grade_name, item.name, item.section_name)}</h4>
                     {item.grade_name && item.room ? (
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        · {item.room}
-                      </span>
+                      <span className="rounded-md bg-blue-50 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-primary">Room {item.room}</span>
                     ) : null}
                   </div>
                   <div className="mt-2 flex items-start gap-2 text-sm text-muted">

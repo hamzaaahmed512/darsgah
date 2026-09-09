@@ -141,12 +141,15 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
     if (userId && !existingProfile) {
       const { error: profileError } = await adminClient
         .from("profiles")
-        .upsert({
+      .upsert({
           id: userId,
           full_name: parsed.full_name,
           email: normalizedEmail,
           avatar_url: null,
-          must_change_password: true,
+        must_change_password: true,
+        phone: parsed.phone,
+        cnic: parsed.cnic,
+        gender: parsed.gender,
         });
 
       if (profileError && isDuplicateEmailError(profileError)) {
@@ -163,6 +166,9 @@ export async function createStaffAccount(user: AppUser, values: StaffFormValues)
       }
     }
   }
+
+  const { error: identityError } = await adminClient.from("profiles").update({ phone: parsed.phone, cnic: parsed.cnic, gender: parsed.gender }).eq("id", userId);
+  if (identityError) throw new Error(identityError.message);
 
   const { error: memberError } = await adminClient
     .from("school_members")

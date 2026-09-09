@@ -13,6 +13,8 @@ import { Plus, X } from "lucide-react";
 import type { UserRole } from "@/types/database";
 import { normalizeEmail } from "@/lib/email";
 import { sanitizeEnglishNameInput } from "@/lib/validation/names";
+import { useToast } from "@/components/ui/toast";
+import { formatCnic } from "@/lib/pakistan-format";
 
 const roleLabels: Record<UserRole, string> = {
   administrator: "Administrator",
@@ -35,6 +37,7 @@ export function StaffFormModal({
   triggerLabel?: string;
 }) {
   const router = useRouter();
+  const { pushToast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -82,6 +85,7 @@ export function StaffFormModal({
         reset();
         setSelectedRoleOption(roleOptions[0]?.value ?? `base:${allowedRoles[0] ?? "teacher"}`);
         setOpen(false);
+        pushToast("Staff account created successfully.", "success");
         router.refresh();
       } catch (err: any) {
         setError(err.message || "Failed to create account.");
@@ -130,6 +134,22 @@ export function StaffFormModal({
                     placeholder="Jane Doe"
                   />
                   {errors.full_name?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.full_name.message}</p> : null}
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">CNIC<span className="ml-0.5 text-danger">*</span></label>
+                  <Input {...register("cnic")} required inputMode="numeric" maxLength={15} placeholder="00000-0000000-0" onChange={(event) => setValue("cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} />
+                  {errors.cnic?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.cnic.message}</p> : null}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Phone number<span className="ml-0.5 text-danger">*</span></label>
+                  <Input {...register("phone")} required inputMode="tel" placeholder="0300-0000000" />
+                  {errors.phone?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.phone.message}</p> : null}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Gender<span className="ml-0.5 text-danger">*</span></label>
+                  <Select {...register("gender")} required><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></Select>
+                  {errors.gender?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.gender.message}</p> : null}
                 </div>
 
                 <div className="sm:col-span-2">

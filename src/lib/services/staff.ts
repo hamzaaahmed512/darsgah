@@ -59,6 +59,8 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
       department: row.department,
       job_title: row.job_title,
       phone: row.phone,
+      cnic: row.cnic,
+      gender: row.gender,
       personal_email: null,
       must_change_password: false,
       assigned_classes: 0,
@@ -192,7 +194,9 @@ export async function updateStaffProfile(user: AppUser, staffId: string, values:
     admin.from("profiles").update({
       full_name: parsed.fullName,
       phone: formatPakistaniPhoneForStorage(parsed.phone),
-      personal_email: parsed.personalEmail || null
+      personal_email: parsed.personalEmail || null,
+      cnic: parsed.cnic || null,
+      gender: parsed.gender || null
     }).eq("id", staffId),
     admin.from("school_members").update({
       department: parsed.department || null,
@@ -202,12 +206,14 @@ export async function updateStaffProfile(user: AppUser, staffId: string, values:
   if (profileError) throw new Error(profileError.message);
   if (memberError) throw new Error(memberError.message);
   await logActivity(user, "staff_profile_updated", "school_member", target.id, {
-    fields: ["full_name", "phone", "personal_email", "department", "job_title"]
+    fields: ["full_name", "phone", "cnic", "gender", "personal_email", "department", "job_title"]
   });
 }
 
 export async function createOtherStaffRecord(user: AppUser, values: {
   fullName: string;
+  cnic: string;
+  gender: "male" | "female";
   category: OtherStaffCategory;
   department?: string;
   jobTitle?: string;
@@ -230,6 +236,8 @@ export async function createOtherStaffRecord(user: AppUser, values: {
       department: values.department?.trim() || "Others",
       job_title: values.jobTitle?.trim() || OTHER_STAFF_CATEGORY_LABELS[category],
       phone,
+      cnic: values.cnic,
+      gender: values.gender,
       monthly_salary: values.monthlySalary ?? null,
       status: "active",
       ...(values.joiningDate ? { joining_date: values.joiningDate } : {})

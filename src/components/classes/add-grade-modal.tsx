@@ -10,14 +10,6 @@ import { useToast } from "@/components/ui/toast";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 
-export function getActiveGradeNames(classes: Array<{ grade_name: string; academic_year_id: string }>, activeAcademicYearId?: string) {
-  if (!activeAcademicYearId) return [];
-  return [...new Set(classes
-    .filter((cls) => cls.academic_year_id === activeAcademicYearId)
-    .map((cls) => cls.grade_name)
-    .filter(Boolean))];
-}
-
 export function AddGradeModal({ existingGradeNames }: { existingGradeNames: string[] }) {
   const router = useRouter();
   const { pushToast } = useToast();

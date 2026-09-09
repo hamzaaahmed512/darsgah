@@ -14,6 +14,7 @@ import { PakistaniPhoneInput } from "@/components/ui/pakistani-phone-input";
 import { OTHER_STAFF_CATEGORIES, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { normalizeEmail } from "@/lib/email";
 import { sanitizeEnglishNameInput } from "@/lib/validation/names";
+import { formatCnic } from "@/lib/pakistan-format";
 import { staffFormSchema, type StaffFormValues } from "@/lib/validation/staff";
 import type { UserRole } from "@/types/database";
 
@@ -45,6 +46,8 @@ export function StaffCreateModal({
   const [error, setError] = useState<string | null>(null);
   const [recordForm, setRecordForm] = useState({
     fullName: "",
+    cnic: "",
+    gender: "" as "" | "male" | "female",
     category: "peon" as OtherStaffCategory,
     department: "Others",
     jobTitle: "",
@@ -101,6 +104,8 @@ export function StaffCreateModal({
   function resetRecordForm() {
     setRecordForm({
       fullName: "",
+      cnic: "",
+      gender: "",
       category: "peon",
       department: "Others",
       jobTitle: "",
@@ -154,6 +159,8 @@ export function StaffCreateModal({
       try {
         await createOtherStaffAction({
           fullName: recordForm.fullName,
+          cnic: recordForm.cnic,
+          gender: recordForm.gender as "male" | "female",
           category: recordForm.category,
           department: recordForm.department,
           jobTitle: recordForm.jobTitle,
@@ -272,6 +279,22 @@ export function StaffCreateModal({
                               />
                             </Field>
 
+                            <Field label="CNIC" required error={errors.cnic?.message}>
+                              <Input {...register("cnic")} required aria-required="true" inputMode="numeric" maxLength={15} placeholder="00000-0000000-0" onChange={(event) => setValue("cnic", formatCnic(event.target.value), { shouldDirty: true, shouldValidate: true })} />
+                            </Field>
+
+                            <Field label="Phone Number" required error={errors.phone?.message}>
+                              <PakistaniPhoneInput {...register("phone")} required aria-required="true" />
+                            </Field>
+
+                            <Field label="Gender" required error={errors.gender?.message}>
+                              <Select {...register("gender")} required aria-required="true">
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                              </Select>
+                            </Field>
+
                             <Field label="Temporary Password" required error={errors.password?.message} hint="Share it privately. They must change it on first login.">
                               <Input {...register("password")} required aria-required="true" type="text" placeholder="Enter a secure temporary password" />
                             </Field>
@@ -384,14 +407,24 @@ export function StaffCreateModal({
                                 ))}
                               </Select>
                             </Field>
+                            <Field label="CNIC" required>
+                              <Input required inputMode="numeric" maxLength={15} value={formatCnic(recordForm.cnic)} onChange={(event) => updateRecordForm("cnic", formatCnic(event.target.value))} placeholder="00000-0000000-0" />
+                            </Field>
+                            <Field label="Gender" required>
+                              <Select required value={recordForm.gender} onChange={(event) => updateRecordForm("gender", event.target.value as "" | "male" | "female")}>
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                              </Select>
+                            </Field>
                             <Field label="Department">
                               <Input value={recordForm.department} onChange={(event) => updateRecordForm("department", event.target.value)} placeholder="Others" />
                             </Field>
                             <Field label="Job Title">
                               <Input value={recordForm.jobTitle} onChange={(event) => updateRecordForm("jobTitle", event.target.value)} placeholder="Peon, Guard, Cleaner..." />
                             </Field>
-                            <Field label="Phone">
-                              <PakistaniPhoneInput value={recordForm.phone} onChange={(event) => updateRecordForm("phone", event.target.value)} />
+                            <Field label="Phone" required>
+                              <PakistaniPhoneInput required value={recordForm.phone} onChange={(event) => updateRecordForm("phone", event.target.value)} />
                             </Field>
                             <Field label="Monthly Salary">
                               <Input type="number" min="0" step="0.01" value={recordForm.monthlySalary} onChange={(event) => updateRecordForm("monthlySalary", event.target.value)} placeholder="Optional" />
