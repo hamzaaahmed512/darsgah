@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { getActiveGradeNames } from "@/lib/academics/active-grades";
+import { getDefaultSubjectsForGrade } from "@/lib/constants/subjectDefaults";
 
 export { getActiveGradeNames };
 export function AddGradeModal({ existingGradeNames }: { existingGradeNames: string[] }) {
