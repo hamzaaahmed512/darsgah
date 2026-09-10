@@ -19,6 +19,7 @@ import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
 import { LibraryReports } from "./library-reports";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -32,10 +33,11 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Form({
-  action, children, label = "Save", id, reset = false, buttonVariant = "primary", disabled = false, onSuccess
+  action, children, label = "Save", id, reset = false, buttonVariant = "primary", buttonSize = "md", disabled = false, className, buttonClassName, onSuccess
 }: {
   action: string; children?: ReactNode; label?: string; id?: string;
-  reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; disabled?: boolean;
+  reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; buttonSize?: "sm" | "md"; disabled?: boolean;
+  className?: string; buttonClassName?: string;
   onSuccess?: () => void;
 }) {
   const router = useRouter();
@@ -60,13 +62,13 @@ function Form({
           }
         });
       }}
-      className="grid gap-3"
+      className={className ?? "grid gap-3"}
     >
       <input type="hidden" name="action" value={action} />
       {id && <input type="hidden" name="id" value={id} />}
-      <fieldset disabled={pending} className="grid min-w-0 gap-3">
+      <fieldset disabled={pending} className={children ? "grid min-w-0 gap-3" : "min-w-0"}>
         {children}
-        <Button type="submit" variant={buttonVariant} disabled={pending || disabled}>
+        <Button type="submit" variant={buttonVariant} size={buttonSize} disabled={pending || disabled} className={cn("whitespace-nowrap", buttonClassName)}>
           {pending ? "Saving…" : label}
         </Button>
       </fieldset>
@@ -884,23 +886,138 @@ export function LibraryWorkspace({
 
               {!waitingReservations.length && <p className="text-xs text-muted">No waiting reservations currently queued.</p>}
 
-              <div className="overflow-x-auto rounded-2xl border border-outline/60">
-                <table className="min-w-[800px] w-full text-left text-sm">
-                  <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Book</th><th className="px-5 py-3">Borrower</th><th className="px-5 py-3">Requested</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
-                  <tbody>
-                {waitingReservations.map((item) => {
-                  const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
-                  const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
-                  const queuePos = item.queue_position ?? (waitingReservations.filter(r => r.book_id === item.book_id).findIndex(r => r.id === item.id) + 1);
-                  const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
+              {waitingReservations.length > 0 && (
+                <>
+                  {/* Mobile Queue List Cards */}
+                  <div className="space-y-3 md:hidden">
+                    {waitingReservations.map((item) => {
+                      const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
+                      const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
+                      const queuePos = item.queue_position ?? (waitingReservations.filter(r => r.book_id === item.book_id).findIndex(r => r.id === item.id) + 1);
+                      const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
 
-                  return (
-                    <tr key={item.id} className="border-t border-outline/50"><td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td><td className="px-5 py-4"><p className="font-semibold text-ink">{bookTitle}</p><p className="mt-1 text-xs text-muted">{availCount} available</p></td><td className="px-5 py-4"><p className="font-semibold text-ink">{item.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p></td><td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{isReady ? "Ready to issue" : "Waiting for a return"}</span></td><td className="px-5 py-4"><div className="flex justify-end gap-2">{canManage && isReady ? <Button type="button" onClick={() => handleOneClickFulfill(item)} className="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700">Select for issue</Button> : null}{canManage ? <Form action="cancel_reservation" id={item.id} label="Cancel reservation" buttonVariant="secondary" /> : null}</div></td></tr>
-                  );
-                })}
-                  </tbody>
-                </table>
-              </div>
+                      return (
+                        <div key={item.id} className="rounded-2xl border border-outline/60 bg-white p-4 shadow-card space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <span className="inline-block text-[11px] font-bold uppercase tracking-wider text-muted">#{queuePos}</span>
+                              <h3 className="font-bold text-ink text-base leading-snug break-words">{bookTitle}</h3>
+                              <p className="text-xs text-muted mt-0.5">{availCount} available</p>
+                            </div>
+                            <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                              {isReady ? "Ready to issue" : "Waiting for return"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs">
+                            <div className="min-w-0">
+                              <p className="text-muted font-medium text-[11px] uppercase tracking-wider">Borrower</p>
+                              <p className="font-semibold text-ink truncate mt-0.5">{item.borrower_name}</p>
+                              <p className="capitalize text-muted text-[11px] truncate">{item.borrower_kind}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted font-medium text-[11px] uppercase tracking-wider">Requested</p>
+                              <p className="font-semibold text-ink mt-0.5">{formatDate(item.created_at)}</p>
+                            </div>
+                          </div>
+
+                          {canManage && (
+                            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                              {isReady ? (
+                                <Button
+                                  type="button"
+                                  onClick={() => handleOneClickFulfill(item)}
+                                  size="sm"
+                                  className="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white flex-1 justify-center"
+                                >
+                                  Select for issue
+                                </Button>
+                              ) : null}
+                              <Form
+                                action="cancel_reservation"
+                                id={item.id}
+                                label="Cancel reservation"
+                                buttonVariant="secondary"
+                                buttonSize="sm"
+                                className="flex-1 min-w-0"
+                                buttonClassName="w-full whitespace-nowrap justify-center"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto rounded-2xl border border-outline/60">
+                    <table className="min-w-[800px] w-full text-left text-sm">
+                      <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                        <tr>
+                          <th className="px-5 py-3">#</th>
+                          <th className="px-5 py-3">Book</th>
+                          <th className="px-5 py-3">Borrower</th>
+                          <th className="px-5 py-3">Requested</th>
+                          <th className="px-5 py-3">Status</th>
+                          <th className="px-5 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {waitingReservations.map((item) => {
+                          const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
+                          const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
+                          const queuePos = item.queue_position ?? (waitingReservations.filter(r => r.book_id === item.book_id).findIndex(r => r.id === item.id) + 1);
+                          const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
+
+                          return (
+                            <tr key={item.id} className="border-t border-outline/50">
+                              <td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td>
+                              <td className="px-5 py-4">
+                                <p className="font-semibold text-ink">{bookTitle}</p>
+                                <p className="mt-1 text-xs text-muted">{availCount} available</p>
+                              </td>
+                              <td className="px-5 py-4">
+                                <p className="font-semibold text-ink">{item.borrower_name}</p>
+                                <p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p>
+                              </td>
+                              <td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td>
+                              <td className="px-5 py-4">
+                                <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                                  {isReady ? "Ready to issue" : "Waiting for a return"}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4">
+                                <div className="flex items-center justify-end gap-2">
+                                  {canManage && isReady ? (
+                                    <Button
+                                      type="button"
+                                      onClick={() => handleOneClickFulfill(item)}
+                                      size="sm"
+                                      className="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                      Select for issue
+                                    </Button>
+                                  ) : null}
+                                  {canManage ? (
+                                    <Form
+                                      action="cancel_reservation"
+                                      id={item.id}
+                                      label="Cancel reservation"
+                                      buttonVariant="secondary"
+                                      buttonSize="sm"
+                                      buttonClassName="whitespace-nowrap"
+                                    />
+                                  ) : null}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </Panel>
           </div>
         </div>

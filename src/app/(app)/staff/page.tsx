@@ -98,28 +98,28 @@ export default async function StaffPage({
         <div className="grid gap-4">
           {staff.map((member: any) => (
             <details key={member.member_id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
-              <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-blue-50/35 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
-                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
+              <summary className="grid cursor-pointer gap-x-4 gap-y-3 px-5 py-5 transition hover:bg-blue-50/35 grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
+                <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full text-base sm:text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
                   {getInitials(member.full_name)}
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate font-display text-[1.25rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
-                  {member.email ? (
-                    <p className="mt-2 flex items-center gap-2 text-base text-muted">
-                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{member.email}</span>
-                    </p>
-                  ) : (
-                    <p className="mt-2 text-base text-muted">Others / record-only staff</p>
-                  )}
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <h2 className="truncate font-display text-[1.2rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
                     <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
                     <StaffStatus status={member.status} />
                     {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                   </div>
+                  {member.email ? (
+                    <p className="mt-2 flex items-center gap-2 text-sm sm:text-base text-muted">
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{member.email}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm sm:text-base text-muted">Others / record-only staff</p>
+                  )}
                 </div>
-                <div className="flex items-center justify-end gap-3 self-start md:self-center">
+                <div className="col-span-2 flex items-center justify-between border-t border-blue-50/80 pt-3 md:col-span-1 md:border-0 md:pt-0 md:justify-end md:gap-3">
                   <span className="text-sm font-semibold text-muted md:text-base">
                     {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
                   </span>
