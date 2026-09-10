@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ClassGradeGroup } from "@/components/classes/class-grade-group";
 
 export function ClassGradeList({ groups, classDetails }: { groups: Array<{ gradeName: string; classes: any[] }>; classDetails: any }) {
-  const [expandedGrade, setExpandedGrade] = useState<string | null>(groups[0]?.gradeName ?? null);
+  const [expandedGrade, setExpandedGrade] = useState<string | null>(null);
 
   return (
     <div className="grid gap-4">

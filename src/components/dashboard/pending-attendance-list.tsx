@@ -111,7 +111,7 @@ export function PendingAttendanceList({ classes, todayLabel }: { classes: Pendin
                 variant="secondary"
                 disabled={!item.head_teacher_id || isSending || alreadySent}
                 onClick={() => sendReminder(item.id)}
-                className={`min-h-10 rounded-2xl px-4 text-sm ${alreadySent ? "bg-surface-high text-muted ring-outline" : ""}`}
+                className={`min-h-10 rounded-2xl px-4 text-sm ${alreadySent ? "bg-surface-high text-muted ring-outline" : "bg-blue-50 text-primary shadow-[0_8px_18px_rgba(37,99,235,0.12)] ring-primary/20 hover:bg-blue-100 hover:text-primary-ink disabled:bg-surface-low disabled:text-muted disabled:shadow-none disabled:ring-outline"}`}
               >
                 {isSending ? (
                   "Sending..."

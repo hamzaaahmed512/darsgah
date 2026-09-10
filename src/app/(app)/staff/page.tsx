@@ -103,21 +103,21 @@ export default async function StaffPage({
                   {getInitials(member.full_name)}
                 </div>
                 <div className="min-w-0">
-                  <div className="mb-3 flex flex-wrap gap-2">
+                  <h2 className="truncate font-display text-[1.25rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
+                  {member.email ? (
+                    <p className="mt-2 flex items-center gap-2 text-base text-muted">
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{member.email}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-base text-muted">Others / record-only staff</p>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
                     <StaffStatus status={member.status} />
                     {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
                     {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
                   </div>
-                  <h2 className="truncate font-display text-[1.25rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
-                  {member.email ? (
-                    <p className="mt-3 flex items-center gap-2 text-base text-muted">
-                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{member.email}</span>
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-base text-muted">Others / record-only staff</p>
-                  )}
                 </div>
                 <div className="flex items-center justify-end gap-3 self-start md:self-center">
                   <span className="text-sm font-semibold text-muted md:text-base">

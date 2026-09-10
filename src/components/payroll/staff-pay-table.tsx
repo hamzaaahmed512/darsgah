@@ -64,7 +64,7 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.staffId} className="border-t border-outline/60 hover:bg-surface-low/70">
-                      <td className="px-4 py-4">
+                      <td className="responsive-table-identity px-4 py-4">
                         <p className="font-semibold text-ink">{row.name}</p>
                         <p className="text-xs capitalize text-muted">{row.jobTitle || row.role.replace("_", " ")}</p>
                         {row.email ? <p className="text-xs text-muted">{row.email}</p> : null}
@@ -79,13 +79,13 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
                       <td className="px-4 py-4 font-semibold">{formatPKR(row.yearlyPaidTotal)}</td>
                       <td className="px-4 py-4 text-muted">{row.paymentDate ? formatDatePK(row.paymentDate) : "-"}</td>
                       {canManage ? (
-                        <td className="px-4 py-4">
-                          <div className="flex justify-end gap-2">
+                        <td className="responsive-table-actions px-4 py-4">
+                          <div className="flex justify-end gap-2 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => setEditing(row)}
                               disabled={row.status === "paid"}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-ink ring-1 ring-outline hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex h-9 whitespace-nowrap items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-ink ring-1 ring-outline hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <Edit3 className="h-3.5 w-3.5" /> Edit
                             </button>
@@ -94,7 +94,7 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
                                 type="button"
                                 disabled={isPending && pendingStaffId === row.staffId}
                                 onClick={() => handleStatus(row, "unpaid")}
-                                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-warning px-3 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
+                                className="inline-flex h-9 whitespace-nowrap items-center gap-1.5 rounded-lg bg-warning px-3 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
                               >
                                 <RotateCcw className="h-3.5 w-3.5" /> Mark Unpaid
                               </button>
@@ -103,7 +103,7 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
                                 type="button"
                                 disabled={(isPending && pendingStaffId === row.staffId) || row.baseSalary <= 0}
                                 onClick={() => handleStatus(row, "paid")}
-                                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-success px-3 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
+                                className="inline-flex h-9 whitespace-nowrap items-center gap-1.5 rounded-lg bg-success px-3 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
                               >
                                 <CheckCircle className="h-3.5 w-3.5" /> Mark Paid
                               </button>

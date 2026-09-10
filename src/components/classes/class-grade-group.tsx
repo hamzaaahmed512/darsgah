@@ -32,7 +32,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
             <p className="mt-1.5 text-sm text-muted">{totalStudents} students across this grade</p>
           </div>
         </button>
-        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="class-grade-manage min-h-10 shrink-0 rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
+        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="class-grade-manage min-h-10 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
         <button type="button" onClick={() => onExpandedChange(!expanded)} className="class-grade-expand rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
       </div>
 
@@ -60,7 +60,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
                     </div>
                   </div>
                   <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
-                    <ButtonLink href={`/classes/${cls.id}`} size="sm" variant="secondary" className="min-h-10 rounded-xl px-4 text-sm text-primary">
+                      <ButtonLink href={`/classes/${cls.id}`} size="sm" variant="secondary" className="min-h-10 whitespace-nowrap rounded-xl px-4 text-sm text-primary">
                       <Settings className="h-4 w-4" /> Manage Section
                     </ButtonLink>
                   </div>

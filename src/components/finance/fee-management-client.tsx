@@ -232,7 +232,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
           ) : (
           <>
           <div className="border-b border-blue-100 px-5 py-4 sm:px-6"><div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Student Fee Accounts</h3><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filtered.length} account{filtered.length === 1 ? "" : "s"}</span></div></div>
-          <div className="overflow-x-auto">
+          <div className="responsive-table-cards overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                 <tr>
@@ -243,7 +243,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   <th className="px-5 py-4">Remaining</th>
                   <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4">Receipt</th>
-                  {canManage && <th className="px-5 py-4 text-right">Actions</th>}
+                  {canManage && <th className="px-5 py-4 text-right"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -255,21 +255,21 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                       key={acc.id}
                       className={`border-t border-blue-100/70 ${isSelected ? "bg-blue-50/70" : "hover:bg-blue-50/35"}`}
                     >
-                      <td className="px-5 py-4">
+                      <td data-label="Student" className="px-5 py-4">
                         <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="flex items-center gap-3 text-left">
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-primary">{acc.student_name.slice(0, 1).toUpperCase()}</span><span><p className="font-semibold text-ink">{acc.student_name}</p><p className="text-xs text-muted">Adm: {acc.admission_number}</p></span>
                         </button>
                       </td>
-                      <td className="px-5 py-4">
+                      <td data-label="Class" className="px-5 py-4">
                         <span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span>
                       </td>
-                      <td className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
-                      <td className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
-                      <td className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
-                      <td className="px-5 py-4">
+                      <td data-label="Payable" className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
+                      <td data-label="Paid" className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
+                      <td data-label="Remaining" className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
+                      <td data-label="Status" className="px-5 py-4">
                         <FeeStatus status={acc.payment_status} />
                       </td>
-                      <td className="px-5 py-4">
+                      <td data-label="Receipt" className="px-5 py-4">
                         {receipt ? (
                           <button
                             type="button"
@@ -283,19 +283,19 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                         )}
                       </td>
                       {canManage && (
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex justify-end gap-2">
+                        <td className="responsive-table-actions px-5 py-4 text-right">
+                          <div className="flex justify-end gap-2 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => handleOpenCollect(acc.id)}
-                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary hover:brightness-95"
+                              className="inline-flex min-h-9 whitespace-nowrap items-center gap-1 rounded-xl bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary hover:brightness-95"
                             >
                               <Wallet className="h-3 w-3" /> Collect
                             </button>
                             <button
                               type="button"
                               onClick={() => handleOpenDiscount(acc)}
-                              className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success hover:brightness-95"
+                              className="inline-flex min-h-9 whitespace-nowrap items-center gap-1 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success hover:brightness-95"
                             >
                               <Percent className="h-3 w-3" /> Discount
                             </button>

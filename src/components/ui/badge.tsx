@@ -16,7 +16,7 @@ export function Badge({
 }: HTMLAttributes<HTMLSpanElement> & { tone?: keyof typeof toneClasses }) {
   return (
     <span
-      className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ring-1", toneClasses[tone], className)}
+      className={cn("inline-flex whitespace-nowrap items-center rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ring-1", toneClasses[tone], className)}
       {...props}
     />
   );

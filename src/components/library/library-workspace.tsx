@@ -487,16 +487,17 @@ export function LibraryWorkspace({
       </div>
 
       {/* ── Tab nav ── */}
-      <nav aria-label="Library sections" className="flex gap-2 overflow-x-auto border-b border-outline pb-3">
+      <nav aria-label="Library sections" className="grid grid-cols-4 gap-1 border-b border-outline pb-3 sm:flex sm:gap-2 sm:overflow-x-auto">
         {tabs.map(item => (
           <button
             type="button"
             key={item}
             aria-current={tab === item ? "page" : undefined}
             onClick={() => { setTab(item); setQuery(""); setPage(1); }}
-            className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold ${tab === item ? "bg-primary text-white" : "bg-white text-muted hover:bg-slate-100"}`}
+            className={`min-w-0 rounded-xl px-2 py-2 text-xs font-semibold sm:whitespace-nowrap sm:px-4 sm:text-sm ${tab === item ? "bg-primary text-white" : "bg-white text-muted hover:bg-slate-100"}`}
           >
-            {item}
+            <span className="sm:hidden">{item === "Loans & reservations" ? "Loans" : item === "Rules & team" ? "Rules" : item}</span>
+            <span className="hidden sm:inline">{item}</span>
           </button>
         ))}
       </nav>
@@ -557,7 +558,7 @@ export function LibraryWorkspace({
                   <td className="px-5 py-4"><BookMeta label="" value={book.isbn} /></td>
                   <td className="px-5 py-4"><BookMeta label="" value={String(totalCopies)} /></td>
 
-                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-2">
+                  <td className="responsive-table-actions px-5 py-4"><div className="flex items-center justify-end gap-2">
                     <Link href={`/library/${book.id}`} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-outline/70 bg-white text-primary transition hover:bg-primary-soft" aria-label={`View inventory for ${book.title}`} title="View inventory">
                       <Eye className="h-4 w-4" />
                     </Link>

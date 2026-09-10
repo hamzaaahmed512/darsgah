@@ -299,6 +299,37 @@ tbody tr {
   .app-workspace .responsive-table-cards tbody td > * {
     max-width: 62%;
   }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-actions {
+    display: block;
+    text-align: left;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-actions::before {
+    display: none;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-actions > * {
+    max-width: 100%;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-actions > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-identity {
+    display: block;
+    text-align: left;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-identity::before {
+    display: none;
+  }
+
+  .app-workspace .responsive-table-cards tbody td.responsive-table-identity > * {
+    max-width: 100%;
+  }
 }
 
 @media screen and (max-width: 639px) {

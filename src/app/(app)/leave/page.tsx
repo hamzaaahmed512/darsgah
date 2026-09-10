@@ -107,10 +107,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               ) : !teacherLeaveSummary.summaries.length ? (
                 <EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." />
               ) : (
-                <div className="overflow-hidden rounded-[24px] border border-outline/50">
+                <div className="overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-left text-sm">
-                      <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
+                      <thead className="bg-blue-50/35 font-label text-xs uppercase tracking-[0.14em] text-muted">
                         <tr>
                           <th className="px-5 py-4">Teacher Name</th>
                           <th className="px-5 py-4">Annual (Used/Limit)</th>
@@ -120,7 +120,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                       </thead>
                       <tbody>
                         {teacherLeaveSummary.summaries.map((s) => (
-                          <tr key={s.teacherId} className="border-t border-outline/50">
+                          <tr key={s.teacherId} className="border-t border-blue-50 transition-colors hover:bg-blue-50/25">
                             <td className="px-5 py-4 font-semibold">{s.teacherName}</td>
                             <td className="px-5 py-4">
                               <span className={s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit}
