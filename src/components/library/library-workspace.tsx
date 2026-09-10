@@ -889,7 +889,7 @@ export function LibraryWorkspace({
               {waitingReservations.length > 0 && (
                 <>
                   {/* Mobile Queue List Cards */}
-                  <div className="space-y-3 md:hidden">
+                  <div className="space-y-3 lg:hidden">
                     {waitingReservations.map((item) => {
                       const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
                       const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
@@ -950,7 +950,7 @@ export function LibraryWorkspace({
                   </div>
 
                   {/* Desktop Table View */}
-                  <div className="hidden md:block overflow-x-auto rounded-2xl border border-outline/60">
+                  <div className="hidden lg:block overflow-x-auto rounded-2xl border border-outline/60">
                     <table className="min-w-[800px] w-full text-left text-sm">
                       <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
                         <tr>
