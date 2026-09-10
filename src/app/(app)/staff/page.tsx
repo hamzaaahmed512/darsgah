@@ -98,29 +98,39 @@ export default async function StaffPage({
         <div className="grid gap-4">
           {staff.map((member: any) => (
             <details key={member.member_id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
-              <summary className="grid cursor-pointer gap-x-4 gap-y-3 px-5 py-5 transition hover:bg-blue-50/35 grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:px-6">
-                <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full text-base sm:text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
-                  {getInitials(member.full_name)}
-                </div>
-                <div className="min-w-0">
-                  <h2 className="truncate font-display text-[1.2rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
-                    <StaffStatus status={member.status} />
-                    {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
-                    {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
+              <summary className="cursor-pointer px-5 py-5 transition hover:bg-blue-50/35 md:px-6 [&::-webkit-details-marker]:hidden [&::marker]:hidden">
+                <div className="flex items-start gap-3 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4 md:items-center">
+                  <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full text-base sm:text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
+                    {getInitials(member.full_name)}
                   </div>
-                  {member.email ? (
-                    <p className="mt-2 flex items-center gap-2 text-sm sm:text-base text-muted">
-                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{member.email}</span>
-                    </p>
-                  ) : (
-                    <p className="mt-2 text-sm sm:text-base text-muted">Others / record-only staff</p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="truncate font-display text-[1.2rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
+                      <div className="hidden md:flex items-center gap-3 shrink-0 self-center">
+                        <span className="text-sm font-semibold text-muted md:text-base">
+                          {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      <Badge tone={member.is_record_only ? "gray" : "blue"}>{getRoleLabel(member.role, member.custom_role_name, member.other_category)}</Badge>
+                      <StaffStatus status={member.status} />
+                      {member.is_record_only ? <Badge tone="yellow">Record only</Badge> : null}
+                      {member.must_change_password ? <Badge tone="yellow">Password reset</Badge> : null}
+                    </div>
+                    {member.email ? (
+                      <p className="mt-2 flex items-center gap-2 text-sm sm:text-base text-muted">
+                        <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{member.email}</span>
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-sm sm:text-base text-muted">Others / record-only staff</p>
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-2 flex items-center justify-between border-t border-blue-50/80 pt-3 md:col-span-1 md:border-0 md:pt-0 md:justify-end md:gap-3">
-                  <span className="text-sm font-semibold text-muted md:text-base">
+                <div className="md:hidden flex items-center justify-between border-t border-blue-50/80 mt-3 pt-3">
+                  <span className="text-sm font-semibold text-muted">
                     {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />

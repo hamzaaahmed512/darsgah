@@ -986,8 +986,8 @@ export function LibraryWorkspace({
                                   {isReady ? "Ready to issue" : "Waiting for a return"}
                                 </span>
                               </td>
-                              <td className="px-5 py-4">
-                                <div className="flex items-center justify-end gap-2">
+                              <td className="px-5 py-4 responsive-table-actions">
+                                <div className="flex flex-wrap items-center justify-end gap-2">
                                   {canManage && isReady ? (
                                     <Button
                                       type="button"
