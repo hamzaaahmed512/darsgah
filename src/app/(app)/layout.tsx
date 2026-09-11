@@ -18,7 +18,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   const [notificationSummary, announcements] = await Promise.all([
     getNotificationSummary(user).catch((error) => {
       console.error("Notification summary failed:", error);
-      return { notifications: [], sidebarBadges: { attendance: 0, leave: 0 } };
+      return { notifications: [], sidebarBadges: { attendance: 0, leave: 0, queries: 0 } };
     }),
     getAnnouncements(user).catch((error) => {
       console.error("Announcements failed:", error);

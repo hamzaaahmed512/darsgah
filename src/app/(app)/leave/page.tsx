@@ -250,7 +250,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             </div>
           ) : null}
 
-          <Card className="rounded-[30px] border border-outline/70 bg-white shadow-card">
+          <Card className="mt-6 rounded-[30px] border border-outline/70 bg-white shadow-card">
           <CardHeader className="gap-4 border-b border-outline/50 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
@@ -339,41 +339,34 @@ function LeaveBalanceCard({
   const remaining = isUnlimited ? "N/A" : Math.max(0, limit - used);
   const over = !isUnlimited && used > limit;
   const pct = isUnlimited ? 0 : Math.min(100, limit > 0 ? (used / limit) * 100 : 0);
+  const normalStyles = label === "Monthly leave"
+    ? { accent: "!border-t-emerald-500", tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", bar: "bg-emerald-500" }
+    : label === "Weekly leave"
+      ? { accent: "!border-t-purple-500", tile: "bg-purple-50 text-purple-600 ring-purple-100", bar: "bg-purple-500" }
+      : { accent: "!border-t-blue-500", tile: "bg-blue-50 text-blue-600 ring-blue-100", bar: "bg-blue-500" };
+  const style = isUnlimited
+    ? { accent: "!border-t-slate-400", tile: "bg-slate-50 text-slate-500 ring-slate-100", bar: "bg-slate-300" }
+    : over
+      ? { accent: "!border-t-red-500", tile: "bg-red-50 text-red-600 ring-red-100", bar: "bg-red-500" }
+      : remaining === 0
+        ? { accent: "!border-t-amber-500", tile: "bg-amber-50 text-amber-600 ring-amber-100", bar: "bg-amber-500" }
+        : normalStyles;
   return (
-    <div className="rounded-[24px] border border-outline/70 bg-white p-5 shadow-card">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">{label}</p>
-          <div className="mt-1 flex items-end gap-1.5">
-            <span className={`font-display text-3xl font-bold ${over ? "text-red-600" : "text-ink"}`}>
-              {remaining}
-            </span>
-            <span className="mb-0.5 text-sm text-muted">/ {isUnlimited ? "N/A" : limit} remaining</span>
-          </div>
-          <p className="mt-0.5 text-xs text-muted">{used} days taken &middot; {description}</p>
-        </div>
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-lg font-bold ${
-            isUnlimited
-              ? "border-slate-100 bg-slate-50 text-slate-400"
-              : over
-              ? "border-red-100 bg-red-50 text-red-600"
-              : remaining === 0
-              ? "border-amber-100 bg-amber-50 text-amber-600"
-              : "border-emerald-100 bg-emerald-50 text-emerald-600"
-          }`}
-        >
-          {remaining}
+    <Card className={`h-full !border-t-4 p-4 shadow-sm sm:p-5 ${style.accent}`}>
+      <div className="flex items-start gap-4">
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-14 sm:w-14 ${style.tile}`}><CalendarRange className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="font-label text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
+          <p className={`mt-2 font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight ${over ? "text-red-600" : "text-ink"}`}>{remaining}<span className="ml-1.5 text-sm font-medium text-muted">/ {isUnlimited ? "N/A" : limit}</span></p>
+          <p className="mt-2 text-sm font-medium leading-5 text-muted">{used} days taken · {description}</p>
         </div>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className={`h-full rounded-full transition-all ${
-            isUnlimited ? "bg-slate-200" : over ? "bg-red-400" : remaining === 0 ? "bg-amber-400" : "bg-primary"
-          }`}
+          className={`h-full rounded-full transition-all ${style.bar}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-    </div>
+    </Card>
   );
 }

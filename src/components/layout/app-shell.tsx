@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
 import type { WorkflowNotification } from "@/lib/services/notifications";
 
@@ -36,7 +37,7 @@ function formatNavDate(date: Date) {
 export function AppShell({
   user,
   branding,
-  sidebarBadges = { attendance: 0, leave: 0 },
+  sidebarBadges = { attendance: 0, leave: 0, queries: 0 },
   initialWorkflowNotifications = [],
   initialAttentionAnnouncements = [],
   principalCanAccessAcademicControl = false,
@@ -44,7 +45,7 @@ export function AppShell({
 }: {
   user: AppUser;
   branding: SchoolBranding;
-  sidebarBadges?: { attendance: number; leave: number };
+  sidebarBadges?: { attendance: number; leave: number; queries: number };
   initialWorkflowNotifications?: WorkflowNotification[];
   initialAttentionAnnouncements?: AnnouncementWithRead[];
   principalCanAccessAcademicControl?: boolean;
@@ -220,6 +221,7 @@ export function AppShell({
   function badgeForHref(href: string) {
     if (href === "/attendance") return sidebarBadges.attendance;
     if (href === "/leave") return sidebarBadges.leave;
+    if (href === "/queries") return sidebarBadges.queries;
     return 0;
   }
 
@@ -523,7 +525,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="app-workspace mx-auto w-full max-w-[1520px] px-4 py-5 sm:px-6 sm:py-8 lg:px-10">{children}</main>
+        <main className="app-workspace mx-auto w-full max-w-[1520px] px-4 py-5 sm:px-6 sm:py-8 lg:px-10"><PageTransition>{children}</PageTransition></main>
       </div>
     </div>
   );

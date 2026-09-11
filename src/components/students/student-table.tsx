@@ -29,12 +29,12 @@ export function StudentTable({
   }
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
         <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Students List</h2>
         {pagination ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{pagination.count} students</span> : null}
       </div>
-      <div className="hidden overflow-x-auto lg:block">
+      <div className="student-table-scroll hidden overflow-x-auto lg:block">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
             <tr>

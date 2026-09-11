@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, ClipboardList, FileText } from "lucide-react";
+import { BookOpen, CheckCircle2, ClipboardList, Clock3, FileText, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResultCardsFilters, ResultCardsPanel } from "@/app/(app)/results/_components/result-cards-panel";
 import { ResultsTable } from "@/app/(app)/results/_components/results-table";
@@ -13,11 +13,12 @@ import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getResultCardsWorkspace, getResultsManagementWorkspace } from "@/lib/services/marks";
 import type { ResultWorkflowStatus, UserRole } from "@/types/database";
 import { AutoPrint } from "@/components/reports/auto-print";
+import { StatCard } from "@/components/dashboard/stat-card";
 
 const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
   { value: "draft", label: "Draft" },
-  { value: "pending_approval", label: "Pending Approval" },
+  { value: "pending_approval", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Returned" }
 ];
@@ -49,6 +50,8 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   ]);
 
   const pendingCount = results.filter((row) => row.workflowStatus === "pending_approval").length;
+  const approvedCount = results.filter((row) => row.workflowStatus === "approved").length;
+  const returnedCount = results.filter((row) => row.workflowStatus === "rejected").length;
   const showCards = canGenerateCards && (user.role === "student_staff" || view === "cards");
 
   return (
@@ -117,20 +120,16 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       {!showCards ? (
-        <Card className="mb-6 rounded-[30px] border border-outline/70 bg-white shadow-card">
-          <CardHeader className="gap-4 border-b border-outline/50 pb-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
-                <ClipboardList className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div>
-                <CardTitle className="text-[1.5rem]">{user.role === "teacher" ? "Uploaded Results" : user.role === "principal" ? "Major Examination Review" : "Result Register"}</CardTitle>
-                <p className="mt-1 text-sm text-muted">Filter results by term and workflow status.</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form className="mb-5 grid gap-3 rounded-[24px] border border-blue-100 bg-white p-4 shadow-[0_8px_24px_rgba(37,99,235,0.035)] md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
+        <>
+          <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Results" value={results.length} hint="In this view" icon={ClipboardList} tone="blue" trend="Result register" />
+            <StatCard label="Approved" value={approvedCount} hint="Ready for use" icon={CheckCircle2} tone="green" trend={approvedCount ? "Approved results" : "None approved yet"} trendTone="positive" />
+            <StatCard label="Pending" value={pendingCount} hint="Awaiting review" icon={Clock3} tone="amber" trend={pendingCount ? "Action needed" : "Nothing waiting"} trendTone={pendingCount ? "negative" : "positive"} />
+            <StatCard label="Returned" value={returnedCount} hint="Needs revision" icon={Undo2} tone="red" trend={returnedCount ? "Teacher follow-up" : "No revisions"} trendTone={returnedCount ? "negative" : "positive"} />
+          </section>
+          <section className="mb-5 rounded-[22px] border border-blue-200 bg-white p-4 shadow-[0_10px_28px_rgba(37,99,235,0.04)] sm:p-5">
+            <div className="mb-4 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-primary ring-1 ring-blue-100"><ClipboardList className="h-5 w-5" /></span><div><h2 className="font-display text-xl font-bold text-ink">Filter results</h2><p className="mt-0.5 text-sm text-muted">Narrow the register by term and workflow status.</p></div></div>
+            <form className="grid gap-3 rounded-[18px] border border-blue-100 bg-blue-50/45 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
               {user.role === "student_staff" ? <input type="hidden" name="view" value="management" /> : null}
               <Field label="Term">
                 <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 shadow-none focus:bg-white" />
@@ -151,7 +150,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
               </div>
             </form>
 
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               {statusFilters.map((item) => (
                 <Link
                   key={item.value}
@@ -163,7 +162,8 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
               ))}
             </div>
 
-            {!results.length ? (
+          </section>
+          {!results.length ? (
               <EmptyState
                 title={user.role === "teacher" ? "No uploaded results yet" : "No results found"}
                 description={
@@ -172,16 +172,15 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
                     : "Uploaded major examination results will appear here."
                 }
               />
-            ) : (
+          ) : (
               <ResultsTable
                 rows={results}
                 showApprovalColumns
                 showPrint={user.role === "student_staff"}
                 inlineApproval={user.role === "principal"}
               />
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </>
       ) : null}
 
       {showCards && cardsWorkspace ? <ResultCardsPanel workspace={cardsWorkspace} /> : null}

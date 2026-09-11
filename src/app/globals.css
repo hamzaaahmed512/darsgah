@@ -108,6 +108,26 @@ select:not([multiple]) {
   box-shadow: var(--app-shadow-lift);
 }
 
+/* Route changes should feel settled: content rises gently into its final position. */
+.page-enter {
+  animation: page-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tagline-caret {
+  display: inline-block;
+  margin-left: 0.04em;
+  animation: tagline-caret-blink 850ms step-end infinite;
+}
+
+@keyframes tagline-caret-blink {
+  50% { opacity: 0; }
+}
+
 /* Screen layout foundations: allow grid/flex content to shrink, without hiding overflow. */
 @media screen {
   :where(main, section, article, form, fieldset, .grid > *, .flex > *) {
@@ -206,6 +226,13 @@ tbody tr {
 }
 
 .app-workspace .results-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* The Students List owns its outer card, including title and pagination. */
+.app-workspace .student-table-scroll.overflow-x-auto {
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -497,6 +524,7 @@ a {
 .feature-tone-2 > span { background: #ecfeff; color: #0891b2; }
 
 @media (prefers-reduced-motion: reduce) {
+  .page-enter, .tagline-caret { animation: none; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
 }
 

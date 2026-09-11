@@ -10,7 +10,7 @@ export type WorkflowNotification = {
   description: string;
   href: string;
   priority: "low" | "medium" | "high" | "critical";
-  category: "attendance" | "leave";
+  category: "attendance" | "leave" | "queries";
 };
 
 export type NotificationSummary = {
@@ -18,6 +18,7 @@ export type NotificationSummary = {
   sidebarBadges: {
     attendance: number;
     leave: number;
+    queries: number;
   };
 };
 
@@ -78,6 +79,14 @@ async function getPendingLeaveCount(user: AppUser) {
   return count ?? 0;
 }
 
+async function getOpenQueryCount(user: AppUser) {
+  if (user.role !== "administrator" && user.role !== "principal") return 0;
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("internal_support_queries").select("id", { count: "exact", head: true }).eq("school_id", user.schoolId).eq("status", "open");
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 async function getTeacherPendingHeadClasses(user: AppUser, today: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -108,6 +117,7 @@ export async function getNotificationSummary(user: AppUser): Promise<Notificatio
   const notifications: WorkflowNotification[] = [];
   let attendanceBadge = 0;
   let leaveBadge = 0;
+  let queriesBadge = 0;
 
   if (preferences.attendanceDeadlineEnabled) {
     const canReviewAttendance = user.role === "administrator" || user.role === "principal";
@@ -156,11 +166,14 @@ export async function getNotificationSummary(user: AppUser): Promise<Notificatio
     }
   }
 
+  queriesBadge = await getOpenQueryCount(user).catch(() => 0);
+
   return {
     notifications,
     sidebarBadges: {
       attendance: attendanceBadge,
-      leave: leaveBadge
+      leave: leaveBadge,
+      queries: queriesBadge
     }
   };
 }

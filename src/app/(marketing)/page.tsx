@@ -5,6 +5,7 @@ import { CTA, Eyebrow, SectionHeading } from "@/components/marketing/shared";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { PricingSection } from "@/components/marketing/pricing-section";
 import { ScrollReveal } from "@/components/marketing/scroll-reveal";
+import { RotatingTagline } from "@/components/marketing/rotating-tagline";
 
 export const metadata: Metadata = {
   title: "GetDarsgah | School management, made clear",
@@ -29,7 +30,7 @@ export default function OverviewPage() {
         <div className="marketing-container relative text-center">
           <Eyebrow><Sparkles className="h-3.5 w-3.5" /> One workspace for your whole school</Eyebrow>
           <h1 className="mx-auto mt-7 max-w-5xl font-display text-5xl font-bold leading-[1.02] tracking-[-0.055em] text-ink sm:text-7xl lg:text-[82px]">
-            School management,<br /><span className="text-primary">made clear.</span>
+            School management,<br /><RotatingTagline />
           </h1>
           <p className="mx-auto mt-7 max-w-2xl text-base leading-8 text-muted sm:text-xl">
             Darsgah connects students, staff, academics, attendance, and finance so your team spends less time chasing information and more time moving the school forward.

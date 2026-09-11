@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import { BookOpen, CheckCircle2, ClipboardList, Clock3, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResultsTable } from "@/app/(app)/results/_components/results-table";
 import ResultsPage from "@/app/(app)/results/page";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { requireUser } from "@/lib/auth/session";
@@ -13,11 +12,12 @@ import { hasPermission } from "@/lib/permissions";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
 import type { ResultWorkflowStatus } from "@/types/database";
+import { StatCard } from "@/components/dashboard/stat-card";
 
 const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
   { value: "draft", label: "Draft" },
-  { value: "pending_approval", label: "Pending Approval" },
+  { value: "pending_approval", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" }
 ];
@@ -39,6 +39,9 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
     status,
     scope: "teacher"
   });
+  const approvedCount = results.filter((row) => row.workflowStatus === "approved").length;
+  const pendingCount = results.filter((row) => row.workflowStatus === "pending_approval").length;
+  const returnedCount = results.filter((row) => row.workflowStatus === "rejected").length;
 
   return (
     <>
@@ -64,12 +67,15 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
         }
       />
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>My Exams & Results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="mb-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]" action="/academics/results">
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Results" value={results.length} hint="In this view" icon={ClipboardList} tone="blue" trend="My class results" />
+        <StatCard label="Approved" value={approvedCount} hint="Ready results" icon={CheckCircle2} tone="green" trend={approvedCount ? "Approved" : "None approved yet"} trendTone="positive" />
+        <StatCard label="Pending" value={pendingCount} hint="Awaiting review" icon={Clock3} tone="amber" trend={pendingCount ? "Awaiting approval" : "Nothing waiting"} trendTone={pendingCount ? "negative" : "positive"} />
+        <StatCard label="Returned" value={returnedCount} hint="Needs revision" icon={Undo2} tone="red" trend={returnedCount ? "Review feedback" : "No revisions"} trendTone={returnedCount ? "negative" : "positive"} />
+      </section>
+      <section className="mb-5 rounded-[22px] border border-blue-200 bg-white p-4 shadow-[0_10px_28px_rgba(37,99,235,0.04)] sm:p-5">
+        <div className="mb-4 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-primary ring-1 ring-blue-100"><ClipboardList className="h-5 w-5" /></span><div><h2 className="font-display text-xl font-bold text-ink">Filter results</h2><p className="mt-0.5 text-sm text-muted">Find your results by term and review status.</p></div></div>
+          <form className="grid gap-3 rounded-[18px] border border-blue-100 bg-blue-50/45 p-4 md:grid-cols-[minmax(0,1fr)_180px_auto]" action="/academics/results">
             <Field label="Term">
               <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" />
             </Field>
@@ -89,7 +95,7 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
             </div>
           </form>
 
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {statusFilters.map((item) => (
               <Link
                 key={item.value}
@@ -101,16 +107,15 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
             ))}
           </div>
 
-          {!results.length ? (
+      </section>
+      {!results.length ? (
             <EmptyState
               title="No uploaded results yet"
               description="Assessments appear here after marks are saved. Major examinations show their approval status."
             />
-          ) : (
+      ) : (
             <ResultsTable rows={results} showApprovalColumns showPrint={false} inlineApproval={false} />
-          )}
-        </CardContent>
-      </Card>
+      )}
     </>
   );
 }

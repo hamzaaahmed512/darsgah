@@ -14,6 +14,7 @@ import {
   Receipt,
   Wallet,
   CircleHelp
+  ,MessageSquareText
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import { hasPermission } from "@/lib/permissions";
@@ -145,6 +146,10 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
       continue;
     }
     items.push(item);
+
+    if (item.href === "/help" && (role === "administrator" || role === "principal")) {
+      items.splice(items.length - 1, 0, { href: "/queries", label: "Staff Queries", icon: MessageSquareText, permission: "dashboard:view", section: "SUPPORT" });
+    }
 
     if (item.href === "/classes") {
       if (usesPrincipalAcademicControl(role) && options.principalCanAccessAcademicControl) {

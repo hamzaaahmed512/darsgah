@@ -126,7 +126,7 @@ export function CreateAssessmentDialog({
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lift ring-1 ring-outline">
+          <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-lift ring-1 ring-outline">
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b border-outline px-5 py-4">
               <div>
