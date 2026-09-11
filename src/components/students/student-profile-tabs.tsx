@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn, formatGradeSection } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/student-name";
+import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
+import { completeStudentPortalDetails } from "@/app/parent-portal/actions";
 
 type Tab = "bio" | "attendance" | "marks" | "fees";
 type Props = {
@@ -20,6 +22,8 @@ type Props = {
   challans: any[];
   limitedView: boolean;
   canViewFinance: boolean;
+  hideTabs?: boolean;
+  portalMode?: boolean;
 };
 
 const money = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
@@ -45,8 +49,8 @@ export function StudentProfileTabs(props: Props) {
   }
 
   return (
-    <section className="mt-7">
-      <div className="scrollbar-none overflow-x-auto border-b border-outline" role="tablist" aria-label="Student profile sections">
+    <section className={props.hideTabs ? "" : "mt-7"}>
+      {!props.hideTabs ? <div className="scrollbar-none overflow-x-auto border-b border-outline" role="tablist" aria-label="Student profile sections">
         <div className="flex min-w-max gap-1">
           {availableTabs.map((tab) => (
             <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} onClick={() => selectTab(tab.id)}
@@ -55,12 +59,12 @@ export function StudentProfileTabs(props: Props) {
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
       <div className="pt-6" role="tabpanel">
         {activeTab === "bio" ? <BioTab {...props} /> : null}
         {activeTab === "attendance" ? <AttendanceTab rows={props.attendance} /> : null}
         {activeTab === "marks" ? <MarksTab rows={props.marks} /> : null}
-        {activeTab === "fees" && props.canViewFinance ? <FeesTab rows={props.challans} /> : null}
+        {activeTab === "fees" && props.canViewFinance ? <FeesTab rows={props.challans} portalMode={props.portalMode} /> : null}
       </div>
     </section>
   );
@@ -71,7 +75,7 @@ function BioTab({ student, guardians, limitedView }: Props) {
   return <div className="grid gap-5 lg:grid-cols-2">
     <DetailCard title="Personal & academic" icon={<UserRound className="h-5 w-5" />}>
       <DetailsGrid items={[
-        ["Gender", student.gender], ["Date of birth", limitedView ? "Restricted" : student.date_of_birth],
+        ["Student CNIC / Form-B", formatCnic(student.student_cnic) || "Not recorded"], ["Gender", student.gender], ["Date of birth", limitedView ? "Restricted" : student.date_of_birth],
         ["Religion", limitedView ? "Restricted" : student.religion],
         ["Admission date", student.admission_date], ["Class assignment", classAssignment],
         ...(!limitedView ? [["Father alive", student.father_alive === false ? "No" : "Yes"]] : [])
@@ -79,6 +83,7 @@ function BioTab({ student, guardians, limitedView }: Props) {
     </DetailCard>
     {!limitedView ? <DetailCard title="Contact details" icon={<Phone className="h-5 w-5" />}>
       <DetailsGrid items={[["Phone", student.phone], ["Email", student.email], ["Home / permanent address", student.address]]} />
+      <CompleteMissingDetails student={student} />
     </DetailCard> : null}
     {!limitedView ? <Card className="lg:col-span-2"><CardHeader className="border-b-0 pb-2"><div><CardTitle className="flex items-center gap-3"><span className="rounded-lg bg-primary-soft p-2 text-primary"><UsersRound className="h-5 w-5" /></span>Guardians</CardTitle><p className="ml-12 mt-1 text-sm text-muted">Primary family contact information.</p></div></CardHeader><CardContent className="grid gap-4 pt-2 md:grid-cols-2">
       {guardians.length ? guardians.map((guardian) => <div key={guardian.guardian_id} className="flex flex-col gap-4 rounded-2xl border border-outline bg-surface-low p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -87,6 +92,27 @@ function BioTab({ student, guardians, limitedView }: Props) {
       </div>) : <EmptyState title="No guardian recorded" description="Guardian details will appear here." className="min-h-44 md:col-span-2" />}
     </CardContent></Card> : null}
   </div>;
+}
+
+function CompleteMissingDetails({ student }: { student: any }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const missing = [!student.phone && "phone", !student.email && "email", !student.address && "address"].filter(Boolean);
+  if (!missing.length) return null;
+
+  function submit(formData: FormData) {
+    setError("");
+    startTransition(async () => {
+      const result = await completeStudentPortalDetails({ phone: String(formData.get("phone") ?? ""), email: String(formData.get("email") ?? ""), address: String(formData.get("address") ?? "") });
+      if ("error" in result) { setError(result.error ?? "Could not save details."); return; }
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  return <><button type="button" onClick={() => setOpen(true)} className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-blue-50 px-3.5 text-sm font-bold text-primary transition hover:bg-blue-100">Complete missing details</button>{open ? <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"><form action={submit} className="w-full max-w-lg rounded-t-[24px] bg-white p-5 shadow-lift sm:rounded-[24px] sm:p-6"><div className="flex items-start justify-between gap-4"><div><h3 className="font-display text-xl font-bold text-ink">Complete missing details</h3><p className="mt-1 text-sm text-muted">You can add only information that is not already recorded by the school.</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-lg px-2 py-1 text-muted hover:bg-slate-100" aria-label="Close">×</button></div>{error ? <p className="mt-4 rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</p> : null}<div className="mt-5 grid gap-4">{!student.phone ? <label className="grid gap-1.5 text-sm font-semibold text-ink">Phone number<input name="phone" inputMode="numeric" placeholder="0300-0000000" onChange={(event) => { event.currentTarget.value = formatPakistaniPhone(event.currentTarget.value); }} className="min-h-11 rounded-xl border border-outline px-3 text-sm font-medium" /></label> : null}{!student.email ? <label className="grid gap-1.5 text-sm font-semibold text-ink">Email address<input name="email" type="email" placeholder="student@email.com" className="min-h-11 rounded-xl border border-outline px-3 text-sm font-medium" /></label> : null}{!student.address ? <label className="grid gap-1.5 text-sm font-semibold text-ink">Home address<textarea name="address" rows={3} placeholder="Enter home address" className="rounded-xl border border-outline px-3 py-2 text-sm font-medium" /></label> : null}</div><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} disabled={pending} className="min-h-10 rounded-xl px-4 text-sm font-semibold text-muted hover:bg-slate-100">Cancel</button><button type="submit" disabled={pending} className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-button">{pending ? "Saving..." : "Save details"}</button></div></form></div> : null}</>;
 }
 
 function AttendanceTab({ rows }: { rows: any[] }) {
@@ -116,13 +142,14 @@ function MarksTab({ rows }: { rows: any[] }) {
     <DataCard title="Marks & exam history"><HistoryTable headers={["Exam name","Term","Subject","Marks obtained","Grade","Approval status","Teacher comments"]} rows={filtered.map((r)=>[r.exams?.title||"—",r.exams?.term||"—",r.subjects?.name||"—",`${r.marks_obtained}/${r.exams?.max_marks??"—"}`,r.grade||"—",<StatusBadge key="s" status={r.exams?.approval_status||r.status}/>,r.teacher_comment||"—"])} empty="No exam results match these filters." /></DataCard></div>;
 }
 
-function FeesTab({ rows }: { rows: any[] }) {
+function FeesTab({ rows, portalMode = false }: { rows: any[]; portalMode?: boolean }) {
   const periods=unique(rows.map((r)=>r.fee_month?.slice(0,7)).filter(Boolean)); const [status,setStatus]=useState("all"),[period,setPeriod]=useState("all");
   const normalized=(r:any)=>r.payment_status==="partially paid"?"partial":r.payment_status;
   const filtered=rows.filter((r)=>(status==="all"||normalized(r)===status)&&(period==="all"||r.fee_month?.startsWith(period))); const outstanding=filtered.reduce((sum,r)=>sum+Number(r.outstanding),0); const overdue=filtered.filter((r)=>r.outstanding>0&&new Date(r.due_date)<new Date()).length;
   return <div className="space-y-5"><FilterCard><Select label="Challan status" value={status} onChange={setStatus} options={[["all","All"],["unpaid","Unpaid"],["paid","Paid"],["overdue","Overdue"],["partial","Partial"]]} /><Select label="Fiscal year / month" value={period} onChange={setPeriod} options={[["all","All periods"],...periods.map(v=>[v,v])]} /></FilterCard>
     <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-[18px] border border-danger/15 bg-danger-soft p-5"><WalletCards className="h-5 w-5 text-danger"/><p className="mt-3 text-sm font-semibold text-danger">Total outstanding balance</p><p className="mt-1 font-display text-3xl font-bold text-ink">{money.format(outstanding)}</p></div><div className="rounded-[18px] border border-warning/20 bg-warning-soft p-5"><CalendarDays className="h-5 w-5 text-warning"/><p className="mt-3 text-sm font-semibold text-warning">Overdue challans</p><p className="mt-1 font-display text-3xl font-bold text-ink">{overdue}</p></div></div>
-    <DataCard title="Fee & challan history"><HistoryTable headers={["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status","Actions"]} rows={filtered.map((r)=>[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>,<div key="a" className="flex min-w-max gap-2"><Link href="/finance/challans" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"><Download className="h-3.5 w-3.5"/>View / PDF</Link>{r.outstanding>0?<Link href="/finance/fees" className="font-semibold text-success hover:underline">Mark as paid</Link>:null}</div>])} empty="No fee challans match these filters." /></DataCard></div>;
+    {portalMode && outstanding > 0 ? <p className="rounded-xl border border-primary/15 bg-primary-soft px-4 py-3 text-sm font-medium text-primary">Please contact the school office to arrange payment for any outstanding dues.</p> : null}
+    <DataCard title="Fee & challan history"><HistoryTable headers={portalMode ? ["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status"] : ["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status","Actions"]} rows={filtered.map((r)=>portalMode?[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>]:[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>,<div key="a" className="flex min-w-max gap-2"><Link href="/finance/challans" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"><Download className="h-3.5 w-3.5"/>View / PDF</Link>{r.outstanding>0?<Link href="/finance/fees" className="font-semibold text-success hover:underline">Mark as paid</Link>:null}</div>])} empty="No fee challans match these filters." /></DataCard></div>;
 }
 
 function DetailCard({title,icon,children}:{title:string;icon:React.ReactNode;children:React.ReactNode}){return <Card><CardHeader className="border-b border-outline/70 p-5"><div className="flex items-center gap-3"><span className="rounded-lg bg-primary-soft p-2 text-primary">{icon}</span><CardTitle className="text-lg">{title}</CardTitle></div></CardHeader><CardContent className="p-5 pt-5">{children}</CardContent></Card>}
