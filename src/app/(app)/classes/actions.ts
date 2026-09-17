@@ -8,6 +8,7 @@ import { z } from "zod";
 import { setStudentMajor } from "@/lib/services/students";
 import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, deleteDefaultStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
 import { classNameSchema, englishNameSchema } from "@/lib/validation/names";
+import { createClient } from "@/lib/supabase/server";
 
 
 const classSchema = z.object({
@@ -119,6 +120,24 @@ export async function removeGradeSubjectAction(gradeId: string, subjectId: strin
 export async function getClassStudentRosterAction(classId: string) {
   const user = await requireUser("classes:manage");
   return getClassStudentRoster(user, classId);
+}
+
+export async function getPromotionRosterAction(classIds: string[]) {
+  const user = await requireUser("classes:manage");
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("enrollments").select("student_id,class_id,students(first_name,last_name,admission_number)").eq("school_id", user.schoolId).in("class_id", classIds).eq("status", "active");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: any) => ({ id: row.student_id, classId: row.class_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admissionNumber: row.students?.admission_number ?? null }));
+}
+
+export async function promoteStudentsAction(classIds: string[], promotedStudentIds: string[], retainedStudentIds: string[], graduateStudentIds: string[] = []) {
+  const user = await requireUser("classes:manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: classIds, p_promoted_student_ids: promotedStudentIds, p_retained_student_ids: retainedStudentIds, p_graduate_student_ids: graduateStudentIds });
+  if (error) throw new Error(error.message);
+  const { error: promotionError } = await supabase.from("class_promotions").upsert(classIds.map((source_class_id) => ({ school_id: user.schoolId, source_class_id, promoted_by: user.id })), { onConflict: "school_id,source_class_id" });
+  if (promotionError) throw new Error(promotionError.message);
+  revalidatePath("/classes"); revalidatePath("/students"); revalidatePath("/dashboard");
 }
 
 export async function unassignTeacherClassAction(assignmentId: string) {

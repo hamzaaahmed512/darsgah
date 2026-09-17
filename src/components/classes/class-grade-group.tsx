@@ -5,6 +5,7 @@ import { AddSectionModal } from "@/components/classes/add-section-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatGradeSection } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
+import { PromotionModal } from "@/components/classes/promotion-modal";
 
 export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, onExpandedChange }: {
   gradeName: string;
@@ -32,7 +33,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
             <p className="mt-1.5 text-sm text-muted">{totalStudents} students across this grade</p>
           </div>
         </button>
-        {gradeId ? <ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="class-grade-manage min-h-10 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm text-primary"><Layers3 className="h-4 w-4" /> Manage Grade</ButtonLink> : null}
+        {gradeId ? <div className="flex shrink-0 gap-2">{classes.some((cls) => !cls.is_promoted) ? <PromotionModal classIds={classes.filter((cls) => !cls.is_promoted).map((cls) => cls.id)} label={gradeName} /> : null}<ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="class-grade-manage min-h-10 whitespace-nowrap rounded-xl px-4 text-sm text-primary"><Settings className="h-4 w-4" /> Manage Grade</ButtonLink></div> : null}
         <button type="button" onClick={() => onExpandedChange(!expanded)} className="class-grade-expand rounded-xl p-2 text-muted transition hover:bg-surface-low" aria-label={expanded ? "Collapse grade" : "Expand grade"}><ChevronDown className={`h-5 w-5 transition ${expanded ? "rotate-180" : ""}`} /></button>
       </div>
 
@@ -60,6 +61,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
                     </div>
                   </div>
                   <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
+                      {!cls.is_promoted ? <PromotionModal classIds={[cls.id]} label={formatGradeSection(gradeName, cls.section_name)} /> : null}
                       <ButtonLink href={`/classes/${cls.id}`} size="sm" variant="secondary" className="min-h-10 whitespace-nowrap rounded-xl px-4 text-sm text-primary">
                       <Settings className="h-4 w-4" /> Manage Section
                     </ButtonLink>

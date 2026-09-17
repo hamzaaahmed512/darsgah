@@ -276,11 +276,21 @@ export async function getDashboardData(user: AppUser) {
   const today = new Date().toISOString().slice(0, 10);
   const from = formatISO(subDays(new Date(), 30), { representation: "date" });
 
-  const optimized = await supabase.rpc("get_school_dashboard", {
-    p_school_id: user.schoolId,
-    p_from: from,
-    p_today: today
-  });
+  const [optimized, activeClasses] = await Promise.all([
+    supabase.rpc("get_school_dashboard", {
+      p_school_id: user.schoolId,
+      p_from: from,
+      p_today: today
+    }),
+    supabase
+      .from("classes")
+      .select("id, academic_years!inner(is_active)", { count: "exact", head: true })
+      .eq("school_id", user.schoolId)
+      .eq("academic_years.is_active", true)
+  ]);
+
+  if (activeClasses.error) throw new Error(activeClasses.error.message);
+  const totalActiveClasses = activeClasses.count ?? 0;
 
   if (!optimized.error && optimized.data && typeof optimized.data === "object") {
     const data = optimized.data as any;
@@ -288,6 +298,7 @@ export async function getDashboardData(user: AppUser) {
       totalStudents: Number(data.totalStudents ?? 0),
       totalTeachers: Number(data.totalTeachers ?? 0),
       totalStaff: Number(data.totalStaff ?? 0),
+      totalActiveClasses,
       absentToday: Number(data.absentToday ?? 0),
       attendanceRate: data.attendanceRate === null ? null : Number(data.attendanceRate),
       recentAdmissions: data.recentAdmissions ?? [],
@@ -349,6 +360,7 @@ export async function getDashboardData(user: AppUser) {
     totalStudents: students.count ?? 0,
     totalTeachers: teachers.count ?? 0,
     totalStaff: staff.count ?? 0,
+    totalActiveClasses,
     absentToday: absences.count ?? 0,
     attendanceRate,
     recentAdmissions: recentAdmissions.data ?? [],

@@ -31,7 +31,7 @@ async function assertSubjectAssignableTeacher(
 
 export async function getAcademicOptions(user: AppUser) {
   const supabase = await createClient();
-  const [years, grades, sections, subjects, classes] = await Promise.all([
+  const [years, grades, sections, subjects, classes, promotions] = await Promise.all([
     supabase.from("academic_years").select("*").eq("school_id", user.schoolId).order("starts_on", { ascending: false }),
     supabase.from("grades").select("*").eq("school_id", user.schoolId).order("sort_order"),
     supabase.from("sections").select("*").eq("school_id", user.schoolId).order("name"),
@@ -42,8 +42,11 @@ export async function getAcademicOptions(user: AppUser) {
       .from("classes")
       .select("id,name,room,grade_id,section_id,academic_year_id,head_teacher_id,major_count,default_major,class_allowed_majors(major_key),grades(name),sections(name),academic_years(name),head_teacher:profiles!classes_head_teacher_id_fkey(full_name,email)")
       .eq("school_id", user.schoolId)
-      .order("name")
+      .order("name"),
+    supabase.from("class_promotions").select("source_class_id").eq("school_id", user.schoolId)
   ]);
+
+  const promotedClassIds = new Set((promotions.data ?? []).map((row: any) => row.source_class_id));
 
   const activeSubjects = (subjects.data ?? []).filter((subject: any) => !subject.archived_at);
   const subjectCatalog = [...new Map(activeSubjects.map((subject) => [canonicalSubjectName(subject.name), subject])).values()];
@@ -66,6 +69,7 @@ export async function getAcademicOptions(user: AppUser) {
       head_teacher_id: row.head_teacher_id,
       head_teacher_name: formatDisplayName(row.head_teacher?.full_name) || null,
       head_teacher_email: row.head_teacher?.email ?? null
+      ,is_promoted: promotedClassIds.has(row.id)
       ,major_count: row.major_count ?? 0
       ,default_major: row.default_major ?? null
       ,allowed_majors: (row.class_allowed_majors ?? []).map((item: any) => item.major_key as string)
@@ -458,7 +462,6 @@ export async function getClassTeachersAndAttendance(user: AppUser) {
       .from("enrollments")
       .select("class_id")
       .eq("school_id", user.schoolId)
-      .eq("status", "active")
   ]);
 
   if (assignmentsResult.error) throw new Error(assignmentsResult.error.message);

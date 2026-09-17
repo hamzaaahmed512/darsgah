@@ -11,7 +11,7 @@ import { AddGradeModal } from "@/components/classes/add-grade-modal";
 import { getActiveGradeNames } from "@/lib/academics/active-grades";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { GraduationCap, Layers3, UserCheck, Users } from "lucide-react";
+import { GraduationCap, Layers3, School, UserCheck, Users } from "lucide-react";
 
 export default async function ClassesPage({
   searchParams
@@ -28,9 +28,11 @@ export default async function ClassesPage({
 
   const filterGrade = params.grade ?? "all";
   const filterClass = params.classId ?? "all";
+  const selectedYearId = params.year ?? academicData.years.find((year: any) => year.is_active)?.id ?? academicData.years[0]?.id ?? "all";
   const filterQ = (params.q ?? "").toLowerCase();
 
-  const filteredClasses = academicData.classes.filter((cls) => {
+  const classesForYear = academicData.classes.filter((cls) => selectedYearId === "all" || cls.academic_year_id === selectedYearId);
+  const filteredClasses = classesForYear.filter((cls) => {
     if (filterGrade !== "all" && cls.grade_id !== filterGrade) return false;
     if (filterClass !== "all" && cls.id !== filterClass) return false;
     if (!filterQ) return true;
@@ -48,7 +50,8 @@ export default async function ClassesPage({
 
   const sortedGradeNames = Object.keys(classesByGrade).sort(sortGrades);
   const totalStudents = Object.values(classDetails.studentsByClass ?? {}).reduce((sum: number, count: any) => sum + Number(count ?? 0), 0);
-  const assignedTeachers = new Set(academicData.classes.map((cls: any) => cls.head_teacher_id).filter(Boolean)).size;
+  const assignedTeachers = new Set(classesForYear.map((cls: any) => cls.head_teacher_id).filter(Boolean)).size;
+  const selectedYear = academicData.years.find((year: any) => year.id === selectedYearId);
 
   return (
     <>
@@ -76,7 +79,7 @@ export default async function ClassesPage({
 
       <Card className="mb-5 rounded-[24px] border border-blue-100 bg-white p-4 shadow-[0_12px_34px_rgba(37,99,235,0.05)]">
         <Suspense>
-          <ClassFilterForm grades={academicData.grades} classes={academicData.classes} />
+          <ClassFilterForm grades={academicData.grades} classes={classesForYear} years={academicData.years} selectedYearId={selectedYearId} />
         </Suspense>
       </Card>
 
@@ -88,8 +91,8 @@ export default async function ClassesPage({
       ) : (
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-4 px-1">
-            <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Layers3 className="h-5 w-5 text-primary" />Class Structure</h2>
-            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{academicData.classes.length} sections</span>
+            <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><School className="h-5 w-5 text-primary" />Class Structure</h2>
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{classesForYear.length} sections{selectedYear ? ` · ${selectedYear.name}` : ""}</span>
           </div>
         <ClassGradeList
           classDetails={classDetails}

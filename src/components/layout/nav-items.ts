@@ -47,6 +47,7 @@ const coreNavItems: NavItem[] = [
   { href: "/library", label: "Library", icon: BookOpen, permission: "library:view", section: "OPERATIONS" },
   { href: "/reports", label: "Reports", icon: Activity, permission: "reports:view", section: "OPERATIONS" },
   { href: "/admin", label: "Admin Console", icon: Shield, permission: "users:manage", anyPermissions: ["settings:manage"], section: "SYSTEM" },
+  { href: "/activity", label: "Activity Logs", icon: Activity, permission: "activity:view", section: "SYSTEM" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage", section: "SYSTEM" },
   { href: "/help", label: "Help & Support", icon: CircleHelp, permission: "dashboard:view", section: "SUPPORT" }
 ];

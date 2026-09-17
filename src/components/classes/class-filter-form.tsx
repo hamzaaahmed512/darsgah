@@ -2,16 +2,18 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useRef, useTransition } from "react";
-import { Building2, GraduationCap, Search } from "lucide-react";
+import { Building2, CalendarDays, GraduationCap, Search } from "lucide-react";
 import { formatGradeSection } from "@/lib/utils";
 import { Select } from "@/components/ui/form-field";
 
 type Props = {
   grades: { id: string; name: string }[];
   classes: { id: string; name: string; grade_id: string; grade_name: string; section_name: string | null }[];
+  years?: { id: string; name: string; is_active: boolean }[];
+  selectedYearId?: string;
 };
 
-export function ClassFilterForm({ grades, classes }: Props) {
+export function ClassFilterForm({ grades, classes, years = [], selectedYearId = "all" }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,14 +22,15 @@ export function ClassFilterForm({ grades, classes }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pushFilters = useCallback(
-    (gradeId: string, q: string, classId: string) => {
+    (gradeId: string, q: string, classId: string, yearId = selectedYearId) => {
       const params = new URLSearchParams();
+      if (yearId && yearId !== "all") params.set("year", yearId);
       if (gradeId && gradeId !== "all") params.set("grade", gradeId);
       if (q) params.set("q", q);
       if (classId && classId !== "all") params.set("classId", classId);
       startTransition(() => router.replace(`${pathname}?${params.toString()}`));
     },
-    [pathname, router]
+    [pathname, router, selectedYearId]
   );
 
   const currentGrade = searchParams.get("grade") ?? "all";
@@ -56,7 +59,7 @@ export function ClassFilterForm({ grades, classes }: Props) {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_260px]">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_210px_220px_260px]">
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
@@ -70,6 +73,12 @@ export function ClassFilterForm({ grades, classes }: Props) {
           className="h-14 w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-4 pl-12 text-sm font-medium shadow-none placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10"
           placeholder="Search classes by name, section, room..."
         />
+      </div>
+      <div className="relative">
+        <CalendarDays className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
+        <Select aria-label="Academic year" value={selectedYearId} onChange={(event) => pushFilters("all", "", "all", event.target.value)} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
+          {years.map((year) => <option key={year.id} value={year.id}>{year.name}{year.is_active ? " (Current)" : ""}</option>)}
+        </Select>
       </div>
       <div className="relative">
         <GraduationCap className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
