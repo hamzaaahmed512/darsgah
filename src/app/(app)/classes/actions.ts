@@ -124,19 +124,38 @@ export async function getClassStudentRosterAction(classId: string) {
 
 export async function getPromotionRosterAction(classIds: string[]) {
   const user = await requireUser("classes:manage");
+  const parsedClassIds = z.array(z.string().uuid()).min(1).parse(classIds);
   const supabase = await createClient();
-  const { data, error } = await supabase.from("enrollments").select("student_id,class_id,students(first_name,last_name,admission_number)").eq("school_id", user.schoolId).in("class_id", classIds).eq("status", "active");
+  const [{ data, error }, { data: selectedClasses, error: classError }, { data: grades, error: gradeError }] = await Promise.all([
+    supabase.from("enrollments").select("student_id,class_id,students(first_name,last_name,admission_number)").eq("school_id", user.schoolId).in("class_id", parsedClassIds).eq("status", "active"),
+    supabase.from("classes").select("id,grade_id,academic_year_id,grades(sort_order)").eq("school_id", user.schoolId).in("id", parsedClassIds),
+    supabase.from("grades").select("sort_order").eq("school_id", user.schoolId).order("sort_order", { ascending: false }).limit(1)
+  ]);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => ({ id: row.student_id, classId: row.class_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admissionNumber: row.students?.admission_number ?? null }));
+  if (classError) throw new Error(classError.message);
+  if (gradeError) throw new Error(gradeError.message);
+  if ((selectedClasses ?? []).length !== new Set(parsedClassIds).size) throw new Error("One or more selected classes were not found.");
+  const academicYearIds = new Set((selectedClasses ?? []).map((item: any) => item.academic_year_id));
+  const gradeOrders = new Set((selectedClasses ?? []).map((item: any) => item.grades?.sort_order));
+  if (academicYearIds.size !== 1 || gradeOrders.size !== 1) throw new Error("Promote classes from one grade and academic year at a time.");
+  const highestGradeOrder = grades?.[0]?.sort_order;
+  const selectedGradeOrder = (selectedClasses?.[0] as any)?.grades?.sort_order;
+  return {
+    students: (data ?? []).map((row: any) => ({ id: row.student_id, classId: row.class_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admissionNumber: row.students?.admission_number ?? null })),
+    isTerminalGrade: highestGradeOrder !== undefined && selectedGradeOrder === highestGradeOrder
+  };
 }
 
 export async function promoteStudentsAction(classIds: string[], promotedStudentIds: string[], retainedStudentIds: string[], graduateStudentIds: string[] = []) {
   const user = await requireUser("classes:manage");
+  const ids = z.array(z.string().uuid());
+  const parsedClassIds = ids.min(1).parse(classIds);
+  const promoted = ids.parse(promotedStudentIds);
+  const retained = ids.parse(retainedStudentIds);
+  const graduated = ids.parse(graduateStudentIds);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: classIds, p_promoted_student_ids: promotedStudentIds, p_retained_student_ids: retainedStudentIds, p_graduate_student_ids: graduateStudentIds });
+  const { error } = await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: parsedClassIds, p_promoted_student_ids: promoted, p_retained_student_ids: retained, p_graduate_student_ids: graduated });
   if (error) throw new Error(error.message);
-  const { error: promotionError } = await supabase.from("class_promotions").upsert(classIds.map((source_class_id) => ({ school_id: user.schoolId, source_class_id, promoted_by: user.id })), { onConflict: "school_id,source_class_id" });
-  if (promotionError) throw new Error(promotionError.message);
   revalidatePath("/classes"); revalidatePath("/students"); revalidatePath("/dashboard");
 }
 
