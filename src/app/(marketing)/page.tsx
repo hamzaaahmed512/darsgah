@@ -84,7 +84,7 @@ export default function OverviewPage() {
       <section data-reveal className="marketing-container py-20 sm:py-24">
         <div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pricing</p><h2 className="mt-4 font-display text-3xl font-bold tracking-[-0.035em] text-ink sm:text-4xl">Simple pricing. Room to grow.</h2><p className="mt-4 text-base leading-7 text-muted">Choose a plan that fits your school, with clear pricing and room to grow.</p></div>
         <PricingSection compact />
-        <div className="mt-8 text-center"><Link href="/pricing" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-ink">Compare all features <ArrowRight className="h-4 w-4" /></Link></div>
+        <div className="mt-8 text-center"><Link href="/pricing" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-ink">Go to pricing page <ArrowRight className="h-4 w-4" /></Link></div>
       </section>
       <div data-reveal><CTA /></div>
     </div>

@@ -13,6 +13,7 @@ import { formatCompactPKR, formatPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { getStudentGenderCounts } from "@/lib/services/students";
+import { aggregateClassDistributionByGrade } from "@/lib/grade-distribution";
 import { GenderCounts } from "@/components/students/gender-counts";
 
 const statTones = {
@@ -151,7 +152,7 @@ export default async function PrincipalDashboardPage() {
             <CardTitle>Class Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <LazyClassDistributionChart data={dashboard.classDistribution} />
+            <LazyClassDistributionChart data={aggregateClassDistributionByGrade(dashboard.classDistribution)} />
           </CardContent>
         </Card>
         <ActivityFeed items={dashboard.activity} />

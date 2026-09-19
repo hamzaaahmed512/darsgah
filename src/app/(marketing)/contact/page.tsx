@@ -10,7 +10,7 @@ export default function ContactPage() {
   return <section className="marketing-grid relative overflow-hidden py-20 sm:py-24">
     <div className="marketing-orb left-[5%] top-0" />
     <div className="marketing-container relative grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-      <div className="lg:sticky lg:top-28">
+      <div className="self-start">
         <Eyebrow>Contact us</Eyebrow>
         <h1 className="mt-6 font-display text-4xl font-bold leading-tight tracking-[-0.045em] text-ink sm:text-6xl">Let&apos;s make school management <span className="text-primary">clearer.</span></h1>
         <p className="mt-6 max-w-lg text-base leading-8 text-muted">Request a walkthrough, ask about pricing, or tell us where your current process creates friction.</p>
