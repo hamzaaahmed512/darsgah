@@ -62,16 +62,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   ref
 ) {
   return (
-    <div className="relative min-w-0 w-full">
+    <div className="relative box-border min-w-0 w-full max-w-full">
       <select
         ref={ref}
         className={cn(
-          "min-h-12 min-w-0 w-full appearance-none rounded-2xl border border-outline/70 bg-white px-4 py-3 pr-11 text-sm font-medium text-ink shadow-none focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted cursor-pointer",
+          "app-select min-h-12 min-w-0 box-border w-full max-w-full appearance-none rounded-2xl border border-outline/70 bg-white px-4 py-3 pr-12 text-sm font-medium text-ink shadow-none focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:bg-surface-low disabled:text-muted cursor-pointer",
           className
         )}
         {...props}
       />
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-muted">
+      <div aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted">
         <ChevronDown className="h-4 w-4" />
       </div>
     </div>
