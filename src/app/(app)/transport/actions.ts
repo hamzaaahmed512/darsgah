@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import {
+  assignStaffToVehicle,
   assignStudentToVehicle,
   createTransportDriver,
   createTransportRoute,
   createTransportVehicle,
   removeStudentTransport,
+  removeStaffTransport,
   updateTransportVehicle
 } from "@/lib/services/transport";
 
@@ -82,4 +84,26 @@ export async function removeTransportAction(formData: FormData) {
   }
   revalidatePath("/transport");
   revalidatePath("/finance/student-fees");
+}
+
+export async function assignStaffTransportAction(formData: FormData) {
+  const user = await requireUser("transport:manage");
+  try {
+    await assignStaffToVehicle(user, formData);
+  } catch (error) {
+    if (isMigrationRequiredError(error)) redirect("/transport");
+    throw error;
+  }
+  revalidatePath("/transport");
+}
+
+export async function removeStaffTransportAction(formData: FormData) {
+  const user = await requireUser("transport:manage");
+  try {
+    await removeStaffTransport(user, String(formData.get("assignment_id") ?? ""));
+  } catch (error) {
+    if (isMigrationRequiredError(error)) redirect("/transport");
+    throw error;
+  }
+  revalidatePath("/transport");
 }

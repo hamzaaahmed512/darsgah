@@ -30,11 +30,13 @@ const roleLabels: Record<UserRole, string> = {
 export function StaffFormModal({
   allowedRoles = ["teacher", "student_staff"],
   customRoles = [],
-  triggerLabel = "Add User"
+  triggerLabel = "Add User",
+  wider = false
 }: {
   allowedRoles?: UserRole[];
   customRoles?: Array<{ id: string; name: string; base_role: UserRole }>;
   triggerLabel?: string;
+  wider?: boolean;
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
@@ -101,7 +103,7 @@ export function StaffFormModal({
 
       {mounted ? createPortal(open ? (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+          <div className={`flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] ${wider ? "max-w-xl" : "max-w-lg"}`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-[1.7rem] font-bold">Create User Account</h2>
@@ -199,8 +201,8 @@ export function StaffFormModal({
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-ink">Monthly Salary</label>
-                  <Input {...register("salary")} type="number" min="0" step="0.01" placeholder="Optional" />
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">Monthly Salary<span className="ml-0.5 text-danger">*</span></label>
+                  <Input {...register("salary")} required type="number" min="0.01" step="0.01" placeholder="Monthly salary" />
                   {errors.salary?.message ? <p className="mt-1 text-sm font-semibold text-danger">{errors.salary.message}</p> : null}
                 </div>
 

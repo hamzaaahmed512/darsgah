@@ -96,7 +96,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
     const formData = new FormData();
     formData.append("academic_year_id", sessionId);
     formData.append("class_id", classId);
-    appendMoney(formData, "tuition_fee", tuition);
+    formData.append("tuition_fee", tuition.trim());
     appendMoney(formData, "admission_fee", admission);
     appendMoney(formData, "examination_fee", exam);
     appendMoney(formData, "library_fee", library);
@@ -233,15 +233,15 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
                   </Field>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Tuition Fee" required><Input type="number" min="0" value={tuition} onChange={(event) => setTuition(event.target.value)} /></Field>
-                  <Field label="Admission Fee" required><Input type="number" min="0" value={admission} onChange={(event) => setAdmission(event.target.value)} /></Field>
-                  <Field label="Examination Fee" required><Input type="number" min="0" value={exam} onChange={(event) => setExam(event.target.value)} /></Field>
-                  <Field label="Library Fee" required><Input type="number" min="0" value={library} onChange={(event) => setLibrary(event.target.value)} /></Field>
-                  <Field label="Laboratory Fee" required><Input type="number" min="0" value={lab} onChange={(event) => setLab(event.target.value)} /></Field>
-                  <Field label="Transport Fee" required><Input type="number" min="0" value={transport} onChange={(event) => setTransport(event.target.value)} /></Field>
+                  <Field label="Tuition Fee" required><Input type="number" min="0" step="0.01" value={tuition} onChange={(event) => setTuition(event.target.value)} required /></Field>
+                  <Field label="Admission Fee"><Input type="number" min="0" step="0.01" value={admission} onChange={(event) => setAdmission(event.target.value)} /></Field>
+                  <Field label="Examination Fee"><Input type="number" min="0" step="0.01" value={exam} onChange={(event) => setExam(event.target.value)} /></Field>
+                  <Field label="Library Fee"><Input type="number" min="0" step="0.01" value={library} onChange={(event) => setLibrary(event.target.value)} /></Field>
+                  <Field label="Laboratory Fee"><Input type="number" min="0" step="0.01" value={lab} onChange={(event) => setLab(event.target.value)} /></Field>
+                  <Field label="Transport Fee"><Input type="number" min="0" step="0.01" value={transport} onChange={(event) => setTransport(event.target.value)} /></Field>
                 </div>
-                <Field label="Miscellaneous Charges" required>
-                  <Input type="number" min="0" value={misc} onChange={(event) => setMisc(event.target.value)} />
+                <Field label="Miscellaneous Charges">
+                  <Input type="number" min="0" step="0.01" value={misc} onChange={(event) => setMisc(event.target.value)} />
                 </Field>
                 <div className="flex items-center justify-between rounded-lg bg-surface-low p-3">
                   <span className="text-sm font-semibold text-muted">Total</span>

@@ -165,7 +165,7 @@ export function StaffCreateModal({
           department: recordForm.department,
           jobTitle: recordForm.jobTitle,
           phone: recordForm.phone,
-          monthlySalary: recordForm.monthlySalary ? Number(recordForm.monthlySalary) : null,
+          monthlySalary: recordForm.monthlySalary === "" ? NaN : Number(recordForm.monthlySalary),
           joiningDate: recordForm.joiningDate || null
         });
         resetRecordForm();
@@ -335,8 +335,8 @@ export function StaffCreateModal({
                             <Field label="Job Title" error={errors.job_title?.message}>
                               <Input {...register("job_title")} placeholder="e.g. Math Teacher" />
                             </Field>
-                            <Field label="Monthly Salary" error={errors.salary?.message}>
-                              <Input {...register("salary")} type="number" min="0" step="0.01" placeholder="Optional" />
+                            <Field label="Monthly Salary" required error={errors.salary?.message}>
+                              <Input {...register("salary")} required type="number" min="0.01" step="0.01" placeholder="Monthly salary" />
                             </Field>
                             <div className="grid gap-2">
                               <div className="flex items-center justify-between">
@@ -426,8 +426,8 @@ export function StaffCreateModal({
                             <Field label="Phone" required>
                               <PakistaniPhoneInput required value={recordForm.phone} onChange={(event) => updateRecordForm("phone", event.target.value)} />
                             </Field>
-                            <Field label="Monthly Salary">
-                              <Input type="number" min="0" step="0.01" value={recordForm.monthlySalary} onChange={(event) => updateRecordForm("monthlySalary", event.target.value)} placeholder="Optional" />
+                            <Field label="Monthly Salary" required>
+                              <Input required type="number" min="0.01" step="0.01" value={recordForm.monthlySalary} onChange={(event) => updateRecordForm("monthlySalary", event.target.value)} placeholder="Monthly salary" />
                             </Field>
                             <div className="grid gap-2 md:col-span-2">
                               <div className="flex items-center justify-between">

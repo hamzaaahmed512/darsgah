@@ -1,16 +1,22 @@
 import { z } from "zod";
 import { TRANSACTION_CATEGORIES } from "@/lib/finance-transactions";
 
+const feeAmount = z.coerce.number().finite("Enter a valid fee amount").min(0, "Fee must be greater than or equal to 0");
+const optionalFeeAmount = z.preprocess(
+  (value) => value == null || (typeof value === "string" && value.trim() === "") ? 0 : value,
+  feeAmount
+);
+
 export const feeStructureSchema = z.object({
   academic_year_id: z.string().uuid("Invalid Academic Session"),
   class_id: z.string().uuid("Invalid Class selection"),
-  tuition_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  admission_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  examination_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  library_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  laboratory_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  transport_fee: z.coerce.number().min(0, "Fee must be greater than or equal to 0"),
-  miscellaneous_charges: z.coerce.number().min(0, "Fee must be greater than or equal to 0")
+  tuition_fee: z.union([z.number(), z.string().trim().min(1, "Tuition Fee is required")]).pipe(feeAmount),
+  admission_fee: optionalFeeAmount,
+  examination_fee: optionalFeeAmount,
+  library_fee: optionalFeeAmount,
+  laboratory_fee: optionalFeeAmount,
+  transport_fee: optionalFeeAmount,
+  miscellaneous_charges: optionalFeeAmount
 });
 
 export type FeeStructureFormValues = z.infer<typeof feeStructureSchema>;

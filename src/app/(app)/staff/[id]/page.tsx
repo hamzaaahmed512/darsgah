@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
+import { canReceiveClassAssignments } from "@/lib/constants/staff";
 import { getLeavePolicy, type LeavePolicy } from "@/lib/services/leaves";
 import { getStaffProfile } from "@/lib/services/staff";
 import { formatDatePK, formatGradeSection, formatPKR } from "@/lib/utils";
@@ -34,10 +35,6 @@ const leaveTone: Record<string, string> = {
   rejected: "bg-red-50 text-red-700 border-red-100"
 };
 
-function isTeacherRole(role: string) {
-  return role === "teacher" || role === "head_teacher";
-}
-
 export default async function StaffProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser("staff:view");
@@ -61,7 +58,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
   // Leave policy (only needed for teacher-role profiles when user can view insights)
   let leavePolicy: LeavePolicy = { annualLimit: 36, monthlyLimit: 3, weeklyLimit: null };
-  if (canViewStaffInsights && isTeacherRole(member.role)) {
+  if (canViewStaffInsights && canReceiveClassAssignments(member.role)) {
     try { leavePolicy = await getLeavePolicy(user); } catch {}
   }
 
@@ -120,7 +117,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Staff summary">
+        <section className={`grid gap-5 sm:grid-cols-2 ${canReceiveClassAssignments(member.role) ? "lg:grid-cols-4" : "lg:grid-cols-3"}`} aria-label="Staff summary">
           <Summary icon={<ShieldCheck className="h-5 w-5" />} label="Role" value={displayRole} />
           <Summary icon={<Building2 className="h-5 w-5" />} label="Department" value={member.department || "Not set"} />
           <Summary
@@ -128,15 +125,17 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
             label="Job title"
             value={member.job_title || data.employment?.designation || "Not set"}
           />
-          <Summary
-            icon={<Users className="h-5 w-5" />}
-            label="Class assignments"
-            value={String(data.assignments.length + data.headClasses.length)}
-          />
+          {canReceiveClassAssignments(member.role) ? (
+            <Summary
+              icon={<Users className="h-5 w-5" />}
+              label="Class assignments"
+              value={String(data.assignments.length + data.headClasses.length)}
+            />
+          ) : null}
         </section>
       </div>
 
-      <section className="mt-7 grid gap-5 lg:grid-cols-2">
+      <section className={`mt-7 grid gap-5 ${canReceiveClassAssignments(member.role) ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
         <Card>
           <CardHeader className="border-b-0 pb-2">
             <CardTitle>Contact &amp; employment</CardTitle>
@@ -167,7 +166,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
 
-        <Card>
+        {canReceiveClassAssignments(member.role) ? <Card>
           <CardHeader className="border-b-0 pb-2">
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
@@ -203,11 +202,11 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
               <p className="py-8 text-center text-sm text-muted">No classes assigned.</p>
             ) : null}
           </CardContent>
-        </Card>
+        </Card> : null}
       </section>
 
       {/* Attendance & Leave stats — visible to admins/principals for teacher profiles */}
-      {canViewStaffInsights && isTeacherRole(member.role) ? (
+      {canViewStaffInsights && canReceiveClassAssignments(member.role) ? (
         <section className="mt-5 grid gap-5 lg:grid-cols-2">
           {/* Attendance card */}
           <Card>

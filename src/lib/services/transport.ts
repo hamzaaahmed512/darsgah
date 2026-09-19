@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { hasPermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/services/activity";
 import type { AppUser } from "@/types/database";
-import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
+import { formatCnic, formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 
 function isMissingTransportSchema(error: { code?: string; message?: string } | null) {
   if (!error) return false;
@@ -14,7 +16,9 @@ function isMissingTransportSchema(error: { code?: string; message?: string } | n
     error.message?.includes("public.transport_drivers") ||
     error.message?.includes("public.transport_vehicles") ||
     error.message?.includes("public.student_transport_assignments") ||
-    error.message?.includes("assign_student_transport")
+    error.message?.includes("public.staff_transport_assignments") ||
+    error.message?.includes("assign_student_transport") ||
+    error.message?.includes("assign_staff_transport")
   );
 }
 
@@ -30,7 +34,8 @@ function assertCanManageTransport(user: AppUser) {
 
 export async function getTransportDashboard(user: AppUser) {
   const supabase = await createClient();
-  const [routes, drivers, vehicles, assignments, students] = await Promise.all([
+  const admin = createAdminClient();
+  const [routes, drivers, vehicles, assignments, staffAssignments, students, accountStaff, recordStaff] = await Promise.all([
     supabase.from("transport_routes").select("*").eq("school_id", user.schoolId).order("name"),
     supabase.from("transport_drivers").select("*").eq("school_id", user.schoolId).order("full_name"),
     supabase.from("transport_vehicles").select("*").eq("school_id", user.schoolId).order("plate_number"),
@@ -39,15 +44,21 @@ export async function getTransportDashboard(user: AppUser) {
       .select("id,vehicle_id,student_id,students(first_name,last_name,admission_number)")
       .eq("school_id", user.schoolId)
       .order("assigned_at", { ascending: false }),
+    supabase.from("staff_transport_assignments").select("id,vehicle_id,account_staff_id,record_staff_id")
+      .eq("school_id", user.schoolId).order("assigned_at", { ascending: false }),
     supabase
       .from("student_directory")
       .select("id,first_name,last_name,admission_number,class_name,grade_name")
       .eq("school_id", user.schoolId)
       .eq("status", "active")
-      .order("last_name")
+      .order("last_name"),
+    admin.from("staff_directory").select("user_id,full_name,role,job_title,status")
+      .eq("school_id", user.schoolId).order("full_name"),
+    admin.from("other_staff_records").select("id,full_name,category,job_title,status")
+      .eq("school_id", user.schoolId).order("full_name")
   ]);
 
-  for (const result of [routes, drivers, vehicles, assignments, students]) {
+  for (const result of [routes, drivers, vehicles, assignments, staffAssignments, students, accountStaff, recordStaff]) {
     if (isMissingTransportSchema(result.error)) {
       return {
         routes: [],
@@ -55,6 +66,7 @@ export async function getTransportDashboard(user: AppUser) {
         vehicles: [],
         assignments: [],
         students: [],
+        staff: [],
         migrationRequired: true
       };
     }
@@ -63,8 +75,13 @@ export async function getTransportDashboard(user: AppUser) {
 
   const driverById = new Map((drivers.data ?? []).map((driver: any) => [driver.id, driver]));
   const routeById = new Map((routes.data ?? []).map((route: any) => [route.id, route]));
+  const staff = [
+    ...(accountStaff.data ?? []).map((row: any) => ({ id: row.user_id, kind: "account" as const, name: formatDisplayName(row.full_name) || "Unknown", role: row.job_title || row.role?.replace(/_/g, " ") || "Staff", status: row.status })),
+    ...(recordStaff.data ?? []).map((row: any) => ({ id: row.id, kind: "record" as const, name: formatDisplayName(row.full_name) || "Unknown", role: row.job_title || OTHER_STAFF_CATEGORY_LABELS[row.category as OtherStaffCategory] || "Staff", status: row.status }))
+  ];
+  const staffByKey = new Map(staff.map((person) => [`${person.kind}:${person.id}`, person]));
   const passengersByVehicle = new Map<string, number>();
-  for (const assignment of assignments.data ?? []) {
+  for (const assignment of [...(assignments.data ?? []), ...(staffAssignments.data ?? [])]) {
     passengersByVehicle.set(assignment.vehicle_id, (passengersByVehicle.get(assignment.vehicle_id) ?? 0) + 1);
   }
 
@@ -80,6 +97,7 @@ export async function getTransportDashboard(user: AppUser) {
         ...vehicle,
         driver_name: formatDisplayName(driver?.full_name) || null,
         driver_phone: driver?.phone ?? null,
+        driver_cnic: driver?.cnic ?? null,
         route_name: route?.name ?? null,
         start_point: route?.start_point ?? null,
         end_point: route?.end_point ?? null,
@@ -87,14 +105,20 @@ export async function getTransportDashboard(user: AppUser) {
         passenger_count: passengerCount
       };
     }),
-    assignments: (assignments.data ?? []).map((row: any) => ({
+    assignments: [...(assignments.data ?? []).map((row: any) => ({
       id: row.id,
       vehicle_id: row.vehicle_id,
-      student_id: row.student_id,
-      student_name: formatFullName(row.students?.first_name, row.students?.last_name),
-      admission_number: row.students?.admission_number
-    })),
+      kind: "student" as const,
+      name: formatFullName(row.students?.first_name, row.students?.last_name),
+      detail: row.students?.admission_number || "Student"
+    })), ...(staffAssignments.data ?? []).map((row: any) => {
+      const kind = row.account_staff_id ? "account" : "record";
+      const person = staffByKey.get(`${kind}:${row.account_staff_id ?? row.record_staff_id}`);
+      return { id: row.id, vehicle_id: row.vehicle_id, kind: "staff" as const,
+        name: person?.name || "Staff member", detail: person?.role || "Staff" };
+    })],
     students: students.data ?? [],
+    staff: staff.filter((person) => person.status === "active"),
     migrationRequired: false
   };
 }
@@ -129,10 +153,13 @@ export async function createTransportDriver(user: AppUser, formData: FormData) {
   const supabase = await createClient();
   const phone = formatPakistaniPhoneForStorage(String(formData.get("phone") ?? ""));
   if (!phone) throw new Error("Driver phone number is required.");
+  const cnic = formatCnic(String(formData.get("cnic") ?? ""));
+  if (!/^\d{5}-\d{7}-\d$/.test(cnic)) throw new Error("CNIC must be exactly 13 digits, like 00000-0000000-0.");
   const { error } = await supabase.from("transport_drivers").insert({
     school_id: user.schoolId,
     full_name: String(formData.get("full_name") ?? "").trim(),
     phone,
+    cnic,
     license_number: String(formData.get("license_number") ?? "").trim(),
     status: "active"
   });
@@ -206,4 +233,35 @@ export async function removeStudentTransport(user: AppUser, assignmentId: string
   if (isMissingTransportSchema(error)) throw new Error(missingTransportMessage());
   if (error) throw new Error(error.message);
   await logActivity(user, "transport_student_removed", "transport_assignment", assignmentId);
+}
+
+export async function assignStaffToVehicle(user: AppUser, formData: FormData) {
+  assertCanManageTransport(user);
+  const rawStaff = String(formData.get("staff_id") ?? "");
+  const vehicleId = String(formData.get("vehicle_id") ?? "");
+  const [kind, staffId] = rawStaff.split(":");
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(staffId ?? "") || !["account", "record"].includes(kind)) {
+    throw new Error("Select a staff member.");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_staff_transport", {
+    p_school_id: user.schoolId,
+    p_account_staff_id: kind === "account" ? staffId : null,
+    p_record_staff_id: kind === "record" ? staffId : null,
+    p_vehicle_id: vehicleId,
+    p_actor_id: user.id
+  });
+  if (isMissingTransportSchema(error)) throw new Error(missingTransportMessage());
+  if (error) throw new Error(error.message);
+  await logActivity(user, "transport_staff_assigned", "staff", staffId, { vehicle_id: vehicleId });
+}
+
+export async function removeStaffTransport(user: AppUser, assignmentId: string) {
+  assertCanManageTransport(user);
+  const supabase = await createClient();
+  const { error } = await supabase.from("staff_transport_assignments").delete()
+    .eq("school_id", user.schoolId).eq("id", assignmentId);
+  if (isMissingTransportSchema(error)) throw new Error(missingTransportMessage());
+  if (error) throw new Error(error.message);
+  await logActivity(user, "transport_staff_removed", "staff_transport_assignment", assignmentId);
 }

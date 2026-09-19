@@ -1,6 +1,10 @@
 export const OTHER_STAFF_CATEGORIES = ["peon", "guard", "cleaner", "driver", "office_assistant", "other"] as const;
 export type OtherStaffCategory = (typeof OTHER_STAFF_CATEGORIES)[number];
 
+export function canReceiveClassAssignments(role: string): boolean {
+  return role === "teacher" || role === "head_teacher";
+}
+
 export const OTHER_STAFF_CATEGORY_LABELS: Record<OtherStaffCategory, string> = {
   peon: "Peon",
   guard: "Guard",

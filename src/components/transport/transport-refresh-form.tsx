@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 
 export function TransportRefreshForm({
   action,
+  id,
   className,
   confirmText,
   children
 }: {
   action: (formData: FormData) => Promise<void>;
+  id?: string;
   className?: string;
   confirmText?: string;
   children: ReactNode;
@@ -21,6 +23,7 @@ export function TransportRefreshForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     const form = event.currentTarget;
     if (!form.reportValidity()) return;
     if (confirmText && !window.confirm(confirmText)) return;
@@ -41,7 +44,7 @@ export function TransportRefreshForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className={className} aria-busy={pending}>
+    <form id={id} onSubmit={handleSubmit} className={className} aria-busy={pending}>
       {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
       <fieldset disabled={pending} className="contents">
         {children}

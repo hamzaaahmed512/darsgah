@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { setStudentMajorAction } from "@/app/(app)/classes/actions";
 import { Select } from "@/components/ui/form-field";
 import { useToast } from "@/components/ui/toast";
-import { canSelectStudentCombination, defaultCombinationOptionsForGrade, normalizeStudentMajorValue, type StudentCombinationOption } from "@/lib/student-majors";
+import { defaultCombinationOptionsForGrade, normalizeStudentMajorValue, type StudentCombinationOption } from "@/lib/student-majors";
 
 export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor, options: providedOptions }: {
   studentId: string;
@@ -16,8 +16,7 @@ export function StudentMajorSelect({ studentId, classId, gradeName, currentMajor
 }) {
   const router = useRouter();
   const { pushToast } = useToast();
-  const canSelectCombination = canSelectStudentCombination(gradeName);
-  const options = canSelectCombination ? (providedOptions?.length ? providedOptions : defaultCombinationOptionsForGrade(gradeName)) : [];
+  const options = providedOptions?.length ? providedOptions : defaultCombinationOptionsForGrade(gradeName);
   const automatic = providedOptions?.length === 1;
   const [value, setValue] = useState(normalizeStudentMajorValue(currentMajor) ?? currentMajor ?? "");
   const [pending, startTransition] = useTransition();

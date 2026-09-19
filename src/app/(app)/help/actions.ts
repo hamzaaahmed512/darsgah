@@ -35,3 +35,26 @@ export async function updateInternalQueryAction(id: string, action: "solved" | "
   if (error) throw new Error(error.message);
   revalidatePath("/queries");
 }
+
+export async function addInternalQueryRemarkAction(id: string, formData: FormData) {
+  const user = await requireUser("dashboard:view");
+  if (user.role !== "administrator" && user.role !== "principal") return { success: false, error: "Only school leadership can add remarks." };
+  const parsed = z.string().trim().min(1, "Enter a remark.").max(3000, "Keep the remark under 3000 characters.").safeParse(formData.get("remark"));
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Enter a valid remark." };
+
+  const db = await createClient();
+  const { data: query, error: queryError } = await db.from("internal_support_queries")
+    .select("id").eq("id", id).eq("school_id", user.schoolId).maybeSingle();
+  if (queryError || !query) return { success: false, error: "Query not found." };
+
+  const { error } = await db.from("internal_support_query_remarks").insert({
+    query_id: id,
+    school_id: user.schoolId,
+    author_id: user.id,
+    author_role: user.role,
+    remark: parsed.data
+  });
+  if (error) return { success: false, error: "Could not save the remark. Please try again." };
+  revalidatePath("/queries");
+  return { success: true };
+}

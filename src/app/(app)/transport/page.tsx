@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bus, ChevronDown, MapPin, Users } from "lucide-react";
+import { Banknote, Bus, ChevronDown, MapPin, UserRound, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,17 +8,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { PakistaniPhoneInput } from "@/components/ui/pakistani-phone-input";
 import { TransportActionPopover } from "@/components/transport/action-popover";
+import { DriverCnicInput } from "@/components/transport/driver-cnic-input";
 import { TransportRefreshForm } from "@/components/transport/transport-refresh-form";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { getTransportDashboard } from "@/lib/services/transport";
 import { formatFullName } from "@/lib/student-name";
 import {
+  assignStaffTransportAction,
   assignTransportAction,
   createDriverAction,
   createRouteAction,
   createVehicleAction,
   removeTransportAction,
+  removeStaffTransportAction,
   updateVehicleAction
 } from "@/app/(app)/transport/actions";
 
@@ -32,7 +35,7 @@ export default async function TransportPage() {
       <PageHeader
         eyebrow="Operations"
         title="Transport Dashboard"
-        description="Manage routes, drivers, buses, capacity, and student transport billing."
+        description="Manage routes, drivers, vehicles, passengers, and student transport billing."
         actions={
           canManage ? (
             <div className="flex flex-wrap justify-end gap-2">
@@ -65,8 +68,8 @@ export default async function TransportPage() {
               const pct = capacity ? Math.min(100, Math.round((passengers / capacity) * 100)) : 0;
               const roster = data.assignments.filter((item) => item.vehicle_id === vehicle.id);
               return (
-                <details key={vehicle.id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
-                  <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-blue-50/35 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <details key={vehicle.id} className="group overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card">
+                  <summary className="grid cursor-pointer gap-4 px-5 py-5 transition hover:bg-surface-low/70 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display text-[1.35rem] font-semibold text-ink">{vehicle.plate_number}</h3>
@@ -79,16 +82,16 @@ export default async function TransportPage() {
                       <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
                     </div>
                   </summary>
-                  <div className="grid gap-5 border-t border-blue-100 bg-slate-50/30 p-5">
+                  <div className="grid gap-5 border-t border-outline/50 bg-slate-50/30 p-5">
                     <div className="grid gap-3 md:grid-cols-4">
                       <TransportInfo icon={<Bus className="h-4 w-4" />} label="Vehicle" value={vehicle.plate_number} />
-                      <TransportInfo icon={<Users className="h-4 w-4" />} label="Driver" value={vehicle.driver_name ?? "Unassigned"} hint={vehicle.driver_phone ?? undefined} />
+                      <TransportInfo icon={<UserRound className="h-4 w-4" />} label="Driver" value={vehicle.driver_name ?? "Unassigned"} hint={[vehicle.driver_phone, vehicle.driver_cnic ? `CNIC: ${vehicle.driver_cnic}` : null].filter(Boolean).join(" · ") || undefined} />
                       <TransportInfo icon={<MapPin className="h-4 w-4" />} label="Route" value={`${vehicle.start_point ?? "-"} to ${vehicle.end_point ?? "-"}`} />
-                      <TransportInfo icon={<Users className="h-4 w-4" />} label="Fare" value={`${Number(vehicle.monthly_fare || 0).toLocaleString()} / month`} />
+                      <TransportInfo icon={<Banknote className="h-4 w-4" />} label="Fare" value={`${Number(vehicle.monthly_fare || 0).toLocaleString()} / month`} />
                     </div>
 
                     {canManage ? (
-                      <div className="flex flex-col gap-3 rounded-lg bg-surface-low p-3 lg:flex-row lg:items-end">
+                      <div className="flex flex-col gap-3 rounded-[22px] border border-outline/50 bg-surface-low/70 p-4 lg:flex-row lg:items-end">
                         <div className="min-w-0 flex-1">
                           <VehicleSettingsForm data={data} vehicle={vehicle} />
                         </div>
@@ -110,22 +113,25 @@ export default async function TransportPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[22px] bg-surface-low/50 p-4">
+                    <div className="rounded-[22px] border border-outline/50 bg-surface-low/50 p-4">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <p className="font-label text-xs font-bold uppercase tracking-wide text-muted">Students and Staff Using This Transport</p>
-                        {canManage ? (
+                        {canManage ? <div className="flex flex-wrap gap-2">
                           <TransportActionPopover title="Add Student" triggerLabel="Add Student" icon="student" variant="secondary">
                             <AssignStudentForm data={data} vehicle={vehicle} />
                           </TransportActionPopover>
-                        ) : null}
+                          <TransportActionPopover title="Add Staff" triggerLabel="Add Staff" icon="staff" variant="secondary">
+                            <AssignStaffForm data={data} vehicle={vehicle} />
+                          </TransportActionPopover>
+                        </div> : null}
                       </div>
                       {roster.length ? (
                         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                           {roster.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 text-sm ring-1 ring-outline/40">
-                              <span className="min-w-0 truncate">{item.student_name} <span className="text-muted">({item.admission_number})</span></span>
+                            <div key={`${item.kind}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-outline/50 bg-white px-3 py-2.5 text-sm shadow-soft">
+                              <span className="min-w-0 truncate font-semibold text-ink">{item.name} <span className="font-normal text-muted">({item.kind === "staff" ? `Staff · ${item.detail}` : item.detail})</span></span>
                               {canManage ? (
-                                <TransportRefreshForm action={removeTransportAction} confirmText={`Remove ${item.student_name} from this transport?`}>
+                                <TransportRefreshForm action={item.kind === "staff" ? removeStaffTransportAction : removeTransportAction} confirmText={`Remove ${item.name} from this transport?`}>
                                   <input type="hidden" name="assignment_id" value={item.id} />
                                   <Button type="submit" variant="ghost" size="sm">Remove</Button>
                                 </TransportRefreshForm>
@@ -143,7 +149,7 @@ export default async function TransportPage() {
             })
           ) : (
             <div>
-              <EmptyState title="No vehicles yet" description="Add a driver and vehicle to begin assigning students." />
+              <EmptyState title="No vehicles yet" description="Add a driver and vehicle to begin assigning passengers." />
             </div>
           )}
         </div>
@@ -157,6 +163,7 @@ function DriverForm() {
     <TransportRefreshForm action={createDriverAction} className="grid gap-3">
       <Field label="Full name"><Input name="full_name" required /></Field>
       <Field label="Phone"><PakistaniPhoneInput name="phone" required /></Field>
+      <Field label="CNIC" required><DriverCnicInput /></Field>
       <Field label="License number"><Input name="license_number" required /></Field>
       <Button type="submit">Save Driver</Button>
     </TransportRefreshForm>
@@ -165,7 +172,7 @@ function DriverForm() {
 
 function VehicleForm({ data }: { data: any }) {
   return (
-    <div className="grid max-h-[75vh] gap-4 overflow-y-auto">
+    <div className="grid gap-4">
       <TransportRefreshForm action={createVehicleAction} className="grid gap-3">
         <Field label="Plate number"><Input name="plate_number" required /></Field>
         <Field label="Seat capacity"><Input name="seat_capacity" type="number" min="1" required /></Field>
@@ -183,22 +190,17 @@ function VehicleForm({ data }: { data: any }) {
         </Field>
         <Button type="submit">Save Vehicle</Button>
       </TransportRefreshForm>
-      <details className="rounded-xl bg-surface-low p-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-ink">
-          <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Add Route</span>
-          <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" />
-        </summary>
-        <div className="mt-3">
-          <RouteForm submitLabel="Save Route" />
-        </div>
-      </details>
+      <TransportActionPopover title="Add Route" triggerLabel="Add Route" icon="route" variant="secondary"
+        footer={<Button type="submit" form="add-route-from-vehicle" className="w-full sm:w-auto">Save Route</Button>}>
+        <RouteForm formId="add-route-from-vehicle" submitLabel="Save Route" />
+      </TransportActionPopover>
     </div>
   );
 }
 
 function VehicleSettingsForm({ data, vehicle }: { data: any; vehicle: any }) {
   return (
-    <TransportRefreshForm action={updateVehicleAction} className="grid gap-3 rounded-lg bg-white p-3 ring-1 ring-outline/50 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+    <TransportRefreshForm action={updateVehicleAction} className="grid gap-3 rounded-2xl border border-outline/50 bg-white p-4 shadow-soft md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
       <input type="hidden" name="vehicle_id" value={vehicle.id} />
       <Field label="Driver">
         <Select name="driver_id" defaultValue={vehicle.driver_id ?? ""}>
@@ -236,23 +238,42 @@ function AssignStudentForm({ data, vehicle }: { data: any; vehicle: any }) {
   );
 }
 
-function RouteForm({ vehicleId, submitLabel }: { vehicleId?: string; submitLabel: string }) {
+function AssignStaffForm({ data, vehicle }: { data: any; vehicle: any }) {
   return (
-    <TransportRefreshForm action={createRouteAction} className="grid gap-3">
+    <TransportRefreshForm action={assignStaffTransportAction} className="grid gap-3">
+      <input type="hidden" name="vehicle_id" value={vehicle.id} />
+      <Field label="Staff">
+        <Select name="staff_id" required>
+          <option value="">Choose staff</option>
+          {data.staff.map((person: any) => (
+            <option key={`${person.kind}:${person.id}`} value={`${person.kind}:${person.id}`}>
+              {person.name} / {person.role}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Button type="submit">Add Staff</Button>
+    </TransportRefreshForm>
+  );
+}
+
+function RouteForm({ vehicleId, submitLabel, formId }: { vehicleId?: string; submitLabel: string; formId?: string }) {
+  return (
+    <TransportRefreshForm action={createRouteAction} id={formId} className="grid gap-3">
       {vehicleId ? <input type="hidden" name="vehicle_id" value={vehicleId} /> : null}
       <Field label="Route name"><Input name="name" required /></Field>
       <Field label="Start point"><Input name="start_point" required /></Field>
       <Field label="End point"><Input name="end_point" required /></Field>
       <Field label="Monthly fare"><Input name="monthly_fare" type="number" min="0" step="0.01" required /></Field>
-      <Button type="submit">{submitLabel}</Button>
+      {!formId ? <Button type="submit">{submitLabel}</Button> : null}
     </TransportRefreshForm>
   );
 }
 
 function TransportInfo({ icon, label, value, hint }: { icon: ReactNode; label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-outline/40 bg-surface-low p-3 text-sm">
-      <div className="mb-1 flex items-center gap-1.5 text-muted">
+    <div className="rounded-[16px] border border-outline/60 bg-white p-4 text-sm shadow-soft">
+      <div className="mb-2 flex items-center gap-2 font-semibold text-muted">
         <span className="text-primary">{icon}</span>
         {label}
       </div>

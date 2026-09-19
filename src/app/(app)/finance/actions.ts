@@ -21,13 +21,18 @@ function numberOrZero(formData: FormData, key: string) {
   return Number(value);
 }
 
+function requiredFee(formData: FormData) {
+  const value = formData.get("tuition_fee");
+  return typeof value === "string" ? value.trim() : value;
+}
+
 export async function createFeeStructureAction(formData: FormData) {
   const user = await requireUser("finance:manage");
   
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
     class_id: formData.get("class_id") as string,
-    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    tuition_fee: requiredFee(formData),
     admission_fee: numberOrZero(formData, "admission_fee"),
     examination_fee: numberOrZero(formData, "examination_fee"),
     library_fee: numberOrZero(formData, "library_fee"),
@@ -49,7 +54,7 @@ export async function createFeeStructuresForClassesAction(formData: FormData) {
   const classIds = formData.getAll("class_ids").map(String).filter(Boolean);
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
-    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    tuition_fee: requiredFee(formData),
     admission_fee: numberOrZero(formData, "admission_fee"),
     examination_fee: numberOrZero(formData, "examination_fee"),
     library_fee: numberOrZero(formData, "library_fee"),
@@ -72,7 +77,7 @@ export async function updateFeeStructureAction(id: string, formData: FormData) {
   const values = {
     academic_year_id: formData.get("academic_year_id") as string,
     class_id: formData.get("class_id") as string,
-    tuition_fee: numberOrZero(formData, "tuition_fee"),
+    tuition_fee: requiredFee(formData),
     admission_fee: numberOrZero(formData, "admission_fee"),
     examination_fee: numberOrZero(formData, "examination_fee"),
     library_fee: numberOrZero(formData, "library_fee"),

@@ -34,7 +34,7 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
         eyebrow="Finance"
         title={`Staff Pay - ${formatMonth(month)}`}
         description="Manage monthly staff salaries, bonuses, deductions, and payment status."
-        actions={canManage ? <AddAdjustmentDialog month={month} teachers={eligibleStaff} /> : null}
+        actions={canManage ? <AddAdjustmentDialog month={month} staff={eligibleStaff} /> : null}
       />
 
       <form method="get" className="mb-6 flex flex-wrap items-center gap-2">

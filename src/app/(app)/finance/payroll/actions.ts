@@ -73,7 +73,7 @@ export async function setStaffPayStatusAction(staffId: string, month: string, st
 }
 
 export async function createAdjustmentAction(data: {
-  teacherId: string;
+  staffId: string;
   amount: number;
   type: AdjustmentType;
   reason: string;
@@ -82,7 +82,7 @@ export async function createAdjustmentAction(data: {
   try {
     const user = await requireUser("payroll:manage");
     await createSalaryAdjustment(user, {
-      teacher_id: data.teacherId,
+      teacher_id: data.staffId,
       amount: data.amount,
       type: data.type,
       reason: data.reason,

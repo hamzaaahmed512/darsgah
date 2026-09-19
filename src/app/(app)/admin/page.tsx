@@ -36,7 +36,7 @@ export default async function AdminPage() {
         description="Manage user membership, role policy, and school-level settings without exposing service-role credentials."
         actions={
           <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" />
+            <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" wider />
             {user.role === "principal" ? <ButtonLink href="/admin/roles" variant="secondary">View Roles</ButtonLink> : null}
             <CreateRoleModal currentUserRole={user.role} />
           </div>
@@ -56,7 +56,7 @@ export default async function AdminPage() {
             </div>
             <Badge tone="blue" className="rounded-full px-3 py-1.5 text-xs font-bold">{members.length} members</Badge>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="overflow-hidden rounded-[24px] border border-outline/50">
               <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">

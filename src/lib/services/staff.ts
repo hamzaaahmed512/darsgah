@@ -218,12 +218,13 @@ export async function createOtherStaffRecord(user: AppUser, values: {
   department?: string;
   jobTitle?: string;
   phone?: string;
-  monthlySalary?: number | null;
+  monthlySalary: number;
   joiningDate?: string | null;
 }) {
   if (!canManageOtherStaff(user)) throw new Error("Only administrators and principals can add other staff records.");
   const fullName = values.fullName.trim();
   if (!fullName) throw new Error("Full name is required.");
+  if (!Number.isFinite(values.monthlySalary) || values.monthlySalary <= 0) throw new Error("Monthly salary must be greater than zero.");
   const category = OTHER_STAFF_CATEGORIES.includes(values.category) ? values.category : "other";
   const phone = formatPakistaniPhoneForStorage(values.phone);
   const supabase = await createClient();
@@ -238,7 +239,7 @@ export async function createOtherStaffRecord(user: AppUser, values: {
       phone,
       cnic: values.cnic,
       gender: values.gender,
-      monthly_salary: values.monthlySalary ?? null,
+      monthly_salary: values.monthlySalary,
       status: "active",
       ...(values.joiningDate ? { joining_date: values.joiningDate } : {})
     })

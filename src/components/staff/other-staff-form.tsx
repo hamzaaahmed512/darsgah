@@ -44,7 +44,7 @@ export function OtherStaffFormModal() {
           department: form.department,
           jobTitle: form.jobTitle,
           phone: form.phone,
-          monthlySalary: form.monthlySalary ? Number(form.monthlySalary) : null,
+          monthlySalary: form.monthlySalary === "" ? NaN : Number(form.monthlySalary),
           joiningDate: form.joiningDate || null
         });
         setForm({ fullName: "", cnic: "", gender: "", category: "peon", department: "Others", jobTitle: "", phone: "", monthlySalary: "", joiningDate: "" });
@@ -87,7 +87,7 @@ export function OtherStaffFormModal() {
               <Field label="Department"><Input value={form.department} onChange={(event) => update("department", event.target.value)} placeholder="Others" /></Field>
               <Field label="Job title"><Input value={form.jobTitle} onChange={(event) => update("jobTitle", event.target.value)} placeholder="Peon, Guard, Cleaner..." /></Field>
               <Field label="Phone" required><PakistaniPhoneInput required value={form.phone} onChange={(event) => update("phone", event.target.value)} /></Field>
-              <Field label="Monthly salary"><Input type="number" min="0" step="0.01" value={form.monthlySalary} onChange={(event) => update("monthlySalary", event.target.value)} placeholder="Optional" /></Field>
+              <Field label="Monthly salary" required><Input required type="number" min="0.01" step="0.01" value={form.monthlySalary} onChange={(event) => update("monthlySalary", event.target.value)} placeholder="Monthly salary" /></Field>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="other-joining-date" className="text-sm font-semibold text-ink">Joining Date</label>

@@ -73,7 +73,7 @@ export async function createOtherStaffAction(values: {
   department?: string;
   jobTitle?: string;
   phone?: string;
-  monthlySalary?: number | null;
+  monthlySalary: number;
   joiningDate?: string | null;
 }) {
   const user = await requireUser("teachers:manage");

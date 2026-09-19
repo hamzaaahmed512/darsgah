@@ -12,7 +12,7 @@ import { StaffFilterForm } from "@/components/staff/staff-filter-form";
 import { createClient } from "@/lib/supabase/server";
 import { StaffCreateModal } from "@/components/staff/staff-create-modal";
 import { ButtonLink } from "@/components/ui/button";
-import { OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
+import { canReceiveClassAssignments, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { StatCard } from "@/components/dashboard/stat-card";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -59,7 +59,7 @@ export default async function StaffPage({
         ? (["administrator", "teacher", "staff", "student_staff", "cashier", "librarian"] as const)
         : (["teacher", "staff", "student_staff", "cashier", "librarian"] as const);
   const activeStaff = allStaff.filter((member: any) => member.status === "active");
-  const teacherCount = allStaff.filter((member: any) => member.role === "teacher" || member.role === "head_teacher").length;
+  const teacherCount = allStaff.filter((member: any) => canReceiveClassAssignments(member.role)).length;
   const accountStaff = allStaff.filter((member: any) => !member.is_record_only).length;
 
   return (
@@ -107,9 +107,11 @@ export default async function StaffPage({
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="truncate font-display text-[1.2rem] font-bold leading-tight text-ink sm:text-[1.4rem]">{member.full_name}</h2>
                       <div className="hidden md:flex items-center gap-3 shrink-0 self-center">
-                        <span className="text-sm font-semibold text-muted md:text-base">
-                          {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
-                        </span>
+                        {canReceiveClassAssignments(member.role) ? (
+                          <span className="text-sm font-semibold text-muted md:text-base">
+                            {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
+                          </span>
+                        ) : null}
                         <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
                       </div>
                     </div>
@@ -130,19 +132,21 @@ export default async function StaffPage({
                   </div>
                 </div>
                 <div className="md:hidden flex items-center justify-between border-t border-blue-50/80 mt-3 pt-3">
-                  <span className="text-sm font-semibold text-muted">
-                    {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
-                  </span>
+                  {canReceiveClassAssignments(member.role) ? (
+                    <span className="text-sm font-semibold text-muted">
+                      {member.assigned_classes ?? 0} assigned class{Number(member.assigned_classes ?? 0) === 1 ? "" : "es"}
+                    </span>
+                  ) : null}
                   <ChevronDown className="h-4 w-4 text-muted transition group-open:rotate-180" aria-hidden="true" />
                 </div>
               </summary>
 
               <div className="grid gap-4 border-t border-blue-100 bg-slate-50/30 px-5 py-5 md:px-6">
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className={`grid gap-3 ${canReceiveClassAssignments(member.role) ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
                   <StaffInfo icon={<ShieldCheck className="h-4 w-4" />} label="Role" value={getRoleLabel(member.role, member.custom_role_name, member.other_category)} />
                   <StaffInfo icon={<Building2 className="h-4 w-4" />} label="Department" value={[member.department, member.job_title].filter(Boolean).join(" / ") || "Not set"} />
                   <StaffInfo icon={<Phone className="h-4 w-4" />} label="Phone" value={member.phone || "Not provided"} />
-                  <StaffInfo icon={<Users className="h-4 w-4" />} label="Assigned Classes" value={String(member.assigned_classes ?? 0)} />
+                  {canReceiveClassAssignments(member.role) ? <StaffInfo icon={<Users className="h-4 w-4" />} label="Assigned Classes" value={String(member.assigned_classes ?? 0)} /> : null}
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
