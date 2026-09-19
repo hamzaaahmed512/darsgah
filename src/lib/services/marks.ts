@@ -143,7 +143,8 @@ async function assertTeacherCanUseSubject(user: AppUser, classId: string, subjec
 
 async function getEditableExam(user: AppUser, examId: string) {
   const supabase = await createClient();
-  const { data: exam, error } = await supabase
+  const readClient = user.role === "principal" ? createAdminClient() : supabase;
+  const { data: exam, error } = await readClient
     .from("exams")
     .select("*")
     .eq("school_id", user.schoolId)
@@ -152,6 +153,9 @@ async function getEditableExam(user: AppUser, examId: string) {
 
   if (error) throw new Error(error.message);
   if (!exam) throw new Error("Exam not found.");
+  if (user.role === "principal" && exam.created_by !== user.id) {
+    throw new Error("You can enter marks only for assessments you created.");
+  }
   await assertTeacherCanUseSubject(user, exam.class_id, exam.subject_id);
   const canEdit = exam.requires_approval
     ? ["pending_approval", "rejected"].includes(exam.status)
