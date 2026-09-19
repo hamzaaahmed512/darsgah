@@ -43,7 +43,7 @@ describe("library workspace", () => {
     searchCopies.mockResolvedValue([{ id: "copy", book_id: "book", book_title: "School Science", accession: "LIB-001", shelf: "A1", status: "available", is_eligible: true }]);
     save.mockResolvedValue({ ok: true });
     render(<LibraryWorkspace data={data} canManage canAdmin />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue Book" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Issue Book" })[0]);
     const borrowerSearch = screen.getByPlaceholderText(/Search by student name/);
     fireEvent.focus(borrowerSearch);
     fireEvent.click(await screen.findByRole("button", { name: /Ali Test.*Eligible/ }));
@@ -68,7 +68,7 @@ describe("library workspace", () => {
   });
   it("shows catalogue search and hides writes for a viewer", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    expect(screen.getByText("School Science")).toBeTruthy();
+    expect(screen.getAllByText("School Science").length).toBeGreaterThan(0);
     expect(screen.queryByText("Add a book")).toBeNull();
     fireEvent.change(screen.getByLabelText("Search catalogue"), { target: { value: "missing" } });
     expect(screen.getByText("No books found")).toBeTruthy();
@@ -84,19 +84,28 @@ describe("library workspace", () => {
 
   it("links each catalogue title to its copy inventory", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
-    expect(screen.getByRole("link", { name: "View inventory for School Science" }).getAttribute("href")).toBe("/library/book");
+    expect(screen.getAllByRole("link", { name: "View copies" })[0].getAttribute("href")).toBe("/library/book");
   });
 
-  it("KPI Total books counts active copies and shows title count subtitle", () => {
+  it("KPI Total books counts copies and shows title count subtitle", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
     expect(screen.getByText("Total books")).toBeTruthy();
     expect(screen.getByText("Across 1 title")).toBeTruthy();
   });
 
+  it("totals copies across every title and opens overdue loans from the metric", () => {
+    const otherBook = { ...data.books[0], id: "other", title: "Second Title" };
+    render(<LibraryWorkspace data={{ ...data, books: [...data.books, otherBook], copies: [...data.copies, { ...data.copies[0], id: "other-copy", book_id: "other" }] }} canManage={false} canAdmin={false} />);
+    const totalCard = screen.getByRole("button", { name: /Total books/ });
+    expect(within(totalCard).getByText("3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Overdue loans/ }));
+    expect((screen.getByLabelText("Loan status") as HTMLSelectElement).value).toBe("overdue");
+  });
+
   it("keeps catalogue issue disabled until a borrower is selected", async () => {
     save.mockResolvedValue({ error: "This copy is no longer available" });
     render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "Issue Book" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Issue Book" })[0]);
 
     const forms = document.querySelectorAll("form");
     const issueForm = Array.from(forms).find(f => (f as HTMLFormElement).querySelector("input[name='action'][value='issue']"));

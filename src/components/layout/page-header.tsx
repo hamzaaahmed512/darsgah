@@ -4,11 +4,13 @@ export function PageHeader({
   title,
   eyebrow,
   description,
+  descriptionClassName,
   actions
 }: {
   title: string | ReactNode;
   eyebrow?: string;
   description?: string;
+  descriptionClassName?: string;
   actions?: ReactNode;
 }) {
   return (
@@ -16,7 +18,7 @@ export function PageHeader({
       <div className="min-w-0">
         {eyebrow ? <p className="font-label text-xs font-bold uppercase tracking-[0.14em] text-primary">{eyebrow}</p> : null}
         <h1 className="mt-2 break-words font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">{title}</h1>
-        {description ? <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-muted">{description}</p> : null}
+        {description ? <p className={`mt-3 max-w-3xl text-sm font-medium leading-6 text-muted ${descriptionClassName ?? ""}`}>{description}</p> : null}
       </div>
       {actions ? <div className="flex w-full min-w-0 flex-wrap gap-3 sm:w-auto">{actions}</div> : null}
     </div>
