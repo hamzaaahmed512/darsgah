@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, BriefcaseBusiness, Building2, CalendarCheck2, CalendarX2, Mail, Phone, ShieldCheck, Users } from "lucide-react";
 import { StaffProfileEditModal } from "@/components/staff/staff-profile-edit-modal";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
@@ -68,7 +67,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
   return (
     <>
-      <div className="relative z-10 bg-white pb-1">
+      <div className="min-w-0">
         <Link
           href="/staff"
           className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-primary"
@@ -93,9 +92,9 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
               </div>
             )}
             <div>
-              <p className="font-label text-xs font-bold uppercase tracking-[0.12em] text-primary">Faculty profile</p>
+              <p className="font-label text-xs font-bold uppercase tracking-[0.14em] text-primary">Staff profile</p>
               <div className="mt-1 flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{member.full_name}</h1>
+                <h1 className="break-words font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">{member.full_name}</h1>
                 <Badge tone={member.status === "active" ? "green" : "gray"}>{member.status}</Badge>
               </div>
               <p className="mt-1 text-sm font-medium text-muted">
@@ -118,10 +117,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                 }}
               />
             ) : null}
-            <ButtonLink href="/staff">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </ButtonLink>
           </div>
         </div>
 

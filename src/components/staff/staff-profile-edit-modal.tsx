@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { BriefcaseBusiness, Pencil, X } from "lucide-react";
 import { updateStaffProfileAction } from "@/app/(app)/teachers/actions";
@@ -24,6 +25,9 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   function submit(formData: FormData) {
     setError(null);
@@ -48,13 +52,13 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
 
   return <>
     <Button type="button" variant="secondary" onClick={() => setOpen(true)}><Pencil className="h-4 w-4" /> Edit profile</Button>
-    {open ? <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-[24px] bg-white shadow-lift sm:rounded-[24px]">
-        <div className="flex items-start justify-between gap-4 border-b border-outline/60 px-5 py-4 sm:px-6">
-          <div><h2 className="font-display text-xl font-bold text-ink">Edit staff profile</h2><p className="mt-1 text-sm text-muted">Salary is managed separately in Payroll.</p></div>
-          <button type="button" aria-label="Close" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>
+    {mounted && open ? createPortal(<div role="dialog" aria-modal="true" aria-labelledby="edit-staff-profile-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="flex max-h-[calc(100dvh-2rem)] min-w-0 w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
+          <div className="min-w-0 flex-1"><h2 id="edit-staff-profile-title" className="font-display text-[1.7rem] font-bold text-ink">Edit staff profile</h2><p className="mt-1 break-words text-sm leading-5 text-muted">Salary is managed separately in Payroll.</p></div>
+          <button type="button" aria-label="Close" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink"><X className="h-5 w-5" /></button>
         </div>
-        <form action={submit} className="min-h-0 overflow-y-auto bg-slate-50/30 p-5 sm:p-6">
+        <form action={submit} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50/30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
           {error ? <p className="mb-4 rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</p> : null}
           <FormSectionCard
             icon={<BriefcaseBusiness className="h-5 w-5" />}
@@ -79,6 +83,6 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
           </div>
         </form>
       </div>
-    </div> : null}
+    </div>, document.body) : null}
   </>;
 }

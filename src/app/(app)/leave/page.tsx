@@ -101,14 +101,14 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-8">
               {teacherLeaveSummary.migrationRequired ? (
                 <EmptyState title="Leave data unavailable" description="The hosted database does not have the staff leave table yet." />
               ) : !teacherLeaveSummary.summaries.length ? (
                 <EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." />
               ) : (
-                <div className="overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
-                  <div className="overflow-x-auto">
+                <div className="overflow-hidden rounded-[24px] border border-blue-200/90 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
+                  <div className="overflow-x-auto !rounded-none !border-0 !shadow-none">
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-blue-50/35 font-label text-xs uppercase tracking-[0.14em] text-muted">
                         <tr>
@@ -153,7 +153,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             </div>
             <CsvExport rows={reviewExportRows} filename={`staff-leave-requests-${exportDate}.csv`} />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-8">
             <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
             {!reviewLeaves.length ? (
               <EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." />

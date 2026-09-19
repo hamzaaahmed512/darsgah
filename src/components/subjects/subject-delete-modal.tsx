@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, X, AlertTriangle } from "lucide-react";
+import { Trash2, X, AlertTriangle } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { checkSubjectDeletionAction, deleteSubjectAction } from "@/app/(app)/subjects/actions";
@@ -71,11 +71,11 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
       <button 
         type="button" 
         onClick={handleCheck}
-        className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 shadow-sm transition hover:bg-red-100 hover:text-red-700"
+        className="rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
         aria-label={`Archive ${subjectName}`}
         title={`Archive ${subjectName}`}
       >
-        <Archive className="h-4 w-4" />
+        <Trash2 className="h-4 w-4" />
       </button>
 
       {open ? (

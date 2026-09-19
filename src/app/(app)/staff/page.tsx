@@ -98,7 +98,7 @@ export default async function StaffPage({
         <div className="grid gap-4">
           {staff.map((member: any) => (
             <details key={member.member_id} className="group overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_8px_25px_rgba(37,99,235,0.04)]">
-              <summary className="cursor-pointer px-5 py-5 transition hover:bg-blue-50/35 md:px-6 [&::-webkit-details-marker]:hidden [&::marker]:hidden">
+              <summary className="list-none cursor-pointer px-5 py-5 transition hover:bg-blue-50/35 md:px-6 [&::-webkit-details-marker]:hidden [&::marker]:hidden">
                 <div className="flex items-start gap-3 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4 md:items-center">
                   <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full text-base sm:text-lg font-bold ${getAvatarToneClasses(member.full_name, member.status)}`}>
                     {getInitials(member.full_name)}

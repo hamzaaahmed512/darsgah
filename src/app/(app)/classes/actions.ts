@@ -187,6 +187,22 @@ export async function createGradeAction(formData: FormData) {
   return data;
 }
 
+export async function deleteGradeAction(gradeId: string) {
+  const user = await requireUser("classes:manage");
+  const parsedGradeId = z.string().uuid().parse(gradeId);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("delete_grade_with_classes", {
+    p_school_id: user.schoolId,
+    p_grade_id: parsedGradeId
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/subjects");
+  revalidatePath("/academics");
+  revalidatePath("/dashboard");
+  return { deletedSections: Number(data ?? 0) };
+}
+
 export async function createSectionAction(formData: FormData) {
   const user = await requireUser("classes:manage");
   const name = englishNameSchema("Section name", 80).parse(formData.get("name"));

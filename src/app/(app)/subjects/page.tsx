@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { ArrowLeft, BookOpenCheck, Boxes, CircleDot, Layers3, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { SubjectCombinationCreateForm } from "@/components/classes/subject-combination-create-form";
@@ -8,6 +7,7 @@ import { SubjectDeleteModal } from "@/components/subjects/subject-delete-modal";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { requireUser } from "@/lib/auth/session";
 import { getAcademicOptions } from "@/lib/services/academics";
 import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
@@ -39,25 +39,25 @@ export default async function SubjectsPage({ searchParams }: { searchParams: Pro
       />
 
       <section className="mb-6 grid gap-4 lg:grid-cols-3">
-        <MetricCard
-          icon={<BookOpenCheck className="h-5 w-5" />}
-          title="Subject Catalog"
+        <StatCard
+          icon={BookOpenCheck}
+          label="Subject Catalog"
           value={visibleSubjects.length}
-          note="Available school subjects"
+          hint="Available school subjects"
           tone="blue"
         />
-        <MetricCard
-          icon={<Layers3 className="h-5 w-5" />}
-          title="Default Combinations"
+        <StatCard
+          icon={Layers3}
+          label="Default Combinations"
           value={combinations.defaultCombinations.length}
-          note="Built-in grade combinations"
-          tone="emerald"
+          hint="Built-in grade combinations"
+          tone="green"
         />
-        <MetricCard
-          icon={<Sparkles className="h-5 w-5" />}
-          title="Custom Combinations"
+        <StatCard
+          icon={Sparkles}
+          label="Custom Combinations"
           value={combinations.customCombinations.length}
-          note="School-specific combinations"
+          hint="School-specific combinations"
           tone="amber"
         />
       </section>
@@ -184,36 +184,6 @@ export default async function SubjectsPage({ searchParams }: { searchParams: Pro
       </div>
 
     </>
-  );
-}
-
-function MetricCard({
-  icon,
-  title,
-  value,
-  note,
-  tone
-}: {
-  icon: ReactNode;
-  title: string;
-  value: number;
-  note: string;
-  tone: "blue" | "emerald" | "amber";
-}) {
-  const toneClasses =
-    tone === "emerald"
-      ? "bg-emerald-50 text-emerald-600"
-      : tone === "amber"
-        ? "bg-amber-50 text-amber-600"
-        : "bg-blue-50 text-primary";
-
-  return (
-    <div className="rounded-[26px] border border-outline/70 bg-white p-4 shadow-card">
-      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl ${toneClasses}`}>{icon}</div>
-      <p className="text-sm font-semibold text-muted">{title}</p>
-      <p className="mt-1 text-[1.75rem] font-bold leading-none text-ink">{value}</p>
-      <p className="mt-1.5 text-sm text-muted">{note}</p>
-    </div>
   );
 }
 
