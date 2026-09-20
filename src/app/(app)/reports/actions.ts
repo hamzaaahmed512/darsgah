@@ -35,6 +35,6 @@ export async function exportReportCsvAction(report: ReportCsvKey, month: string)
       filename: `fee-challans-${month}.csv`
     };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not generate this report." };
+    return { error: "Could not generate this report." };
   }
 }

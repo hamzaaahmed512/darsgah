@@ -20,7 +20,7 @@ async function checkTable(tableName) {
   if (error.message?.includes(`"public.${tableName}"`) || error.code === "42P01") return false;
   // If we get a permission error, the table exists
   if (error.code === "42501") return true;
-  console.log(`  Table check ${tableName}: code=${error.code} msg=${error.message}`);
+  console.log(`  Table check ${tableName}: failed`);
   return false;
 }
 
@@ -67,4 +67,4 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch(() => console.error("Remote migration check failed."));

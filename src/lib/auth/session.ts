@@ -82,10 +82,7 @@ async function loadCurrentUser(): Promise<AppUser | null> {
 
   if (!member) {
     if (profileResult.error || memberResult.error) {
-      console.error(`getCurrentUser lookup failed for user ${userId}:`, JSON.stringify({
-        profileError: profileResult.error,
-        memberError: memberResult.error
-      }, null, 2));
+      console.error("getCurrentUser lookup failed.");
     }
     return null;
   }

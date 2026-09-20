@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -19,7 +20,7 @@ export async function createAnnouncementAction(
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -33,7 +34,7 @@ export async function updateAnnouncementAction(
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -44,7 +45,7 @@ export async function archiveAnnouncementAction(id: string) {
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -55,6 +56,8 @@ export async function deleteAnnouncementAction(id: string) {
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
+
+

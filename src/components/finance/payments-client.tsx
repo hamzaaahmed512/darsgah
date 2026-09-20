@@ -288,7 +288,6 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                             <option value="cash">Cash Payment</option>
                             <option value="bank_transfer">Bank Transfer</option>
                             <option value="cheque">Cheque Payment</option>
-                            <option value="online_payment">Online Payment Gateway</option>
                           </Select>
                         </Field>
                       </div>

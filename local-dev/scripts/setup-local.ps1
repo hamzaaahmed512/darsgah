@@ -5,17 +5,6 @@ Set-Location $repoRoot
 
 $dockerDesktopPath = Join-Path $env:LOCALAPPDATA "Programs\DockerDesktop\Docker Desktop.exe"
 $envFilePath = Join-Path $repoRoot ".env.local"
-$envContents = @"
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-"@
-
-function Write-LocalEnv {
-  Set-Content -LiteralPath $envFilePath -Value $envContents
-}
-
 function Invoke-Native {
   param(
     [Parameter(Mandatory = $true)]
@@ -50,7 +39,6 @@ function Test-DockerReady {
   }
 }
 
-Write-LocalEnv
 Start-DockerDesktopIfPresent
 
 if (-not (Test-DockerReady)) {
@@ -86,16 +74,25 @@ After the restart:
 
 Invoke-Native -FilePath "npx.cmd" -ArgumentList @("supabase", "start")
 Invoke-Native -FilePath "npx.cmd" -ArgumentList @("supabase", "db", "reset", "--local", "--yes")
-
-Write-Host ""
-Write-Host "Local Supabase is ready."
-Write-Host "DBeaver connection:"
-Write-Host "  Host: 127.0.0.1"
-Write-Host "  Port: 54322"
-Write-Host "  Database: postgres"
-Write-Host "  Username: postgres"
-Write-Host "  Password: postgres"
-Write-Host "  SSL: Disable"
+$statusLines = & npx.cmd supabase status -o env
+if ($LASTEXITCODE -ne 0) { throw "Could not read local Supabase credentials." }
+$status = @{}
+foreach ($line in $statusLines) {
+  if ($line -match '^([A-Z_]+)=(.*)$') { $status[$matches[1]] = $matches[2].Trim('"') }
+}
+foreach ($key in @('API_URL', 'ANON_KEY', 'SERVICE_ROLE_KEY')) {
+  if (-not $status[$key]) { throw "Local Supabase status is missing $key." }
+}
+@(
+  "NEXT_PUBLIC_SUPABASE_URL=$($status.API_URL)"
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY=$($status.ANON_KEY)"
+  "SUPABASE_SERVICE_ROLE_KEY=$($status.SERVICE_ROLE_KEY)"
+  "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+  "PARENT_PORTAL_SESSION_SECRET=$([Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)))"
+) | Set-Content -LiteralPath $envFilePath
 Write-Host ""
 Write-Host "Start the website with:"
 Write-Host "  npm.cmd run dev:local"
+
+
+

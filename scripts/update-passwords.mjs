@@ -5,9 +5,10 @@ dotenv.config({ path: ".env.local" });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const replacementPassword = process.env.TEST_USER_PASSWORD;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL in .env.local");
+if (!supabaseUrl || !supabaseKey || !replacementPassword) {
+  console.error("Missing Supabase configuration or TEST_USER_PASSWORD in .env.local");
   process.exit(1);
 }
 
@@ -17,21 +18,21 @@ async function updatePasswords() {
   const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
   
   if (usersError) {
-    console.error("Error listing users:", usersError);
+    console.error("Error listing users.");
     return;
   }
 
   for (const u of users) {
     if (u.email.endsWith('@scholarly.test')) {
-      console.log(`Updating password for ${u.email} (${u.id})...`);
+      console.log("Updating a test user password.");
       const { error } = await supabase.auth.admin.updateUserById(u.id, {
-        password: "password123",
+        password: replacementPassword,
         email_confirm: true
       });
       if (error) {
-        console.error(`Error updating ${u.email}:`, error.message);
+        console.error("Error updating a test user.");
       } else {
-        console.log(`Successfully updated ${u.email}`);
+        console.log("Test user password updated.");
       }
     }
   }

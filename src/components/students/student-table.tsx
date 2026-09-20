@@ -55,7 +55,7 @@ export function StudentTable({
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
                     {student.photo_url ? (
-                      <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                      <img referrerPolicy="no-referrer" src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                     ) : (
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name }))}`}>
                         {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
@@ -101,7 +101,7 @@ export function StudentTable({
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 {student.photo_url ? (
-                  <img src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                  <img referrerPolicy="no-referrer" src={student.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
                   <div className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name }))}`}>
                     {String(student.name_en ? student.name_en[0] : student.first_name?.[0] ?? "?").toUpperCase()}
@@ -147,3 +147,4 @@ function getStudentAvatarTone(name: string) {
   const hash = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return tones[hash % tones.length];
 }
+

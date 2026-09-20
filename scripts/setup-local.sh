@@ -6,13 +6,6 @@ cd "$REPO_ROOT"
 
 ENV_FILE=".env.local"
 
-cat << 'EOF' > "$ENV_FILE"
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-EOF
-
 if ! command -v docker &> /dev/null || ! docker info &> /dev/null; then
   echo "Docker is not running or not installed."
   echo "Please start Docker Desktop or ensure the Docker daemon is running, then re-run this script."
@@ -21,6 +14,18 @@ fi
 
 npx supabase start
 npx supabase db reset --local --yes
+
+status="$(npx supabase status -o env)"
+api_url="$(printf '%s\n' "$status" | sed -n 's/^API_URL=//p' | tr -d '"')"
+anon_key="$(printf '%s\n' "$status" | sed -n 's/^ANON_KEY=//p' | tr -d '"')"
+service_role_key="$(printf '%s\n' "$status" | sed -n 's/^SERVICE_ROLE_KEY=//p' | tr -d '"')"
+if [ -z "$api_url" ] || [ -z "$anon_key" ] || [ -z "$service_role_key" ]; then
+  echo "Local Supabase status is missing required credentials." >&2
+  exit 1
+fi
+session_secret="$(openssl rand -hex 32)"
+printf 'NEXT_PUBLIC_SUPABASE_URL=%s\nNEXT_PUBLIC_SUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nNEXT_PUBLIC_APP_URL=http://localhost:3000\nPARENT_PORTAL_SESSION_SECRET=%s\n' \
+  "$api_url" "$anon_key" "$service_role_key" "$session_secret" > "$ENV_FILE"
 
 echo ""
 echo "Local Supabase is ready."

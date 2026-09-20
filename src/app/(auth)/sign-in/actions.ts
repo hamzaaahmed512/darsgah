@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getSupabaseBrowserErrorMessage } from "@/lib/supabase/browser-error";
 import { isPlatformAdminUser } from "@/lib/platform/auth";
 import { resolveAuthDestination } from "@/lib/auth/destination";
 import { normalizeEmail } from "@/lib/email";
+import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
 
 const signInSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address.").transform(normalizeEmail),
@@ -16,6 +16,13 @@ const signInSchema = z.object({
 export type SignInValues = z.infer<typeof signInSchema>;
 
 export async function signInAction(values: SignInValues) {
+  try {
+    if (!await consumeAuthRateLimit("login", 5, 60)) {
+      return { error: "Too many sign-in attempts. Try again in a minute." };
+    }
+  } catch {
+    return { error: "Sign-in is temporarily unavailable." };
+  }
   const parsed = signInSchema.safeParse(values);
   if (!parsed.success) {
     return { error: "Please enter a valid email and password." };
@@ -26,7 +33,7 @@ export async function signInAction(values: SignInValues) {
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error) {
-      return { error: error.message };
+      return { error: "Unable to sign in with those credentials." };
     }
 
     const [isPlatformAdmin, profileResult] = await Promise.all([
@@ -41,9 +48,8 @@ export async function signInAction(values: SignInValues) {
 
     return { destination };
   } catch (error) {
-    console.error("Sign in error:", error);
-    return { 
-      error: getSupabaseBrowserErrorMessage(error, "Unable to sign in right now. Please try again.") 
-    };
+    console.error("Sign in failed.");
+    return { error: "Unable to sign in right now. Please try again." };
   }
 }
+

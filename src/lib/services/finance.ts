@@ -6,6 +6,7 @@ import { startOfMonth, subMonths, format } from "date-fns";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
+import { postgrestSearchTerm } from "@/lib/postgrest-search";
 
 export async function logFinanceAction(
   user: AppUser,
@@ -216,7 +217,8 @@ export async function getStudentFees(user: AppUser, filters: {
     query = query.neq("discount_type", "none");
   }
   if (filters.q) {
-    query = query.or(`student_name.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+    const q = postgrestSearchTerm(filters.q);
+    if (q) query = query.or(`student_name.ilike.%${q}%,admission_number.ilike.%${q}%`);
   }
 
   const [{ data, error }, { data: challansData, error: challansError }] = await Promise.all([
@@ -495,7 +497,8 @@ export async function getPaymentHistory(user: AppUser, filters: {
     query = query.lte("payment_date", filters.dateTo);
   }
   if (filters.q) {
-    query = query.or(`student_name.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%,receipt_number.ilike.%${filters.q}%`);
+    const q = postgrestSearchTerm(filters.q);
+    if (q) query = query.or(`student_name.ilike.%${q}%,admission_number.ilike.%${q}%,receipt_number.ilike.%${q}%`);
   }
 
   const { data, error } = await query.order("created_at", { ascending: false });
@@ -609,8 +612,9 @@ export async function getFinanceTransactions(user: AppUser, filters: {
   if (dateTo && totalsQuery) totalsQuery = totalsQuery.lte("transaction_date", dateTo);
   if (filters.direction && filters.direction !== "all") query = query.eq("direction", filters.direction);
   if (filters.direction && filters.direction !== "all" && totalsQuery) totalsQuery = totalsQuery.eq("direction", filters.direction);
-  if (filters.q) query = query.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
-  if (filters.q && totalsQuery) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${filters.q}%,party_name.ilike.%${filters.q}%,reference_number.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
+  const q = filters.q ? postgrestSearchTerm(filters.q) : "";
+  if (q) query = query.or(`receipt_number.ilike.%${q}%,party_name.ilike.%${q}%,reference_number.ilike.%${q}%,description.ilike.%${q}%`);
+  if (q && totalsQuery) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${q}%,party_name.ilike.%${q}%,reference_number.ilike.%${q}%,description.ilike.%${q}%`);
   const [{ data, count, error }, totalsResult] = await Promise.all([
     query.order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
     totalsQuery ?? Promise.resolve({ data: [], error: null })

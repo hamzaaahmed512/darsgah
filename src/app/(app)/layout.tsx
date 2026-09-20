@@ -17,11 +17,11 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   const settings = legacyProfile?.settings ?? {};
   const [notificationSummary, announcements] = await Promise.all([
     getNotificationSummary(user).catch((error) => {
-      console.error("Notification summary failed:", error);
+      console.error("Notification summary failed.");
       return { notifications: [], sidebarBadges: { attendance: 0, leave: 0, queries: 0 } };
     }),
     getAnnouncements(user).catch((error) => {
-      console.error("Announcements failed:", error);
+      console.error("Announcements failed.");
       return [];
     })
   ]);
@@ -30,7 +30,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   );
   const canAccessAcademicControl = user.role === "principal"
     ? await principalCanAccessAcademicControl(user).catch((error) => {
-        console.error("Principal Academic Control access check failed:", error);
+        console.error("Principal Academic Control access check failed.");
         return false;
       })
     : false;
@@ -57,3 +57,4 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     </ToastProvider>
   );
 }
+

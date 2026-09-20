@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -60,7 +61,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
     if (error.code === "23505") {
       return { ok: false, error: "That school slug is already in use.", errors: { slug: ["Slug already in use"] } };
     }
-    return { ok: false, error: error.message, errors: {} };
+    return { ok: false, error: publicActionError(), errors: {} };
   }
 
   const { data: existingProfile, error: existingProfileError } = await admin
@@ -71,7 +72,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
     .maybeSingle<{ id: string }>();
   if (existingProfileError) {
     await admin.from("schools").delete().eq("id", data.id);
-    return { ok: false, error: existingProfileError.message, errors: {} };
+    return { ok: false, error: publicActionError(existingProfileError), errors: {} };
   }
 
   let principalUserId = existingProfile?.id ?? null;
@@ -86,7 +87,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
     });
     if (authError || !authData.user) {
       await admin.from("schools").delete().eq("id", data.id);
-      return { ok: false, error: authError?.message ?? "Unable to create the principal account.", errors: {} };
+      return { ok: false, error: publicActionError(authError), errors: {} };
     }
 
     const { error: profileError } = await admin.from("profiles").upsert({
@@ -98,7 +99,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
     if (profileError) {
       await admin.auth.admin.deleteUser(authData.user.id);
       await admin.from("schools").delete().eq("id", data.id);
-      return { ok: false, error: profileError.message, errors: {} };
+      return { ok: false, error: publicActionError(profileError), errors: {} };
     }
 
     principalUserId = authData.user.id;
@@ -115,7 +116,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
   if (existingMembershipError) {
     if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
     await admin.from("schools").delete().eq("id", data.id);
-    return { ok: false, error: existingMembershipError.message, errors: {} };
+    return { ok: false, error: publicActionError(existingMembershipError), errors: {} };
   }
   if (existingMembership) {
     if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
@@ -133,7 +134,7 @@ export async function createSchoolAction(prevState: any, formData: FormData) {
   if (memberError) {
     if (createdNewIdentity && principalUserId) await admin.auth.admin.deleteUser(principalUserId);
     await admin.from("schools").delete().eq("id", data.id);
-    return { ok: false, error: memberError.message ?? "Unable to provision the principal account.", errors: {} };
+    return { ok: false, error: publicActionError(memberError), errors: {} };
   }
   await recordPlatformAudit(actor.id, data.id, "school.created", { name: values.data.name, plan: values.data.subscriptionPlan });
   revalidatePath("/platform", "layout");
@@ -157,7 +158,7 @@ export async function changeSchoolStatusAction(prevState: any, formData: FormDat
   };
   const { error } = await createAdminClient().from("schools").update(update).eq("id", schoolId);
   if (error) {
-    return { ok: false, error: error.message, errors: {} };
+    return { ok: false, error: publicActionError(), errors: {} };
   }
   await recordPlatformAudit(actor.id, schoolId, `school.${status}`, reason ? { reason } : {});
   revalidatePath("/platform");
@@ -180,9 +181,12 @@ export async function updateSubscriptionAction(formData: FormData) {
     billing_status: values.billingStatus,
     subscription_ends_at: values.subscriptionEndsAt ? new Date(`${values.subscriptionEndsAt}T23:59:59Z`).toISOString() : null
   }).eq("id", values.schoolId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(publicActionError(error));
   await recordPlatformAudit(actor.id, values.schoolId, "subscription.updated", { plan: values.subscriptionPlan, billingStatus: values.billingStatus, endsAt: values.subscriptionEndsAt || null });
   revalidatePath("/platform");
   revalidatePath(`/platform/schools/${values.schoolId}`);
   revalidatePath("/platform/subscriptions");
 }
+
+
+

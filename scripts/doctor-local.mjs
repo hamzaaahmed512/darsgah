@@ -31,7 +31,7 @@ try {
   console.log(`Supabase Auth is reachable (${local ? "local stack" : "hosted project"}) at ${url.origin}.`);
   console.log("Environment check passed. Restart the dev server after every .env.local change.");
 } catch (error) {
-  console.error(`Cannot reach Supabase Auth at ${url.origin}: ${error instanceof Error ? error.message : error}`);
+  console.error("Cannot reach Supabase Auth.");
   if (local) console.error("Start Docker Desktop, then run `npm run setup:sh` before `npm run dev:sh`.");
   process.exit(1);
 }

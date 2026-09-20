@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getDaysInRangeWithin } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
 import { staffProfileUpdateSchema, type StaffProfileUpdateValues } from "@/lib/validation/staff";
+import { postgrestSearchTerm } from "@/lib/postgrest-search";
 
 function isMissingOtherStaffTable(error: { code?: string; message?: string } | null) {
   return error?.code === "PGRST205" || error?.message?.includes("public.other_staff_records");
@@ -29,7 +30,7 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
       .order("full_name");
 
     if (role !== "all") accountQuery = accountQuery.eq("role", role);
-    if (q) accountQuery = accountQuery.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,department.ilike.%${q}%`);
+    if (q) { const term = postgrestSearchTerm(q); if (term) accountQuery = accountQuery.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,department.ilike.%${term}%`); }
 
     const { data, error } = await accountQuery;
     if (error) throw new Error(error.message);
@@ -43,7 +44,7 @@ export async function getStaff(user: AppUser, role = "all", q = "") {
       .select("*")
       .eq("school_id", user.schoolId)
       .order("full_name");
-    if (q) otherQuery = otherQuery.or(`full_name.ilike.%${q}%,department.ilike.%${q}%,job_title.ilike.%${q}%`);
+    if (q) { const term = postgrestSearchTerm(q); if (term) otherQuery = otherQuery.or(`full_name.ilike.%${term}%,department.ilike.%${term}%,job_title.ilike.%${term}%`); }
     const { data: others, error: otherError } = await otherQuery;
     if (isMissingOtherStaffTable(otherError)) otherRows = [];
     else if (otherError) throw new Error(otherError.message);

@@ -27,6 +27,8 @@ export const discountSchema = z.object({
   discount_reason: z.enum(["scholarship", "sibling_discount", "merit", "need_based", "special_approval"]),
   discount_remarks: z.string().optional(),
   discount_approved_by: z.string().min(1, "Approved by name is required")
+}).refine((value) => value.discount_type !== "percentage" || value.discount_value <= 100, {
+  path: ["discount_value"], message: "Percentage discount cannot exceed 100%."
 });
 
 export type DiscountFormValues = z.infer<typeof discountSchema>;
@@ -34,7 +36,7 @@ export type DiscountFormValues = z.infer<typeof discountSchema>;
 export const paymentSchema = z.object({
   student_fee_account_id: z.string().uuid("Invalid Fee Account ID"),
   amount: z.coerce.number().positive("Payment amount must be greater than 0"),
-  payment_method: z.enum(["cash", "bank_transfer", "cheque", "online_payment"]),
+  payment_method: z.enum(["cash", "bank_transfer", "cheque"]),
   transaction_number: z.string().optional(),
   reference_number: z.string().optional(),
   remarks: z.string().optional()

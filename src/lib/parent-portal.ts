@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import "server-only";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCnic } from "@/lib/pakistan-format";
@@ -6,13 +7,14 @@ import { formatCnic } from "@/lib/pakistan-format";
 const SESSION_COOKIE = "parent_portal_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const attempts = new Map<string, { count: number; resetAt: number }>();
+const rateLimitKey = randomBytes(32);
 
-export type ParentPortalSession = { studentId: string; schoolId: string; expiresAt: number };
+export type ParentPortalSession = { sessionId: string; studentId: string; schoolId: string; expiresAt: number };
 
 type StudentPortalLoginRow = { id: string; school_id: string; student_cnic: string | null; date_of_birth: string | null };
 
 function sessionSecret() {
-  const secret = process.env.PARENT_PORTAL_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.PARENT_PORTAL_SESSION_SECRET;
   if (!secret) throw new Error("PARENT_PORTAL_SESSION_SECRET is not configured.");
   return secret;
 }
@@ -32,12 +34,15 @@ function decodeSession(value: string): ParentPortalSession | null {
   if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   try {
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as ParentPortalSession;
-    return session.studentId && session.schoolId && session.expiresAt > Math.floor(Date.now() / 1000) ? session : null;
+    return session.sessionId && session.studentId && session.schoolId && session.expiresAt > Math.floor(Date.now() / 1000) ? session : null;
   } catch { return null; }
 }
 
 function checkRateLimit(key: string) {
   const now = Date.now();
+  for (const [storedKey, attempt] of attempts) {
+    if (attempt.resetAt <= now) attempts.delete(storedKey);
+  }
   const current = attempts.get(key);
   if (!current || current.resetAt <= now) {
     attempts.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 });
@@ -64,7 +69,7 @@ export async function authenticateParent(studentCnic: string, dateOfBirth: strin
   const normalizedDateOfBirth = dateOfBirthPassword(dateOfBirth);
   if (normalizedCnic.length !== 13 || !normalizedDateOfBirth) return { error: "Enter a valid student CNIC and date of birth." };
 
-  const rateKey = normalizedCnic;
+  const rateKey = createHmac("sha256", rateLimitKey).update(normalizedCnic).digest("hex");
   if (!checkRateLimit(rateKey)) return { error: "Too many attempts. Try again in a few minutes." };
 
   const admin = createAdminClient();
@@ -74,7 +79,9 @@ export async function authenticateParent(studentCnic: string, dateOfBirth: strin
   const student = (students as StudentPortalLoginRow[] | null)?.find((row) => normalizeCnic(row.student_cnic ?? "") === normalizedCnic && row.date_of_birth === normalizedDateOfBirth);
   if (!student) return { error: "The student CNIC or date of birth is incorrect." };
 
-  const session: ParentPortalSession = { studentId: student.id, schoolId: student.school_id, expiresAt: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS };
+  const session: ParentPortalSession = { sessionId: randomUUID(), studentId: student.id, schoolId: student.school_id, expiresAt: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS };
+  const { error: sessionError } = await admin.from("parent_portal_sessions").insert({ id: session.sessionId, student_id: session.studentId, school_id: session.schoolId, expires_at: new Date(session.expiresAt * 1000).toISOString() });
+  if (sessionError) return { error: "Unable to sign in right now." };
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, encodeSession(session), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: SESSION_TTL_SECONDS });
   attempts.delete(rateKey);
@@ -83,10 +90,24 @@ export async function authenticateParent(studentCnic: string, dateOfBirth: strin
 
 export async function getParentPortalSession() {
   const value = (await cookies()).get(SESSION_COOKIE)?.value;
-  return value ? decodeSession(value) : null;
+  const session = value ? decodeSession(value) : null;
+  if (!session) return null;
+  const { data, error } = await createAdminClient().from("parent_portal_sessions")
+    .select("id")
+    .eq("id", session.sessionId)
+    .eq("student_id", session.studentId)
+    .eq("school_id", session.schoolId)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  return error || !data ? null : session;
 }
 
 export async function signOutParent() {
+  const session = await getParentPortalSession();
+  if (session) {
+    const { error } = await createAdminClient().from("parent_portal_sessions").delete().eq("id", session.sessionId);
+    if (error) throw new Error("Unable to end the parent portal session.");
+  }
   (await cookies()).delete(SESSION_COOKIE);
 }
 

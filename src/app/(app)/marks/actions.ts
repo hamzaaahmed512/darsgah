@@ -51,7 +51,7 @@ export async function createExamAction(formData: FormData) {
     revalidatePath("/results");
     return { success: true as const };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Assessment could not be created." };
+    return { error: "Assessment could not be created." };
   }
 }
 
@@ -85,3 +85,4 @@ export async function submitExamForApprovalAction(formData: FormData) {
   revalidatePath("/admin/academic-control");
   revalidatePath("/results");
 }
+

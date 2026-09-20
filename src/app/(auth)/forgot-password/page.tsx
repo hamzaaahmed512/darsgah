@@ -5,9 +5,8 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-field";
-import { getSupabaseBrowserErrorMessage } from "@/lib/supabase/browser-error";
-import { createClient } from "@/lib/supabase/browser";
 import { normalizeEmail } from "@/lib/email";
+import { requestPasswordResetAction } from "./actions";
 
 export default function ForgotPasswordPage() {
   const [message, setMessage] = useState("");
@@ -20,15 +19,12 @@ export default function ForgotPasswordPage() {
     setError("");
     setMessage("");
     try {
-      const supabase = createClient();
       const email = normalizeEmail(String(new FormData(event.currentTarget).get("email") ?? ""));
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-      if (resetError) setError(resetError.message);
-      else setMessage("Password reset instructions have been sent if an account exists for that email.");
-    } catch (error) {
-      setError(getSupabaseBrowserErrorMessage(error, "Unable to send a reset link right now. Please try again."));
+      const result = await requestPasswordResetAction(email);
+      if (result.error) setError(result.error);
+      else setMessage(result.message ?? "Password reset instructions have been sent if an account exists for that email.");
+    } catch {
+      setError("Unable to send a reset link right now. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -70,11 +70,16 @@ cp .env.example .env.local
 Fill in:
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://hgomjumrwdwzkkvsppjs.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+For the current Vercel deployment, set `NEXT_PUBLIC_APP_URL=https://darsgah.vercel.app`. In Supabase project `hgomjumrwdwzkkvsppjs`, the site URL and allowed authentication redirects must include that origin and `https://darsgah.vercel.app/reset-password`. Check the full production variable list and remaining release gates in [PREDEPLOY_SECURITY_AUDIT.md](PREDEPLOY_SECURITY_AUDIT.md).
+
+The critical path findings and code fixes are documented in [CRITICAL_PATH_SECURITY_AUDIT.md](CRITICAL_PATH_SECURITY_AUDIT.md).
+The attacker-path findings, direct database access fixes, and live unauthenticated probes are documented in [ATTACK_PATH_AUDIT.md](ATTACK_PATH_AUDIT.md).
 
 Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only. Do not expose it in browser code.
 
@@ -232,6 +237,25 @@ Deploy to any Node-compatible host that supports Next.js, such as Vercel, Netlif
 - Role changes are protected by administrator-only policies.
 - User-provided content is rendered as text, not HTML.
 - No secrets are committed; `.env.example` contains placeholders only.
+
+## Secret rotation before deployment
+
+See [DATA_FLOW_AUDIT.md](DATA_FLOW_AUDIT.md) for personal-data collection, storage, external destinations, and remaining privacy risks.
+See [PREDEPLOY_SECURITY_AUDIT.md](PREDEPLOY_SECURITY_AUDIT.md) for the release checks and required deployment verification.
+
+Rotate any previously hardcoded secrets immediately. Removing a value from the current files does not remove it from Git history, cached builds, or existing deployments. In particular, replace the Supabase local demo JWTs previously embedded in setup scripts if they were ever used outside an isolated local stack. Set `PARENT_PORTAL_SESSION_SECRET` to an independent, long random value; do not reuse the Supabase service role key. Keep `.env.local` out of Git and configure production secrets in the deployment environment.
+
+Before exposing a Supabase anon key, confirm Row Level Security is enabled on every application table in the deployed database. The migrations enable it for the application tables, including the library tables through a dynamic SQL block, but deployment state must be checked separately.
+
+Run this against the deployment database and resolve every returned row before launch:
+
+```sql
+select schemaname, tablename
+from pg_tables
+where schemaname = 'public' and not rowsecurity;
+```
+
+The local seed gives demo users random passwords. To set a known local test password, put a strong value in `TEST_USER_PASSWORD` in `.env.local` and run `node scripts/update-passwords.mjs` against the local stack only.
 
 ## Common Troubleshooting
 

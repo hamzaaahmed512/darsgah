@@ -11,11 +11,11 @@ export default function PlatformError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Platform error:", error);
+    console.error("Platform error occurred.");
   }, [error]);
 
   // Extract the most useful message
-  let message = error.message || "An unexpected error occurred.";
+  let message = "An unexpected error occurred.";
   if (message.includes("ZodError")) {
     message = "Please check all required form fields and try again.";
   }
@@ -48,3 +48,4 @@ export default function PlatformError({
     </div>
   );
 }
+

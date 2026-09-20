@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -42,7 +43,7 @@ export async function createStudentAction(values: StudentFormValues) {
     id = await createStudent(user, values);
   } catch (error: any) {
     if (error instanceof StudentIdentifierValidationError) {
-      return { error: error.message, fieldErrors: error.fieldErrors };
+      return { error: publicActionError(), fieldErrors: error.fieldErrors };
     }
     if (error instanceof z.ZodError) {
       const fieldErrors: Record<string, string> = {};
@@ -54,7 +55,7 @@ export async function createStudentAction(values: StudentFormValues) {
       }
       return { error: error.issues[0]?.message || "Validation error.", fieldErrors };
     }
-    return { error: error.message || "Failed to create student." };
+    return { error: "Failed to create student." };
   }
   revalidatePath("/students");
   return { ok: true, id };
@@ -66,7 +67,7 @@ export async function updateStudentAction(id: string, values: StudentFormValues)
     await updateStudent(user, id, values);
   } catch (error: any) {
     if (error instanceof StudentIdentifierValidationError) {
-      return { error: error.message, fieldErrors: error.fieldErrors };
+      return { error: publicActionError(), fieldErrors: error.fieldErrors };
     }
     if (error instanceof z.ZodError) {
       const fieldErrors: Record<string, string> = {};
@@ -78,7 +79,7 @@ export async function updateStudentAction(id: string, values: StudentFormValues)
       }
       return { error: error.issues[0]?.message || "Validation error.", fieldErrors };
     }
-    return { error: error.message || "Failed to update student." };
+    return { error: "Failed to update student." };
   }
   revalidatePath("/students");
   revalidatePath(`/students/${id}`);
@@ -98,7 +99,7 @@ export async function exportStudentsAction(filters: StudentFilters) {
     const csvData = await exportStudents(user, filters);
     return { ok: true, data: csvData };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -111,7 +112,7 @@ export async function importStudentsAction(records: any[]) {
     revalidatePath("/students");
     return { ok: true, count };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -135,6 +136,9 @@ export async function reviewStudentRequestAction(requestId: string, formData: Fo
     revalidatePath("/dashboard/principal");
     return { success: true };
   } catch (err: any) {
-    return { error: err.message || "Failed to process request" };
+    return { error: "Failed to process request" };
   }
 }
+
+
+

@@ -1,6 +1,5 @@
 "use server";
-
-"use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -24,7 +23,7 @@ export async function generatePayrollAction(month: string, teacherId?: string) {
     revalidatePath("/finance/transactions");
     return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0), skippedNoSalary: Number(result?.skipped_no_salary_count ?? 0) };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -35,7 +34,7 @@ export async function markPayrollPaidAction(payrollId: string) {
     revalidatePath("/payroll");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -55,7 +54,7 @@ export async function saveStaffPayAction(formData: FormData) {
     revalidatePath("/finance/transactions");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -68,7 +67,7 @@ export async function setStaffPayStatusAction(staffId: string, month: string, st
     revalidatePath("/finance/transactions");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -93,7 +92,7 @@ export async function createAdjustmentAction(data: {
     revalidatePath("/finance/transactions");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -104,7 +103,7 @@ export async function deleteAdjustmentAction(adjustmentId: string) {
     revalidatePath("/payroll");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -127,6 +126,8 @@ export async function saveEmploymentDetailsAction(
     revalidatePath("/teachers");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
+
+

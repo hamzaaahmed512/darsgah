@@ -7,6 +7,7 @@ import { getCombinationOptionsForClass, getCustomCombinationOptionForClass, getD
 import { canSelectStudentCombination, isCustomStudentMajor, isDefaultStudentMajor, isSubjectExcludedForMajor, majorsForGrade, normalizeStudentMajorValue, type MajorValue } from "@/lib/student-majors";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { formatDisplayName, splitFullName } from "@/lib/student-name";
+import { postgrestSearchTerm } from "@/lib/postgrest-search";
 
 export type StudentFilters = {
   q?: string;
@@ -887,7 +888,7 @@ export async function exportStudents(user: AppUser, filters: StudentFilters = {}
 
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
-  if (filters.q) query = query.or(`first_name.ilike.%${filters.q}%,last_name.ilike.%${filters.q}%,name_en.ilike.%${filters.q}%,father_name_en.ilike.%${filters.q}%,father_phone.ilike.%${filters.q}%,admission_number.ilike.%${filters.q}%`);
+  if (filters.q) { const q = postgrestSearchTerm(filters.q); if (q) query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,name_en.ilike.%${q}%,father_name_en.ilike.%${q}%,father_phone.ilike.%${q}%,admission_number.ilike.%${q}%`); }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);

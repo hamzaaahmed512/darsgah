@@ -9,6 +9,7 @@ import { setStudentMajor } from "@/lib/services/students";
 import { createStudentSubjectCombination, updateStudentSubjectCombination, deleteStudentSubjectCombination, deleteDefaultStudentSubjectCombination, updateDefaultStudentSubjectCombination } from "@/lib/services/student-combinations";
 import { classNameSchema, englishNameSchema } from "@/lib/validation/names";
 import { createClient } from "@/lib/supabase/server";
+import { publicActionError } from "@/lib/public-error";
 
 
 const classSchema = z.object({
@@ -131,9 +132,9 @@ export async function getPromotionRosterAction(classIds: string[]) {
     supabase.from("classes").select("id,grade_id,academic_year_id,grades(sort_order)").eq("school_id", user.schoolId).in("id", parsedClassIds),
     supabase.from("grades").select("sort_order").eq("school_id", user.schoolId).order("sort_order", { ascending: false }).limit(1)
   ]);
-  if (error) throw new Error(error.message);
-  if (classError) throw new Error(classError.message);
-  if (gradeError) throw new Error(gradeError.message);
+  if (error) throw new Error(publicActionError(error));
+  if (classError) throw new Error(publicActionError(classError));
+  if (gradeError) throw new Error(publicActionError(gradeError));
   if ((selectedClasses ?? []).length !== new Set(parsedClassIds).size) throw new Error("One or more selected classes were not found.");
   const academicYearIds = new Set((selectedClasses ?? []).map((item: any) => item.academic_year_id));
   const gradeOrders = new Set((selectedClasses ?? []).map((item: any) => item.grades?.sort_order));
@@ -155,7 +156,7 @@ export async function promoteStudentsAction(classIds: string[], promotedStudentI
   const graduated = ids.parse(graduateStudentIds);
   const supabase = await createClient();
   const { error } = await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: parsedClassIds, p_promoted_student_ids: promoted, p_retained_student_ids: retained, p_graduate_student_ids: graduated });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(publicActionError(error));
   revalidatePath("/classes"); revalidatePath("/students"); revalidatePath("/dashboard");
 }
 
@@ -195,7 +196,7 @@ export async function deleteGradeAction(gradeId: string) {
     p_school_id: user.schoolId,
     p_grade_id: parsedGradeId
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(publicActionError(error));
   revalidatePath("/classes");
   revalidatePath("/subjects");
   revalidatePath("/academics");

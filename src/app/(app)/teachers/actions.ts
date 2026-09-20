@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
@@ -22,12 +23,12 @@ export async function createStaffAction(values: StaffFormValues): Promise<StaffA
     return { success: true, error: null };
   } catch (error) {
     if (error instanceof StaffEmailAlreadyAssignedError) {
-      return { success: false, error: error.message, field: error.field };
+      return { success: false, error: publicActionError(), field: error.field };
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create staff member. Please try again."
+      error: "Failed to create staff member. Please try again."
     };
   }
 }
@@ -54,7 +55,7 @@ export async function updateStaffProfileAction(staffId: string, values: StaffPro
     revalidatePath(`/staff/${staffId}`);
     return { success: true as const };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Staff profile could not be updated." };
+    return { error: "Staff profile could not be updated." };
   }
 }
 
@@ -95,3 +96,6 @@ export async function setOtherStaffSalaryAction(staffId: string, salary: number)
   revalidatePath("/staff");
   revalidatePath("/finance/payroll");
 }
+
+
+

@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
@@ -23,7 +24,7 @@ export async function sendAttendanceReminderAction(classId: string) {
     .eq("id", classId)
     .maybeSingle();
 
-  if (classError) return { error: classError.message };
+  if (classError) return { error: publicActionError(classError) };
   if (!targetClass) return { error: "Class not found." };
   if (!targetClass.head_teacher_id) return { error: "No head teacher assigned to this class." };
 
@@ -35,7 +36,7 @@ export async function sendAttendanceReminderAction(classId: string) {
     .eq("attendance_date", today)
     .maybeSingle();
 
-  if (sessionError) return { error: sessionError.message };
+  if (sessionError) return { error: publicActionError(sessionError) };
   if (existingSession) return { error: "Attendance has already been marked for this class today." };
 
   const { data: existingReminder, error: reminderError } = await supabase
@@ -50,7 +51,7 @@ export async function sendAttendanceReminderAction(classId: string) {
     .limit(1)
     .maybeSingle();
 
-  if (reminderError) return { error: reminderError.message };
+  if (reminderError) return { error: publicActionError(reminderError) };
   if (existingReminder) return { error: "A reminder has already been sent for this class in the last 12 hours.", alreadySent: true };
 
   const headTeacher = Array.isArray(targetClass.head_teacher) ? targetClass.head_teacher[0] : targetClass.head_teacher;
@@ -68,7 +69,7 @@ export async function sendAttendanceReminderAction(classId: string) {
     created_by: user.id
   });
 
-  if (announcementError) return { error: announcementError.message };
+  if (announcementError) return { error: publicActionError(announcementError) };
 
   await logActivity(user, "attendance_reminder_sent", "class", classId, {
     class_name: targetClass.name,
@@ -84,3 +85,4 @@ export async function sendAttendanceReminderAction(classId: string) {
     teacherName: formatDisplayName(headTeacher?.full_name) || "Head teacher"
   };
 }
+

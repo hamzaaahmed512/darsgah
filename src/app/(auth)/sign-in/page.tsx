@@ -38,7 +38,7 @@ export default function SignInPage() {
           router.refresh();
         }
       } catch (error) {
-        setError(error instanceof Error ? error.message : "Unable to sign in right now. Please try again.");
+        setError("Unable to sign in right now. Please try again.");
       }
     });
   }
@@ -97,3 +97,4 @@ export default function SignInPage() {
     </>
   );
 }
+

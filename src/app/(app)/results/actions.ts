@@ -25,6 +25,7 @@ export async function returnApprovedResultAction(examId: string, reason: string)
     revalidatePath("/exam-approvals");
     return { success: true as const };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Approved result could not be returned." };
+    return { error: "Approved result could not be returned." };
   }
 }
+

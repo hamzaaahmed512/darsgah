@@ -15,7 +15,7 @@ export async function updateProfileAction(values: ProfileFormValues) {
     revalidatePath("/teachers");
     revalidatePath("/admin");
     return { ok: true };
-  } catch (err: any) {
-    return { error: err.message };
+  } catch {
+    return { error: "Profile could not be updated." };
   }
 }

@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -29,7 +30,7 @@ export async function updateThemeAction(theme: string) {
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -62,7 +63,7 @@ export async function updateNotificationPreferencesAction(data: {
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -101,7 +102,7 @@ export async function updateResultCardTemplateAction(data: {
     revalidatePath("/results/print");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -115,7 +116,7 @@ export async function updatePrincipalTeachingAssignmentAction(classId: string | 
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -128,7 +129,7 @@ export async function createAcademicYearAction(data: { name: string; starts_on: 
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -139,7 +140,7 @@ export async function updateAcademicYearAction(id: string, data: { name: string;
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -150,7 +151,7 @@ export async function deleteAcademicYearAction(id: string) {
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -165,7 +166,7 @@ export async function updateMemberRoleAction(memberId: string, newRole: string) 
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -178,7 +179,7 @@ export async function updateMemberStatusAction(memberId: string, newStatus: stri
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -232,7 +233,7 @@ export async function updateMemberRoleAssignmentAction(memberId: string, newRole
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -269,7 +270,7 @@ export async function createCustomRoleAction(name: string, baseRole: string, per
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -283,7 +284,7 @@ export async function deleteCustomRoleAction(id: string) {
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -329,7 +330,7 @@ export async function assignCustomRoleToUserAction(memberId: string, customRoleI
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -342,7 +343,7 @@ export async function deleteMemberAction(memberId: string) {
     revalidatePath("/staff");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -370,14 +371,25 @@ export async function updateRolePermissionsAction(roleKey: string, permissions: 
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
 export async function updateUserPermissionOverridesAction(targetUserId: string, granted: string[], revoked: string[]) {
   try {
     const user = await requireUser("settings:manage");
+    if (user.role !== "principal") throw new Error("Only the principal can update user permissions.");
     const adminClient = createAdminClient();
+    const { data: target, error: targetError } = await adminClient
+      .from("school_members")
+      .select("user_id,status")
+      .eq("school_id", user.schoolId)
+      .eq("user_id", targetUserId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) throw new Error("School member not found.");
+    if (targetUserId === user.id) throw new Error("Self permission changes are not allowed.");
     
     // Delete existing overrides for this user
     await adminClient.from("user_permission_overrides").delete().eq("school_id", user.schoolId).eq("user_id", targetUserId);
@@ -394,6 +406,8 @@ export async function updateUserPermissionOverridesAction(targetUserId: string, 
     revalidatePath("/settings");
     return { ok: true };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
+
+

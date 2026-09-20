@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isPlatformAdminUser } from "@/lib/platform/auth";
 import { resolveAuthDestination } from "@/lib/auth/destination";
+import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
 
 const changePasswordSchema = z
   .object({
@@ -20,6 +21,11 @@ const changePasswordSchema = z
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
 
 export async function changePasswordAction(values: ChangePasswordValues) {
+  try {
+    if (!await consumeAuthRateLimit("login", 5, 60)) return { error: "Too many attempts. Try again in a minute." };
+  } catch {
+    return { error: "Password change is temporarily unavailable." };
+  }
   const parsed = changePasswordSchema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.errors[0].message };
@@ -47,14 +53,14 @@ export async function changePasswordAction(values: ChangePasswordValues) {
   if (verifyError) return { error: "Current password is incorrect." };
 
   const { error: passwordError } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (passwordError) return { error: passwordError.message };
+  if (passwordError) return { error: "Password could not be changed." };
 
   const { error: profileError } = await supabase
     .from("profiles")
     .update({ must_change_password: false })
     .eq("id", user.id);
 
-  if (profileError) return { error: profileError.message };
+  if (profileError) return { error: "Password change could not be completed." };
   
   const destination = resolveAuthDestination(parsed.data.next, await isPlatformAdminUser(user.id));
   return { success: true, destination };

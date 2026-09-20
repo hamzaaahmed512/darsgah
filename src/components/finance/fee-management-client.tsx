@@ -356,7 +356,6 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
                     <option value="cheque">Cheque</option>
-                    <option value="online_payment">Online Payment</option>
                   </Select>
                 </Field>
                 <Field label="Transaction Number">

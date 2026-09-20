@@ -22,7 +22,7 @@ export async function submitLeaveAction(formData: FormData) {
   } catch (error) {
     if (isMigrationRequiredError(error)) redirect("/leave");
     if (error instanceof Error && error.message.includes("leave limit")) {
-      return { error: error.message };
+      return { error: "Leave limit exceeded." };
     }
     throw error;
   }
@@ -42,8 +42,8 @@ export async function reviewLeaveAction(formData: FormData) {
     if (error instanceof ZodError) {
       return { error: error.issues[0]?.message ?? "Check the review details and try again." };
     }
-    console.error("Leave review failed:", error);
-    return { error: error instanceof Error ? error.message : "Leave could not be reviewed. Please try again." };
+    console.error("Leave review failed.");
+    return { error: "Leave could not be reviewed. Please try again." };
   }
   revalidatePath("/leave");
   return { success: true };
@@ -62,9 +62,10 @@ export async function updateLeavePolicyAction(formData: FormData) {
     }
     await updateLeavePolicy(user, { annualLimit, monthlyLimit, weeklyLimit });
   } catch (error) {
-    console.error("Leave policy update failed:", error);
-    return { error: error instanceof Error ? error.message : "Could not save leave policy. Please try again." };
+    console.error("Leave policy update failed.");
+    return { error: "Could not save leave policy. Please try again." };
   }
   revalidatePath("/leave");
   return { success: true };
 }
+

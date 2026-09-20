@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
@@ -164,7 +165,7 @@ export async function generateFeeChallansAction(values: { month: string; student
     revalidatePath("/finance/fees");
     return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
   } catch (err: any) {
-    return { error: err.message };
+    return { error: publicActionError() };
   }
 }
 
@@ -189,3 +190,5 @@ export async function createManualTransactionAction(formData: FormData) {
   revalidatePath("/finance/transactions");
   return transaction;
 }
+
+

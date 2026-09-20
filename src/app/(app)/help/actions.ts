@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { publicActionError } from "@/lib/public-error";
 
 const querySchema = z.object({ subject: z.string().trim().min(3).max(160), message: z.string().trim().min(10).max(3000), assignedRole: z.enum(["principal", "administrator"]) });
 
@@ -32,7 +33,7 @@ export async function updateInternalQueryAction(id: string, action: "solved" | "
     ? { status: "solved", solved_by: user.id, solved_at: new Date().toISOString() }
     : { assigned_role: user.role === "principal" ? "administrator" : "principal", status: "open", solved_by: null, solved_at: null };
   const { error } = await db.from("internal_support_queries").update(update).eq("id", id).eq("school_id", user.schoolId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(publicActionError(error));
   revalidatePath("/queries");
 }
 

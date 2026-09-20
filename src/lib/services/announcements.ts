@@ -17,7 +17,7 @@ function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
     return Boolean(audienceValue?.split(",").map((item) => item.trim()).includes(user.role));
   }
 
-  return true;
+  return false;
 }
 
 export async function getAnnouncements(user: AppUser): Promise<AnnouncementWithRead[]> {
@@ -62,7 +62,7 @@ export async function getAnnouncementHistory(user: AppUser): Promise<Announcemen
 
   if (error) throw new Error(error.message);
 
-  return (data || []).map((row: any) => ({
+  return (data || []).filter((row: any) => announcementVisibleToUser(row, user)).map((row: any) => ({
     ...row,
     created_by_name: formatDisplayName(row.profiles?.full_name) || null,
     is_read: Array.isArray(row.announcement_reads) && row.announcement_reads.length > 0

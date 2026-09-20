@@ -1,10 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 import { normalizeEmail } from "@/lib/email";
 import { plans } from "@/components/marketing/pricing-data";
+import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
 
 export type ContactFormState = {
   status: "idle" | "success" | "error";
@@ -22,19 +22,6 @@ const enquirySchema = z.object({
   billing: z.enum(["monthly", "yearly"]).optional(),
   enquiry: z.enum(["custom-development"]).optional()
 });
-
-const attempts = new Map<string, number[]>();
-const RATE_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT = 4;
-
-function isRateLimited(key: string) {
-  const now = Date.now();
-  const recent = (attempts.get(key) ?? []).filter((time) => now - time < RATE_WINDOW_MS);
-  if (recent.length >= RATE_LIMIT) return true;
-  recent.push(now);
-  attempts.set(key, recent);
-  return false;
-}
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);
@@ -56,14 +43,16 @@ export async function sendContactEnquiryAction(_previous: ContactFormState, form
   // Honeypot submissions are discarded without telling automated senders.
   if (parsed.data.website) return { status: "success" };
 
-  const requestHeaders = await headers();
-  const clientAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || "unknown";
-  if (isRateLimited(clientAddress)) return { status: "error", message: "Too many enquiries were sent. Please wait a few minutes and try again." };
+  try {
+    if (!await consumeAuthRateLimit("contact_enquiry", 4, 900)) return { status: "error", message: "Too many enquiries were sent. Please wait a few minutes and try again." };
+  } catch {
+    return { status: "error", message: "The enquiry service is temporarily unavailable." };
+  }
 
   const smtpUser = process.env.CONTACT_EMAIL_USER?.trim();
   const smtpPassword = process.env.CONTACT_EMAIL_APP_PASSWORD?.replace(/\s/g, "");
-  const recipient = process.env.CONTACT_EMAIL_TO?.trim() || "darsgah.help@gmail.com";
-  if (!smtpUser || !smtpPassword) {
+  const recipient = process.env.CONTACT_EMAIL_TO?.trim();
+  if (!smtpUser || !smtpPassword || !recipient) {
     console.error("Contact form email is not configured. Set CONTACT_EMAIL_USER and CONTACT_EMAIL_APP_PASSWORD.");
     return { status: "error", message: "The enquiry service is temporarily unavailable. Please email darsgah.help@gmail.com directly." };
   }
@@ -83,7 +72,7 @@ export async function sendContactEnquiryAction(_previous: ContactFormState, form
     });
     return { status: "success" };
   } catch (error) {
-    console.error("Contact enquiry email failed:", error);
+    console.error("Contact enquiry email failed.");
     return { status: "error", message: "We could not send your enquiry right now. Please try again or email darsgah.help@gmail.com directly." };
   }
 }

@@ -8,8 +8,8 @@ type CookieToSet = {
   options?: Parameters<NextResponse["cookies"]["set"]>[2];
 };
 
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export async function updateSession(request: NextRequest, forwardedHeaders = new Headers(request.headers)) {
+  let response = NextResponse.next({ request: { headers: forwardedHeaders } });
   const { url, anonKey } = requirePublicSupabaseEnv();
 
   const supabase = createServerClient(
@@ -22,8 +22,11 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          forwardedHeaders.set("cookie", request.cookies.toString());
+          response = NextResponse.next({ request: { headers: forwardedHeaders } });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, {
+            ...options, sameSite: "lax", secure: process.env.NODE_ENV === "production"
+          }));
         }
       }
     }

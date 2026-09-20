@@ -35,7 +35,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       <Link href="/students" prefetch={false} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-primary"><ArrowLeft className="h-4 w-4 text-primary" />Back to students</Link>
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          {student.photo_url ? <img src={student.photo_url} alt="" className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-blue-50" /> : <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-blue-50 text-2xl font-bold text-primary ring-1 ring-blue-100">{initials}</div>}
+          {student.photo_url ? <img referrerPolicy="no-referrer" src={student.photo_url} alt="" className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-blue-50" /> : <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-blue-50 text-2xl font-bold text-primary ring-1 ring-blue-100">{initials}</div>}
           <div>
             <p className="font-label text-xs font-bold uppercase tracking-[0.12em] text-primary">Student ID&nbsp; · &nbsp;{student.admission_number}</p>
             <div className="mt-1 flex flex-wrap items-center gap-3"><h1 className="font-display text-3xl font-bold tracking-tight text-ink">{displayName}</h1><Badge tone={statusTone}>{student.status.replaceAll("_", " ")}</Badge></div>
@@ -58,3 +58,4 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     <StudentProfileTabs student={student} guardians={guardians} attendance={attendance} marks={marks} challans={challans} limitedView={limitedView} canViewFinance={canViewFinance} />
   </>;
 }
+

@@ -22,10 +22,10 @@ while (!user) {
   page += 1;
 }
 if (!user) {
-  console.error(`No Supabase Auth user exists for ${email}. Create the user first, then run this command again.`);
+  console.error("No matching Supabase Auth user exists. Create the user first, then run this command again.");
   process.exit(1);
 }
 const fullName = String(user.user_metadata?.full_name ?? email.split("@")[0]);
 const { error } = await admin.from("platform_admins").upsert({ user_id: user.id, email, full_name: fullName, status: "active" });
 if (error) throw error;
-console.log(`Platform access granted to ${email}.`);
+console.log("Platform access granted.");

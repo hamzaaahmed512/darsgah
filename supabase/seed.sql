@@ -56,10 +56,10 @@ begin
     is_sso_user, is_anonymous
   )
   values
-    (principal_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'principal@scholarly.test', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
-    (admin_id,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'admin@scholarly.test',     crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
-    (teacher_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'teacher@scholarly.test',   crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
-    (staff_id,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'staff@scholarly.test',     crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false)
+    (principal_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'principal@scholarly.test', crypt(gen_random_uuid()::text, gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
+    (admin_id,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'admin@scholarly.test',     crypt(gen_random_uuid()::text, gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
+    (teacher_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'teacher@scholarly.test',   crypt(gen_random_uuid()::text, gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false),
+    (staff_id,     '00000000-0000-0000-0000-000000000000', 'authenticated', 'staff@scholarly.test',     crypt(gen_random_uuid()::text, gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), 'authenticated', '', '', '', '', '', '', '', '', false, false)
   on conflict (id) do nothing;
 
   insert into public.profiles (id, full_name, email, must_change_password) values
@@ -149,3 +149,4 @@ insert into public.teacher_assignments (school_id, teacher_id, class_id, subject
   ('00000000-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001'),
   ('00000000-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333', '50000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001')
 on conflict do nothing;
+

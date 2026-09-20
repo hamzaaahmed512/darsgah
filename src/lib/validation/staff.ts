@@ -9,7 +9,7 @@ const phone = z.string().trim().refine(isValidPakistaniPhone, "Phone number must
 export const staffFormSchema = z.object({
   full_name: englishNameSchema("Full name", 100, 2),
   email: z.string().trim().toLowerCase().email("Enter a valid email").transform(normalizeEmail),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   cnic,
   phone,
   gender: z.enum(["male", "female"]),

@@ -17,7 +17,7 @@ export async function libraryAction(form: FormData): Promise<{ ok?: boolean; err
     revalidatePath("/library");
     return { ok: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not save. Please try again." };
+    return { error: "Could not save. Please try again." };
   }
 }
 

@@ -1,4 +1,5 @@
 "use server";
+import { publicActionError } from "@/lib/public-error";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
@@ -67,9 +68,7 @@ export async function deleteSubjectAction(subjectId: string) {
     return {
       error: error instanceof z.ZodError
         ? error.issues[0]?.message ?? "Invalid subject."
-        : error instanceof Error
-          ? error.message
-          : "Subject could not be deleted."
+        : publicActionError(error)
     };
   }
 }
