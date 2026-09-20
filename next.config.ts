@@ -8,7 +8,7 @@ if (process.env.NODE_ENV === "production") {
     "CONTACT_EMAIL_USER", "CONTACT_EMAIL_APP_PASSWORD", "CONTACT_EMAIL_TO"
   ];
   const missing = required.filter((name) => !process.env[name]?.trim() || /^(your-|replace-with-)/.test(process.env[name]!.trim()));
-  if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(", ")}`);
+  if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(", ")}. Set them in the Vercel project's Production/Preview environment settings and redeploy.`);
   for (const name of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_APP_URL"]) {
     let url: URL;
     try { url = new URL(process.env[name]!); }

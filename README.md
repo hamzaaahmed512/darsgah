@@ -245,6 +245,8 @@ See [PREDEPLOY_SECURITY_AUDIT.md](PREDEPLOY_SECURITY_AUDIT.md) for the release c
 
 Rotate any previously hardcoded secrets immediately. Removing a value from the current files does not remove it from Git history, cached builds, or existing deployments. In particular, replace the Supabase local demo JWTs previously embedded in setup scripts if they were ever used outside an isolated local stack. Set `PARENT_PORTAL_SESSION_SECRET` to an independent, long random value; do not reuse the Supabase service role key. Keep `.env.local` out of Git and configure production secrets in the deployment environment.
 
+**Current release blocker:** a Supabase service-role credential was present in the tracked `.env.example` at `HEAD`. It has been replaced with a placeholder in the working tree, but the exposed credential must be rotated in Supabase and the replacement updated in Vercel. Also set independent, random values of at least 32 characters for `PARENT_PORTAL_SESSION_SECRET` and `AUTH_RATE_LIMIT_SECRET` in the Vercel project's Production and Preview environment settings, then redeploy. Never reuse the old value or put the replacements in `.env.example` or Git.
+
 Before exposing a Supabase anon key, confirm Row Level Security is enabled on every application table in the deployed database. The migrations enable it for the application tables, including the library tables through a dynamic SQL block, but deployment state must be checked separately.
 
 Run this against the deployment database and resolve every returned row before launch:
