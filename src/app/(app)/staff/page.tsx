@@ -14,6 +14,7 @@ import { StaffCreateModal } from "@/components/staff/staff-create-modal";
 import { ButtonLink } from "@/components/ui/button";
 import { canReceiveClassAssignments, OTHER_STAFF_CATEGORY_LABELS, type OtherStaffCategory } from "@/lib/constants/staff";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { ReportGenerator } from "@/components/reports/report-generator";
 
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
@@ -68,7 +69,24 @@ export default async function StaffPage({
         eyebrow="School Directory"
         title="Staff"
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
-        actions={canCreateUsers ? <StaffCreateModal allowedRoles={[...allowedRoles]} customRoles={customRoles ?? []} /> : null}
+        actions={
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <ReportGenerator 
+              headers={["Name", "Role", "Department", "Phone", "Email", "Status"]}
+              data={staff.map((row: any) => [
+                row.full_name || "",
+                getRoleLabel(row.role, row.custom_role_name, row.other_category) || "",
+                row.department || "Not set",
+                row.phone || "Not provided",
+                row.email || "N/A",
+                row.status || ""
+              ])}
+              title="Staff Directory Report" 
+              filters={{ Search: params.q, Role: params.role }} 
+            />
+            {canCreateUsers ? <StaffCreateModal allowedRoles={[...allowedRoles]} customRoles={customRoles ?? []} /> : null}
+          </div>
+        }
       />
 
       <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

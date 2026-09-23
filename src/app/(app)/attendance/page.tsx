@@ -11,6 +11,7 @@ import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance
 import { ButtonLink } from "@/components/ui/button";
 import { BriefcaseBusiness, CalendarDays, House } from "lucide-react";
 import { AutoPrint } from "@/components/reports/auto-print";
+import { ReportGenerator } from "@/components/reports/report-generator";
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -41,6 +42,33 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
         eyebrow="Daily workflow"
         title={teacherAttendanceView ? "Teacher Attendance" : "Attendance"}
         description={teacherAttendanceView ? "Mark daily attendance for active teachers and head teachers." : canOpenMarkingForm ? "Choose a date and class, mark the roster, and submit attendance once for that class and day." : "Review submitted attendance by class and date."}
+        actions={
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            {teacherAttendanceView && teacherContext ? (
+              <ReportGenerator 
+                headers={["Name", "Role", "Status"]}
+                data={teacherContext.teachers.map((row: any) => [
+                  row.full_name || "",
+                  row.role ? row.role.replace(/_/g, " ") : "",
+                  row.status || (teacherContext.submitted ? "Present" : "Unmarked")
+                ])}
+                title={`Teacher Attendance - ${teacherContext.attendanceDate}`} 
+                filters={{ Date: teacherContext.attendanceDate }} 
+              />
+            ) : context ? (
+              <ReportGenerator 
+                headers={["Student", "Gender", "Status"]}
+                data={context.roster.map((row: any) => [
+                  row.full_name || "",
+                  row.gender || "",
+                  row.status || (context.session ? "Present" : "Unmarked")
+                ])}
+                title={`Attendance Report - ${selectedClass?.name || "All Classes"} - ${context.attendanceDate}`} 
+                filters={{ Date: context.attendanceDate, Class: selectedClass?.name || "All" }} 
+              />
+            ) : null}
+          </div>
+        }
       />
       {canManageTeacherAttendance ? (
         <div className="mb-6 flex flex-wrap gap-2">

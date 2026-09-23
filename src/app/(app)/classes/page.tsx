@@ -12,6 +12,7 @@ import { getActiveGradeNames } from "@/lib/academics/active-grades";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { GraduationCap, Layers3, School, UserCheck, Users } from "lucide-react";
+import { ReportGenerator } from "@/components/reports/report-generator";
 
 export default async function ClassesPage({
   searchParams
@@ -60,13 +61,25 @@ export default async function ClassesPage({
         title="Classes"
         description="Organize the academic structure, assign teachers, and manage each class from one place."
         actions={
-          <>
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <ReportGenerator 
+              headers={["Grade", "Class Name", "Section", "Head Teacher", "Room"]}
+              data={filteredClasses.map((row: any) => [
+                row.grade_name || "",
+                row.name || "",
+                row.section_name || "",
+                row.head_teacher_name || "Unassigned",
+                row.room || ""
+              ])}
+              title="Classes Report" 
+              filters={{ Search: params.q, Grade: params.grade, "Class ID": params.classId, Year: selectedYearId }} 
+            />
             <ButtonLink href="/subjects" variant="secondary" className="rounded-2xl">Subjects and Combinations</ButtonLink>
             <AddGradeModal existingGradeNames={getActiveGradeNames(
               academicData.classes,
               academicData.years.find((year: any) => year.is_active)?.id
             )} />
-          </>
+          </div>
         }
       />
 

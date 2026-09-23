@@ -17,6 +17,7 @@ import { hasPermission } from "@/lib/permissions";
 import { createStudentAction } from "@/app/(app)/students/actions";
 import { GenderCounts } from "@/components/students/gender-counts";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { ReportGenerator } from "@/components/reports/report-generator";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -53,6 +54,21 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         description={isTeacher ? "View the students enrolled in your assigned head class." : "Search, filter, profile, archive, and manage students within the current school tenant."}
         actions={
           <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <ReportGenerator 
+              headers={["Adm #", "Name", "Gender", "Class", "Section", "Father's Name", "Phone", "Status"]}
+              data={students.rows.map((row: any) => [
+                row.admission_number || "N/A",
+                row.full_name || row.name_en || "",
+                row.gender || "",
+                row.class_name || "N/A",
+                row.section_name || "N/A",
+                row.father_name_en || row.guardian_name || "N/A",
+                row.father_phone || "N/A",
+                row.status || ""
+              ])}
+              title="Students Report" 
+              filters={{ Search: params.q, Status: params.status, "Class ID": params.classId }} 
+            />
             {hasPermission(user.role, "students:create", user.permissions) ? (
               <StudentActions filters={{ q: params.q, status: params.status ?? "active", classId: params.classId }} />
             ) : null}
