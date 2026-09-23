@@ -5,17 +5,12 @@ import {
   Download,
   ChevronDown,
   RotateCcw,
-  BookCopy,
-  Clock,
-  AlertTriangle,
   Search,
   ChevronLeft,
   ChevronRight,
-  ArrowUpRight,
-  Bookmark,
-  CheckCircle2,
   FileSpreadsheet
 } from "lucide-react";
+import { LibrarySummary } from "./library-summary";
 import { Button } from "@/components/ui/button";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
@@ -273,10 +268,6 @@ export function LibraryReports({
   // KPI CALCULATIONS (Using complete system data for absolute health KPIs)
   // ══════════════════════════════════════════════════════════════════════════
   const activeBooks = useMemo(() => data.books.filter(b => !b.archived), [data.books]);
-  const availableCopies = useMemo(() => data.copies.filter(c => c.status === "available"), [data.copies]);
-  const activeLoans = useMemo(() => data.loans.filter(l => l.returned_at === null), [data.loans]);
-  const overdueLoans = useMemo(() => data.loans.filter(l => l.returned_at === null && l.due_date < todayStr), [data.loans, todayStr]);
-  const waitingReservations = useMemo(() => data.reservations.filter(r => r.status === "waiting"), [data.reservations]);
 
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -571,6 +562,7 @@ export function LibraryReports({
 
   return (
     <div className="space-y-5">
+      <LibrarySummary data={data} />
       {/* ══════════════════════════════════════════════════════════════════════
           1. REPORTS HEADER & FILTER TOOLBAR
       ══════════════════════════════════════════════════════════════════════ */}
@@ -746,113 +738,6 @@ export function LibraryReports({
         </details>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          2. KPI OVERVIEW (5 CARDS)
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div className="space-y-3">
-        <h3 className="font-display text-base font-bold text-ink">Current library totals</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {/* Card 1: Total Titles */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-blue-50 text-blue-600">
-                <BookCopy className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Total titles</p>
-                <p className="text-2xl font-bold text-ink">{activeBooks.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Catalogue")}
-              className="mt-3 text-left text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
-            >
-              View Catalogue <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Card 3: Available Now */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-emerald-50 text-emerald-600">
-                <CheckCircle2 className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Available copies</p>
-                <p className="text-2xl font-bold text-emerald-700">{availableCopies.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Catalogue")}
-              className="mt-3 text-left text-[11px] font-semibold text-emerald-600 hover:underline flex items-center gap-1"
-            >
-              Available Titles <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Card 4: On Loan */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-emerald-50 text-emerald-600">
-                <Clock className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">On loan</p>
-                <p className="text-2xl font-bold text-ink">{activeLoans.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Issue & return")}
-              className="mt-3 text-left text-[11px] font-semibold text-emerald-600 hover:underline flex items-center gap-1"
-            >
-              Active Loans <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Card 5: Overdue Loans */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-red-50 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{overdueLoans.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Issue & return")}
-              className="mt-3 text-left text-[11px] font-semibold text-red-600 hover:underline flex items-center gap-1"
-            >
-              Manage Overdue <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Card 6: Waiting Reservations */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-teal-50 text-teal-600">
-                <Bookmark className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Pending reservations</p>
-                <p className="text-2xl font-bold text-teal-700">{waitingReservations.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Reservations")}
-              className="mt-3 text-left text-[11px] font-semibold text-teal-600 hover:underline flex items-center gap-1"
-            >
-              Waiting Queues <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          3. INVENTORY HEALTH
-      ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Inventory copy status breakdown">
           <div className="overflow-x-auto">

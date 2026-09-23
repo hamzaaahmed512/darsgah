@@ -216,7 +216,9 @@ describe("library workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
 
     expect(screen.getByText("Library reports")).toBeTruthy();
-    expect(screen.getByText("Current library totals")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Current library totals" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Total Books" }).textContent).toContain("Across 1 title");
+    expect(screen.getByRole("group", { name: "Reservations / Waiting List" })).toBeTruthy();
     expect(screen.getByText("Inventory copy status breakdown")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Total books/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "Report type" })).toBeNull();
