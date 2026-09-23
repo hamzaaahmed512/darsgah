@@ -8,6 +8,8 @@ const { save, refresh, searchBorrowers, searchCopies } = vi.hoisted(() => ({ sav
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/(app)/library/actions", () => ({
   libraryAction: save,
+  libraryAssignableStaffAction: vi.fn().mockResolvedValue({ staff: [] }),
+  libraryTeamRoleAction: vi.fn(),
   searchBorrowersAction: searchBorrowers,
   searchCopiesAction: searchCopies
 }));
@@ -59,12 +61,14 @@ describe("library workspace", () => {
     expect(screen.queryByRole("button", { name: "Issue book" })).toBeNull();
   });
 
-  it("opens the library roster from the single Manage team entry", () => {
+  it("opens the library roster from the single Manage team entry", async () => {
     render(<LibraryWorkspace data={data} canManage canAdmin />);
     fireEvent.click(screen.getByRole("button", { name: "Manage team" }));
     expect(screen.getByText("Assigned Librarians")).toBeTruthy();
     expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Assign librarian" }).getAttribute("href")).toBe("/admin");
+    expect(screen.getByLabelText("Assign New Librarian")).toBeTruthy();
+    expect(screen.getByText("No librarians currently assigned.")).toBeTruthy();
+    await screen.findByText("No eligible active staff members available.");
   });
   it("shows catalogue search and hides writes for a viewer", () => {
     render(<LibraryWorkspace data={data} canManage={false} canAdmin={false} />);
@@ -207,18 +211,29 @@ describe("library workspace", () => {
     expect(screen.getAllByRole("button", { name: "Cancel reservation" }).length).toBeGreaterThan(0);
   });
 
-  it("renders decision-focused reports dashboard with filters, KPIs, and export buttons", () => {
-    render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
+  it("renders unified reports with a single summary, collapsed filters, and export menu", () => {
+    render(<LibraryWorkspace data={{ ...data, grades: [{ id: "g9", name: "9", sort_order: 9 }, { id: "g10", name: "Grade 10", sort_order: 10 }, { id: "bad", name: "Ali Test", sort_order: 11 }] }} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
 
     expect(screen.getByText("Library reports")).toBeTruthy();
     expect(screen.getByText("Current library totals")).toBeTruthy();
-    expect(screen.queryByText("Inventory copy status breakdown")).toBeNull();
+    expect(screen.getByText("Inventory copy status breakdown")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Total books/ })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Report type" })).toBeNull();
+    expect(screen.getByText("Filter reports").closest("details")!.open).toBe(false);
+    const grades = within(screen.getByLabelText("Filter by grade"));
+    expect(grades.getByRole("option", { name: "Grade 9" })).toBeTruthy();
+    expect(grades.getByRole("option", { name: "Grade 10" })).toBeTruthy();
+    expect(grades.queryByRole("option", { name: "Ali Test" })).toBeNull();
     expect(screen.getByText("Circulation Insights")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Fines" }));
     expect(screen.getByText("Fines summary")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Inventory CSV" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Loan History CSV" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Overdue Loans CSV" })).toBeTruthy();
+    const exports = screen.getByText("Export Report").closest("details")!;
+    expect(exports.open).toBe(false);
+    exports.open = true;
+    for (const name of ["Inventory", "Loan History", "Overdue Loans", "Reservations", "Fines", "Audit Activity"]) {
+      expect(within(exports).getByRole("button", { name })).toBeTruthy();
+    }
+    fireEvent.keyDown(exports, { key: "Escape" });
+    expect(exports.open).toBe(false);
   });
 });

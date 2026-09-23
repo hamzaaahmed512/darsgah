@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAssignableLibraryStaff, setLibraryTeamRole } from "@/lib/services/library-team";
 import { requireUser } from "@/lib/auth/session";
 import { mutateLibrary, searchBorrowers, searchCopies, type SearchResultBorrower, type SearchResultCopy } from "@/lib/services/library";
 
@@ -49,4 +50,26 @@ export async function searchCopiesAction(
 ): Promise<SearchResultCopy[]> {
   const user = await requireUser("library:view");
   return searchCopies(user, query, borrowerKind, borrowerId);
+}
+
+export async function libraryAssignableStaffAction() {
+  const user = await requireUser("library:view");
+  try {
+    return { staff: await getAssignableLibraryStaff(user) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not load staff." };
+  }
+}
+
+export async function libraryTeamRoleAction(input: { memberId: string; action: "assign" | "unassign" }) {
+  const user = await requireUser("library:view");
+  try {
+    const member = await setLibraryTeamRole(user, input);
+    revalidatePath("/library");
+    revalidatePath("/admin");
+    revalidatePath("/teachers");
+    return { member };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not update the librarian role." };
+  }
 }

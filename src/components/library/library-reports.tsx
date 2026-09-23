@@ -3,12 +3,11 @@
 import React, { useState, useMemo } from "react";
 import {
   Download,
+  ChevronDown,
   RotateCcw,
   BookCopy,
-  BookOpen,
   Clock,
   AlertTriangle,
-  Coins,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
+import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { libraryToday } from "@/lib/validation/library";
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -47,7 +47,6 @@ export function LibraryReports({
   formatDate,
   overdueDays
 }: LibraryReportsProps) {
-  const [report, setReport] = useState("Overview");
   // Filter States
   const [dateRangePreset, setDateRangePreset] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
@@ -75,6 +74,14 @@ export function LibraryReports({
     });
     return Array.from(set).sort();
   }, [data.books]);
+
+  // Restrict report options to school grade labels, excluding malformed name records.
+  const reportGrades = useMemo(() => data.grades.flatMap(grade => {
+    const name = grade.name.trim();
+    const number = name.match(/^(?:grade\s*)?(1[0-2]|[1-9])$/i)?.[1];
+    const label = number ? `Grade ${number}` : DEFAULT_GRADE_NAMES.find(item => item.toLowerCase() === name.toLowerCase());
+    return label ? [{ ...grade, name: label }] : [];
+  }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })), [data.grades]);
 
   // Lookup maps for fast lookup
   const booksMap = useMemo(() => new Map<string, LibraryBook>(data.books.map(b => [b.id, b])), [data.books]);
@@ -266,19 +273,11 @@ export function LibraryReports({
   // KPI CALCULATIONS (Using complete system data for absolute health KPIs)
   // ══════════════════════════════════════════════════════════════════════════
   const activeBooks = useMemo(() => data.books.filter(b => !b.archived), [data.books]);
-  const activeCopies = useMemo(() => data.copies.filter(c => c.status !== "withdrawn"), [data.copies]);
   const availableCopies = useMemo(() => data.copies.filter(c => c.status === "available"), [data.copies]);
   const activeLoans = useMemo(() => data.loans.filter(l => l.returned_at === null), [data.loans]);
   const overdueLoans = useMemo(() => data.loans.filter(l => l.returned_at === null && l.due_date < todayStr), [data.loans, todayStr]);
   const waitingReservations = useMemo(() => data.reservations.filter(r => r.status === "waiting"), [data.reservations]);
-  const lostOrDamagedCopies = useMemo(() => data.copies.filter(c => c.status === "lost" || c.status === "damaged"), [data.copies]);
 
-  const totalOutstandingFines = useMemo(() => {
-    return data.loans.reduce((sum, loan) => {
-      const bal = Math.max(0, loan.fine_amount - loan.paid_amount - loan.waived_amount);
-      return sum + bal;
-    }, 0);
-  }, [data.loans]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // INVENTORY HEALTH CALCULATIONS
@@ -571,7 +570,7 @@ export function LibraryReports({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* ══════════════════════════════════════════════════════════════════════
           1. REPORTS HEADER & FILTER TOOLBAR
       ══════════════════════════════════════════════════════════════════════ */}
@@ -583,23 +582,41 @@ export function LibraryReports({
               Library reports
             </h2>
             <p className="text-xs text-muted">
-              Choose a report to view or download. Inventory totals show the current position; date filters apply to activity.
+              Current totals and detailed library records.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" onClick={handleResetFilters} className="text-xs font-semibold">
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reset filters
-            </Button>
-          </div>
+          <details className="relative shrink-0" onKeyDown={event => {
+            if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); }
+          }} onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
+          }}>
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+              <Download className="h-4 w-4" /> Export Report <ChevronDown className="h-4 w-4" />
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-outline bg-white p-1.5 shadow-lg">
+              {[
+                { label: "Inventory", action: exportInventoryReport },
+                { label: "Loan History", action: exportLoanHistoryReport },
+                { label: "Overdue Loans", action: exportOverdueReport },
+                { label: "Reservations", action: exportReservationsReport },
+                { label: "Fines", action: exportFinesReport },
+                { label: "Audit Activity", action: exportActivityReport }
+              ].map(({ label, action }) => (
+                <button key={label} type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-slate-100 focus-visible:bg-slate-100"
+                  onClick={event => {
+                    action();
+                    const menu = event.currentTarget.closest("details");
+                    if (menu) { menu.open = false; menu.querySelector("summary")?.focus(); }
+                  }}>{label}</button>
+              ))}
+            </div>
+          </details>
         </div>
 
-        <div role="group" aria-label="Report type" className="flex flex-wrap gap-2">
-          {["Overview", "Inventory", "Loans & waiting list", "Fines", "Activity"].map(item => (
-            <Button key={item} type="button" variant={report === item ? "primary" : "secondary"} aria-pressed={report === item} onClick={() => setReport(item)}>{item}</Button>
-          ))}
-        </div>
         <details><summary className="cursor-pointer text-sm font-semibold text-primary">Filter reports</summary>
+        <Button type="button" variant="secondary" onClick={handleResetFilters} className="my-2 text-xs font-semibold">
+          <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset filters
+        </Button>
         <p className="my-2 text-xs text-muted">Date and borrower filters apply to loans; inventory uses the category filter. Activity uses its own action and date filters.</p>
         {/* Filter Toolbar Controls */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -631,7 +648,7 @@ export function LibraryReports({
               onChange={e => setSelectedGrade(e.target.value)}
             >
               <option value="all">All grades</option>
-              {data.grades.map(g => (
+              {reportGrades.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
@@ -695,7 +712,7 @@ export function LibraryReports({
             >
               <option value="all">All statuses</option>
               <option value="active">Active loans</option>
-              <option value="overdue">Overdue loans</option>
+              <option value="overdue">Overdue</option>
               <option value="returned">Returned / closed</option>
             </select>
           </div>
@@ -729,13 +746,12 @@ export function LibraryReports({
         </details>
       </div>
 
-      {report === "Overview" && <>
       {/* ══════════════════════════════════════════════════════════════════════
-          2. KPI OVERVIEW (8 CARDS)
+          2. KPI OVERVIEW (5 CARDS)
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="space-y-3">
         <h3 className="font-display text-base font-bold text-ink">Current library totals</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {/* Card 1: Total Titles */}
           <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -755,25 +771,6 @@ export function LibraryReports({
             </button>
           </div>
 
-          {/* Card 2: Total Physical Copies */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-blue-50 text-blue-600">
-                <BookOpen className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Total physical copies</p>
-                <p className="text-2xl font-bold text-ink">{activeCopies.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Catalogue")}
-              className="mt-3 text-left text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
-            >
-              View Inventory <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
           {/* Card 3: Available Now */}
           <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -781,7 +778,7 @@ export function LibraryReports({
                 <CheckCircle2 className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs font-medium text-muted">Available now</p>
+                <p className="text-xs font-medium text-muted">Available copies</p>
                 <p className="text-2xl font-bold text-emerald-700">{availableCopies.length}</p>
               </div>
             </div>
@@ -819,7 +816,7 @@ export function LibraryReports({
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs font-medium text-muted">Overdue loans</p>
+                <p className="text-xs font-medium text-muted">Overdue</p>
                 <p className="text-2xl font-bold text-red-600">{overdueLoans.length}</p>
               </div>
             </div>
@@ -838,7 +835,7 @@ export function LibraryReports({
                 <Bookmark className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs font-medium text-muted">Waiting reservations</p>
+                <p className="text-xs font-medium text-muted">Pending reservations</p>
                 <p className="text-2xl font-bold text-teal-700">{waitingReservations.length}</p>
               </div>
             </div>
@@ -850,48 +847,9 @@ export function LibraryReports({
             </button>
           </div>
 
-          {/* Card 7: Lost or Damaged Copies */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-amber-50 text-amber-600">
-                <AlertTriangle className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Lost / Damaged</p>
-                <p className="text-2xl font-bold text-amber-700">{lostOrDamagedCopies.length}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Catalogue")}
-              className="mt-3 text-left text-[11px] font-semibold text-amber-700 hover:underline flex items-center gap-1"
-            >
-              Inspect Copies <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Card 8: Outstanding Fines */}
-          <div className="flex flex-col justify-between rounded-2xl border border-outline/70 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl p-2.5 bg-rose-50 text-rose-600">
-                <Coins className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xs font-medium text-muted">Outstanding fines</p>
-                <p className="text-2xl font-bold text-rose-700">{formatMoney(totalOutstandingFines)}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigateTab("Issue & return")}
-              className="mt-3 text-left text-[11px] font-semibold text-rose-600 hover:underline flex items-center gap-1"
-            >
-              Unpaid Balances <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
         </div>
       </div>
-      </>}
 
-      {report === "Inventory" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           3. INVENTORY HEALTH
       ══════════════════════════════════════════════════════════════════════ */}
@@ -989,9 +947,7 @@ export function LibraryReports({
           </div>
         </Panel>
       </div>
-      </>}
 
-      {report === "Overview" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           4. CIRCULATION INSIGHTS
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1077,9 +1033,7 @@ export function LibraryReports({
           </div>
         </div>
       </Panel>
-      </>}
 
-      {report === "Loans & waiting list" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           5. OVERDUE & RESERVATIONS FOCUSED LISTS
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1163,9 +1117,7 @@ export function LibraryReports({
           </div>
         </Panel>
       </div>
-      </>}
 
-      {report === "Fines" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           6. FINES SUMMARY
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1196,9 +1148,7 @@ export function LibraryReports({
           Note: Fine payments and waivers are library internal records. They are managed independently and are not automatically posted to the general school finance ledger.
         </p>
       </Panel>
-      </>}
 
-      {report === "Activity" && <>
       {/* ══════════════════════════════════════════════════════════════════════
           7. RECENT ACTIVITY & AUDIT LOG
       ══════════════════════════════════════════════════════════════════════ */}
@@ -1292,36 +1242,8 @@ export function LibraryReports({
           )}
         </div>
       </Panel>
-      </>}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          8. FILTERED CSV EXPORTS TOOLBAR
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Panel title="Export Filtered CSV Reports">
-        <p className="text-xs text-muted mb-4">
-          Download the report you need. Loan exports use loan filters; inventory uses category; activity uses date and action filters.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Button type="button" variant="secondary" onClick={exportInventoryReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Inventory CSV
-          </Button>
-          <Button type="button" variant="secondary" onClick={exportLoanHistoryReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Loan History CSV
-          </Button>
-          <Button type="button" variant="secondary" onClick={exportOverdueReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Overdue Loans CSV
-          </Button>
-          <Button type="button" variant="secondary" onClick={exportReservationsReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Reservations CSV
-          </Button>
-          <Button type="button" variant="secondary" onClick={exportFinesReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Fines CSV
-          </Button>
-          <Button type="button" variant="secondary" onClick={exportActivityReport} className="text-xs">
-            <Download className="mr-2 h-4 w-4" /> Audit Activity CSV
-          </Button>
-        </div>
-      </Panel>
+
     </div>
   );
 }

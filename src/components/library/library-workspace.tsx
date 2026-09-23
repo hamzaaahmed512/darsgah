@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, ShieldCheck, UserCheck, MoreHorizontal
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, UserCheck, MoreHorizontal
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
@@ -16,6 +16,7 @@ import { Field, Input, Select } from "@/components/ui/form-field";
 import { BorrowerSelector } from "./borrower-selector";
 import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
+import { LibraryTeamCard } from "./library-team-card";
 import { LibraryReports } from "./library-reports";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -513,7 +514,7 @@ export function LibraryWorkspace({
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       {/* ── Top Header & Team Status ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" disabled={!canAdmin} onClick={() => { setTab("Rules & team"); setQuery(""); setPage(1); }} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 text-xs font-bold text-slate-800 transition enabled:hover:bg-primary-soft enabled:hover:text-primary disabled:cursor-default">
             <UserCheck className="h-4 w-4 text-primary" />
@@ -522,7 +523,7 @@ export function LibraryWorkspace({
         </div>
 
         {(canManage || canAdmin) && (
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-wrap items-center gap-2">
             {canManage && <AddBookModal />}
             {canAdmin && (
               <button
@@ -538,7 +539,7 @@ export function LibraryWorkspace({
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {tab !== "Reports" && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg, accent, destination, filter, section }) => (
           <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className={`flex min-w-0 items-center gap-2 rounded-2xl border border-outline/70 border-t-4 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary sm:gap-4 sm:p-5 ${accent}`}>
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${bg} ${fg}`}>
@@ -551,7 +552,7 @@ export function LibraryWorkspace({
             </div>
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ── Tab nav ── */}
       <nav aria-label="Library sections" className="flex gap-1 overflow-x-auto border-b border-outline pb-3 sm:gap-2">
@@ -1074,64 +1075,7 @@ export function LibraryWorkspace({
             )}
           </Panel>
 
-          {/* Assigned Librarians Roster */}
-          <Panel title="Assigned Librarians">
-            <p className="mb-4 text-sm text-muted">
-              Staff members with the structured Librarian role automatically receive library permissions linked to their login accounts.
-            </p>
-
-            {data.team && data.team.length > 0 ? (
-              <div className="space-y-3">
-                {data.team.map((member) => (
-                  <div key={member.member_id} className="flex flex-col gap-2 rounded-2xl border border-outline p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <span className="font-bold text-ink">{member.full_name}</span>
-                      <p className="text-xs text-muted">{member.email || "No email"}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        member.status === "active" && !member.must_change_password
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-amber-50 text-amber-700"
-                      }`}>
-                        {member.status === "active" && !member.must_change_password
-                          ? "Active"
-                          : member.must_change_password
-                          ? "Account setup required"
-                          : "Inactive"}
-                      </span>
-
-                      {canAdmin && (
-                        <Link
-                          href="/admin"
-                          className="rounded-xl border border-outline bg-white px-3 py-1.5 text-xs font-semibold text-muted hover:bg-slate-50 hover:text-ink"
-                        >
-                          Manage role
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-outline/80 p-6 text-center">
-                <ShieldCheck className="mx-auto h-8 w-8 text-muted" />
-                <p className="mt-2 text-sm font-semibold text-ink">No librarian assigned</p>
-                <p className="mt-1 text-xs text-muted">
-                  Assign the Librarian role to a staff member in Staff Management or Admin Console.
-                </p>
-                {canAdmin && (
-                  <Link
-                    href="/admin"
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90"
-                  >
-                    <Plus className="h-4 w-4" /> Assign librarian
-                  </Link>
-                )}
-              </div>
-            )}
-          </Panel>
+          <LibraryTeamCard team={data.team} canAdmin={canAdmin} />
         </div>
       )}
     </div>

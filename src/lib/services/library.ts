@@ -207,24 +207,24 @@ export async function getLibrary(user: AppUser) {
 
   async function getLibrariansTeam(): Promise<LibraryTeamMember[]> {
     const { data, error } = await db
-      .from("staff_directory")
-      .select("member_id, user_id, full_name, email, role, status, must_change_password")
+      .from("school_members")
+      .select("id, user_id, role, status, profiles!school_members_user_id_fkey(full_name,email,must_change_password)")
       .eq("school_id", user.schoolId)
       .eq("role", "librarian")
-      .order("full_name");
+      .order("id");
     if (error) {
       if (error.code === "PGRST205") return [];
       return [];
     }
     return (data ?? []).map((row: any) => ({
-      member_id: row.member_id,
+      member_id: row.id,
       user_id: row.user_id,
-      full_name: row.full_name,
-      email: row.email,
+      full_name: row.profiles?.full_name || "Staff member",
+      email: row.profiles?.email ?? null,
       role: row.role,
       status: row.status,
-      must_change_password: Boolean(row.must_change_password)
-    }));
+      must_change_password: Boolean(row.profiles?.must_change_password)
+    })).sort((a, b) => a.full_name.localeCompare(b.full_name));
   }
 
   const [books, copies, loans, reservations, settingsResult, borrowers, events, grades, sections, team] = await Promise.all([
