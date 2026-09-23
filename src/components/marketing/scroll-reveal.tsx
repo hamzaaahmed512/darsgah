@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 export function ScrollReveal() {
   useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+
     const items = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -12,7 +14,8 @@ export function ScrollReveal() {
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.12 });
+    // Large sections may never reach a percentage threshold on small screens.
+    }, { threshold: 0 });
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
   }, []);
