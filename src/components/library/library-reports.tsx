@@ -9,6 +9,7 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/ui/data-table";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { libraryToday } from "@/lib/validation/library";
@@ -543,81 +544,77 @@ export function LibraryReports({
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Overdue Loans List */}
         <Panel title={`Overdue Loans (${filteredLoans.filter(l => l.returned_at === null && l.due_date < todayStr).length})`}>
-          <div className="max-h-72 overflow-y-auto space-y-2">
-            {filteredLoans.filter(l => l.returned_at === null && l.due_date < todayStr).map(loan => {
+          {(() => {
+            const overdueLoans = filteredLoans.filter(loan => loan.returned_at === null && loan.due_date < todayStr);
+            return <DataTable ariaLabel="Overdue library loans" count={overdueLoans.length} itemLabel="loans" minWidthClassName="min-w-[620px]">
+              <DataTableHeader><tr>
+                <th className={dataTableHeaderCellClassName}>Borrower</th>
+                <th className={dataTableHeaderCellClassName}>Book / copy</th>
+                <th className={dataTableHeaderCellClassName}>Due</th>
+                <th className={dataTableHeaderCellClassName}>Fine</th>
+                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+              </tr></DataTableHeader>
+              <tbody>
+            {overdueLoans.map(loan => {
               const copy = copiesMap.get(loan.copy_id);
               const book = booksMap.get(copy?.book_id || loan.book_id || "");
               const days = overdueDays(loan.due_date);
               const estFine = days * (loan.fine_per_day || data.settings.fine_per_day || 0);
 
               return (
-                <div key={loan.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-red-200 bg-red-50/50 p-3 text-xs gap-2">
-                  <div>
-                    <strong className="font-bold text-ink block">{loan.borrower_name} <span className="font-normal text-muted capitalize">({loan.borrower_kind})</span></strong>
-                    <p className="text-[11px] text-muted">
-                      {book?.title || loan.book_title || "Book"} (Copy: {copy?.accession || loan.accession || "N/A"})
-                    </p>
-                    <p className="text-[11px] font-semibold text-red-600 mt-0.5">
-                      Due {loan.due_date} · {days} days overdue · Est. Fine: {formatMoney(estFine)}
-                    </p>
-                  </div>
-                  <Button
+                <DataTableRow key={loan.id}>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{loan.borrower_name}</p><p className="text-xs capitalize text-muted">{loan.borrower_kind}</p></td>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{book?.title || loan.book_title || "Book"}</p><p className="text-xs text-muted">Copy {copy?.accession || loan.accession || "N/A"}</p></td>
+                  <td className={`${dataTableCellClassName} font-semibold text-red-700`}>{loan.due_date}<p className="text-xs font-normal">{days} days overdue</p></td>
+                  <td className={dataTableCellClassName}>{formatMoney(estFine)}</td>
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white text-right`}><Button
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab("Issue & return")}
-                    className="shrink-0 text-[11px] py-1 px-2.5 border-red-300 text-red-700 hover:bg-red-100"
+                    className="h-9 min-h-9 text-xs border-red-300 text-red-700 hover:bg-red-100"
                   >
                     Manage
-                  </Button>
-                </div>
+                  </Button></td>
+                </DataTableRow>
               );
             })}
-            {!filteredLoans.filter(l => l.returned_at === null && l.due_date < todayStr).length && (
-              <p className="text-xs text-muted py-4 text-center">No overdue loans matching current filters.</p>
-            )}
-          </div>
+              </tbody>
+            </DataTable>;
+          })()}
         </Panel>
 
         {/* Waiting Reservations List */}
         <Panel title={`Waiting Reservations (${filteredReservations.length})`}>
-          <div className="max-h-72 overflow-y-auto space-y-2">
+          <DataTable ariaLabel="Library report reservations" count={filteredReservations.length} itemLabel="reservations" minWidthClassName="min-w-[620px]">
+            <DataTableHeader><tr>
+              <th className={dataTableHeaderCellClassName}>Book</th>
+              <th className={dataTableHeaderCellClassName}>Borrower</th>
+              <th className={dataTableHeaderCellClassName}>Queue</th>
+              <th className={dataTableHeaderCellClassName}>Status</th>
+              <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+            </tr></DataTableHeader>
+            <tbody>
             {filteredReservations.map(res => {
               const bookTitle = res.book_title || booksMap.get(res.book_id)?.title || "Book";
               return (
-                <div key={res.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-outline/60 bg-white p-3 text-xs gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <strong className="font-bold text-ink">{bookTitle}</strong>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                        Position #{res.queue_position || 1}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-medium text-muted mt-0.5">
-                      {res.borrower_name} ({res.borrower_kind}) · Reserved {formatDate(res.created_at)}
-                    </p>
-                    <p className="text-[11px] font-bold mt-0.5">
-                      {res.is_ready_to_issue ? (
-                        <span className="text-emerald-600">Ready to issue ({res.available_copies} available copy)</span>
-                      ) : (
-                        <span className="text-amber-600">Waiting for a return</span>
-                      )}
-                    </p>
-                  </div>
-                  <Button
+                <DataTableRow key={res.id}>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{bookTitle}</p><p className="text-xs text-muted">Reserved {formatDate(res.created_at)}</p></td>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{res.borrower_name}</p><p className="text-xs capitalize text-muted">{res.borrower_kind}</p></td>
+                  <td className={dataTableCellClassName}>#{res.queue_position || 1}</td>
+                  <td className={dataTableCellClassName}>{res.is_ready_to_issue ? <span className="font-semibold text-emerald-600">Ready to issue</span> : <span className="font-semibold text-amber-600">Waiting for return</span>}</td>
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white text-right`}><Button
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab(res.is_ready_to_issue ? "Issue & return" : "Reservations")}
-                    className="shrink-0 text-[11px] py-1 px-2.5"
+                    className="h-9 min-h-9 text-xs"
                   >
                     {res.is_ready_to_issue ? "Fulfil" : "View queue"}
-                  </Button>
-                </div>
+                  </Button></td>
+                </DataTableRow>
               );
             })}
-            {!filteredReservations.length && (
-              <p className="text-xs text-muted py-4 text-center">No active waiting reservations matching current filters.</p>
-            )}
-          </div>
+            </tbody>
+          </DataTable>
         </Panel>
       </div>
 

@@ -203,8 +203,8 @@ describe("library workspace", () => {
     render(<LibraryWorkspace data={dataWithReservations} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: /Loans & reservations/ }));
     expect(screen.getByText("Waiting queue management")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /Select for issue/ })).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole("button", { name: /Select for issue/ })[0]);
+    expect(screen.getAllByRole("button", { name: /Select for issue/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Select for issue/ }));
     expect(screen.getByLabelText("Search catalogue")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Issue book" })).toHaveLength(1);
     fireEvent.submit(screen.getByRole("button", { name: "Issue book" }).closest("form")!);

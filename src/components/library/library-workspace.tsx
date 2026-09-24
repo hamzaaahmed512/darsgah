@@ -12,6 +12,7 @@ import type {
 } from "@/lib/services/library";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
 import { Button } from "@/components/ui/button";
+import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/ui/data-table";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { BorrowerSelector } from "./borrower-selector";
 import { ReturnBookDialog } from "./return-book-dialog";
@@ -588,69 +589,42 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <div className="grid gap-3 xl:hidden">
-            {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
-              const stock = data.copies.filter(copy => copy.book_id === book.id);
-              return <article key={book.id} className="min-w-0 rounded-2xl border border-outline/70 bg-white p-4 shadow-card">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0"><h2 className="break-words font-display text-base font-bold text-ink">{book.title}</h2>{book.author && <p className="mt-1 text-sm font-semibold text-primary">{book.author}</p>}</div>
-                  <BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                  <Tag>{stock.length} {stock.length === 1 ? "copy" : "copies"}</Tag>
-                  {book.archived && <Tag>Archived</Tag>}
-                  {book.category && <Tag>{book.category}</Tag>}
-                </div>
-                {(book.publisher || book.shelf || book.isbn) && <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
-                  {book.publisher && <div><dt className="font-bold text-muted">Publisher</dt><dd className="break-words text-ink">{book.publisher}</dd></div>}
-                  {book.shelf && <div><dt className="font-bold text-muted">Location</dt><dd className="break-words text-ink">{book.shelf}</dd></div>}
-                  {book.isbn && <div><dt className="font-bold text-muted">ISBN</dt><dd className="break-words text-ink">{book.isbn}</dd></div>}
-                </dl>}
-              </article>;
-            })}
-          </div>
-
-          <div className="hidden min-w-0 overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card xl:block xl:overflow-visible">
-            <table aria-label="Library catalogue" className="w-full min-w-[820px] table-fixed text-left text-sm">
+          <DataTable ariaLabel="Library catalogue" count={filteredBooks.length} itemLabel="titles" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[820px] table-fixed">
               <caption className="sr-only">Library catalogue titles, details, copy counts, and actions</caption>
               <colgroup><col className="w-[32%]" /><col className="w-[44%]" /><col className="w-[12%]" /><col className="w-[12%]" /></colgroup>
-              <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr>
-                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("title")} aria-label="Sort catalogue by title" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} aria-label="Sort catalogue by author" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
-                <th className="px-5 py-3">Details</th>
-                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("copies")} aria-label="Sort catalogue by copy count" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Copies {catalogSort === "copies" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
-                <th className="px-5 py-3 text-right">Actions</th>
-              </tr></thead>
-              <tbody className="divide-y divide-outline/50">
+              <DataTableHeader><tr>
+                <th className={dataTableHeaderCellClassName}><button type="button" onClick={() => sortCatalogue("title")} aria-label="Sort catalogue by title" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} aria-label="Sort catalogue by author" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
+                <th className={dataTableHeaderCellClassName}>Details</th>
+                <th className={dataTableHeaderCellClassName}><button type="button" onClick={() => sortCatalogue("copies")} aria-label="Sort catalogue by copy count" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Copies {catalogSort === "copies" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
+                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+              </tr></DataTableHeader>
+              <tbody>
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
               const stock = data.copies.filter(c => c.book_id === book.id);
               const totalCopies = stock.length;
 
               return (
-                <tr
-                  key={book.id}
-                  className="align-top transition hover:bg-primary-soft/20"
-                >
-                  <td className="min-w-0 px-5 py-4">
+                <DataTableRow key={book.id}>
+                  <td className={`${dataTableCellClassName} min-w-0`}>
                     <div className="flex min-w-0 items-center gap-2">
                       <h2 title={book.title} className="truncate font-display text-base font-bold text-ink">{book.title}</h2>
                       {book.archived && <Tag>Archived</Tag>}
                     </div>
                     <p title={book.author || ""} className="mt-1 truncate text-sm font-semibold text-primary">{book.author || "Unknown author"}</p>
                   </td>
-                  <td className="px-5 py-4"><div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                  <td className={dataTableCellClassName}><div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     {book.category && <span className="break-words">{book.category}</span>}
                     {book.publisher && <span className="break-words">Publisher: {book.publisher}</span>}
                     {book.shelf && <span className="break-words">Location: {book.shelf}</span>}
                     {book.isbn && <span className="break-all">ISBN: {book.isbn}</span>}
                   </div></td>
-                  <td className="px-5 py-4"><BookMeta label="" value={String(totalCopies)} /></td>
-                  <td className="whitespace-nowrap px-5 py-4 text-right"><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
-                </tr>
+                  <td className={dataTableCellClassName}><BookMeta label="" value={String(totalCopies)} /></td>
+                  <td className={`${dataTableCellClassName} sticky right-0 whitespace-nowrap bg-white text-right`}><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
+                </DataTableRow>
               );
             })}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
           {catalogIssueRequest && (() => {
             const book = books.get(catalogIssueRequest.bookId);
             if (!book) return null;
@@ -691,9 +665,8 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <div className="overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card">
-            <table className="min-w-[900px] w-full text-left text-sm">
-              <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr><th className="px-5 py-3">Book / copy</th><th className="px-5 py-3">Borrower</th><th className="px-5 py-3">Issued</th><th className="px-5 py-3">Due date</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+          <DataTable ariaLabel="Library loans" count={filteredLoans.length} itemLabel="loans" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[900px]">
+              <DataTableHeader><tr><th className={dataTableHeaderCellClassName}>Book / copy</th><th className={dataTableHeaderCellClassName}>Borrower</th><th className={dataTableHeaderCellClassName}>Issued</th><th className={dataTableHeaderCellClassName}>Due date</th><th className={dataTableHeaderCellClassName}>Status</th><th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th></tr></DataTableHeader>
               <tbody>
             {filteredLoans.slice((currentPage - 1) * 20, currentPage * 20).map(loan => {
               const copy = copies.get(loan.copy_id);
@@ -703,19 +676,18 @@ export function LibraryWorkspace({
                 : (data.settings.staff_max_renewals ?? 3);
 
               return (
-                <tr key={loan.id} className="border-t border-outline/50">
-                  <td className="px-5 py-4"><p className="font-semibold text-ink">{books.get(copy?.book_id ?? "")?.title || "Book"}</p><p className="mt-1 text-xs text-muted">Copy {copy?.accession || "N/A"} · Renewals {loan.renewals}/{maxAllowedRenewals}</p></td>
-                  <td className="px-5 py-4"><p className="font-semibold text-ink">{loan.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{loan.borrower_kind}</p></td>
-                  <td className="px-5 py-4 text-muted">{formatDate(loan.issued_at)}</td>
-                  <td className={`px-5 py-4 font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</td>
-                  <td className="px-5 py-4"><Tag>{loan.returned_at ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}` : days ? `${days} days overdue` : "On loan"}</Tag></td>
-                  <td className="px-5 py-4"><div className="flex justify-end gap-2">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
-                </tr>
+                <DataTableRow key={loan.id}>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{books.get(copy?.book_id ?? "")?.title || "Book"}</p><p className="mt-1 text-xs text-muted">Copy {copy?.accession || "N/A"} · Renewals {loan.renewals}/{maxAllowedRenewals}</p></td>
+                  <td className={dataTableCellClassName}><p className="font-semibold text-ink">{loan.borrower_name}</p><p className="mt-1 text-xs capitalize text-muted">{loan.borrower_kind}</p></td>
+                  <td className={`${dataTableCellClassName} text-muted`}>{formatDate(loan.issued_at)}</td>
+                  <td className={`${dataTableCellClassName} font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</td>
+                  <td className={dataTableCellClassName}><Tag>{loan.returned_at ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}` : days ? `${days} days overdue` : "On loan"}</Tag></td>
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white`}><div className="flex justify-end gap-2 whitespace-nowrap">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
+                </DataTableRow>
               );
             })}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         </>
       )}
 
@@ -740,15 +712,6 @@ export function LibraryWorkspace({
         />
       )}
 
-      {/* Pagination (Catalogue + loans) */}
-      {(tab === "Catalogue" || tab === "Loans & reservations") && rows > 20 && (
-        <div className="flex items-center justify-center gap-4">
-          <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</Button>
-          <span className="text-sm">Page {currentPage} of {Math.ceil(rows / 20)}</span>
-          <Button disabled={currentPage * 20 >= rows} onClick={() => setPage(currentPage + 1)}>Next</Button>
-        </div>
-      )}
-
       {/* ══════════════════════════════════════════════════════════════════════
           RESERVATIONS TAB
       ══════════════════════════════════════════════════════════════════════ */}
@@ -769,80 +732,17 @@ export function LibraryWorkspace({
 
               {waitingReservations.length > 0 && (
                 <>
-                  {/* Mobile Queue List Cards */}
-                  <div className="space-y-3 lg:hidden">
-                    {waitingReservations.map((item) => {
-                      const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
-                      const availCount = item.available_copies ?? data.copies.filter(c => c.book_id === item.book_id && c.status === "available").length;
-                      const queuePos = item.queue_position ?? (waitingReservations.filter(r => r.book_id === item.book_id).findIndex(r => r.id === item.id) + 1);
-                      const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
-
-                      return (
-                        <div key={item.id} className="rounded-2xl border border-outline/60 bg-white p-4 shadow-card space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <span className="inline-block text-[11px] font-bold uppercase tracking-wider text-muted">#{queuePos}</span>
-                              <h3 className="font-bold text-ink text-base leading-snug break-words">{bookTitle}</h3>
-                              <p className="text-xs text-muted mt-0.5">{availCount} available</p>
-                            </div>
-                            <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-                              {isReady ? "Ready to issue" : "Waiting for return"}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs">
-                            <div className="min-w-0">
-                              <p className="text-muted font-medium text-[11px] uppercase tracking-wider">Borrower</p>
-                              <p className="font-semibold text-ink truncate mt-0.5">{item.borrower_name}</p>
-                              <p className="capitalize text-muted text-[11px] truncate">{item.borrower_kind}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted font-medium text-[11px] uppercase tracking-wider">Requested</p>
-                              <p className="font-semibold text-ink mt-0.5">{formatDate(item.created_at)}</p>
-                            </div>
-                          </div>
-
-                          {canManage && (
-                            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                              {isReady ? (
-                                <Button
-                                  type="button"
-                                  onClick={() => handleOneClickFulfill(item)}
-                                  size="sm"
-                                  className="whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white flex-1 justify-center"
-                                >
-                                  Select for issue
-                                </Button>
-                              ) : null}
-                              <Form
-                                action="cancel_reservation"
-                                id={item.id}
-                                label="Cancel reservation"
-                                buttonVariant="secondary"
-                                buttonSize="sm"
-                                className="flex-1 min-w-0"
-                                buttonClassName="w-full whitespace-nowrap justify-center"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Desktop Table View */}
-                  <div className="hidden lg:block overflow-x-auto rounded-2xl border border-outline/60">
-                    <table className="min-w-[800px] w-full text-left text-sm">
-                      <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                  <DataTable ariaLabel="Library reservation queue" count={waitingReservations.length} itemLabel="reservations" minWidthClassName="min-w-[800px]">
+                      <DataTableHeader>
                         <tr>
-                          <th className="px-5 py-3">#</th>
-                          <th className="px-5 py-3">Book</th>
-                          <th className="px-5 py-3">Borrower</th>
-                          <th className="px-5 py-3">Requested</th>
-                          <th className="px-5 py-3">Status</th>
-                          <th className="px-5 py-3 text-right">Actions</th>
+                          <th className={dataTableHeaderCellClassName}>#</th>
+                          <th className={dataTableHeaderCellClassName}>Book</th>
+                          <th className={dataTableHeaderCellClassName}>Borrower</th>
+                          <th className={dataTableHeaderCellClassName}>Requested</th>
+                          <th className={dataTableHeaderCellClassName}>Status</th>
+                          <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
                         </tr>
-                      </thead>
+                      </DataTableHeader>
                       <tbody>
                         {waitingReservations.map((item) => {
                           const bookTitle = item.book_title || books.get(item.book_id)?.title || "Book";
@@ -851,23 +751,23 @@ export function LibraryWorkspace({
                           const isReady = item.is_ready_to_issue ?? (queuePos === 1 && availCount > 0);
 
                           return (
-                            <tr key={item.id} className="border-t border-outline/50">
-                              <td className="px-5 py-4 font-semibold text-ink">#{queuePos}</td>
-                              <td className="px-5 py-4">
+                            <DataTableRow key={item.id}>
+                              <td className={`${dataTableCellClassName} font-semibold text-ink`}>#{queuePos}</td>
+                              <td className={dataTableCellClassName}>
                                 <p className="font-semibold text-ink">{bookTitle}</p>
                                 <p className="mt-1 text-xs text-muted">{availCount} available</p>
                               </td>
-                              <td className="px-5 py-4">
+                              <td className={dataTableCellClassName}>
                                 <p className="font-semibold text-ink">{item.borrower_name}</p>
                                 <p className="mt-1 text-xs capitalize text-muted">{item.borrower_kind}</p>
                               </td>
-                              <td className="px-5 py-4 text-muted">{formatDate(item.created_at)}</td>
-                              <td className="px-5 py-4">
+                              <td className={`${dataTableCellClassName} text-muted`}>{formatDate(item.created_at)}</td>
+                              <td className={dataTableCellClassName}>
                                 <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
                                   {isReady ? "Ready to issue" : "Waiting for a return"}
                                 </span>
                               </td>
-                              <td className="px-5 py-4 responsive-table-actions">
+                              <td className={`${dataTableCellClassName} sticky right-0 bg-white responsive-table-actions`}>
                                 <div className="flex flex-wrap items-center justify-end gap-2">
                                   {canManage && isReady ? (
                                     <Button
@@ -891,12 +791,11 @@ export function LibraryWorkspace({
                                   ) : null}
                                 </div>
                               </td>
-                            </tr>
+                            </DataTableRow>
                           );
                         })}
                       </tbody>
-                    </table>
-                  </div>
+                  </DataTable>
                 </>
               )}
             </Panel>
