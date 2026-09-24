@@ -1,3 +1,4 @@
+import { DownloadActionProvider } from "@/components/reports/DownloadActionModal";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
@@ -53,7 +54,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           principalCanAccessAcademicControl={canAccessAcademicControl}
         >
           <ReportBrandingProvider school={{ name: user.schoolFullName ?? legacyProfile?.school?.name ?? user.schoolName, logoUrl: user.schoolLogoUrl ?? settings.schoolLogoUrl ?? null }}>
-            {children}
+            <DownloadActionProvider>{children}</DownloadActionProvider>
           </ReportBrandingProvider>
         </AppShell>
       </OnboardingGate>

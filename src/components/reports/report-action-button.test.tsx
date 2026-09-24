@@ -4,10 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { ReportActionButton } from "./report-action-button";
 import { exportReportCsvAction } from "@/app/(app)/reports/actions";
 
-const pushToast = vi.fn();
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+import { DownloadActionProvider } from "./DownloadActionModal";
 
 vi.mock("@/app/(app)/reports/actions", () => ({ exportReportCsvAction: vi.fn() }));
-vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ pushToast }) }));
+
 
 beforeEach(() => {
   vi.stubGlobal("React", React);
@@ -27,7 +29,7 @@ describe("ReportActionButton", () => {
     render(<ReportActionButton kind="print" href="/attendance?date=2026-09-09" month="2026-09" />);
     fireEvent.click(screen.getByRole("button", { name: "Print/PDF" }));
 
-    expect(open).toHaveBeenCalledWith("/attendance?date=2026-09-09&print=1", "_blank", "noopener,noreferrer");
+    expect(push).toHaveBeenCalledWith("/attendance?date=2026-09-09&print=1");
   });
 
   it("downloads CSV data without navigating to the report section", async () => {
@@ -51,9 +53,11 @@ describe("ReportActionButton", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
 
-    render(<ReportActionButton kind="csv" href="/students" month="2026-09" exportKey="student_directory" />);
+    render(<DownloadActionProvider><ReportActionButton kind="csv" href="/students" month="2026-09" exportKey="student_directory" /></DownloadActionProvider>);
     fireEvent.click(screen.getByRole("button", { name: "CSV" }));
 
+    expect(exportReportCsvAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Download File" }));
     await waitFor(() => expect(exportReportCsvAction).toHaveBeenCalledWith("student_directory", "2026-09"));
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();

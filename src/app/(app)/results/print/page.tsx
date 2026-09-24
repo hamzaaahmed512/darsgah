@@ -46,7 +46,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
           <h1 className="font-display text-3xl font-bold">Printable Result Cards</h1>
           <p className="text-sm text-muted">Download the standard school PDF, or open it to preview and print.</p>
         </div>
-        <ReportExport data={report} autoOpen={params.print === "1"} label="Download / Print PDF" />
+        <ReportExport data={report} autoOpen label="Download / Print PDF" />
       </div>
 
       {!result.complete ? (

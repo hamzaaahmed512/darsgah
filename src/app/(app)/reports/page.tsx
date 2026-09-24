@@ -327,7 +327,7 @@ function ReportCard({ report, month }: { report: ReportItem; month: string }) {
             {action.label}
           </ButtonLink>
         ) : (
-          <ReportActionButton key={`${report.title}-${action.label}`} kind={action.kind} href={action.href} month={month} exportKey={action.exportKey} />
+          <ReportActionButton title={report.title} key={`${report.title}-${action.label}`} kind={action.kind} href={action.href} month={month} exportKey={action.exportKey} />
         ))}
       </div>
     </Card>

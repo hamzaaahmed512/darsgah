@@ -1,67 +1,52 @@
 "use client";
 
-import { useTransition } from "react";
+import { requestDownload } from "./DownloadActionModal";
 import { Download, Printer } from "lucide-react";
 import { exportReportCsvAction, type ReportCsvKey } from "@/app/(app)/reports/actions";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
 import { toCsv } from "@/lib/utils";
 
 export function ReportActionButton({
+  title = "School Report",
   kind,
   href,
   month,
   exportKey
 }: {
+  title?: string;
   kind: "print" | "csv";
   href: string;
   month: string;
   exportKey?: ReportCsvKey;
 }) {
-  const [pending, startTransition] = useTransition();
-  const { pushToast } = useToast();
+
+  const router = useRouter();
 
   function printReport() {
     const separator = href.includes("?") ? "&" : "?";
-    const printWindow = window.open(`${href}${separator}print=1`, "_blank", "noopener,noreferrer");
-    if (!printWindow) pushToast("Allow pop-ups to open the print report.", "error");
+    router.push(`${href}${separator}print=1`);
   }
 
   function downloadCsv() {
     if (!exportKey) return;
-    startTransition(async () => {
+    requestDownload({ title, filename: `${exportKey}.csv`, generate: async () => {
       const result = await exportReportCsvAction(exportKey, month);
-      if ("error" in result) {
-        pushToast(result.error ?? "Could not generate this report.", "error");
-        return;
-      }
-      if (!result.rows.length) {
-        pushToast("No records are available for this report.", "info");
-        return;
-      }
-      const blob = new Blob(["\uFEFF", toCsv(result.rows)], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = result.filename;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-    });
+      if ("error" in result) throw new Error(result.error ?? "Could not generate this report.");
+      if (!result.rows.length) throw new Error("No records are available for this report.");
+      return { blob: new Blob(["\uFEFF", toCsv(result.rows)], { type: "text/csv;charset=utf-8" }), filename: result.filename };
+    }});
   }
 
   return (
     <Button
       type="button"
       size="sm"
-      disabled={pending}
       onClick={kind === "print" ? printReport : downloadCsv}
       className="w-full justify-center min-[420px]:w-auto"
     >
       {kind === "print" ? <Printer className="h-4 w-4" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
-      {pending ? "Preparing…" : kind === "print" ? "Print/PDF" : "CSV"}
+      {kind === "print" ? "Print/PDF" : "CSV"}
     </Button>
   );
 }

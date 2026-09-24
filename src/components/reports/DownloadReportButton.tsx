@@ -28,8 +28,9 @@ export function DownloadReportButton(props: DownloadReportButtonProps) {
   const [request, setRequest] = useState<{ generatedAt: string; key: number } | null>(null);
   const prepare = () => setRequest({ generatedAt: new Date().toISOString(), key: Date.now() });
   return <div className={props.className}>
+    <Button type="button" variant="secondary" onClick={prepare}><Download className="h-4 w-4" />Download report</Button>
     {request ? <PDFErrorBoundary key={request.key} onRetry={prepare}>
-      <ReportDownloadLink {...(props.type === "staff" ? { type: "staff" as const, data: { ...props.data, school: resolvedSchool } } : { type: "student" as const, data: { ...props.data, school: resolvedSchool } })} generatedAt={request.generatedAt} onRetry={prepare} />
-    </PDFErrorBoundary> : <Button type="button" variant="secondary" onClick={prepare}><Download className="h-4 w-4" />Download report</Button>}
+      <ReportDownloadLink {...(props.type === "staff" ? { type: "staff" as const, data: { ...props.data, school: resolvedSchool } } : { type: "student" as const, data: { ...props.data, school: resolvedSchool } })} generatedAt={request.generatedAt} onRetry={prepare} onClose={() => setRequest(null)} />
+    </PDFErrorBoundary> : null}
   </div>;
 }

@@ -1,57 +1,33 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ChevronDown, Download, FileSpreadsheet, FileText, Upload } from "lucide-react";
 import { exportStudentsAction } from "@/app/(app)/students/actions";
 import type { StudentFilters } from "@/lib/services/students";
+import { requestDownload } from "@/components/reports/DownloadActionModal";
 import { StudentImportModal } from "./student-import-modal";
 
 export function StudentActions({ filters }: { filters: StudentFilters }) {
-  const [isPending, startTransition] = useTransition();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleExport = (format: "csv" | "excel") => {
-    startTransition(async () => {
+    const filename = `students_export_${new Date().toISOString().split("T")[0]}.${format === "csv" ? "csv" : "xlsx"}`;
+    requestDownload({ title: "Students Report", filename, generate: async () => {
       const res = await exportStudentsAction(filters);
-      if (res.error) {
-        alert(res.error);
-        return;
-      }
-      if (res.data) {
-        const XLSX = await import("xlsx");
-        if (format === "csv") {
-          // Generate CSV directly from JSON using SheetJS
-          const worksheet = XLSX.utils.json_to_sheet(res.data);
-          const csvText = XLSX.utils.sheet_to_csv(worksheet);
-          const blob = new Blob([csvText], { type: "text/csv" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `students_export_${new Date().toISOString().split("T")[0]}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
-        } else {
-          // Generate Excel from JSON
-          const worksheet = XLSX.utils.json_to_sheet(res.data);
-          
-          // Auto-fit column widths
-          const keys = Object.keys(res.data[0] || {});
-          const colWidths = keys.map((key) => {
-            return {
-              wch: Math.max(key.length, ...res.data.map((row: any) => (row[key] ? String(row[key]).length : 0)))
-            };
-          });
-          worksheet["!cols"] = colWidths;
-          
-          const workbook = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-          XLSX.writeFile(workbook, `students_export_${new Date().toISOString().split("T")[0]}.xlsx`);
-        }
-      }
-    });
+      if (res.error) throw new Error(res.error);
+      const XLSX = await import("xlsx");
+      const worksheet = XLSX.utils.json_to_sheet(res.data ?? []);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+      const blob = format === "csv" ? new Blob(["\uFEFF", XLSX.utils.sheet_to_csv(worksheet)], { type: "text/csv;charset=utf-8" })
+        : new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return { blob, filename };
+    }});
   };
 
   const handleTemplate = async () => {
+    requestDownload({ title: "Student Import Template", filename: "student_import_template.xlsx", generate: async () => {
     const XLSX = await import("xlsx");
     // Generate an XLSX template with standard headers and sample data
     const headers = ["Admission Number", "First Name", "Last Name", "Grade", "Section", "Gender", "Date of Birth", "Guardian Name", "Contact Number"];
@@ -69,7 +45,8 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
-    XLSX.writeFile(workbook, "student_import_template.xlsx");
+    return { blob: new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), filename: "student_import_template.xlsx" };
+    }});
   };
 
   return (
@@ -99,7 +76,6 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
           </button>
           <button
             onClick={() => handleExport("csv")}
-            disabled={isPending}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low disabled:opacity-50"
           >
             <FileText className="h-4 w-4 text-muted" />
@@ -107,7 +83,6 @@ export function StudentActions({ filters }: { filters: StudentFilters }) {
           </button>
           <button
             onClick={() => handleExport("excel")}
-            disabled={isPending}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:bg-surface-low disabled:opacity-50"
           >
             <FileSpreadsheet className="h-4 w-4 text-muted" />

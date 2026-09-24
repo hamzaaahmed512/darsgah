@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Printer, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +17,12 @@ type Props = {
 };
 
 export function ResultCardDownloadButton({ href, label, status, approvedCount, totalSubjects, missing, variant = "primary" }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const complete = status === "complete";
 
   function proceed() {
-    window.open(href, "_blank", "noopener,noreferrer");
+    router.push(href);
     setOpen(false);
   }
 

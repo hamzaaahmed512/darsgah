@@ -1,5 +1,6 @@
 "use client";
 
+import { requestDownload } from "@/components/reports/DownloadActionModal";
 import React, { useState, useMemo } from "react";
 import {
   Download,
@@ -425,13 +426,8 @@ export function LibraryReports({
     const content = rows
       .map(row => row.map(cell => `"${(cell ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n");
-    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
+    requestDownload({ title: filename.replace(/[-_]/g, " ").replace(/\.csv$/, ""), filename,
+      generate: async () => ({ blob: new Blob([content], { type: "text/csv;charset=utf-8" }), filename }) });
   };
 
   const exportInventoryReport = () => {

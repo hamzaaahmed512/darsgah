@@ -126,3 +126,11 @@ Run `npm run typecheck` and
 The render tests exercise actual vector PDF generation, A4 page dimensions,
 one-page output for normal/long/missing data, and font-backed text. Set
 `PDF_QA_OUTPUT=1` to write synthetic sample PDFs under `tmp/pdfs/` for visual QA.
+
+## Unified document actions
+
+All file saves go through `DownloadActionModal`. Pass a title, filename, optional description, and either a file URL or a lazy `generate` function returning `{ blob, filename }`. `ReportExport` and `DownloadReportButton` use it for PDF reports. CSV/Excel controls call `requestDownload`; the protected application layout mounts `DownloadActionProvider`, which also intercepts native `a[download]` links.
+
+Do not call `XLSX.writeFile`, `PDFDownloadLink`, or create download anchors in feature components. Use `XLSX.write` to return a workbook blob to the modal. Printable report routes must open `ReportExport` automatically when entered from report actions.
+
+Preview opens PDFs in the browser viewer and renders CSV/Excel as escaped text for browser printing. Sharing uses native file sharing, an explicitly supplied authorized HTTPS share URL, or an email composition prompt. Email attachments must be added manually; local blob URLs are never shared.
