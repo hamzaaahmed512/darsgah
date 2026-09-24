@@ -18,6 +18,7 @@ import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
 import { LibraryTeamCard } from "./library-team-card";
 import { LibraryReports } from "./library-reports";
+import { LibraryDialog } from "./library-dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -248,12 +249,13 @@ function ArchiveBookButton({ book, menuItem = false }: { book: LibraryBook; menu
 }
 
 function IssueBookModal({
-  book, availableCopies, grades, sections, onIssued, onReserved, prefilled, onClosed, showTrigger = true
+  book, availableCopies, grades, sections, settings, onIssued, onReserved, prefilled, onClosed, showTrigger = true
 }: {
   book: LibraryBook;
   availableCopies: SearchResultCopy[];
   grades: LibraryData["grades"];
   sections: LibraryData["sections"];
+  settings: LibraryData["settings"];
   onIssued: () => void;
   onReserved: () => void;
   prefilled?: { reservationId: string; borrower: SearchResultBorrower };
@@ -263,7 +265,8 @@ function IssueBookModal({
   const [open, setOpen] = useState(Boolean(prefilled));
   const [borrower, setBorrower] = useState<SearchResultBorrower | null>(prefilled?.borrower ?? null);
   const [copyId, setCopyId] = useState(availableCopies[0]?.id ?? "");
-  const dueDate = libraryDueDate(borrower?.kind === "staff" ? 30 : 14);
+  const loanDays = borrower?.kind === "staff" ? settings.staff_loan_days : settings.student_loan_days;
+  const dueDate = libraryDueDate(loanDays);
 
   function close() {
     setOpen(false);
@@ -276,16 +279,8 @@ function IssueBookModal({
         className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
         title={availableCopies.length ? "Issue book" : "Reserve book"}>Issue Book</button>}
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="dialog-panel w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
-            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="font-display text-2xl font-bold text-ink">{availableCopies.length ? "Issue book" : "Reserve book"}</h2>
-                <p className="mt-1 text-sm text-muted">{book.title}</p>
-              </div>
-              <button type="button" onClick={close} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6">
+        <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl">
+            <div className="p-5 sm:p-6">
               {availableCopies.length ? (
                 <Form action="issue" label="Issue book" reset disabled={!borrower || !copyId || !borrower.is_eligible}
                   onSuccess={() => { close(); setBorrower(null); onIssued(); }}>
@@ -297,8 +292,8 @@ function IssueBookModal({
                       {availableCopies.map(copy => <option key={copy.id} value={copy.id}>Copy {copy.accession}</option>)}
                     </Select>
                   </Field>
-                  <Field label="Return by due date">
-                    <Input name="due_date" type="date" min={libraryDueDate(1)} max={libraryDueDate(90)} defaultValue={dueDate} required />
+                  <Field label="Return by due date" hint={`School policy: up to ${loanDays} days for this borrower.`}>
+                    <Input key={`${borrower?.kind ?? "student"}-${loanDays}`} name="due_date" type="date" min={libraryDueDate(1)} max={dueDate} defaultValue={dueDate} required />
                   </Field>
                   {borrower && !borrower.is_eligible && (
                     <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
@@ -315,18 +310,18 @@ function IssueBookModal({
                 </Form>
               )}
             </div>
-          </div>
-        </div>
+        </LibraryDialog>
       )}
     </>
   );
 }
 
-function BookActions({ book, stock, grades, sections, canManage }: {
+function BookActions({ book, stock, grades, sections, settings, canManage }: {
   book: LibraryBook;
   stock: LibraryData["copies"];
   grades: LibraryData["grades"];
   sections: LibraryData["sections"];
+  settings: LibraryData["settings"];
   canManage: boolean;
 }) {
   return <details className="relative inline-block text-left">
@@ -334,7 +329,7 @@ function BookActions({ book, stock, grades, sections, canManage }: {
     <div className="absolute right-0 z-30 mt-2 flex min-w-44 flex-col gap-2 rounded-xl border border-outline/70 bg-white p-2 shadow-xl">
       <Link href={`/library/${book.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink hover:bg-surface-low"><Eye className="h-4 w-4" />View copies</Link>
       {canManage && <>
-        <IssueBookModal book={book} availableCopies={stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }))} grades={grades} sections={sections} onIssued={() => {}} onReserved={() => {}} />
+        <IssueBookModal book={book} availableCopies={stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }))} grades={grades} sections={sections} settings={settings} onIssued={() => {}} onReserved={() => {}} />
         <AddCopiesModal book={book} />
         <EditBookModal book={book} menuItem />
         <ArchiveBookButton book={book} menuItem />
@@ -359,12 +354,7 @@ export function LibraryWorkspace({
   const [page, setPage] = useState(1);
 
   const [catalogIssueRequest, setCatalogIssueRequest] = useState<{ reservationId: string; bookId: string; borrower: SearchResultBorrower } | null>(null);
-  const [reservationVersion, setReservationVersion] = useState(0);
   const [fulfilledReservationIds, setFulfilledReservationIds] = useState<Set<string>>(() => new Set());
-
-  // Reservation Creation state
-  const [reserveBookId, setReserveBookId] = useState<string>("");
-  const [reserveBorrower, setReserveBorrower] = useState<SearchResultBorrower | null>(null);
 
   // Dialog state for Return and Renew workflows
   const [activeReturnLoan, setActiveReturnLoan] = useState<LibraryLoan | null>(null);
@@ -599,7 +589,7 @@ export function LibraryWorkspace({
               return <article key={book.id} className="min-w-0 rounded-2xl border border-outline/70 bg-white p-4 shadow-card">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><h2 className="break-words font-display text-base font-bold text-ink">{book.title}</h2>{book.author && <p className="mt-1 text-sm font-semibold text-primary">{book.author}</p>}</div>
-                  <BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} canManage={canManage} />
+                  <BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
                   <Tag>{stock.length} {stock.length === 1 ? "copy" : "copies"}</Tag>
@@ -648,7 +638,7 @@ export function LibraryWorkspace({
                     {book.isbn && <span>ISBN: {book.isbn}</span>}
                   </div></td>
                   <td className="px-5 py-4"><BookMeta label="" value={String(totalCopies)} /></td>
-                  <td className="px-5 py-4 text-right"><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} canManage={canManage} /></td>
+                  <td className="px-5 py-4 text-right"><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
                 </tr>
               );
             })}
@@ -659,7 +649,7 @@ export function LibraryWorkspace({
             const book = books.get(catalogIssueRequest.bookId);
             if (!book) return null;
             const availableCopies = data.copies.filter(copy => copy.book_id === book.id && copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }));
-            return <IssueBookModal key={catalogIssueRequest.reservationId} book={book} availableCopies={availableCopies} grades={data.grades} sections={data.sections} prefilled={{ reservationId: catalogIssueRequest.reservationId, borrower: catalogIssueRequest.borrower }} showTrigger={false} onClosed={() => setCatalogIssueRequest(null)} onIssued={() => setFulfilledReservationIds(current => new Set(current).add(catalogIssueRequest.reservationId))} onReserved={() => {}} />;
+            return <IssueBookModal key={catalogIssueRequest.reservationId} book={book} availableCopies={availableCopies} grades={data.grades} sections={data.sections} settings={data.settings} prefilled={{ reservationId: catalogIssueRequest.reservationId, borrower: catalogIssueRequest.borrower }} showTrigger={false} onClosed={() => setCatalogIssueRequest(null)} onIssued={() => setFulfilledReservationIds(current => new Set(current).add(catalogIssueRequest.reservationId))} onReserved={() => {}} />;
           })()}
         </>
       )}
@@ -759,68 +749,6 @@ export function LibraryWorkspace({
       {tab === "Loans & reservations" && (
         <div id="library-waiting-list" className="scroll-mt-24 space-y-6">
           <div className="space-y-6">
-            {/* Create Reservation Form */}
-            {canManage && (
-              <div className="hidden"><Panel title="Reserve a title">
-                <p className="mb-4 text-xs text-muted">
-                  Add a borrower to a title&apos;s waiting queue. Reservations are served in FIFO order.
-                </p>
-
-                <Form key={reservationVersion} action="reserve" label="Join waiting list" reset disabled={!reserveBookId || !reserveBorrower} onSuccess={() => { setReserveBookId(""); setReserveBorrower(null); setReservationVersion(value => value + 1); }}>
-                  <Field label="Book title">
-                    <Select
-                      name="book_id"
-                      required
-                      value={reserveBookId}
-                      onChange={(e) => setReserveBookId(e.target.value)}
-                    >
-                      <option value="" disabled>Select title</option>
-                      {data.books.filter(b => !b.archived).map(b => (
-                        <option key={b.id} value={b.id}>{b.title}{b.author ? ` — ${b.author}` : ""}</option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  {/* Title Metrics & Recommendation Banner */}
-                  {reserveBookId && (() => {
-                    const bookCopies = data.copies.filter(c => c.book_id === reserveBookId);
-                    const totalC = bookCopies.filter(c => c.status !== "lost" && c.status !== "withdrawn").length;
-                    const availC = bookCopies.filter(c => c.status === "available").length;
-                    const waitingC = waitingReservations.filter(r => r.book_id === reserveBookId).length;
-
-                    return (
-                      <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-2 border border-outline/60">
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 font-semibold">
-                          <span>Total copies: <strong className="text-ink">{totalC}</strong>
-</span>
-                          <span>Available now: <strong className={availC > 0 ? "text-emerald-700" : "text-amber-700"}>{availC}</strong>
-</span>
-                          <span>Waiting queue: <strong className="text-primary">{waitingC}</strong>
-</span>
-                        </div>
-
-                        {availC > 0 && waitingC === 0 && (
-                          <div className="rounded-lg bg-emerald-50 p-2.5 text-emerald-800 border border-emerald-200 flex flex-col gap-2">
-                            <p className="font-semibold">
-                              💡 Copy is available now! We recommend issuing directly instead of adding to the waiting queue.
-                            </p>
-
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  <BorrowerSelector
-                    grades={data.grades}
-                    sections={data.sections}
-                    selectedBorrower={reserveBorrower}
-                    onSelect={setReserveBorrower}
-                  />
-                </Form>
-              </Panel></div>
-            )}
-
             {/* Detailed Waiting Queue Management */}
             <Panel title="Waiting queue management">
               <div className="mb-4 flex gap-3 rounded-xl bg-blue-50 p-3 text-xs text-blue-800">

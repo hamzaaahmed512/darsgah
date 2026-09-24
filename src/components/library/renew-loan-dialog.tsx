@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, RefreshCw, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import { Button } from "@/components/ui/button";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
 import type { LibraryLoan, LibraryCopy, LibrarySettings, LibraryReservation } from "@/lib/services/library";
+import { LibraryDialog } from "./library-dialog";
 
 interface RenewLoanDialogProps {
   loan: LibraryLoan;
@@ -74,35 +75,14 @@ export function RenewLoanDialog({
         }
         onClose();
         router.refresh();
-      } catch (err) {
+      } catch {
         setError("Connection error. Please try again.");
       }
     });
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="dialog-panel w-full max-w-lg rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
-        <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-              <RefreshCw className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-bold text-ink">Renew loan</h2>
-              <p className="text-xs text-muted">Extend borrowing due date based on school policy</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-xl p-2 text-muted hover:bg-surface-low"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
+    <LibraryDialog title="Renew loan" description="Extend borrowing due date based on school policy" onClose={onClose}>
         <form onSubmit={handleConfirm} className="p-5 space-y-4 sm:p-6">
           {error && (
             <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">
@@ -165,7 +145,6 @@ export function RenewLoanDialog({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </LibraryDialog>
   );
 }

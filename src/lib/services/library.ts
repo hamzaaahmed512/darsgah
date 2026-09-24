@@ -181,7 +181,7 @@ export async function getLibrary(user: AppUser) {
       const result = await db.rpc("library_borrowers", { p_school_id: user.schoolId }).order("kind").order("id").range(offset, offset + 499);
       if (result.error) {
         if (result.error.code === "PGRST202") throw new Error("LIBRARY_MIGRATION_REQUIRED");
-        return [];
+        throw new Error(result.error.message);
       }
       rows.push(...(result.data as LibraryBorrower[]));
       if (result.data.length < 500) return rows;
@@ -191,7 +191,8 @@ export async function getLibrary(user: AppUser) {
   async function getDetailedLoans(): Promise<LibraryLoan[]> {
     const { data, error } = await db.rpc("library_loans_detailed", { p_school_id: user.schoolId });
     if (error) {
-      return all<LibraryLoan>("library_loans", "issued_at");
+      if (error.code === "PGRST202" || error.code === "42883") throw new Error("LIBRARY_MIGRATION_REQUIRED");
+      throw new Error(error.message);
     }
     return (data ?? []) as LibraryLoan[];
   }
@@ -199,8 +200,8 @@ export async function getLibrary(user: AppUser) {
   async function getDetailedReservations(): Promise<LibraryReservation[]> {
     const { data, error } = await db.rpc("library_reservations_detailed", { p_school_id: user.schoolId });
     if (error) {
-      // Fallback to table select if RPC fails or during migration
-      return all<LibraryReservation>("library_reservations", "created_at");
+      if (error.code === "PGRST202" || error.code === "42883") throw new Error("LIBRARY_MIGRATION_REQUIRED");
+      throw new Error(error.message);
     }
     return (data ?? []) as LibraryReservation[];
   }
@@ -213,8 +214,8 @@ export async function getLibrary(user: AppUser) {
       .eq("role", "librarian")
       .order("id");
     if (error) {
-      if (error.code === "PGRST205") return [];
-      return [];
+      if (error.code === "PGRST205") throw new Error("LIBRARY_MIGRATION_REQUIRED");
+      throw new Error(error.message);
     }
     return (data ?? []).map((row: any) => ({
       member_id: row.id,

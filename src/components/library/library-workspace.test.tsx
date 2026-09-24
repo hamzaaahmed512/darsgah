@@ -61,6 +61,22 @@ describe("library workspace", () => {
     expect(screen.queryByRole("button", { name: "Issue book" })).toBeNull();
   });
 
+  it("limits an issue due date to the configured borrower policy", () => {
+    render(<LibraryWorkspace data={{ ...data, settings: { ...data.settings, student_loan_days: 21 } }} canManage canAdmin />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Issue Book" })[0]);
+    const dueDate = document.querySelector("input[name='due_date']") as HTMLInputElement;
+    expect(dueDate.max).toBeTruthy();
+    expect(dueDate.value).toBe(dueDate.max);
+  });
+
+  it("closes the issue dialog with Escape", () => {
+    render(<LibraryWorkspace data={data} canManage canAdmin />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Issue Book" })[0]);
+    expect(screen.getByRole("dialog", { name: "Issue book" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Issue book" })).toBeNull();
+  });
+
   it("opens the library roster from the single Manage team entry", async () => {
     render(<LibraryWorkspace data={data} canManage canAdmin />);
     fireEvent.click(screen.getByRole("button", { name: "Manage team" }));

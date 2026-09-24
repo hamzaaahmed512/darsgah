@@ -18,19 +18,24 @@ export async function libraryAction(form: FormData): Promise<{ ok?: boolean; err
     revalidatePath("/library");
     return { ok: true };
   } catch (error) {
-    return { error: "Could not save. Please try again." };
+    return { error: error instanceof Error && error.message ? error.message : "Could not save. Please try again." };
   }
 }
 
-export async function updateCopyStatusAction(form: FormData) {
+export async function updateCopyStatusAction(form: FormData): Promise<{ ok?: boolean; error?: string }> {
   const user = await requireUser("library:manage");
-  const copyId = form.get("id")?.toString();
-  const status = form.get("status")?.toString();
-  const bookId = form.get("book_id")?.toString();
-  if (!copyId || !status || !bookId) return;
-  await mutateLibrary(user, { action: "copy_status", id: copyId, status });
-  revalidatePath("/library");
-  revalidatePath(`/library/${bookId}`);
+  try {
+    const copyId = form.get("id")?.toString();
+    const status = form.get("status")?.toString();
+    const bookId = form.get("book_id")?.toString();
+    if (!copyId || !status || !bookId) return { error: "Choose a copy status before saving." };
+    await mutateLibrary(user, { action: "copy_status", id: copyId, status });
+    revalidatePath("/library");
+    revalidatePath(`/library/${bookId}`);
+    return { ok: true };
+  } catch (error) {
+    return { error: error instanceof Error && error.message ? error.message : "Could not update the copy status." };
+  }
 }
 
 export async function searchBorrowersAction(
