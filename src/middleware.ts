@@ -9,8 +9,9 @@ export async function middleware(request: NextRequest) {
   const policy = [
     "default-src 'self'",
     // Next's development runtime uses eval for source maps and Fast Refresh.
-    // Production must retain the strict nonce-only execution policy.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+    // React PDF's Yoga layout engine needs WebAssembly compilation. This narrow
+    // allowance preserves the nonce policy and the production ban on JS eval.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",

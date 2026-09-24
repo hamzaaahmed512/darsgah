@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { StaffProfileEditModal } from "@/components/staff/staff-profile-edit-modal";
 import { PrintProfileButton } from "@/components/staff/print-profile-button";
+import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
+import type { StaffReportData } from "@/components/reports/profile-report-types";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -102,6 +104,23 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   );
 
   const totalClassesCount = data.headClasses.length + data.assignments.length;
+  const reportData: StaffReportData = {
+    fullName: member.full_name,
+    status: member.status,
+    staffId: member.user_id ?? id,
+    role: displayRole,
+    email: member.personal_email || member.email,
+    phone: member.phone,
+    department: member.department,
+    joiningDate: data.employment?.joining_date,
+    monthlyPay: canViewSalary && data.employment?.monthly_salary != null ? Number(data.employment.monthly_salary) : null,
+    payRestricted: !canViewSalary,
+    attendanceRate: data.attendanceStats?.total
+      ? ((data.attendanceStats.present + data.attendanceStats.late) / data.attendanceStats.total) * 100 : null,
+    attendanceNote: "Current year • Present + late / recorded days",
+    daysPresent: data.attendanceStats?.total ? data.attendanceStats.present : null,
+    school: { name: user.schoolFullName || user.schoolName, logoUrl: user.schoolLogoUrl }
+  };
 
   return (
     <>
@@ -167,6 +186,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <DownloadReportButton type="staff" data={reportData} />
               <PrintProfileButton />
               {canEdit ? (
                 <StaffProfileEditModal

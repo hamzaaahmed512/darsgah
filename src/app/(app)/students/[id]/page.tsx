@@ -12,6 +12,8 @@ import { getStudentRecord } from "@/lib/services/students";
 import { hasPermission } from "@/lib/permissions";
 import { archiveStudentAction } from "@/app/(app)/students/actions";
 import { formatFullName } from "@/lib/student-name";
+import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
+import type { StudentReportData } from "@/components/reports/profile-report-types";
 
 const money = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
 
@@ -28,6 +30,21 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const statusTone = student.status.startsWith("pending") ? "yellow" : student.status === "archived" ? "gray" : "green";
   const unpaidCount = challans.filter((row: any) => row.outstanding > 0).length;
   const displayName = formatFullName(student.first_name, student.last_name);
+  const primaryGuardian = guardians.find((guardian) => guardian.is_primary) ?? guardians[0];
+  const reportData: StudentReportData = {
+    fullName: displayName,
+    status: student.status,
+    admissionId: student.admission_number,
+    classSection: className,
+    guardianName: limitedView ? "Restricted" : primaryGuardian?.full_name || student.guardian_name || student.father_name_en,
+    phone: limitedView ? "Restricted" : primaryGuardian?.phone || student.father_phone || student.phone,
+    address: limitedView ? "Restricted" : student.address,
+    attendanceRate: summaries.attendance.rate,
+    attendanceNote: `${summaries.attendance.present} present or late / ${summaries.attendance.total} recorded days`,
+    feeStatus: canViewFinance ? (summaries.fees.total === 0 ? "No records" : unpaidCount > 0 ? `${unpaidCount} unpaid challan${unpaidCount === 1 ? "" : "s"}` : "Paid") : null,
+    feesRestricted: !canViewFinance,
+    school: { name: user.schoolFullName || user.schoolName, logoUrl: user.schoolLogoUrl }
+  };
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "ST";
 
   return <>
@@ -43,6 +60,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <DownloadReportButton type="student" data={reportData} />
           {hasPermission(user.role, "students:update", user.permissions) ? <ButtonLink href={`/students/${id}/edit`} variant="secondary"><Pencil className="h-4 w-4" />Edit</ButtonLink> : null}
           {hasPermission(user.role, "students:archive", user.permissions) && student.status !== "archived" && !student.status.startsWith("pending") ? <ConfirmButton label={user.role === "student_staff" ? "Request Cancellation" : "Archive"} confirmText={user.role === "student_staff" ? "Submit a cancellation request for this student to the Principal?" : "Archive this student? This keeps the record but removes it from active lists."} action={archive} variant="secondary" icon={<Archive className="h-4 w-4" />} /> : null}
           <ButtonLink href="/students" className="min-w-24"><ArrowLeft className="h-4 w-4" />Back</ButtonLink>
