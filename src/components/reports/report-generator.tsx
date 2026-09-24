@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FileText, Printer, Download, Share2, Eye, X } from "lucide-react";
@@ -12,7 +12,7 @@ interface ReportGeneratorProps {
   data: (string | number)[][];
   headers: string[];
   title: string;
-  filters?: Record<string, string>;
+  filters?: Record<string, string | undefined>;
   schoolName?: string;
 }
 
@@ -20,7 +20,6 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -58,9 +57,9 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
     startY += 15;
 
     if (filters && Object.keys(filters).length > 0) {
-      const activeFilters = Object.entries(filters).filter(([_, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ");
+      const activeFilters = Object.entries(filters).filter(([, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ");
       if (activeFilters) {
-        doc.setFontStyle("normal");
+        doc.setFont("helvetica", "normal");
         doc.text(`Filters applied: ${activeFilters}`, margin, startY);
         startY += 15;
       }
@@ -86,7 +85,7 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
         margin: { left: margin, right: margin },
         didDrawPage: (data) => {
           // Footer (Page numbers)
-          const str = `Page ${doc.internal.getNumberOfPages()}`;
+          const str = `Page ${doc.getNumberOfPages()}`;
           doc.setFontSize(9);
           doc.setTextColor(150, 150, 150);
           const pageSize = doc.internal.pageSize;
@@ -138,9 +137,9 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
     startY += 15;
 
     if (filters && Object.keys(filters).length > 0) {
-      const activeFilters = Object.entries(filters).filter(([_, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ");
+      const activeFilters = Object.entries(filters).filter(([, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ");
       if (activeFilters) {
-        doc.setFontStyle("normal");
+        doc.setFont("helvetica", "normal");
         doc.text(`Filters applied: ${activeFilters}`, margin, startY);
         startY += 15;
       }
@@ -164,7 +163,7 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
         alternateRowStyles: { fillColor: [249, 250, 251] },
         margin: { left: margin, right: margin },
         didDrawPage: (data) => {
-          const str = `Page ${doc.internal.getNumberOfPages()}`;
+          const str = `Page ${doc.getNumberOfPages()}`;
           doc.setFontSize(9);
           doc.setTextColor(150, 150, 150);
           const pageSize = doc.internal.pageSize;
@@ -212,19 +211,19 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
         <div className="p-4 sm:p-6">
           {!previewMode ? (
             <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={handlePreview}>
+              <Button variant="secondary" className="h-24 flex-col gap-2 rounded-2xl" onClick={handlePreview}>
                 <Eye className="h-6 w-6 text-blue-600" />
                 <span>Preview Report</span>
               </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => generatePDF("print")}>
+              <Button variant="secondary" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => generatePDF("print")}>
                 <Printer className="h-6 w-6 text-blue-600" />
                 <span>Print Report</span>
               </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => generatePDF("download")}>
+              <Button variant="secondary" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => generatePDF("download")}>
                 <Download className="h-6 w-6 text-blue-600" />
                 <span>Download PDF</span>
               </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={handleWhatsAppShare}>
+              <Button variant="secondary" className="h-24 flex-col gap-2 rounded-2xl" onClick={handleWhatsAppShare}>
                 <Share2 className="h-6 w-6 text-green-600" />
                 <span>Share via WhatsApp</span>
               </Button>
@@ -234,7 +233,7 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Report Preview</h3>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPreviewMode(false)}>
+                  <Button variant="secondary" size="sm" onClick={() => setPreviewMode(false)}>
                     <X className="mr-2 h-4 w-4" /> Back
                   </Button>
                   <Button size="sm" onClick={() => generatePDF("download")}>
@@ -254,7 +253,7 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
                       <p className="italic">Generated on: {format(new Date(), "PPpp")}</p>
                       {filters && Object.keys(filters).length > 0 && (
                         <p>
-                          Filters applied: {Object.entries(filters).filter(([_, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ")}
+                          Filters applied: {Object.entries(filters).filter(([, v]) => v && v !== "all").map(([k, v]) => `${k}: ${v}`).join(" | ")}
                         </p>
                       )}
                     </div>
@@ -302,7 +301,7 @@ export function ReportGenerator({ data, headers, title, filters, schoolName = "S
 
   return (
     <>
-      <Button variant="outline" className="gap-2" onClick={() => setOpen(true)}>
+      <Button variant="secondary" className="gap-2" onClick={() => setOpen(true)}>
         <FileText className="h-4 w-4" />
         Generate Report
       </Button>
