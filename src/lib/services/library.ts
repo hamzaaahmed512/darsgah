@@ -191,7 +191,12 @@ export async function getLibrary(user: AppUser) {
   async function getDetailedLoans(): Promise<LibraryLoan[]> {
     const { data, error } = await db.rpc("library_loans_detailed", { p_school_id: user.schoolId });
     if (error) {
-      if (error.code === "PGRST202" || error.code === "42883") throw new Error("LIBRARY_MIGRATION_REQUIRED");
+      // Older deployments predate the detail RPC; the base, school-scoped table
+      // remains a complete circulation source until that optional report upgrade runs.
+      if (error.code === "PGRST202" || error.code === "42883") {
+        console.warn("library_loans_detailed is unavailable; using the base loan query", { schoolId: user.schoolId, code: error.code });
+        return all<LibraryLoan>("library_loans", "issued_at");
+      }
       throw new Error(error.message);
     }
     return (data ?? []) as LibraryLoan[];
@@ -200,7 +205,12 @@ export async function getLibrary(user: AppUser) {
   async function getDetailedReservations(): Promise<LibraryReservation[]> {
     const { data, error } = await db.rpc("library_reservations_detailed", { p_school_id: user.schoolId });
     if (error) {
-      if (error.code === "PGRST202" || error.code === "42883") throw new Error("LIBRARY_MIGRATION_REQUIRED");
+      // Reservations existed before their reporting projection. Keep the library
+      // usable during a staged migration, but expose all other failures.
+      if (error.code === "PGRST202" || error.code === "42883") {
+        console.warn("library_reservations_detailed is unavailable; using the base reservation query", { schoolId: user.schoolId, code: error.code });
+        return all<LibraryReservation>("library_reservations", "created_at");
+      }
       throw new Error(error.message);
     }
     return (data ?? []) as LibraryReservation[];
