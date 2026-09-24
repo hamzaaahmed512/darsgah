@@ -8,7 +8,6 @@ import {
   RotateCcw,
   FileSpreadsheet
 } from "lucide-react";
-import { LibrarySummary } from "./library-summary";
 import { Button } from "@/components/ui/button";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
@@ -537,8 +536,6 @@ export function LibraryReports({
         )}
         </details>
       </div>
-
-      <LibrarySummary data={data} />
 
       {/* ══════════════════════════════════════════════════════════════════════
           5. OVERDUE & RESERVATIONS FOCUSED LISTS

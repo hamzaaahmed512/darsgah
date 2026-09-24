@@ -24,21 +24,24 @@ import { cn } from "@/lib/utils";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-outline/70 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="mb-5 text-lg font-bold text-ink">{title}</h2>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-ink">{title}</h2>
+        {actions}
+      </div>
       {children}
     </section>
   );
 }
 
 function Form({
-  action, children, label = "Save", id, reset = false, buttonVariant = "primary", buttonSize = "md", disabled = false, className, buttonClassName, onSuccess
+  action, children, label = "Save", id, reset = false, buttonVariant = "primary", buttonSize = "md", disabled = false, className, buttonClassName, secondaryAction, onSuccess
 }: {
   action: string; children?: ReactNode; label?: string; id?: string;
   reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; buttonSize?: "sm" | "md"; disabled?: boolean;
-  className?: string; buttonClassName?: string;
+  className?: string; buttonClassName?: string; secondaryAction?: ReactNode;
   onSuccess?: () => void;
 }) {
   const router = useRouter();
@@ -69,9 +72,12 @@ function Form({
       {id && <input type="hidden" name="id" value={id} />}
       <fieldset disabled={pending} className={children ? "grid min-w-0 gap-3" : "min-w-0"}>
         {children}
-        <Button type="submit" variant={buttonVariant} size={buttonSize} disabled={pending || disabled} className={cn("whitespace-nowrap", buttonClassName)}>
-          {pending ? "Saving…" : label}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" variant={buttonVariant} size={buttonSize} disabled={pending || disabled} className={cn("whitespace-nowrap", buttonClassName)}>
+            {pending ? "Saving…" : label}
+          </Button>
+          {secondaryAction}
+        </div>
       </fieldset>
       {message && (
         <p role={message.error ? "alert" : "status"}
@@ -144,7 +150,7 @@ function AddBookModal() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)} className="w-full sm:w-auto">
+      <Button type="button" onClick={() => setOpen(true)} className="h-10 min-h-10 shrink-0 rounded-lg px-4 py-2 text-sm">
         <Plus className="h-4 w-4" /> Add book
       </Button>
       {open && (
@@ -352,6 +358,7 @@ export function LibraryWorkspace({
   const [catalogSort, setCatalogSort] = useState<"title" | "author" | "copies">("title");
   const [catalogSortDescending, setCatalogSortDescending] = useState(false);
   const [page, setPage] = useState(1);
+  const [editingRules, setEditingRules] = useState(false);
 
   const [catalogIssueRequest, setCatalogIssueRequest] = useState<{ reservationId: string; bookId: string; borrower: SearchResultBorrower } | null>(null);
   const [fulfilledReservationIds, setFulfilledReservationIds] = useState<Set<string>>(() => new Set());
@@ -504,22 +511,20 @@ export function LibraryWorkspace({
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       {/* ── Top Header & Team Status ── */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={!canAdmin} onClick={() => { setTab("Rules & team"); setQuery(""); setPage(1); }} className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 text-xs font-bold text-slate-800 transition enabled:hover:bg-primary-soft enabled:hover:text-primary disabled:cursor-default">
-            <UserCheck className="h-4 w-4 text-primary" />
-            {librariansCount > 0 ? `Librarians: ${librariansCount}` : canAdmin ? "+ Assign Librarian" : "No librarian assigned"}
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <button type="button" disabled={!canAdmin} onClick={() => { setTab("Rules & team"); setQuery(""); setPage(1); }} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 transition enabled:hover:bg-primary-soft enabled:hover:text-primary disabled:cursor-default">
+          <UserCheck className="h-4 w-4 text-primary" />
+          {librariansCount > 0 ? `Librarians: ${librariansCount}` : canAdmin ? "+ Assign Librarian" : "No librarian assigned"}
+        </button>
 
         {(canManage || canAdmin) && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             {canManage && <AddBookModal />}
             {canAdmin && (
               <button
                 type="button"
                 onClick={() => setTab("Rules & team")}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary sm:w-auto"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <UserRound className="h-4 w-4" /> Manage team
               </button>
@@ -529,7 +534,7 @@ export function LibraryWorkspace({
       </div>
 
       {/* ── KPI cards ── */}
-      {tab !== "Reports" && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg, accent, destination, filter, section }) => (
           <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className={`flex min-w-0 items-center gap-2 rounded-2xl border border-outline/70 border-t-4 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary sm:gap-4 sm:p-5 ${accent}`}>
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${bg} ${fg}`}>
@@ -542,7 +547,7 @@ export function LibraryWorkspace({
             </div>
           </button>
         ))}
-      </div>}
+      </div>
 
       {/* ── Tab nav ── */}
       <nav aria-label="Library sections" className="flex gap-1 overflow-x-auto border-b border-outline pb-3 sm:gap-2">
@@ -583,7 +588,7 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <div className="grid gap-3 lg:hidden">
+          <div className="grid gap-3 xl:hidden">
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
               const stock = data.copies.filter(copy => copy.book_id === book.id);
               return <article key={book.id} className="min-w-0 rounded-2xl border border-outline/70 bg-white p-4 shadow-card">
@@ -605,16 +610,17 @@ export function LibraryWorkspace({
             })}
           </div>
 
-          <div className="hidden min-w-0 overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card lg:block lg:overflow-visible">
-            <table className="w-full min-w-[760px] table-fixed text-left">
-              <colgroup><col className="w-[34%]" /><col className="w-[44%]" /><col className="w-[12%]" /><col className="w-[10%]" /></colgroup>
+          <div className="hidden min-w-0 overflow-x-auto rounded-[22px] border border-outline/65 bg-white shadow-card xl:block xl:overflow-visible">
+            <table aria-label="Library catalogue" className="w-full min-w-[820px] table-fixed text-left text-sm">
+              <caption className="sr-only">Library catalogue titles, details, copy counts, and actions</caption>
+              <colgroup><col className="w-[32%]" /><col className="w-[44%]" /><col className="w-[12%]" /><col className="w-[12%]" /></colgroup>
               <thead className="bg-slate-50/80 font-label text-[10px] font-bold uppercase tracking-[0.12em] text-muted"><tr>
-                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("title")} className="hover:text-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} className="hover:text-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
+                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("title")} aria-label="Sort catalogue by title" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} aria-label="Sort catalogue by author" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
                 <th className="px-5 py-3">Details</th>
-                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("copies")} className="hover:text-primary">Copies {catalogSort === "copies" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
+                <th className="px-5 py-3"><button type="button" onClick={() => sortCatalogue("copies")} aria-label="Sort catalogue by copy count" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Copies {catalogSort === "copies" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr></thead>
-              <tbody>
+              <tbody className="divide-y divide-outline/50">
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
               const stock = data.copies.filter(c => c.book_id === book.id);
               const totalCopies = stock.length;
@@ -622,7 +628,7 @@ export function LibraryWorkspace({
               return (
                 <tr
                   key={book.id}
-                  className="border-t border-outline/50 transition hover:bg-primary-soft/20"
+                  className="align-top transition hover:bg-primary-soft/20"
                 >
                   <td className="min-w-0 px-5 py-4">
                     <div className="flex min-w-0 items-center gap-2">
@@ -631,14 +637,14 @@ export function LibraryWorkspace({
                     </div>
                     <p title={book.author || ""} className="mt-1 truncate text-sm font-semibold text-primary">{book.author || "Unknown author"}</p>
                   </td>
-                  <td className="px-5 py-4"><div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                    {book.category && <span>{book.category}</span>}
-                    {book.publisher && <span>Publisher: {book.publisher}</span>}
-                    {book.shelf && <span>Location: {book.shelf}</span>}
-                    {book.isbn && <span>ISBN: {book.isbn}</span>}
+                  <td className="px-5 py-4"><div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                    {book.category && <span className="break-words">{book.category}</span>}
+                    {book.publisher && <span className="break-words">Publisher: {book.publisher}</span>}
+                    {book.shelf && <span className="break-words">Location: {book.shelf}</span>}
+                    {book.isbn && <span className="break-all">ISBN: {book.isbn}</span>}
                   </div></td>
                   <td className="px-5 py-4"><BookMeta label="" value={String(totalCopies)} /></td>
-                  <td className="px-5 py-4 text-right"><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
+                  <td className="whitespace-nowrap px-5 py-4 text-right"><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
                 </tr>
               );
             })}
@@ -923,18 +929,25 @@ export function LibraryWorkspace({
       {tab === "Rules & team" && (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Borrowing Rules */}
-          <Panel title="Borrowing rules">
-            <p className="mb-4 text-sm text-muted">
-              Configure separate loan policies for students and staff. Changes apply to new issues and future renewals.
-            </p>
-            <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900" aria-label="Saved borrowing rules">
-              <p className="font-bold">Currently saved rules</p>
-              <p>Students: {data.settings.student_max_loans} books · {data.settings.student_loan_days} days · {data.settings.student_max_renewals} renewals of {data.settings.student_renewal_days} days</p>
-              <p>Staff: {data.settings.staff_max_loans} books · {data.settings.staff_loan_days} days · {data.settings.staff_max_renewals} renewals of {data.settings.staff_renewal_days} days</p>
-              <p>Overdue fine: {formatMoney(data.settings.fine_per_day)} per day</p>
-            </div>
-            {canAdmin && canManage ? (
-              <Form key={JSON.stringify(data.settings)} action="settings" label="Save borrowing rules">
+          <Panel
+            title="Borrowing rules"
+            actions={canAdmin && canManage && !editingRules ? (
+              <Button type="button" size="sm" onClick={() => setEditingRules(true)}>
+                <Pencil className="h-4 w-4" /> Edit rules
+              </Button>
+            ) : undefined}
+          >
+            {editingRules && canAdmin && canManage ? (
+              <Form
+                key={JSON.stringify(data.settings)}
+                action="settings"
+                label="Save changes"
+                secondaryAction={<Button type="button" variant="secondary" size="sm" onClick={() => setEditingRules(false)}>Cancel</Button>}
+                onSuccess={() => setEditingRules(false)}
+              >
+                <p className="text-sm text-muted">
+                  Changes apply to new issues and future renewals.
+                </p>
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Student Policy</h3>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -975,28 +988,29 @@ export function LibraryWorkspace({
                 </div>
               </Form>
             ) : (
-              <div className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-bold text-ink">Student Policy</h4>
-                  <ul className="mt-1 space-y-1 text-muted">
-                    <li>Loan period: {data.settings.student_loan_days ?? data.settings.loan_days} days</li>
-                    <li>Active loans limit: {data.settings.student_max_loans ?? data.settings.max_loans}</li>
-                    <li>Renewals allowed: {data.settings.student_max_renewals ?? data.settings.max_renewals}</li>
-                    <li>Renewal duration: {data.settings.student_renewal_days ?? data.settings.loan_days} days</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-bold text-ink">Staff Policy</h4>
-                  <ul className="mt-1 space-y-1 text-muted">
-                    <li>Loan period: {data.settings.staff_loan_days ?? 30} days</li>
-                    <li>Active loans limit: {data.settings.staff_max_loans ?? 5}</li>
-                    <li>Renewals allowed: {data.settings.staff_max_renewals ?? 3}</li>
-                    <li>Renewal duration: {data.settings.staff_renewal_days ?? 30} days</li>
-                  </ul>
-                </div>
-                <p className="pt-2 border-t border-outline/50 text-muted">
-                  Daily overdue fine: <strong>{formatMoney(data.settings.fine_per_day)}</strong>
-                </p>
+              <div className="grid gap-3 text-sm sm:grid-cols-2" aria-label="Saved borrowing rules">
+                <section className="rounded-xl bg-slate-50 p-4">
+                  <h3 className="font-bold text-ink">Students</h3>
+                  <dl className="mt-3 space-y-2 text-muted">
+                    <div className="flex justify-between gap-3"><dt>Loan period</dt><dd className="font-semibold text-ink">{data.settings.student_loan_days ?? data.settings.loan_days} days</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Active loans</dt><dd className="font-semibold text-ink">{data.settings.student_max_loans ?? data.settings.max_loans}</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Renewals</dt><dd className="font-semibold text-ink">{data.settings.student_max_renewals ?? data.settings.max_renewals}</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Renewal period</dt><dd className="font-semibold text-ink">{data.settings.student_renewal_days ?? data.settings.loan_days} days</dd></div>
+                  </dl>
+                </section>
+                <section className="rounded-xl bg-slate-50 p-4">
+                  <h3 className="font-bold text-ink">Staff</h3>
+                  <dl className="mt-3 space-y-2 text-muted">
+                    <div className="flex justify-between gap-3"><dt>Loan period</dt><dd className="font-semibold text-ink">{data.settings.staff_loan_days ?? 30} days</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Active loans</dt><dd className="font-semibold text-ink">{data.settings.staff_max_loans ?? 5}</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Renewals</dt><dd className="font-semibold text-ink">{data.settings.staff_max_renewals ?? 3}</dd></div>
+                    <div className="flex justify-between gap-3"><dt>Renewal period</dt><dd className="font-semibold text-ink">{data.settings.staff_renewal_days ?? 30} days</dd></div>
+                  </dl>
+                </section>
+                <section className="rounded-xl bg-blue-50 p-4 text-blue-950 sm:col-span-2">
+                  <h3 className="font-bold">Overdue fine</h3>
+                  <p className="mt-1 text-sm">{formatMoney(data.settings.fine_per_day)} per day</p>
+                </section>
               </div>
             )}
           </Panel>

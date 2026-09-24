@@ -140,18 +140,33 @@ describe("library workspace", () => {
   it("shows borrowing rules as read only for librarians", () => {
     render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
-    expect(screen.getByText(/Loan period: 14 days/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Save borrowing rules" })).toBeNull();
+    expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
+    expect(screen.getAllByText("14 days").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Edit rules" })).toBeNull();
   });
 
   it("lets principals save policy and refresh after success", async () => {
     save.mockResolvedValue({ ok: true });
     render(<LibraryWorkspace data={data} canManage canAdmin />);
     fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit rules" }));
     const loanDaysInput = screen.getAllByLabelText(/Loan period/)[0];
     fireEvent.change(loanDaysInput, { target: { value: "21" } });
-    fireEvent.submit(screen.getByRole("button", { name: "Save borrowing rules" }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
     await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
+  });
+
+  it("discards rule edits when cancelled", async () => {
+    render(<LibraryWorkspace data={data} canManage canAdmin />);
+    fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit rules" }));
+    fireEvent.change(screen.getAllByLabelText(/Loan period/)[0], { target: { value: "21" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy());
+    expect(screen.queryByLabelText(/Loan period/)).toBeNull();
+    expect(screen.queryByText("21 days")).toBeNull();
   });
 
   it("shows reservation waiting-request policy note", () => {
@@ -231,11 +246,9 @@ describe("library workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
 
     expect(screen.getByText("Library reports")).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Current library totals" })).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Total Books" }).textContent).toContain("Across 1 title");
-    expect(screen.getByRole("group", { name: "Reservations / Waiting List" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Total books/ }).textContent).toContain("Across 1 title");
+    expect(screen.getAllByRole("button", { name: /Reservations/ }).length).toBeGreaterThan(0);
     expect(screen.queryByText("Inventory copy status breakdown")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Total books/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "Report type" })).toBeNull();
     expect(screen.getByText("Filter reports").closest("details")!.open).toBe(false);
     const grades = within(screen.getByLabelText("Filter by grade"));
