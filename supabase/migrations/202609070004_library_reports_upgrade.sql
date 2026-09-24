@@ -54,9 +54,9 @@ begin
     b.title as book_title,
     b.category as book_category,
     c.accession,
-    case when l.borrower_kind = 'student' then st.grade_id else null end as student_grade_id,
+    case when l.borrower_kind = 'student' then enrolled_class.grade_id else null end as student_grade_id,
     case when l.borrower_kind = 'student' then g.name else null end as student_grade_name,
-    case when l.borrower_kind = 'student' then st.section_id else null end as student_section_id,
+    case when l.borrower_kind = 'student' then enrolled_class.section_id else null end as student_section_id,
     case when l.borrower_kind = 'student' then sec.name else null end as student_section_name,
     case when l.borrower_kind = 'student' then st.admission_number::text else null end as student_registration_number,
     case when l.borrower_kind = 'staff' then stf.member_id::text else null end as staff_id,
@@ -65,8 +65,16 @@ begin
   join public.library_copies c on c.id = l.copy_id
   join public.library_books b on b.id = c.book_id
   left join public.students st on (l.borrower_kind = 'student' and st.id = l.borrower_id and st.school_id = p_school_id)
-  left join public.grades g on g.id = st.grade_id
-  left join public.sections sec on sec.id = st.section_id
+  left join lateral (
+    select c.grade_id, c.section_id
+    from public.enrollments e
+    join public.classes c on c.id = e.class_id and c.school_id = p_school_id
+    where e.school_id = p_school_id and e.student_id = st.id and e.status = 'active'
+    order by e.starts_on desc, e.created_at desc
+    limit 1
+  ) enrolled_class on l.borrower_kind = 'student'
+  left join public.grades g on g.id = enrolled_class.grade_id and g.school_id = p_school_id
+  left join public.sections sec on sec.id = enrolled_class.section_id and sec.school_id = p_school_id
   left join public.staff_directory stf on (l.borrower_kind = 'staff' and stf.user_id = l.borrower_id and stf.school_id = p_school_id)
   where l.school_id = p_school_id
   order by l.issued_at desc;

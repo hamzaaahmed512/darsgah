@@ -100,13 +100,6 @@ export type LibrarySettings = {
   staff_renewal_days: number;
 };
 
-export type LibraryEvent = {
-  id: string;
-  action: string;
-  created_at: string;
-  details: Record<string, string>;
-};
-
 export type LibraryGrade = {
   id: string;
   name: string;
@@ -193,7 +186,7 @@ export async function getLibrary(user: AppUser) {
     if (error) {
       // Older deployments predate the detail RPC; the base, school-scoped table
       // remains a complete circulation source until that optional report upgrade runs.
-      if (error.code === "PGRST202" || error.code === "42883") {
+      if (error.code === "PGRST202" || error.code === "42883" || error.code === "42703") {
         console.warn("library_loans_detailed is unavailable; using the base loan query", { schoolId: user.schoolId, code: error.code });
         return all<LibraryLoan>("library_loans", "issued_at");
       }
@@ -238,14 +231,13 @@ export async function getLibrary(user: AppUser) {
     })).sort((a, b) => a.full_name.localeCompare(b.full_name));
   }
 
-  const [books, copies, loans, reservations, settingsResult, borrowers, events, grades, sections, team] = await Promise.all([
+  const [books, copies, loans, reservations, settingsResult, borrowers, grades, sections, team] = await Promise.all([
     all<LibraryBook>("library_books", "title"),
     all<LibraryCopy>("library_copies", "accession"),
     getDetailedLoans(),
     getDetailedReservations(),
     db.from("library_settings").select("*").eq("school_id", user.schoolId).single(),
     allBorrowers(),
-    db.from("library_events").select("id,action,created_at,details").eq("school_id", user.schoolId).order("created_at", { ascending: false }).limit(100),
     db.from("grades").select("id,name,sort_order").eq("school_id", user.schoolId).order("sort_order").order("name"),
     db.from("sections").select("id,name").eq("school_id", user.schoolId).order("name"),
     getLibrariansTeam()
@@ -276,7 +268,6 @@ export async function getLibrary(user: AppUser) {
     reservations,
     settings,
     borrowers,
-    events: (events.data ?? []) as LibraryEvent[],
     grades: (grades.data ?? []) as LibraryGrade[],
     sections: (sections.data ?? []) as LibrarySection[],
     team

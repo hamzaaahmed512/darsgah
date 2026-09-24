@@ -26,7 +26,6 @@ const data: LibraryData = {
   borrowers: [{ id: "student", kind: "student", name: "Ali Test", reference: "S-001" }],
   loans: [],
   reservations: [],
-  events: [],
   settings: {
     loan_days: 14, max_loans: 3, max_renewals: 2, fine_per_day: 10,
     student_loan_days: 14, student_max_loans: 3, student_max_renewals: 2, student_renewal_days: 14,
@@ -235,7 +234,7 @@ describe("library workspace", () => {
     expect(screen.getByRole("region", { name: "Current library totals" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Total Books" }).textContent).toContain("Across 1 title");
     expect(screen.getByRole("group", { name: "Reservations / Waiting List" })).toBeTruthy();
-    expect(screen.getByText("Inventory copy status breakdown")).toBeTruthy();
+    expect(screen.queryByText("Inventory copy status breakdown")).toBeNull();
     expect(screen.queryByRole("button", { name: /Total books/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "Report type" })).toBeNull();
     expect(screen.getByText("Filter reports").closest("details")!.open).toBe(false);
@@ -243,12 +242,14 @@ describe("library workspace", () => {
     expect(grades.getByRole("option", { name: "Grade 9" })).toBeTruthy();
     expect(grades.getByRole("option", { name: "Grade 10" })).toBeTruthy();
     expect(grades.queryByRole("option", { name: "Ali Test" })).toBeNull();
-    expect(screen.getByText("Circulation Insights")).toBeTruthy();
+    expect(screen.queryByText("Low availability & high demand titles")).toBeNull();
+    expect(screen.queryByText("Circulation Insights")).toBeNull();
+    expect(screen.queryByText(/Recent activity/)).toBeNull();
     expect(screen.getByText("Fines summary")).toBeTruthy();
     const exports = screen.getByText("Export Report").closest("details")!;
     expect(exports.open).toBe(false);
     exports.open = true;
-    for (const name of ["Inventory", "Loan History", "Overdue Loans", "Reservations", "Fines", "Audit Activity"]) {
+    for (const name of ["Inventory", "Loan History", "Overdue Loans", "Reservations", "Fines"]) {
       expect(within(exports).getByRole("button", { name })).toBeTruthy();
     }
     fireEvent.keyDown(exports, { key: "Escape" });

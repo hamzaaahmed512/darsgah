@@ -6,9 +6,6 @@ import {
   Download,
   ChevronDown,
   RotateCcw,
-  Search,
-  ChevronLeft,
-  ChevronRight,
   FileSpreadsheet
 } from "lucide-react";
 import { LibrarySummary } from "./library-summary";
@@ -28,8 +25,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 type LibraryReportsProps = {
   data: LibraryData;
-  canManage: boolean;
-  canAdmin: boolean;
   onNavigateTab: (tab: string, targetId?: string) => void;
   formatMoney: (amount: number) => string;
   formatDate: (dateStr: string) => string;
@@ -52,12 +47,6 @@ export function LibraryReports({
   const [selectedBorrowerType, setSelectedBorrowerType] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedLoanStatus, setSelectedLoanStatus] = useState<string>("all");
-
-  // Activity Log State
-  const [activityActionFilter, setActivityActionFilter] = useState<string>("all");
-  const [activityQuery, setActivityQuery] = useState<string>("");
-  const [activityPage, setActivityPage] = useState<number>(1);
-  const ACTIVITY_PER_PAGE = 10;
 
   // Derive today string in local PK time
   const todayStr = libraryToday();
@@ -220,174 +209,6 @@ export function LibraryReports({
     });
   }, [data.reservations, dateStart, dateEnd, selectedBorrowerType, selectedGrade, selectedSection, selectedCategory, booksMap, gradeMap, sectionMap]);
 
-  // Filtered Events
-  const filteredEvents = useMemo(() => {
-    return data.events.filter(event => {
-      // Date filter
-      if (dateStart || dateEnd) {
-        const eventTime = new Date(event.created_at).getTime();
-        if (dateStart && eventTime < dateStart.getTime()) return false;
-        if (dateEnd && eventTime > dateEnd.getTime()) return false;
-      }
-
-      // Action Filter
-      if (activityActionFilter !== "all") {
-        if (!event.action.toLowerCase().includes(activityActionFilter.toLowerCase())) return false;
-      }
-
-      // Search Query Filter
-      if (activityQuery.trim()) {
-        const q = activityQuery.toLowerCase();
-        const actionStr = event.action.replaceAll("_", " ").toLowerCase();
-        const titleStr = (event.details.title || "").toLowerCase();
-        const accessionStr = (event.details.accession || "").toLowerCase();
-        const reasonStr = (event.details.reason || "").toLowerCase();
-        const borrowerStr = (event.details.borrower || event.details.borrower_name || "").toLowerCase();
-        if (
-          !actionStr.includes(q) &&
-          !titleStr.includes(q) &&
-          !accessionStr.includes(q) &&
-          !reasonStr.includes(q) &&
-          !borrowerStr.includes(q)
-        ) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [data.events, dateStart, dateEnd, activityActionFilter, activityQuery]);
-
-  // Paginated Activity Log
-  const totalActivityPages = Math.max(1, Math.ceil(filteredEvents.length / ACTIVITY_PER_PAGE));
-  const paginatedEvents = useMemo(() => {
-    const startIdx = (activityPage - 1) * ACTIVITY_PER_PAGE;
-    return filteredEvents.slice(startIdx, startIdx + ACTIVITY_PER_PAGE);
-  }, [filteredEvents, activityPage]);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // KPI CALCULATIONS (Using complete system data for absolute health KPIs)
-  // ══════════════════════════════════════════════════════════════════════════
-  const activeBooks = useMemo(() => data.books.filter(b => !b.archived), [data.books]);
-
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // INVENTORY HEALTH CALCULATIONS
-  // ══════════════════════════════════════════════════════════════════════════
-  const copyStatusCounts = useMemo(() => {
-    let available = 0, onLoan = 0, damaged = 0, lost = 0, withdrawn = 0;
-    data.copies.forEach(c => {
-      if (c.status === "available") available++;
-      else if (c.status === "on_loan") onLoan++;
-      else if (c.status === "damaged") damaged++;
-      else if (c.status === "lost") lost++;
-      else if (c.status === "withdrawn") withdrawn++;
-    });
-    return { available, onLoan, damaged, lost, withdrawn, total: data.copies.length };
-  }, [data.copies]);
-
-  // Low Availability / Most Requested Titles
-  const lowAvailabilityTitles = useMemo(() => {
-    return activeBooks.map(book => {
-      const bookCopies = data.copies.filter(c => c.book_id === book.id && c.status !== "withdrawn");
-      const available = bookCopies.filter(c => c.status === "available").length;
-      const onLoan = bookCopies.filter(c => c.status === "on_loan").length;
-      const waiting = data.reservations.filter(r => r.book_id === book.id && r.status === "waiting").length;
-      return {
-        book,
-        totalCopies: bookCopies.length,
-        available,
-        onLoan,
-        waiting,
-        isLow: available === 0 || waiting > 0
-      };
-    }).filter(item => item.isLow)
-      .sort((a, b) => b.waiting - a.waiting || a.available - b.available);
-  }, [activeBooks, data.copies, data.reservations]);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // CIRCULATION INSIGHTS (Respecting active date range & filters)
-  // ══════════════════════════════════════════════════════════════════════════
-  const periodStats = useMemo(() => {
-    let issues = 0, returns = 0, renewals = 0, totalDurationDays = 0, durationCount = 0;
-
-    filteredLoans.forEach(loan => {
-      if (dateStart || dateEnd) {
-        const issuedTime = new Date(loan.issued_at).getTime();
-        const returnedTime = loan.returned_at ? new Date(loan.returned_at).getTime() : null;
-        if (dateStart && issuedTime >= dateStart.getTime() && (!dateEnd || issuedTime <= dateEnd.getTime())) {
-          issues++;
-        }
-        if (returnedTime && dateStart && returnedTime >= dateStart.getTime() && (!dateEnd || returnedTime <= dateEnd.getTime())) {
-          returns++;
-        }
-      } else {
-        issues++;
-        if (loan.returned_at) returns++;
-      }
-
-      renewals += loan.renewals || 0;
-
-      if (loan.returned_at) {
-        const startMs = new Date(loan.issued_at).getTime();
-        const endMs = new Date(loan.returned_at).getTime();
-        const diffDays = Math.max(0, (endMs - startMs) / (1000 * 60 * 60 * 24));
-        totalDurationDays += diffDays;
-        durationCount++;
-      }
-    });
-
-    const avgDuration = durationCount > 0 ? (totalDurationDays / durationCount).toFixed(1) : "N/A";
-    return { issues, returns, renewals, avgDuration };
-  }, [filteredLoans, dateStart, dateEnd]);
-
-  // Most Borrowed Titles in Filtered Set
-  const mostBorrowedTitles = useMemo(() => {
-    const countMap = new Map<string, number>();
-    filteredLoans.forEach(l => {
-      const copy = copiesMap.get(l.copy_id);
-      const bookId = l.book_id || copy?.book_id;
-      if (bookId) {
-        countMap.set(bookId, (countMap.get(bookId) || 0) + 1);
-      }
-    });
-
-    return Array.from(countMap.entries())
-      .map(([bookId, count]) => {
-        const book = booksMap.get(bookId);
-        const bookCopies = data.copies.filter(c => c.book_id === bookId && c.status === "available").length;
-        const waiting = data.reservations.filter(r => r.book_id === bookId && r.status === "waiting").length;
-        return { bookTitle: book?.title || "Unknown Book", count, available: bookCopies, waiting };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [filteredLoans, copiesMap, booksMap, data.copies, data.reservations]);
-
-  // Borrowing by Grade
-  const gradeBorrowingStats = useMemo(() => {
-    const map = new Map<string, number>();
-    filteredLoans.forEach(l => {
-      if (l.borrower_kind === "student") {
-        const gName = l.student_grade_name || "Grade Not Specified";
-        map.set(gName, (map.get(gName) || 0) + 1);
-      }
-    });
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredLoans]);
-
-  // Student vs Staff Borrowing Breakdown
-  const borrowerTypeStats = useMemo(() => {
-    let student = 0, staff = 0;
-    filteredLoans.forEach(l => {
-      if (l.borrower_kind === "student") student++;
-      else if (l.borrower_kind === "staff") staff++;
-    });
-    const total = student + staff;
-    const studentPct = total > 0 ? Math.round((student / total) * 100) : 0;
-    const staffPct = total > 0 ? Math.round((staff / total) * 100) : 0;
-    return { student, staff, total, studentPct, staffPct };
-  }, [filteredLoans]);
-
   // ══════════════════════════════════════════════════════════════════════════
   // FINES SUMMARY CALCULATIONS
   // ══════════════════════════════════════════════════════════════════════════
@@ -541,24 +362,8 @@ export function LibraryReports({
     exportCsv(rows, "library-fines-report.csv");
   };
 
-  const exportActivityReport = () => {
-    const rows = [
-      ["Action", "Timestamp", "User / Details", "Title / Copy ID", "Borrower", "Reason / Amount"],
-      ...filteredEvents.map(e => [
-        e.action,
-        new Date(e.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
-        e.details.user || e.details.by || "",
-        e.details.title || e.details.accession || "",
-        e.details.borrower || e.details.borrower_name || "",
-        e.details.reason || (e.details.amount ? `Rs ${e.details.amount}` : "")
-      ])
-    ];
-    exportCsv(rows, "library-activity-log-report.csv");
-  };
-
   return (
     <div className="space-y-5">
-      <LibrarySummary data={data} />
       {/* ══════════════════════════════════════════════════════════════════════
           1. REPORTS HEADER & FILTER TOOLBAR
       ══════════════════════════════════════════════════════════════════════ */}
@@ -587,8 +392,7 @@ export function LibraryReports({
                 { label: "Loan History", action: exportLoanHistoryReport },
                 { label: "Overdue Loans", action: exportOverdueReport },
                 { label: "Reservations", action: exportReservationsReport },
-                { label: "Fines", action: exportFinesReport },
-                { label: "Audit Activity", action: exportActivityReport }
+                { label: "Fines", action: exportFinesReport }
               ].map(({ label, action }) => (
                 <button key={label} type="button" className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-slate-100 focus-visible:bg-slate-100"
                   onClick={event => {
@@ -605,7 +409,7 @@ export function LibraryReports({
         <Button type="button" variant="secondary" onClick={handleResetFilters} className="my-2 text-xs font-semibold">
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset filters
         </Button>
-        <p className="my-2 text-xs text-muted">Date and borrower filters apply to loans; inventory uses the category filter. Activity uses its own action and date filters.</p>
+        <p className="my-2 text-xs text-muted">Date, borrower, category, and status filters apply to the displayed loan and reservation reports.</p>
         {/* Filter Toolbar Controls */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {/* Date Range Preset */}
@@ -734,186 +538,7 @@ export function LibraryReports({
         </details>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Inventory copy status breakdown">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-outline/60 text-muted font-bold">
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2 text-right">Copies</th>
-                  <th className="pb-2 text-right">% of Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline/40 font-medium">
-                <tr>
-                  <td className="py-2.5 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                    Available copies
-                  </td>
-                  <td className="py-2.5 text-right font-bold">{copyStatusCounts.available}</td>
-                  <td className="py-2.5 text-right text-muted">
-                    {copyStatusCounts.total > 0 ? ((copyStatusCounts.available / copyStatusCounts.total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
-                    On loan
-                  </td>
-                  <td className="py-2.5 text-right font-bold">{copyStatusCounts.onLoan}</td>
-                  <td className="py-2.5 text-right text-muted">
-                    {copyStatusCounts.total > 0 ? ((copyStatusCounts.onLoan / copyStatusCounts.total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span>
-                    Damaged
-                  </td>
-                  <td className="py-2.5 text-right font-bold text-amber-700">{copyStatusCounts.damaged}</td>
-                  <td className="py-2.5 text-right text-muted">
-                    {copyStatusCounts.total > 0 ? ((copyStatusCounts.damaged / copyStatusCounts.total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-500"></span>
-                    Lost
-                  </td>
-                  <td className="py-2.5 text-right font-bold text-red-600">{copyStatusCounts.lost}</td>
-                  <td className="py-2.5 text-right text-muted">
-                    {copyStatusCounts.total > 0 ? ((copyStatusCounts.lost / copyStatusCounts.total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span>
-                    Withdrawn / removed
-                  </td>
-                  <td className="py-2.5 text-right font-bold text-muted">{copyStatusCounts.withdrawn}</td>
-                  <td className="py-2.5 text-right text-muted">
-                    {copyStatusCounts.total > 0 ? ((copyStatusCounts.withdrawn / copyStatusCounts.total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-
-        <Panel title="Low availability & high demand titles">
-          <p className="text-xs text-muted mb-3">Titles with zero available copies or active waiting reservations</p>
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {lowAvailabilityTitles.map(({ book, totalCopies, available, onLoan, waiting }) => (
-              <div key={book.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-xs">
-                <div>
-                  <strong className="font-bold text-ink block">{book.title}</strong>
-                  <p className="text-[11px] text-muted">
-                    {totalCopies} total · <span className={available === 0 ? "font-bold text-red-600" : "text-emerald-700"}>{available} available</span> · {onLoan} on loan · <span className={waiting > 0 ? "font-bold text-teal-700" : ""}>{waiting} waiting</span>
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onNavigateTab("Catalogue", book.id)}
-                  className="text-[11px] px-2.5 py-1"
-                >
-                  View
-                </Button>
-              </div>
-            ))}
-            {!lowAvailabilityTitles.length && (
-              <p className="text-xs text-muted py-4 text-center">All titles have good availability and no waiting queues.</p>
-            )}
-          </div>
-        </Panel>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          4. CIRCULATION INSIGHTS
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Panel title="Circulation Insights">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-muted">Period Issues</p>
-            <p className="text-xl font-bold text-ink">{periodStats.issues}</p>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-muted">Period Returns</p>
-            <p className="text-xl font-bold text-ink">{periodStats.returns}</p>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-muted">Period Renewals</p>
-            <p className="text-xl font-bold text-ink">{periodStats.renewals}</p>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-muted">Avg Loan Duration</p>
-            <p className="text-xl font-bold text-ink">{periodStats.avgDuration} {periodStats.avgDuration !== "N/A" ? "days" : ""}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Most Borrowed Titles */}
-          <div>
-            <h4 className="font-bold text-xs text-ink uppercase tracking-wider mb-2">Most Borrowed Titles</h4>
-            <div className="space-y-2 text-xs">
-              {mostBorrowedTitles.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded-lg border border-outline/50 p-2.5">
-                  <div className="min-w-0 pr-2">
-                    <strong className="font-semibold text-ink block truncate">{item.bookTitle}</strong>
-                    <span className="text-[11px] text-muted">{item.available} available · {item.waiting} waiting</span>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-                    {item.count} issues
-                  </span>
-                </div>
-              ))}
-              {!mostBorrowedTitles.length && <p className="text-muted text-xs py-2">No loans recorded in selected period.</p>}
-            </div>
-          </div>
-
-          {/* Borrowing by Grade */}
-          <div>
-            <h4 className="font-bold text-xs text-ink uppercase tracking-wider mb-2">Student Borrowing by Grade</h4>
-            <div className="space-y-2 text-xs">
-              {gradeBorrowingStats.map(([gName, count]) => (
-                <div key={gName} className="space-y-1">
-                  <div className="flex justify-between text-xs font-medium">
-                    <span>{gName}</span>
-                    <span className="font-bold">{count} issues</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: `${Math.min(100, (count / (periodStats.issues || 1)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {!gradeBorrowingStats.length && <p className="text-muted text-xs py-2">No student borrowing data in filter.</p>}
-            </div>
-          </div>
-
-          {/* Student vs Staff */}
-          <div>
-            <h4 className="font-bold text-xs text-ink uppercase tracking-wider mb-2">Student vs Staff Borrowing</h4>
-            <div className="rounded-xl border border-outline/50 p-4 space-y-3 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-ink">Students</span>
-                <span className="font-bold text-ink">{borrowerTypeStats.student} loans ({borrowerTypeStats.studentPct}%)</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden flex">
-                <div className="bg-blue-600 h-full" style={{ width: `${borrowerTypeStats.studentPct}%` }} />
-                <div className="bg-teal-600 h-full" style={{ width: `${borrowerTypeStats.staffPct}%` }} />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-ink">Staff</span>
-                <span className="font-bold text-ink">{borrowerTypeStats.staff} loans ({borrowerTypeStats.staffPct}%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Panel>
+      <LibrarySummary data={data} />
 
       {/* ══════════════════════════════════════════════════════════════════════
           5. OVERDUE & RESERVATIONS FOCUSED LISTS
@@ -1029,101 +654,6 @@ export function LibraryReports({
           Note: Fine payments and waivers are library internal records. They are managed independently and are not automatically posted to the general school finance ledger.
         </p>
       </Panel>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          7. RECENT ACTIVITY & AUDIT LOG
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Panel title={`Recent activity (${filteredEvents.length} records)`}>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {/* Filter pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {["all", "issue", "return", "renew", "reserve", "cancel", "copy", "payment", "waiver"].map(action => (
-                <button
-                  key={action}
-                  type="button"
-                  onClick={() => { setActivityActionFilter(action); setActivityPage(1); }}
-                  className={`rounded-full px-3 py-1 text-[11px] font-bold capitalize transition-colors ${
-                    activityActionFilter === action
-                      ? "bg-primary text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
-
-            {/* Keyword Search */}
-            <div className="relative min-w-[200px]">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted" />
-              <input
-                type="text"
-                placeholder="Search audit activity..."
-                className="w-full rounded-xl border border-outline/70 bg-white pl-8 pr-3 py-1.5 text-xs font-medium text-ink focus:border-primary focus:outline-none"
-                value={activityQuery}
-                onChange={e => { setActivityQuery(e.target.value); setActivityPage(1); }}
-              />
-            </div>
-          </div>
-
-          {/* Log Table / List */}
-          <div className="space-y-2">
-            {paginatedEvents.map(event => (
-              <div key={event.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl bg-slate-50 p-3 text-xs gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <strong className="capitalize font-bold text-ink">{event.action.replaceAll("_", " ")}</strong>
-                    <span className="text-[11px] text-muted">
-                      {new Date(event.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-700 mt-1">
-                    {event.details.title && <span>Title: <strong>{event.details.title}</strong></span>}
-                    {event.details.accession && <span>Copy ID: <strong>{event.details.accession}</strong></span>}
-                    {event.details.borrower && <span>Borrower: <strong>{event.details.borrower}</strong></span>}
-                    {event.details.amount && <span>Amount: <strong>Rs {event.details.amount}</strong></span>}
-                  </div>
-                  {event.details.reason && <p className="mt-1 text-[11px] text-muted italic">{event.details.reason}</p>}
-                </div>
-              </div>
-            ))}
-            {!paginatedEvents.length && (
-              <p className="text-xs text-muted py-6 text-center">No activity log entries match your filter criteria.</p>
-            )}
-          </div>
-
-          {/* Pagination Controls */}
-          {totalActivityPages > 1 && (
-            <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-outline/40">
-              <span className="text-xs text-muted">
-                Page {activityPage} of {totalActivityPages}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={activityPage <= 1}
-                  onClick={() => setActivityPage(p => Math.max(1, p - 1))}
-                  className="text-xs px-2.5 py-1"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={activityPage >= totalActivityPages}
-                  onClick={() => setActivityPage(p => Math.min(totalActivityPages, p + 1))}
-                  className="text-xs px-2.5 py-1"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </Panel>
-
 
     </div>
   );

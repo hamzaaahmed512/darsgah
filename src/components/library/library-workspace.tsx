@@ -904,8 +904,6 @@ export function LibraryWorkspace({
       {tab === "Reports" && (
         <LibraryReports
           data={data}
-          canManage={canManage}
-          canAdmin={canAdmin}
           onNavigateTab={(targetTab, targetId) => {
             setTab(targetTab === "Reservations" ? "Loans & reservations" : targetTab);
             if (targetId) {

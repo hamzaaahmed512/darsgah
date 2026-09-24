@@ -53,7 +53,7 @@ export function ReturnBookDialog({
 
   return (
     <LibraryDialog title="Return book" description="Process copy return and update availability" onClose={onClose}>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
           {error && (
             <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -62,10 +62,10 @@ export function ReturnBookDialog({
           )}
 
           {/* Loan Overview Summary */}
-          <div className="rounded-2xl bg-slate-50 p-4 text-xs space-y-1">
-            <p><strong className="text-ink">Title:</strong> {bookTitle}</p>
+          <div className="space-y-2 rounded-2xl bg-slate-50 p-4 text-xs">
+            <p className="break-words"><strong className="text-ink">Title:</strong> {bookTitle}</p>
             <p><strong className="text-ink">Copy ID:</strong> {copy?.accession || "N/A"}</p>
-            <p><strong className="text-ink">Borrower:</strong> {loan.borrower_name} ({loan.borrower_kind})</p>
+            <p className="break-words"><strong className="text-ink">Borrower:</strong> {loan.borrower_name} ({loan.borrower_kind})</p>
             <p><strong className="text-ink">Due Date:</strong> {loan.due_date}</p>
           </div>
 
@@ -95,11 +95,11 @@ export function ReturnBookDialog({
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-outline/50">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+          <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline/50 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={pending} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending} className="w-full sm:w-auto">
               {pending ? "Processing..." : "Confirm return"}
             </Button>
           </div>
