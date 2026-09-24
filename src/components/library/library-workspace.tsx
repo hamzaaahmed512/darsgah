@@ -206,53 +206,48 @@ function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnl
         <Plus className="h-4 w-4" />{!iconOnly ? " Add copies" : null}
       </button>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="dialog-panel w-full max-w-lg rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
-            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="font-display text-xl font-bold text-ink">Add copies</h2>
-                <p className="mt-1 text-sm font-semibold text-primary">{book.title}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="rounded-xl p-2 text-muted hover:bg-surface-low"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-5 sm:p-6">
-              <Form action="add_copies" label="Add copies" reset>
+        <LibraryDialog title="Add copies" description={book.title} onClose={() => setOpen(false)} className="max-w-lg lg:max-w-2xl">
+            <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+              <Form action="add_copies" label="Add copies" reset onSuccess={() => setOpen(false)}>
                 <input type="hidden" name="book_id" value={book.id} />
-                <Field label="Quantity to add" hint="Up to 1,000 copies per batch. Copy IDs are generated automatically.">
-                  <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
-                </Field>
-                <Field label="Replacement cost (Rs)"
-                  hint="Optional override for these copies. Added to the library balance if lost. Leave blank to use the book default.">
-                  <Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01"
-                    placeholder={book.default_replacement_cost != null ? String(book.default_replacement_cost) : "Optional"}
-                    defaultValue="" />
-                </Field>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Field label="Quantity to add" hint="Up to 1,000 copies per batch. Copy IDs are generated automatically.">
+                    <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
+                  </Field>
+                  <Field label="Replacement cost (Rs)"
+                    hint="Optional override for these copies. Added to the library balance if lost. Leave blank to use the book default.">
+                    <Input name="replacement_cost" type="number" min="0" max="1000000" step="0.01"
+                      placeholder={book.default_replacement_cost != null ? String(book.default_replacement_cost) : "Optional"}
+                      defaultValue="" />
+                  </Field>
+                </div>
               </Form>
             </div>
-          </div>
-        </div>
+        </LibraryDialog>
       )}
     </>
   );
 }
 
-function EditBookModal({ book, menuItem = false }: { book: LibraryBook; menuItem?: boolean }) {
+function EditBookModal({ book }: { book: LibraryBook }) {
   const [open, setOpen] = useState(false);
-  return <><button type="button" onClick={() => setOpen(true)} className={menuItem ? "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink hover:bg-surface-low" : "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft"} aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" />{menuItem ? "Edit book" : null}</button>{open ? <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="dialog-panel w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]"><div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6"><div><h2 className="font-display text-2xl font-bold text-ink">Edit book</h2><p className="mt-1 text-sm text-muted">Update the details for {book.title}.</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6"><Form action="edit_book" id={book.id}><BookFields book={book} /></Form></div></div></div> : null}</>;
+  return <>
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft" aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" /></button>
+    {open ? (
+      <LibraryDialog title="Edit book" description={`Update the details for ${book.title}.`} onClose={() => setOpen(false)} className="max-w-2xl lg:max-w-4xl">
+        <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+          <Form action="edit_book" id={book.id} onSuccess={() => setOpen(false)}><BookFields book={book} /></Form>
+        </div>
+      </LibraryDialog>
+    ) : null}
+  </>;
 }
 
-function ArchiveBookButton({ book, menuItem = false }: { book: LibraryBook; menuItem?: boolean }) {
+function ArchiveBookButton({ book }: { book: LibraryBook }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const archive = !book.archived;
-  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Delete" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) router.refresh(); else alert(result.error ?? "Unable to update this book."); }); }} className={menuItem ? `inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold disabled:opacity-50 ${archive ? "text-red-600 hover:bg-red-50" : "text-primary hover:bg-primary-soft"}` : `inline-flex h-10 w-10 items-center justify-center rounded-xl border transition disabled:opacity-50 ${archive ? "border-red-100 bg-red-50 text-red-600 hover:bg-red-100" : "border-outline/70 bg-white text-primary hover:bg-primary-soft"}`} aria-label={archive ? `Delete ${book.title}` : `Restore ${book.title}`} title={archive ? "Delete book" : "Restore book"}><Trash2 className="h-4 w-4" />{menuItem ? archive ? "Archive book" : "Restore book" : null}</button>;
+  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Delete" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) router.refresh(); else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition disabled:opacity-50 ${archive ? "border-red-100 bg-red-50 text-red-600 hover:bg-red-100" : "border-outline/70 bg-white text-primary hover:bg-primary-soft"}`} aria-label={archive ? `Delete ${book.title}` : `Restore ${book.title}`} title={archive ? "Delete book" : "Restore book"}><Trash2 className="h-4 w-4" /></button>;
 }
 
 function IssueBookModal({
@@ -286,22 +281,24 @@ function IssueBookModal({
         className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
         title={availableCopies.length ? "Issue book" : "Reserve book"}>Issue Book</button>}
       {open && (
-        <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl">
-            <div className="p-5 sm:p-6">
+        <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl lg:max-w-4xl">
+            <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
               {availableCopies.length ? (
                 <Form action="issue" label="Issue book" reset disabled={!borrower || !copyId || !borrower.is_eligible}
                   onSuccess={() => { close(); setBorrower(null); onIssued(); }}>
                   {prefilled ? <input type="hidden" name="reservation_id" value={prefilled.reservationId} /> : null}
                   <BorrowerSelector grades={grades} sections={sections} selectedBorrower={borrower}
                     onSelect={setBorrower} keepSearchVisible={!prefilled} />
-                  <Field label="Available copy">
-                    <Select name="copy_id" value={copyId} onChange={(event) => setCopyId(event.target.value)}>
-                      {availableCopies.map(copy => <option key={copy.id} value={copy.id}>Copy {copy.accession}</option>)}
-                    </Select>
-                  </Field>
-                  <Field label="Return by due date" hint={`School policy: up to ${loanDays} days for this borrower.`}>
-                    <Input key={`${borrower?.kind ?? "student"}-${loanDays}`} name="due_date" type="date" min={libraryDueDate(1)} max={dueDate} defaultValue={dueDate} required />
-                  </Field>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Field label="Available copy">
+                      <Select name="copy_id" value={copyId} onChange={(event) => setCopyId(event.target.value)}>
+                        {availableCopies.map(copy => <option key={copy.id} value={copy.id}>Copy {copy.accession}</option>)}
+                      </Select>
+                    </Field>
+                    <Field label="Return by due date" hint={`School policy: up to ${loanDays} days for this borrower.`}>
+                      <Input key={`${borrower?.kind ?? "student"}-${loanDays}`} name="due_date" type="date" min={libraryDueDate(1)} max={dueDate} defaultValue={dueDate} required />
+                    </Field>
+                  </div>
                   {borrower && !borrower.is_eligible && (
                     <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
                       {borrower.ineligibility_reason || "This borrower cannot take another loan right now."}
