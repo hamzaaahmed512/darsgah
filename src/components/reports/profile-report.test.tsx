@@ -5,6 +5,8 @@ import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { StaffReportPDF } from "./StaffReportPDF";
 import { StudentReportPDF } from "./StudentReportPDF";
+import { ReportTemplatePDF } from "./ReportTemplatePDF";
+import { expandReportRows } from "./report-template-types";
 import { reportDate, reportFilename, reportMoney, reportRate } from "./profile-report-format";
 import type { StaffReportData, StudentReportData } from "./profile-report-types";
 
@@ -51,6 +53,12 @@ describe("profile PDF output", () => {
 });
 
 describe("report formatting", () => {
+  it("preserves every character when continuing long table cells", () => {
+    const original = "Detailed teacher comment ".repeat(100);
+    const rows = expandReportRows([["Ali", original, "A"]]);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.map((row) => row[1]).join("")).toBe(original);
+  });
   it("distinguishes zero from missing values", () => {
     expect(reportMoney(0)).toBe("PKR 0");
     expect(reportMoney(null)).toBe("Not recorded");
@@ -64,5 +72,35 @@ describe("report formatting", () => {
   });
   it("sanitizes filenames", () => {
     expect(reportFilename("student", "Ali / Khan:?", generatedAt)).toBe("student-Ali-Khan-2026-09-24.pdf");
+  });
+});
+
+describe("shared app-wide PDF template", () => {
+  it("paginates long tables on A4 without dropping rows", async () => {
+    const buffer = await renderToBuffer(<ReportTemplatePDF generatedAt={generatedAt} data={{ title: "Attendance Report", sections: [{
+      title: "Daily Attendance", subtitle: "Grade 9 / Section A • 24 Sep 2026",
+      metrics: [{ label: "Students", value: "100" }, { label: "Present", value: "95" }, { label: "Absent", value: "5" }],
+      headers: ["Student", "Admission ID", "Status"],
+      rows: Array.from({ length: 100 }, (_, i) => [`Student ${String(i + 1).padStart(3, "0")}`, `ADM-${i + 1}`, i < 95 ? "Present" : "Absent"])
+    }] }} />);
+    const pdf = buffer.toString("latin1");
+    expect(pdf.match(/\/Type \/Page\b/g)?.length).toBeGreaterThan(1);
+    for (const size of pdf.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)) {
+      expect(Number(size[1])).toBeCloseTo(595.28, 1);
+      expect(Number(size[2])).toBeCloseTo(841.89, 1);
+    }
+    if (process.env.PDF_QA_OUTPUT === "1") await writeFile("tmp/pdfs/attendance.pdf", buffer);
+  });
+  it("starts separate result cards on new pages and renders receipt metadata", async () => {
+    const buffer = await renderToBuffer(<ReportTemplatePDF generatedAt={generatedAt} data={{ title: "Results and receipt QA", sections: [
+      { title: "Ali Khan", subtitle: "Result Card / Grade 9 A / Monthly examination", status: "Partial results - Mathematics pending",
+        metrics: [{ label: "Total marks", value: "85 / 100" }, { label: "Percentage", value: "85%" }, { label: "Grade", value: "A" }],
+        details: [["Admission ID", "ADM-123"]], headers: ["Subject", "Marks", "Grade", "Teacher comment"],
+        rows: [["Science", "85 / 100", "A", "Excellent work"]], signatures: ["Class Teacher", "Principal"] },
+      { title: "Payment Receipt", subtitle: "REC-000123", metrics: [{ label: "Amount paid", value: "PKR 5,000" }, { label: "Method", value: "Cash" }, { label: "Payment date", value: "24 Sep 2026" }],
+        details: [["Student", "Ali Khan"], ["Admission ID", "ADM-123"], ["Class & section", "Grade 9 A"], ["Session", "2026-27"], ["Reference", "TX-100"], ["Received by", "Cashier"]], note: "September fee payment." }
+    ] }} />);
+    expect(buffer.toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(2);
+    if (process.env.PDF_QA_OUTPUT === "1") await writeFile("tmp/pdfs/results-receipt.pdf", buffer);
   });
 });

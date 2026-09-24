@@ -21,7 +21,6 @@ import {
   XCircle
 } from "lucide-react";
 import { StaffProfileEditModal } from "@/components/staff/staff-profile-edit-modal";
-import { PrintProfileButton } from "@/components/staff/print-profile-button";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 import type { StaffReportData } from "@/components/reports/profile-report-types";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -187,7 +186,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
             <div className="flex flex-wrap items-center gap-3">
               <DownloadReportButton type="staff" data={reportData} />
-              <PrintProfileButton />
               {canEdit ? (
                 <StaffProfileEditModal
                   staffId={id}

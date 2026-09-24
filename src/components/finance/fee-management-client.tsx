@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Percent, X, Printer, Receipt, Wallet, UsersRound } from "lucide-react";
+import { Search, Percent, X, Receipt, Wallet, UsersRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Field, Textarea } from "@/components/ui/form-field";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,6 +13,8 @@ import {
 import { hasPermission } from "@/lib/permissions";
 import type { AppUser } from "@/types/database";
 import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
+import { ReportExport } from "@/components/reports/ReportExport";
+import { ReportGenerator } from "@/components/reports/report-generator";
 
 interface FeeManagementClientProps {
   user: AppUser;
@@ -320,13 +322,14 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
             <p className="text-sm text-muted">
               Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
             </p>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-button hover:brightness-105"
-            >
-              <Printer className="h-4 w-4" /> Print Report
-            </button>
+            <ReportGenerator title="Student Fee Accounts" filters={{ Search: q, Status: status, Class: classes.find((item) => item.id === classId)?.name, Session: sessions.find((item) => item.id === session)?.name, Discounted: onlyDiscounted ? "Yes" : undefined }}
+              headers={["Student / Admission", "Class", "Payable", "Paid", "Outstanding", "Status"]}
+              data={filtered.map((account) => [
+                `${account.student_name} / ${account.admission_number}`,
+                formatGradeSection(account.grade_name, account.section_name),
+                formatPKR(Number(account.total_payable)), formatPKR(Number(account.amount_paid)),
+                formatPKR(Number(account.remaining_balance)), account.payment_status
+              ])} />
           </div>
         </div>
       ) : null}
@@ -457,9 +460,23 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                 <p className="text-xs text-muted">{selectedReceipt.receipt_number}</p>
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => window.print()} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">
-                  Print
-                </button>
+                <ReportExport label="Download / Print PDF" data={{ title: "Payment Receipt", sections: [{
+                  title: "Payment Receipt",
+                  subtitle: selectedReceipt.receipt_number,
+                  metrics: [
+                    { label: "Amount paid", value: formatPKR(Number(selectedReceipt.amount)) },
+                    { label: "Payment method", value: selectedReceipt.payment_method.replace(/_/g, " ") },
+                    { label: "Payment date", value: formatDatePK(selectedReceipt.payment_date) }
+                  ],
+                  details: [
+                    ["Student", selectedReceipt.student_name], ["Admission ID", selectedReceipt.admission_number],
+                    ["Class & section", formatGradeSection(selectedReceipt.grade_name, selectedReceipt.section_name)],
+                    ["Academic session", selectedReceipt.academic_year_name || "Not recorded"],
+                    ["Reference", selectedReceipt.reference_number || selectedReceipt.transaction_number || "Not recorded"],
+                    ["Received by", selectedReceipt.received_by_name || "Not recorded"]
+                  ],
+                  note: selectedReceipt.remarks || undefined
+                }] }} />
                 <button type="button" onClick={() => setSelectedReceipt(null)} className="rounded-lg bg-surface-low px-3 py-2 text-sm font-semibold text-muted">
                   Close
                 </button>

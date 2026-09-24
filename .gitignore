@@ -7,3 +7,5 @@ node_modules/
 coverage/
 dist/
 *.tsbuildinfo
+tmp/pdfs/
+tmp/pdf-qa-packages/

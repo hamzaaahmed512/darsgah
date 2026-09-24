@@ -2,8 +2,8 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getPrintableResultCards } from "@/lib/services/marks";
 import type { ExamType } from "@/types/database";
 import { formatClassDisplayName } from "@/lib/utils";
-import { PrintButton } from "@/app/(app)/results/print/print-button";
-import { AutoPrint } from "@/components/reports/auto-print";
+import { ReportExport } from "@/components/reports/ReportExport";
+import type { ReportTemplateData } from "@/components/reports/report-template-types";
 
 export default async function PrintableResultsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -16,15 +16,37 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
   const template = result.template;
   const examLabel = `${formatExamType(examType)}${examType === "monthly" && month ? ` / ${new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, month - 1, 1))}` : ""}`;
 
+  const report: ReportTemplateData = {
+    title: template.title,
+    school: { name: user.schoolFullName || user.schoolName, logoUrl: result.branding.logoUrl },
+    sections: result.cards.map((card) => ({
+      title: card.student.name,
+      subtitle: `${template.title} / ${formatClassDisplayName(classRow?.grades?.name, classRow?.name, classRow?.sections?.name)} / ${examLabel}`,
+      status: result.complete ? "All subject results approved" : result.status === "pending" ? "Pending - no finalized subject results" : "Partial results - some subjects pending approval",
+      metrics: [
+        { label: "Total marks", value: `${card.totalObtained} / ${card.totalMax}` },
+        { label: "Percentage", value: `${card.percentage.toFixed(1)}%` },
+        { label: "Overall grade", value: card.overallGrade }
+      ],
+      details: [
+        ...(template.showAdmissionNumber ? [["Admission ID", card.student.admission_number] as [string, string]] : []),
+        ...(template.showAcademicYear ? [["Academic year", classRow?.academic_years?.name ?? "Current"] as [string, string]] : [])
+      ],
+      headers: ["Subject", "Exam", "Marks", "Grade", ...(template.showTeacherComments ? ["Comment"] : [])],
+      rows: card.rows.map((row) => [row.subject_name, `${row.exam_title} (${formatExamType(row.exam_type)})`, row.marks_obtained === null ? "Pending" : `${row.marks_obtained} / ${row.max_marks}`, row.grade, ...(template.showTeacherComments ? [row.teacher_comment || "-"] : [])]),
+      note: result.missing.length ? `Missing or pending approval: ${result.missing.join(", ")}` : undefined,
+      signatures: template.signatureLabels
+    }))
+  };
+
   return (
     <div className="mx-auto grid max-w-5xl gap-6 bg-white p-6 text-ink print:max-w-none print:p-0">
-      <AutoPrint enabled={params.print === "1"} />
       <div className="flex items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="font-display text-3xl font-bold">Printable Result Cards</h1>
-          <p className="text-sm text-muted">Use the browser print dialog for paper output or choose Save as PDF.</p>
+          <p className="text-sm text-muted">Download the standard school PDF, or open it to preview and print.</p>
         </div>
-        <PrintButton />
+        <ReportExport data={report} autoOpen={params.print === "1"} label="Download / Print PDF" />
       </div>
 
       {!result.complete ? (

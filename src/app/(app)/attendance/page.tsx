@@ -10,7 +10,6 @@ import { reopenAttendanceAction, submitAttendanceAction, submitTeacherAttendance
 import { PendingAttendanceCard } from "@/components/dashboard/pending-attendance-card";
 import { ButtonLink } from "@/components/ui/button";
 import { BriefcaseBusiness, CalendarDays, House } from "lucide-react";
-import { AutoPrint } from "@/components/reports/auto-print";
 import { ReportGenerator } from "@/components/reports/report-generator";
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -37,7 +36,6 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <AutoPrint enabled={params.print === "1"} />
       <PageHeader
         eyebrow="Daily workflow"
         title={teacherAttendanceView ? "Teacher Attendance" : "Attendance"}
@@ -46,22 +44,24 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             {teacherAttendanceView && teacherContext ? (
               <ReportGenerator 
+                autoOpen={params.print === "1"}
                 headers={["Name", "Role", "Status"]}
                 data={teacherContext.teachers.map((row: any) => [
-                  row.full_name || "",
+                  row.teacher_name || "",
                   row.role ? row.role.replace(/_/g, " ") : "",
-                  row.status || (teacherContext.submitted ? "Present" : "Unmarked")
+                  row.current_status || "Unmarked"
                 ])}
                 title={`Teacher Attendance - ${teacherContext.attendanceDate}`} 
                 filters={{ Date: teacherContext.attendanceDate }} 
               />
             ) : context ? (
               <ReportGenerator 
-                headers={["Student", "Gender", "Status"]}
+                autoOpen={params.print === "1"}
+                headers={["Student", "Admission ID", "Status"]}
                 data={context.roster.map((row: any) => [
-                  row.full_name || "",
-                  row.gender || "",
-                  row.status || (context.session ? "Present" : "Unmarked")
+                  row.student_name || "",
+                  row.admission_number || "",
+                  row.current_status || "Unmarked"
                 ])}
                 title={`Attendance Report - ${selectedClass?.name || "All Classes"} - ${context.attendanceDate}`} 
                 filters={{ Date: context.attendanceDate, Class: selectedClass?.name || "All" }} 

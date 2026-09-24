@@ -7,6 +7,7 @@ import { getSchoolProfile } from "@/lib/services/settings";
 import { getNotificationSummary } from "@/lib/services/notifications";
 import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getAnnouncements } from "@/lib/services/announcements";
+import { ReportBrandingProvider } from "@/components/reports/report-branding";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
@@ -51,7 +52,9 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           initialAttentionAnnouncements={unreadAttentionAnnouncements}
           principalCanAccessAcademicControl={canAccessAcademicControl}
         >
-          {children}
+          <ReportBrandingProvider school={{ name: user.schoolFullName ?? legacyProfile?.school?.name ?? user.schoolName, logoUrl: user.schoolLogoUrl ?? settings.schoolLogoUrl ?? null }}>
+            {children}
+          </ReportBrandingProvider>
         </AppShell>
       </OnboardingGate>
     </ToastProvider>

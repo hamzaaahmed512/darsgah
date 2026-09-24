@@ -36,39 +36,24 @@ const styles = StyleSheet.create({
   pageNumber: { fontSize: 7, color: "#64748b" }
 });
 
-interface Metric { label: string; value: string; note?: string }
+export interface ReportMetric { label: string; value: string; note?: string }
 interface LayoutProps extends PDFRenderOptions {
   type: "STAFF REPORT" | "STUDENT REPORT";
   school?: ReportSchool;
   fullName: string;
   status: string;
   primaryRole: string;
-  metrics: [Metric, Metric, Metric];
+  metrics: [ReportMetric, ReportMetric, ReportMetric];
   details: [string, string][];
 }
 
 export function ProfileReportLayout({ type, school, fullName, status, primaryRole, metrics, details, generatedAt, logoDataUrl }: LayoutProps) {
   const schoolName = reportText(school?.name, DEFAULT_REPORT_SCHOOL);
-  const initials = schoolName.split(/\s+/).slice(0, 3).map((word) => word[0]).join("").toUpperCase();
   const statusLabel = reportText(status, "Unknown").replace(/_/g, " ");
   return (
     <Document title={`${type} - ${fullName}`} author={schoolName} subject="Confidential individual profile report" language="en">
       <Page size="A4" orientation="portrait" wrap={false} style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.brand}>
-            {/* Network logos are validated by the browser before PDF rendering. */}
-            {/* eslint-disable-next-line jsx-a11y/alt-text -- This is a PDF primitive, not an HTML image. */}
-            {logoDataUrl ? <Image src={logoDataUrl} style={styles.logo} /> : <View style={styles.logoFallback}><Text style={styles.initials}>{initials}</Text></View>}
-            <View style={styles.brandText}>
-              <Text style={styles.schoolName}>{schoolName}</Text>
-              <Text style={styles.subtitle}>{reportText(school?.address || school?.subtitle, "School Administration • Individual Profile")}</Text>
-            </View>
-          </View>
-          <View style={styles.reportMeta}>
-            <Text style={styles.reportType}>{type}</Text>
-            <Text style={styles.timestamp}>{reportDate(generatedAt, true)}</Text>
-          </View>
-        </View>
+        <ReportHeader type={type} school={school} generatedAt={generatedAt} logoDataUrl={logoDataUrl} />
         <View style={styles.profile}>
           <Text style={styles.kicker}>PROFILE SUMMARY</Text>
           <View style={styles.nameRow}>
@@ -77,20 +62,48 @@ export function ProfileReportLayout({ type, school, fullName, status, primaryRol
           </View>
           <Text style={styles.role}>{reportText(primaryRole)}</Text>
         </View>
-        <View style={styles.metrics}>{metrics.map((metric) => (
+        <ReportMetrics metrics={metrics} />
+        <Text style={styles.sectionTitle}>ESSENTIAL DETAILS</Text>
+        {details.map(([label, value]) => <View key={label} style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>)}
+        <ReportFooter school={school} />
+      </Page>
+    </Document>
+  );
+}
+
+export function ReportHeader({ type, school, generatedAt, logoDataUrl }: PDFRenderOptions & { type: string; school?: ReportSchool }) {
+  const schoolName = reportText(school?.name, DEFAULT_REPORT_SCHOOL);
+  const initials = schoolName.split(/\s+/).slice(0, 3).map((word) => word[0]).join("").toUpperCase();
+  return <View style={styles.header}>
+          <View style={styles.brand}>
+            {/* Network logos are validated by the browser before PDF rendering. */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- This is a PDF primitive, not an HTML image. */}
+            {logoDataUrl ? <Image src={logoDataUrl} style={styles.logo} /> : <View style={styles.logoFallback}><Text style={styles.initials}>{initials}</Text></View>}
+            <View style={styles.brandText}>
+              <Text style={styles.schoolName}>{schoolName}</Text>
+              <Text style={styles.subtitle}>{reportText(school?.address || school?.subtitle, "School Administration")}</Text>
+            </View>
+          </View>
+          <View style={styles.reportMeta}>
+            <Text style={styles.reportType}>{type}</Text>
+            <Text style={styles.timestamp}>{reportDate(generatedAt, true)}</Text>
+          </View>
+        </View>;
+}
+
+export function ReportMetrics({ metrics }: { metrics: ReportMetric[] }) {
+  return <View style={styles.metrics}>{metrics.map((metric) => (
           <View key={metric.label} style={styles.metric}>
             <Text style={styles.metricLabel}>{metric.label.toUpperCase()}</Text>
             <Text style={styles.metricValue}>{metric.value}</Text>
             {metric.note ? <Text style={styles.metricNote}>{metric.note}</Text> : null}
           </View>
-        ))}</View>
-        <Text style={styles.sectionTitle}>ESSENTIAL DETAILS</Text>
-        {details.map(([label, value]) => <View key={label} style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>)}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>Confidential • Issued by {schoolName}</Text>
+        ))}</View>;
+}
+
+export function ReportFooter({ school }: { school?: ReportSchool }) {
+  return <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>Confidential • Issued by {reportText(school?.name, DEFAULT_REPORT_SCHOOL)}</Text>
           <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
-        </View>
-      </Page>
-    </Document>
-  );
+        </View>;
 }

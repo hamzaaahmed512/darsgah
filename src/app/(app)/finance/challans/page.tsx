@@ -8,7 +8,7 @@ import { ChallanGeneration } from "@/components/finance/challan-generation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDatePK, formatPKR } from "@/lib/utils";
-import { AutoPrint } from "@/components/reports/auto-print";
+import { ReportGenerator } from "@/components/reports/report-generator";
 
 export default async function FinanceChallansPage({ searchParams }: { searchParams: Promise<{ month?: string; print?: string }> }) {
   const user = await requireUser("finance:view");
@@ -22,13 +22,18 @@ export default async function FinanceChallansPage({ searchParams }: { searchPara
 
   return (
     <>
-      <AutoPrint enabled={params.print === "1"} />
       <PageHeader
         eyebrow="Finance"
         title="Fee Challans"
         description="Generate monthly challans and review issued billing records for the selected month."
         actions={
           <>
+            <ReportGenerator title="Fee Challans" autoOpen={params.print === "1"} filters={{ Month: month }}
+              headers={["Student / Admission", "Class", "Amount", "Paid this month", "Status", "Generated"]}
+              data={challans.map((row) => [
+                `${row.student_name} / ${row.admission_number}`, row.class_name || "Unassigned",
+                formatPKR(row.amount), formatPKR(row.amount_paid_for_month), row.payment_status, formatDatePK(row.created_at)
+              ])} />
             <Link href="/finance/fees" className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-primary ring-1 ring-outline hover:bg-primary-soft">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               Fee Management

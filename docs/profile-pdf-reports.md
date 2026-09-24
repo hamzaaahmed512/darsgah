@@ -1,5 +1,43 @@
 # Individual profile PDF reports
 
+## Shared template across the app
+
+All app PDF export controls now use the same vector branding and layout:
+staff/student profiles, staff/student/class directories, student/teacher attendance,
+fee challans, filtered fee-account reports, payment receipts, result cards, and
+the results register's legacy print link. The Reports catalog's `print=1` links
+open the vector export dialog. Preview/Print opens the generated PDF, rather than
+printing the application UI. CSV exports are unaffected.
+
+`ReportBrandingProvider` supplies the authenticated school's name/logo (including
+legacy branding settings) from the protected layout. `ReportHeader`, `ReportFooter`,
+and `ReportMetrics` in `ProfileReportLayout.tsx` are shared by individual profiles
+and `ReportTemplatePDF.tsx`. Update those primitives to change every PDF.
+
+For new exports, use `<ReportExport data={report} />` with `ReportTemplateData`.
+Each section contains a title, optional subtitle/status/three metrics, key-value
+details, table headers/rows, notes, and signature labels. Each section starts a
+fresh page; tables continue onto additional A4 pages with repeated headers and
+page numbers. Long table cells continue in additional rows without dropping text.
+Result cards retain approval notices, optional admission/year/comments, and
+configured signatures; their former decorative theme is replaced by this shared
+minimal template. The older jsPDF dependencies and application-page print helpers
+have been removed.
+
+```tsx
+import { ReportExport } from "@/components/reports/ReportExport";
+
+<ReportExport data={{
+  title: "Attendance Report",
+  sections: [{
+    title: "Daily Attendance",
+    subtitle: "Grade 9 / Section A",
+    headers: ["Student", "Admission ID", "Status"],
+    rows: [["Ali Khan", "ADM-123", "Present"]]
+  }]
+}} />
+```
+
 `DownloadReportButton` is integrated into `/staff/[id]` and `/students/[id]`.
 It lazy-loads `@react-pdf/renderer` after **Download report**, shows a preparing
 state, then presents **Download PDF**. Retry regenerates the document and timestamp.
