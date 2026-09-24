@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, UserCheck, MoreHorizontal
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, UserCheck
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
@@ -283,7 +283,7 @@ function IssueBookModal({
   return (
     <>
       {showTrigger && <button type="button" disabled={book.archived} onClick={() => setOpen(true)}
-        className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
+        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
         title={availableCopies.length ? "Issue book" : "Reserve book"}>Issue Book</button>}
       {open && (
         <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl">
@@ -331,18 +331,17 @@ function BookActions({ book, stock, grades, sections, settings, canManage }: {
   settings: LibraryData["settings"];
   canManage: boolean;
 }) {
-  return <details className="relative inline-block text-left">
-    <summary aria-label={`Actions for ${book.title}`} className="inline-flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-outline/70 bg-white text-primary transition hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden"><MoreHorizontal className="h-5 w-5" /></summary>
-    <div className="absolute right-0 z-30 mt-2 flex min-w-44 flex-col gap-2 rounded-xl border border-outline/70 bg-white p-2 shadow-xl">
-      <Link href={`/library/${book.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink hover:bg-surface-low"><Eye className="h-4 w-4" />View copies</Link>
-      {canManage && <>
-        <IssueBookModal book={book} availableCopies={stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }))} grades={grades} sections={sections} settings={settings} onIssued={() => {}} onReserved={() => {}} />
-        <AddCopiesModal book={book} />
-        <EditBookModal book={book} menuItem />
-        <ArchiveBookButton book={book} menuItem />
-      </>}
-    </div>
-  </details>;
+  const availableCopies = stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }));
+
+  return <div className="flex flex-wrap items-center justify-end gap-2">
+    <Link href={`/library/${book.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"><Eye className="h-4 w-4" />View copies</Link>
+    {canManage && <>
+      <IssueBookModal book={book} availableCopies={availableCopies} grades={grades} sections={sections} settings={settings} onIssued={() => {}} onReserved={() => {}} />
+      <AddCopiesModal book={book} iconOnly />
+      <EditBookModal book={book} />
+      <ArchiveBookButton book={book} />
+    </>}
+  </div>;
 }
 
 // ─── Main workspace ───────────────────────────────────────────────────────────
@@ -589,9 +588,9 @@ export function LibraryWorkspace({
             </Panel>
           )}
 
-          <DataTable ariaLabel="Library catalogue" count={filteredBooks.length} itemLabel="titles" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[820px] table-fixed">
+          <DataTable ariaLabel="Library catalogue" count={filteredBooks.length} itemLabel="titles" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[1200px] table-fixed">
               <caption className="sr-only">Library catalogue titles, details, copy counts, and actions</caption>
-              <colgroup><col className="w-[32%]" /><col className="w-[44%]" /><col className="w-[12%]" /><col className="w-[12%]" /></colgroup>
+              <colgroup><col className="w-[28%]" /><col className="w-[34%]" /><col className="w-[12%]" /><col className="w-[26%]" /></colgroup>
               <DataTableHeader><tr>
                 <th className={dataTableHeaderCellClassName}><button type="button" onClick={() => sortCatalogue("title")} aria-label="Sort catalogue by title" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} aria-label="Sort catalogue by author" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
                 <th className={dataTableHeaderCellClassName}>Details</th>
