@@ -53,9 +53,13 @@ export async function updateStaffProfileAction(staffId: string, values: StaffPro
     await updateStaffProfile(user, staffId, values);
     revalidatePath("/staff");
     revalidatePath(`/staff/${staffId}`);
+    revalidatePath("/teachers");
     return { success: true as const };
-  } catch (error) {
-    return { error: "Staff profile could not be updated." };
+  } catch (error: any) {
+    if (error?.name === "ZodError" && error.errors?.[0]?.message) {
+      return { error: error.errors[0].message };
+    }
+    return { error: error?.message || "Staff profile could not be updated." };
   }
 }
 

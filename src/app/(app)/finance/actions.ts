@@ -117,9 +117,13 @@ export async function applyDiscountAction(accountId: string, formData: FormData)
   await applyDiscount(user, accountId, values);
 
   revalidatePath("/finance/fees");
+  revalidatePath("/finance/challans");
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${accountId}`);
   revalidatePath("/finance/dashboard");
+  revalidatePath("/students");
+  revalidatePath("/students/[id]", "page");
+  revalidatePath("/parent-portal/students/[id]", "page");
 }
 
 export async function recordPaymentAction(formData: FormData) {
@@ -138,10 +142,14 @@ export async function recordPaymentAction(formData: FormData) {
 
   revalidatePath("/finance/payments");
   revalidatePath("/finance/fees");
+  revalidatePath("/finance/challans");
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${values.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
+  revalidatePath("/students");
+  revalidatePath("/students/[id]", "page");
+  revalidatePath("/parent-portal/students/[id]", "page");
   
   return payment;
 }
@@ -152,10 +160,14 @@ export async function voidPaymentAction(paymentId: string, reason: string) {
 
   revalidatePath("/finance/payments");
   revalidatePath("/finance/fees");
+  revalidatePath("/finance/challans");
   revalidatePath("/finance/student-fees");
   revalidatePath(`/finance/student-fees/${payment.student_fee_account_id}`);
   revalidatePath("/finance/dashboard");
   revalidatePath("/finance/transactions");
+  revalidatePath("/students");
+  revalidatePath("/students/[id]", "page");
+  revalidatePath("/parent-portal/students/[id]", "page");
 }
 
 export async function generateFeeChallansAction(values: { month: string; student_id?: string; class_id?: string }) {
@@ -163,6 +175,10 @@ export async function generateFeeChallansAction(values: { month: string; student
     const user = await requireUser("finance:manage");
     const result = await generateFeeChallans(user, values);
     revalidatePath("/finance/fees");
+    revalidatePath("/finance/challans");
+    revalidatePath("/students");
+    revalidatePath("/students/[id]", "page");
+    revalidatePath("/parent-portal/students/[id]", "page");
     return { ok: true, created: Number(result?.created_count ?? 0), skipped: Number(result?.skipped_count ?? 0) };
   } catch (err: any) {
     return { error: publicActionError() };

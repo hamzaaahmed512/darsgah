@@ -194,7 +194,7 @@ export async function updateStaffProfile(user: AppUser, staffId: string, values:
   const [{ error: profileError }, { error: memberError }] = await Promise.all([
     admin.from("profiles").update({
       full_name: parsed.fullName,
-      phone: formatPakistaniPhoneForStorage(parsed.phone),
+      phone: parsed.phone || null,
       personal_email: parsed.personalEmail || null,
       cnic: parsed.cnic || null,
       gender: parsed.gender || null

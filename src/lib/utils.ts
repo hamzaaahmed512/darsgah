@@ -69,19 +69,32 @@ export function formatCompactPKR(amount: number | null | undefined): string {
   return `Rs ${formatCompactNumber(amount)}`;
 }
 
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
 /**
  * Format a date string or Date object as "14 Jul 2026" (DD MMM YYYY) in PKT.
  */
 export function formatDatePK(value: string | Date | null | undefined): string {
   if (!value) return "—";
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = typeof value === "string" ? new Date(value.length === 10 ? `${value}T00:00:00` : value) : value;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat(PK_LOCALE, {
-    day: "2-digit",
-    month: "short",
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: PK_TZ,
     year: "numeric",
-    timeZone: PK_TZ
-  }).format(d);
+    month: "numeric",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(d);
+  let day = "";
+  let month = 1;
+  let year = "";
+  for (const part of parts) {
+    if (part.type === "day") day = part.value;
+    else if (part.type === "month") month = Number(part.value);
+    else if (part.type === "year") year = part.value;
+  }
+  const monthName = MONTH_SHORT[month - 1] ?? "Jan";
+  return `${day} ${monthName} ${year}`;
 }
 
 /**
@@ -91,15 +104,32 @@ export function formatDateTimePK(value: string | Date | null | undefined): strin
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat(PK_LOCALE, {
-    day: "2-digit",
-    month: "short",
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: PK_TZ,
     year: "numeric",
+    month: "numeric",
+    day: "2-digit",
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
-    timeZone: PK_TZ
-  }).format(d);
+    hour12: true
+  });
+  const parts = formatter.formatToParts(d);
+  let day = "";
+  let month = 1;
+  let year = "";
+  let hour = "";
+  let minute = "";
+  let dayPeriod = "AM";
+  for (const part of parts) {
+    if (part.type === "day") day = part.value;
+    else if (part.type === "month") month = Number(part.value);
+    else if (part.type === "year") year = part.value;
+    else if (part.type === "hour") hour = part.value;
+    else if (part.type === "minute") minute = part.value;
+    else if (part.type === "dayPeriod") dayPeriod = part.value.toUpperCase();
+  }
+  const monthName = MONTH_SHORT[month - 1] ?? "Jan";
+  return `${day} ${monthName} ${year}, ${hour}:${minute} ${dayPeriod}`;
 }
 
 /**

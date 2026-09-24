@@ -8,7 +8,7 @@ import { updateStaffProfileAction } from "@/app/(app)/teachers/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { FormSectionCard } from "@/components/ui/form-section-card";
-import { formatCnic } from "@/lib/pakistan-format";
+import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 
 type StaffDetails = {
   fullName: string;
@@ -67,7 +67,7 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name" hint="Use the full display name that should appear in staff records."><Input name="full_name" defaultValue={initial.fullName} required /></Field>
-              <Field label="Phone" hint="Add a direct contact number if one is available."><Input name="phone" defaultValue={initial.phone ?? ""} /></Field>
+              <Field label="Phone" hint="Add a direct contact number if one is available."><Input name="phone" inputMode="numeric" defaultValue={formatPakistaniPhone(initial.phone)} placeholder="0300-0000000" onChange={(event) => { event.currentTarget.value = formatPakistaniPhone(event.currentTarget.value); }} /></Field>
               <Field label="CNIC"><Input name="cnic" inputMode="numeric" maxLength={15} defaultValue={formatCnic(initial.cnic)} placeholder="00000-0000000-0" onChange={(event) => { event.currentTarget.value = formatCnic(event.currentTarget.value); }} /></Field>
               <Field label="Gender"><Select name="gender" defaultValue={initial.gender ?? ""}><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></Select></Field>
               <div className="sm:col-span-2">

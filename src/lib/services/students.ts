@@ -328,7 +328,7 @@ export async function getStudentRecord(
       .eq("id", id);
   if (headClassIds) studentQuery = studentQuery.in("class_id", headClassIds);
 
-  const [student, guardians, attendance, marks, challans] = await Promise.all([
+  const [student, guardians, attendance, marks, challans, feeAccounts] = await Promise.all([
     studentQuery.maybeSingle(),
     isTeacher
       ? Promise.resolve({ data: [], error: null })
@@ -348,10 +348,18 @@ export async function getStudentRecord(
     filters.includeFinance
       ? supabase
           .from("fee_challans")
-          .select("id,fee_month,amount,due_date,created_at,student_fee_accounts(total_payable,amount_paid)")
+          .select("id,fee_month,amount,due_date,created_at,student_fee_account_id,student_fee_accounts(id,total_payable,amount_paid)")
           .eq("school_id", user.schoolId)
           .eq("student_id", id)
           .order("fee_month", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    filters.includeFinance
+      ? supabase
+          .from("student_fee_accounts")
+          .select("id,total_payable,amount_paid")
+          .eq("school_id", user.schoolId)
+          .eq("student_id", id)
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null })
   ]);
 
@@ -360,6 +368,7 @@ export async function getStudentRecord(
   if (attendance.error) throw new Error(attendance.error.message);
   if (marks.error) throw new Error(marks.error.message);
   if (challans.error) throw new Error(challans.error.message);
+  if (feeAccounts?.error) throw new Error(feeAccounts.error.message);
 
   const attendanceRows = attendance.data ?? [];
   const presentCount = attendanceRows.filter((row: any) => ["present", "late"].includes(row.status)).length;
@@ -367,10 +376,17 @@ export async function getStudentRecord(
   const markPercentages = marksRows
     .map((row: any) => Number(row.exams?.max_marks) ? (Number(row.marks_obtained) / Number(row.exams.max_marks)) * 100 : null)
     .filter((value): value is number => value !== null);
+  const fallbackAccountId = (feeAccounts?.data ?? [])[0]?.id ?? null;
   const challanRows = (challans.data ?? []).map((row: any) => {
     const account: any = row.student_fee_accounts;
+    const studentFeeAccountId = row.student_fee_account_id || account?.id || fallbackAccountId;
     const outstanding = Math.max(0, Number(account?.total_payable ?? row.amount) - Number(account?.amount_paid ?? 0));
-    return { ...row, outstanding, payment_status: outstanding <= 0 ? "paid" : Number(account?.amount_paid ?? 0) > 0 ? "partially paid" : "unpaid" };
+    return {
+      ...row,
+      student_fee_account_id: studentFeeAccountId,
+      outstanding,
+      payment_status: outstanding <= 0 ? "paid" : Number(account?.amount_paid ?? 0) > 0 ? "partially paid" : "unpaid"
+    };
   });
 
   return {

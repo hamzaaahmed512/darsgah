@@ -4,14 +4,16 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { CalendarDays, Download, Mail, MapPin, Phone, TrendingUp, UserRound, UsersRound, WalletCards } from "lucide-react";
+import { CalendarDays, Download, Mail, MapPin, Phone, TrendingUp, UserRound, UsersRound, WalletCards, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, Input, Select as FormSelect, Textarea } from "@/components/ui/form-field";
 import { EmptyState } from "@/components/ui/empty-state";
-import { cn, formatGradeSection } from "@/lib/utils";
+import { cn, formatDatePK, formatGradeSection } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/student-name";
 import { formatCnic, formatPakistaniPhone } from "@/lib/pakistan-format";
 import { completeStudentPortalDetails } from "@/app/parent-portal/actions";
+import { recordPaymentAction } from "@/app/(app)/finance/actions";
 
 type Tab = "bio" | "attendance" | "marks" | "fees";
 type Props = {
@@ -64,7 +66,7 @@ export function StudentProfileTabs(props: Props) {
         {activeTab === "bio" ? <BioTab {...props} /> : null}
         {activeTab === "attendance" ? <AttendanceTab rows={props.attendance} /> : null}
         {activeTab === "marks" ? <MarksTab rows={props.marks} /> : null}
-        {activeTab === "fees" && props.canViewFinance ? <FeesTab rows={props.challans} portalMode={props.portalMode} /> : null}
+        {activeTab === "fees" && props.canViewFinance ? <FeesTab rows={props.challans} student={props.student} portalMode={props.portalMode} /> : null}
       </div>
     </section>
   );
@@ -129,7 +131,7 @@ function AttendanceTab({ rows }: { rows: any[] }) {
   const colors = ["#22c55e", "#ef4444", "#f59e0b", "#eab308"];
   return <div className="space-y-5"><FilterCard><Select label="Preset" value={preset} onChange={setPreset} options={[["all","All Time"],["yearly","Yearly"],["monthly","Monthly"],["weekly","Weekly"]]} /><DateField label="From date" value={from} onChange={setFrom} /><DateField label="To date" value={to} onChange={setTo} /><Select label="Status" value={status} onChange={setStatus} options={[["all","All"],["present","Present"],["absent","Absent"],["excused","Excused"],["late","Late"]]} /><button type="button" className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white" onClick={() => { setFrom(from); setTo(to); }}>Apply</button></FilterCard>
     <ChartCard title="Attendance percentage" description={`${filtered.length} attendance records in this view`}><div className="h-64"><ResponsiveContainer><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="75%" paddingAngle={3}>{distribution.map((_, i) => <Cell key={i} fill={colors[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><div className="flex flex-wrap justify-center gap-4">{distribution.map((item, i) => <span key={item.name} className="flex items-center gap-2 text-xs font-medium text-muted"><i className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i] }} />{item.name}: {item.value}</span>)}</div></ChartCard>
-    <DataCard title="Attendance records"><HistoryTable headers={["Date","Class","Status","Note"]} rows={filtered.map((row) => [formatDate(row.attendance_date), formatGradeSection(row.classes?.grades?.name, row.classes?.sections?.name) || row.classes?.name || "—", <StatusBadge key="s" status={row.status} />, row.note || "—"])} empty="No attendance records match these filters." /></DataCard></div>;
+    <DataCard title="Attendance records"><HistoryTable headers={["Date","Class","Status","Note"]} rows={filtered.map((row) => [formatDatePK(row.attendance_date), formatGradeSection(row.classes?.grades?.name, row.classes?.sections?.name) || row.classes?.name || "—", <StatusBadge key="s" status={row.status} />, row.note || "—"])} empty="No attendance records match these filters." /></DataCard></div>;
 }
 
 function MarksTab({ rows }: { rows: any[] }) {
@@ -142,14 +144,277 @@ function MarksTab({ rows }: { rows: any[] }) {
     <DataCard title="Marks & exam history"><HistoryTable headers={["Exam name","Term","Subject","Marks obtained","Grade","Approval status","Teacher comments"]} rows={filtered.map((r)=>[r.exams?.title||"—",r.exams?.term||"—",r.subjects?.name||"—",`${r.marks_obtained}/${r.exams?.max_marks??"—"}`,r.grade||"—",<StatusBadge key="s" status={r.exams?.approval_status||r.status}/>,r.teacher_comment||"—"])} empty="No exam results match these filters." /></DataCard></div>;
 }
 
-function FeesTab({ rows, portalMode = false }: { rows: any[]; portalMode?: boolean }) {
-  const periods=unique(rows.map((r)=>r.fee_month?.slice(0,7)).filter(Boolean)); const [status,setStatus]=useState("all"),[period,setPeriod]=useState("all");
-  const normalized=(r:any)=>r.payment_status==="partially paid"?"partial":r.payment_status;
-  const filtered=rows.filter((r)=>(status==="all"||normalized(r)===status)&&(period==="all"||r.fee_month?.startsWith(period))); const outstanding=filtered.reduce((sum,r)=>sum+Number(r.outstanding),0); const overdue=filtered.filter((r)=>r.outstanding>0&&new Date(r.due_date)<new Date()).length;
-  return <div className="space-y-5"><FilterCard><Select label="Challan status" value={status} onChange={setStatus} options={[["all","All"],["unpaid","Unpaid"],["paid","Paid"],["overdue","Overdue"],["partial","Partial"]]} /><Select label="Fiscal year / month" value={period} onChange={setPeriod} options={[["all","All periods"],...periods.map(v=>[v,v])]} /></FilterCard>
-    <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-[18px] border border-danger/15 bg-danger-soft p-5"><WalletCards className="h-5 w-5 text-danger"/><p className="mt-3 text-sm font-semibold text-danger">Total outstanding balance</p><p className="mt-1 font-display text-3xl font-bold text-ink">{money.format(outstanding)}</p></div><div className="rounded-[18px] border border-warning/20 bg-warning-soft p-5"><CalendarDays className="h-5 w-5 text-warning"/><p className="mt-3 text-sm font-semibold text-warning">Overdue challans</p><p className="mt-1 font-display text-3xl font-bold text-ink">{overdue}</p></div></div>
-    {portalMode && outstanding > 0 ? <p className="rounded-xl border border-primary/15 bg-primary-soft px-4 py-3 text-sm font-medium text-primary">Please contact the school office to arrange payment for any outstanding dues.</p> : null}
-    <DataCard title="Fee & challan history"><HistoryTable headers={portalMode ? ["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status"] : ["Month / session","Challan amount","Due date","Generated date","Outstanding amount","Status","Actions"]} rows={filtered.map((r)=>portalMode?[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>]:[r.fee_month,money.format(Number(r.amount)),formatDate(r.due_date),formatDate(r.created_at),money.format(Number(r.outstanding)),<StatusBadge key="s" status={normalized(r)}/>,<div key="a" className="flex min-w-max gap-2"><Link href="/finance/challans" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"><Download className="h-3.5 w-3.5"/>View / PDF</Link>{r.outstanding>0?<Link href="/finance/fees" className="font-semibold text-success hover:underline">Mark as paid</Link>:null}</div>])} empty="No fee challans match these filters." /></DataCard></div>;
+function FeesTab({ rows, student, portalMode = false }: { rows: any[]; student?: any; portalMode?: boolean }) {
+  const router = useRouter();
+  const [selectedChallan, setSelectedChallan] = useState<any | null>(null);
+  const [isCollectOpen, setIsCollectOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "cheque">("cash");
+  const [transactionNumber, setTransactionNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const periods = unique(rows.map((r) => r.fee_month?.slice(0, 7)).filter(Boolean));
+  const [status, setStatus] = useState("all");
+  const [period, setPeriod] = useState("all");
+  const normalized = (r: any) => (r.payment_status === "partially paid" ? "partial" : r.payment_status);
+  const filtered = rows.filter(
+    (r) => (status === "all" || normalized(r) === status) && (period === "all" || r.fee_month?.startsWith(period))
+  );
+  const outstanding = filtered.reduce((sum, r) => sum + Number(r.outstanding), 0);
+  const overdue = filtered.filter((r) => r.outstanding > 0 && new Date(r.due_date) < new Date()).length;
+
+  function resetCollectForm() {
+    setAmount("");
+    setPaymentMethod("cash");
+    setTransactionNumber("");
+    setReferenceNumber("");
+    setRemarks("");
+    setFormError(null);
+  }
+
+  function handleOpenCollect(challan: any) {
+    setSelectedChallan(challan);
+    resetCollectForm();
+    setAmount(String(challan.outstanding > 0 ? challan.outstanding : challan.amount || ""));
+    setIsCollectOpen(true);
+  }
+
+  function handleCloseCollect() {
+    setIsCollectOpen(false);
+    setSelectedChallan(null);
+    resetCollectForm();
+  }
+
+  async function handleRecordPayment(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFormError(null);
+    if (!selectedChallan) return;
+
+    if (!selectedChallan.student_fee_account_id) {
+      setFormError("No fee account found for this student. Please configure fee structure first.");
+      return;
+    }
+
+    const payAmount = Number(amount);
+    const remaining = Number(selectedChallan.outstanding);
+
+    if (payAmount <= 0) {
+      setFormError("Amount must be greater than 0");
+      return;
+    }
+
+    if (payAmount > remaining) {
+      setFormError(`Amount cannot exceed remaining balance of ${money.format(remaining)}`);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("student_fee_account_id", selectedChallan.student_fee_account_id);
+    formData.append("amount", amount);
+    formData.append("payment_method", paymentMethod);
+    formData.append("transaction_number", transactionNumber);
+    formData.append("reference_number", referenceNumber);
+    formData.append("remarks", remarks);
+
+    startTransition(async () => {
+      try {
+        await recordPaymentAction(formData);
+        handleCloseCollect();
+        router.refresh();
+      } catch (err: any) {
+        setFormError(err.message || "Failed to record payment.");
+      }
+    });
+  }
+
+  const studentDisplayName = student
+    ? formatDisplayName(student.first_name ? `${student.first_name} ${student.last_name || ""}` : student.student_name || "Student")
+    : "Student";
+
+  return (
+    <div className="space-y-5">
+      <FilterCard>
+        <Select
+          label="Challan status"
+          value={status}
+          onChange={setStatus}
+          options={[
+            ["all", "All"],
+            ["unpaid", "Unpaid"],
+            ["paid", "Paid"],
+            ["overdue", "Overdue"],
+            ["partial", "Partial"]
+          ]}
+        />
+        <Select
+          label="Fiscal year / month"
+          value={period}
+          onChange={setPeriod}
+          options={[["all", "All periods"], ...periods.map((v) => [v, v])]}
+        />
+      </FilterCard>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-[18px] border border-danger/15 bg-danger-soft p-5">
+          <WalletCards className="h-5 w-5 text-danger" />
+          <p className="mt-3 text-sm font-semibold text-danger">Total outstanding balance</p>
+          <p className="mt-1 font-display text-3xl font-bold text-ink">{money.format(outstanding)}</p>
+        </div>
+        <div className="rounded-[18px] border border-warning/20 bg-warning-soft p-5">
+          <CalendarDays className="h-5 w-5 text-warning" />
+          <p className="mt-3 text-sm font-semibold text-warning">Overdue challans</p>
+          <p className="mt-1 font-display text-3xl font-bold text-ink">{overdue}</p>
+        </div>
+      </div>
+
+      {portalMode && outstanding > 0 ? (
+        <p className="rounded-xl border border-primary/15 bg-primary-soft px-4 py-3 text-sm font-medium text-primary">
+          Please contact the school office to arrange payment for any outstanding dues.
+        </p>
+      ) : null}
+
+      <DataCard title="Fee & challan history">
+        <HistoryTable
+          headers={
+            portalMode
+              ? ["Month / session", "Challan amount", "Due date", "Generated date", "Outstanding amount", "Status"]
+              : ["Month / session", "Challan amount", "Due date", "Generated date", "Outstanding amount", "Status", "Actions"]
+          }
+          rows={filtered.map((r) =>
+            portalMode
+              ? [
+                  r.fee_month,
+                  money.format(Number(r.amount)),
+                  formatDatePK(r.due_date),
+                  formatDatePK(r.created_at),
+                  money.format(Number(r.outstanding)),
+                  <StatusBadge key="s" status={normalized(r)} />
+                ]
+              : [
+                  r.fee_month,
+                  money.format(Number(r.amount)),
+                  formatDatePK(r.due_date),
+                  formatDatePK(r.created_at),
+                  money.format(Number(r.outstanding)),
+                  <StatusBadge key="s" status={normalized(r)} />,
+                  <div key="a" className="flex min-w-max items-center gap-3">
+                    <Link
+                      href={`/finance/challans?month=${(r.fee_month || "").slice(0, 7)}`}
+                      className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      View / PDF
+                    </Link>
+                    {r.outstanding > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCollect(r)}
+                        className="font-semibold text-success hover:underline"
+                      >
+                        Mark as paid
+                      </button>
+                    ) : null}
+                  </div>
+                ]
+          )}
+          empty="No fee challans match these filters."
+        />
+      </DataCard>
+
+      {isCollectOpen && selectedChallan ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <Card className="dialog-panel w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
+            <div className="flex items-center justify-between border-b border-outline/40 p-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Record Payment</h3>
+                <p className="text-xs text-muted">
+                  {studentDisplayName} • Month: {formatDatePK(selectedChallan.fee_month)} • Remaining {money.format(Number(selectedChallan.outstanding))}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseCollect}
+                className="rounded p-1 text-muted hover:bg-surface-low"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleRecordPayment} className="p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {formError ? (
+                  <div className="md:col-span-2 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">
+                    {formError}
+                  </div>
+                ) : null}
+                <Field label="Amount (PKR)" required>
+                  <Input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field label="Payment Method" required>
+                  <FormSelect
+                    value={paymentMethod}
+                    onChange={(e: any) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                  </FormSelect>
+                </Field>
+                <Field label="Transaction Number">
+                  <Input
+                    value={transactionNumber}
+                    onChange={(e) => setTransactionNumber(e.target.value)}
+                    placeholder="e.g. TXN-12345"
+                  />
+                </Field>
+                <Field label="Reference Number">
+                  <Input
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    placeholder="e.g. Bank deposit slip no."
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Remarks">
+                    <Textarea
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      placeholder="Optional notes or memo..."
+                    />
+                  </Field>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2 border-t border-outline/40 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseCollect}
+                  className="rounded-lg bg-surface-low px-4 py-2 text-sm font-semibold text-muted hover:bg-outline/20"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:brightness-105 disabled:bg-outline shadow-button"
+                >
+                  {pending ? "Recording..." : "Post Payment"}
+                </button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function DetailCard({title,icon,children}:{title:string;icon:React.ReactNode;children:React.ReactNode}){return <Card><CardHeader className="border-b border-outline/70 p-5"><div className="flex items-center gap-3"><span className="rounded-lg bg-primary-soft p-2 text-primary">{icon}</span><CardTitle className="text-lg">{title}</CardTitle></div></CardHeader><CardContent className="p-5 pt-5">{children}</CardContent></Card>}
@@ -161,4 +426,4 @@ function ChartCard({title,description,children}:{title:string;description:string
 function DataCard({title,children}:{title:string;children:React.ReactNode}){return <Card><CardHeader><CardTitle>{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>}
 function HistoryTable({headers,rows,empty}:{headers:string[];rows:React.ReactNode[][];empty:string}){if(!rows.length)return <EmptyState title="Nothing to show" description={empty} className="min-h-44"/>;return <div className="scrollbar-thin overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr>{headers.map(h=><th key={h} className="whitespace-nowrap px-3 py-3 text-xs font-bold uppercase tracking-wide text-muted first:pl-0">{h}</th>)}</tr></thead><tbody>{rows.map((cells,i)=><tr key={i} className="border-t border-outline/70 hover:bg-surface-low">{cells.map((cell,j)=><td key={j} className="max-w-xs px-3 py-3.5 align-top text-ink first:pl-0">{cell}</td>)}</tr>)}</tbody></table></div>}
 function StatusBadge({status}:{status:string}){const s=(status||"").toLowerCase();const tone=s==="present"||s==="paid"||s==="approved"?"green":s==="absent"||s==="unpaid"||s==="overdue"?"red":s==="late"||s==="excused"||s==="partial"||s==="pending"?"yellow":"gray";return <Badge tone={tone}>{labelize(s||"unknown")}</Badge>}
-function unique(values:string[]){return [...new Set(values)]} function labelize(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())} function formatDate(value:string){if(!value)return "—";return new Date(value.length===10?`${value}T00:00:00`:value).toLocaleDateString("en-PK",{day:"2-digit",month:"short",year:"numeric"})} function gradeFor(v:number){return v>=90?"A+":v>=80?"A":v>=70?"B":v>=60?"C":v>=50?"D":"F"}
+function unique(values:string[]){return [...new Set(values)]} function labelize(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())} function gradeFor(v:number){return v>=90?"A+":v>=80?"A":v>=70?"B":v>=60?"C":v>=50?"D":"F"}
