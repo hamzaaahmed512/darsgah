@@ -660,6 +660,43 @@ export function LibraryWorkspace({
               <p className="text-muted">Issued books and their return history will appear here.</p>
             </Panel>
           )}
+          <div className="grid gap-3 lg:hidden">
+            {filteredLoans.slice((currentPage - 1) * 20, currentPage * 20).map(loan => {
+              const copy = copies.get(loan.copy_id);
+              const days = overdueDays(loan.due_date, today);
+              const maxAllowedRenewals = loan.borrower_kind === "student"
+                ? (data.settings.student_max_renewals ?? data.settings.max_renewals ?? 2)
+                : (data.settings.staff_max_renewals ?? 3);
+              const status = loan.returned_at
+                ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}`
+                : days ? `${days} days overdue` : "On loan";
+
+              return (
+                <article key={loan.id} className="min-w-0 rounded-2xl border border-outline/70 bg-white p-4 shadow-card">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="break-words font-display text-base font-bold text-ink">{books.get(copy?.book_id ?? "")?.title || "Book"}</h2>
+                      <p className="mt-1 break-words text-sm font-semibold text-primary">{loan.borrower_name}</p>
+                    </div>
+                    <Tag>{status}</Tag>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                    <div><dt className="font-bold text-muted">Copy ID</dt><dd className="mt-1 break-words text-ink">{copy?.accession || "N/A"}</dd></div>
+                    <div><dt className="font-bold text-muted">Borrower</dt><dd className="mt-1 capitalize text-ink">{loan.borrower_kind}</dd></div>
+                    <div><dt className="font-bold text-muted">Issued</dt><dd className="mt-1 text-ink">{formatDate(loan.issued_at)}</dd></div>
+                    <div><dt className="font-bold text-muted">Due date</dt><dd className={`mt-1 font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</dd></div>
+                    <div className="col-span-2"><dt className="font-bold text-muted">Renewals</dt><dd className="mt-1 text-ink">{loan.renewals} of {maxAllowedRenewals}</dd></div>
+                  </dl>
+                  {canManage && !loan.returned_at && (
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-outline/50 pt-4">
+                      <Button type="button" onClick={() => setActiveReturnLoan(loan)} className="w-full text-xs">Return</Button>
+                      <Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="w-full text-xs">Renew</Button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
 
           <DataTable ariaLabel="Library loans" count={filteredLoans.length} itemLabel="loans" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[900px]">
               <DataTableHeader><tr><th className={dataTableHeaderCellClassName}>Book / copy</th><th className={dataTableHeaderCellClassName}>Borrower</th><th className={dataTableHeaderCellClassName}>Issued</th><th className={dataTableHeaderCellClassName}>Due date</th><th className={dataTableHeaderCellClassName}>Status</th><th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th></tr></DataTableHeader>
