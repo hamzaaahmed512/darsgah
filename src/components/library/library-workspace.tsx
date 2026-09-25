@@ -11,8 +11,8 @@ import type {
   LibraryData, LibraryBook, LibraryLoan, LibraryReservation, SearchResultBorrower, SearchResultCopy
 } from "@/lib/services/library";
 import { libraryDueDate, libraryToday, overdueDays } from "@/lib/validation/library";
-import { Button } from "@/components/ui/button";
-import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/ui/data-table";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/library/library-table";
 import { Field, Input, Select } from "@/components/ui/form-field";
 import { BorrowerSelector } from "./borrower-selector";
 import { ReturnBookDialog } from "./return-book-dialog";
@@ -38,11 +38,11 @@ function Panel({ title, actions, children }: { title: string; actions?: ReactNod
 }
 
 function Form({
-  action, children, label = "Save", id, reset = false, buttonVariant = "primary", buttonSize = "md", disabled = false, className, buttonClassName, secondaryAction, onSuccess
+  action, children, label = "Save", id, reset = false, buttonVariant = "primary", buttonSize = "md", disabled = false, className, buttonClassName, onSuccess
 }: {
   action: string; children?: ReactNode; label?: string; id?: string;
   reset?: boolean; buttonVariant?: "primary" | "secondary" | "danger"; buttonSize?: "sm" | "md"; disabled?: boolean;
-  className?: string; buttonClassName?: string; secondaryAction?: ReactNode;
+  className?: string; buttonClassName?: string;
   onSuccess?: () => void;
 }) {
   const router = useRouter();
@@ -77,7 +77,6 @@ function Form({
           <Button type="submit" variant={buttonVariant} size={buttonSize} disabled={pending || disabled} className={cn("whitespace-nowrap", buttonClassName)}>
             {pending ? "Saving…" : label}
           </Button>
-          {secondaryAction}
         </div>
       </fieldset>
       {message && (
@@ -355,7 +354,6 @@ export function LibraryWorkspace({
   const [catalogSort, setCatalogSort] = useState<"title" | "author" | "copies">("title");
   const [catalogSortDescending, setCatalogSortDescending] = useState(false);
   const [page, setPage] = useState(1);
-  const [editingRules, setEditingRules] = useState(false);
 
   const [catalogIssueRequest, setCatalogIssueRequest] = useState<{ reservationId: string; bookId: string; borrower: SearchResultBorrower } | null>(null);
   const [fulfilledReservationIds, setFulfilledReservationIds] = useState<Set<string>>(() => new Set());
@@ -592,7 +590,7 @@ export function LibraryWorkspace({
                 <th className={dataTableHeaderCellClassName}><button type="button" onClick={() => sortCatalogue("title")} aria-label="Sort catalogue by title" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Book {catalogSort === "title" ? catalogSortDescending ? "↓" : "↑" : ""}</button><span className="mx-1 text-outline">/</span><button type="button" onClick={() => sortCatalogue("author")} aria-label="Sort catalogue by author" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Author {catalogSort === "author" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
                 <th className={dataTableHeaderCellClassName}>Details</th>
                 <th className={dataTableHeaderCellClassName}><button type="button" onClick={() => sortCatalogue("copies")} aria-label="Sort catalogue by copy count" className="rounded hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">Copies {catalogSort === "copies" ? catalogSortDescending ? "↓" : "↑" : ""}</button></th>
-                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
               </tr></DataTableHeader>
               <tbody>
             {filteredBooks.slice((currentPage - 1) * 20, currentPage * 20).map(book => {
@@ -615,7 +613,7 @@ export function LibraryWorkspace({
                     {book.isbn && <span className="break-all">ISBN: {book.isbn}</span>}
                   </div></td>
                   <td className={dataTableCellClassName}><BookMeta label="" value={String(totalCopies)} /></td>
-                  <td className={`${dataTableCellClassName} sticky right-0 whitespace-nowrap bg-white text-right`}><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
+                  <td className={`${dataTableCellClassName} sticky right-0 whitespace-nowrap bg-white group-hover:bg-blue-50 text-right`}><BookActions book={book} stock={stock} grades={data.grades} sections={data.sections} settings={data.settings} canManage={canManage} /></td>
                 </DataTableRow>
               );
             })}
@@ -662,7 +660,7 @@ export function LibraryWorkspace({
           )}
 
           <DataTable ariaLabel="Library loans" count={filteredLoans.length} itemLabel="loans" page={currentPage} pageSize={20} onPageChange={setPage} minWidthClassName="min-w-[900px]">
-              <DataTableHeader><tr><th className={dataTableHeaderCellClassName}>Book / copy</th><th className={dataTableHeaderCellClassName}>Borrower</th><th className={dataTableHeaderCellClassName}>Issued</th><th className={dataTableHeaderCellClassName}>Due date</th><th className={dataTableHeaderCellClassName}>Status</th><th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th></tr></DataTableHeader>
+              <DataTableHeader><tr><th className={dataTableHeaderCellClassName}>Book / copy</th><th className={dataTableHeaderCellClassName}>Borrower</th><th className={dataTableHeaderCellClassName}>Issued</th><th className={dataTableHeaderCellClassName}>Due date</th><th className={dataTableHeaderCellClassName}>Status</th><th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th></tr></DataTableHeader>
               <tbody>
             {filteredLoans.slice((currentPage - 1) * 20, currentPage * 20).map(loan => {
               const copy = copies.get(loan.copy_id);
@@ -678,7 +676,7 @@ export function LibraryWorkspace({
                   <td className={`${dataTableCellClassName} text-muted`}>{formatDate(loan.issued_at)}</td>
                   <td className={`${dataTableCellClassName} font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</td>
                   <td className={dataTableCellClassName}><Tag>{loan.returned_at ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}` : days ? `${days} days overdue` : "On loan"}</Tag></td>
-                  <td className={`${dataTableCellClassName} sticky right-0 bg-white`}><div className="flex justify-end gap-2 whitespace-nowrap">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50`}><div className="flex justify-end gap-2 whitespace-nowrap">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
                 </DataTableRow>
               );
             })}
@@ -736,7 +734,7 @@ export function LibraryWorkspace({
                           <th className={dataTableHeaderCellClassName}>Borrower</th>
                           <th className={dataTableHeaderCellClassName}>Requested</th>
                           <th className={dataTableHeaderCellClassName}>Status</th>
-                          <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+                          <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
                         </tr>
                       </DataTableHeader>
                       <tbody>
@@ -763,7 +761,7 @@ export function LibraryWorkspace({
                                   {isReady ? "Ready to issue" : "Waiting for a return"}
                                 </span>
                               </td>
-                              <td className={`${dataTableCellClassName} sticky right-0 bg-white responsive-table-actions`}>
+                              <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50 responsive-table-actions`}>
                                 <div className="flex flex-wrap items-center justify-end gap-2">
                                   {canManage && isReady ? (
                                     <Button
@@ -826,63 +824,12 @@ export function LibraryWorkspace({
           {/* Borrowing Rules */}
           <Panel
             title="Borrowing rules"
-            actions={canAdmin && canManage && !editingRules ? (
-              <Button type="button" size="sm" onClick={() => setEditingRules(true)}>
+            actions={canAdmin && canManage ? (
+              <ButtonLink href="/library/rules/edit" size="sm">
                 <Pencil className="h-4 w-4" /> Edit rules
-              </Button>
+              </ButtonLink>
             ) : undefined}
           >
-            {editingRules && canAdmin && canManage ? (
-              <Form
-                key={JSON.stringify(data.settings)}
-                action="settings"
-                label="Save changes"
-                secondaryAction={<Button type="button" variant="secondary" size="sm" onClick={() => setEditingRules(false)}>Cancel</Button>}
-                onSuccess={() => setEditingRules(false)}
-              >
-                <p className="text-sm text-muted">
-                  Changes apply to new issues and future renewals.
-                </p>
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Student Policy</h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Loan period (days)">
-                      <Input name="student_loan_days" type="number" required min="1" max="90" defaultValue={data.settings.student_loan_days ?? data.settings.loan_days} />
-                    </Field>
-                    <Field label="Max active loans">
-                      <Input name="student_max_loans" type="number" required min="1" max="30" defaultValue={data.settings.student_max_loans ?? data.settings.max_loans} />
-                    </Field>
-                    <Field label="Max renewals">
-                      <Input name="student_max_renewals" type="number" required min="0" max="10" defaultValue={data.settings.student_max_renewals ?? data.settings.max_renewals} />
-                    </Field>
-                    <Field label="Renewal duration (days)">
-                      <Input name="student_renewal_days" type="number" required min="1" max="90" defaultValue={data.settings.student_renewal_days ?? data.settings.loan_days} />
-                    </Field>
-                  </div>
-
-                  <h3 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted border-t border-outline/50">Staff Policy</h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Loan period (days)">
-                      <Input name="staff_loan_days" type="number" required min="1" max="90" defaultValue={data.settings.staff_loan_days ?? 30} />
-                    </Field>
-                    <Field label="Max active loans">
-                      <Input name="staff_max_loans" type="number" required min="1" max="30" defaultValue={data.settings.staff_max_loans ?? 5} />
-                    </Field>
-                    <Field label="Max renewals">
-                      <Input name="staff_max_renewals" type="number" required min="0" max="10" defaultValue={data.settings.staff_max_renewals ?? 3} />
-                    </Field>
-                    <Field label="Renewal duration (days)">
-                      <Input name="staff_renewal_days" type="number" required min="1" max="90" defaultValue={data.settings.staff_renewal_days ?? 30} />
-                    </Field>
-                  </div>
-
-                  <h3 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted border-t border-outline/50">Overdue Fines</h3>
-                  <Field label="Overdue fine per day (Rs)">
-                    <Input name="fine_per_day" type="number" required min="0" max="10000" step="0.01" defaultValue={data.settings.fine_per_day} />
-                  </Field>
-                </div>
-              </Form>
-            ) : (
               <div className="grid gap-3 text-sm sm:grid-cols-2" aria-label="Saved borrowing rules">
                 <section className="rounded-xl bg-slate-50 p-4">
                   <h3 className="font-bold text-ink">Students</h3>
@@ -907,7 +854,6 @@ export function LibraryWorkspace({
                   <p className="mt-1 text-sm">{formatMoney(data.settings.fine_per_day)} per day</p>
                 </section>
               </div>
-            )}
           </Panel>
 
           <LibraryTeamCard team={data.team} canAdmin={canAdmin} />

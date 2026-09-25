@@ -2,10 +2,11 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { LibraryWorkspace } from "./library-workspace";
+import { LibraryRulesForm } from "./library-rules-form";
 import type { LibraryData } from "@/lib/services/library";
 
-const { save, refresh, searchBorrowers, searchCopies } = vi.hoisted(() => ({ save: vi.fn(), refresh: vi.fn(), searchBorrowers: vi.fn().mockResolvedValue([]), searchCopies: vi.fn().mockResolvedValue([]) }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const { save, refresh, push, searchBorrowers, searchCopies } = vi.hoisted(() => ({ save: vi.fn(), refresh: vi.fn(), push: vi.fn(), searchBorrowers: vi.fn().mockResolvedValue([]), searchCopies: vi.fn().mockResolvedValue([]) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
 vi.mock("@/app/(app)/library/actions", () => ({
   libraryAction: save,
   libraryAssignableStaffAction: vi.fn().mockResolvedValue({ staff: [] }),
@@ -142,31 +143,45 @@ describe("library workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
     expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
     expect(screen.getAllByText("14 days").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Edit rules" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Edit rules" })).toBeNull();
   });
 
-  it("lets principals save policy and refresh after success", async () => {
+  it("links principals to the separate rules editor without an inline form", async () => {
+    render(<LibraryWorkspace data={data} canManage canAdmin />);
+    fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
+    await screen.findByText("No eligible active staff members available.");
+    expect(screen.getByRole("link", { name: "Edit rules" }).getAttribute("href")).toBe("/library/rules/edit");
+    expect(screen.queryByLabelText(/Loan period/)).toBeNull();
+  });
+
+  it("prepopulates all rules and saves before returning to Library", async () => {
     save.mockResolvedValue({ ok: true });
-    render(<LibraryWorkspace data={data} canManage canAdmin />);
-    fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Edit rules" }));
-    const loanDaysInput = screen.getAllByLabelText(/Loan period/)[0];
-    fireEvent.change(loanDaysInput, { target: { value: "21" } });
-    fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy();
+    render(<LibraryRulesForm settings={data.settings} />);
+    expect(screen.getAllByRole("spinbutton").map(input => (input as HTMLInputElement).value)).toEqual(["14", "3", "2", "14", "30", "5", "3", "30", "10"]);
+    fireEvent.change(screen.getAllByLabelText(/Loan period/)[0], { target: { value: "21" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Save Changes" }).closest("form")!);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/library"));
+    expect(save.mock.calls[0][0].get("action")).toBe("settings");
+    expect(save.mock.calls[0][0].get("student_loan_days")).toBe("21");
+    expect(refresh).toHaveBeenCalled();
   });
 
-  it("discards rule edits when cancelled", async () => {
-    render(<LibraryWorkspace data={data} canManage canAdmin />);
-    fireEvent.click(screen.getByRole("button", { name: /Rules & team/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Edit rules" }));
+  it("returns to Library without saving when rule edits are cancelled", () => {
+    render(<LibraryRulesForm settings={data.settings} />);
     fireEvent.change(screen.getAllByLabelText(/Loan period/)[0], { target: { value: "21" } });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(push).toHaveBeenCalledWith("/library");
+    expect(save).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() => expect(screen.getByLabelText("Saved borrowing rules")).toBeTruthy());
-    expect(screen.queryByLabelText(/Loan period/)).toBeNull();
-    expect(screen.queryByText("21 days")).toBeNull();
+  it("keeps rule edits visible when saving fails", async () => {
+    save.mockResolvedValue({ error: "Could not update rules" });
+    render(<LibraryRulesForm settings={data.settings} />);
+    fireEvent.change(screen.getAllByLabelText(/Loan period/)[0], { target: { value: "21" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Save Changes" }).closest("form")!);
+    expect((await screen.findByRole("alert")).textContent).toBe("Could not update rules");
+    expect((screen.getAllByLabelText(/Loan period/)[0] as HTMLInputElement).value).toBe("21");
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("shows reservation waiting-request policy note", () => {
@@ -241,6 +256,29 @@ describe("library workspace", () => {
     expect(screen.getAllByRole("button", { name: "Cancel reservation" }).length).toBeGreaterThan(0);
   });
 
+  it("toggles the full reports filter header with click and keyboard while keeping reset independent", () => {
+    render(<LibraryWorkspace data={data} canManage canAdmin={false} />);
+    fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
+    const header = screen.getByRole("button", { name: "Filter reports" });
+    const panel = document.getElementById(header.getAttribute("aria-controls")!)!;
+    expect(panel.hidden).toBe(true);
+    header.focus();
+    expect(document.activeElement).toBe(header);
+    fireEvent.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(panel.hidden).toBe(false);
+    fireEvent.change(screen.getByLabelText("Filter by date range"), { target: { value: "today" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    expect((screen.getByLabelText("Filter by date range") as HTMLSelectElement).value).toBe("all");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.keyDown(header, { key: "Enter" });
+    expect(panel.hidden).toBe(true);
+    fireEvent.keyDown(header, { key: " " });
+    expect(panel.hidden).toBe(false);
+    fireEvent.click(header.querySelector("svg")!);
+    expect(panel.hidden).toBe(true);
+  });
+
   it("renders unified reports with a single summary, collapsed filters, and export menu", () => {
     render(<LibraryWorkspace data={{ ...data, grades: [{ id: "g9", name: "9", sort_order: 9 }, { id: "g10", name: "Grade 10", sort_order: 10 }, { id: "bad", name: "Ali Test", sort_order: 11 }] }} canManage canAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: /Reports/ }));
@@ -250,7 +288,8 @@ describe("library workspace", () => {
     expect(screen.getAllByRole("button", { name: /Reservations/ }).length).toBeGreaterThan(0);
     expect(screen.queryByText("Inventory copy status breakdown")).toBeNull();
     expect(screen.queryByRole("group", { name: "Report type" })).toBeNull();
-    expect(screen.getByText("Filter reports").closest("details")!.open).toBe(false);
+    expect(screen.getByRole("button", { name: "Filter reports" }).getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Filter reports" }));
     const grades = within(screen.getByLabelText("Filter by grade"));
     expect(grades.getByRole("option", { name: "Grade 9" })).toBeTruthy();
     expect(grades.getByRole("option", { name: "Grade 10" })).toBeTruthy();

@@ -1,7 +1,7 @@
 "use client";
 
 import { requestDownload } from "@/components/reports/DownloadActionModal";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useId } from "react";
 import {
   Download,
   ChevronDown,
@@ -9,7 +9,7 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/ui/data-table";
+import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/library/library-table";
 import type { LibraryData, LibraryBook, LibraryCopy } from "@/lib/services/library";
 import { DEFAULT_GRADE_NAMES } from "@/lib/constants/onboarding";
 import { libraryToday } from "@/lib/validation/library";
@@ -38,6 +38,9 @@ export function LibraryReports({
   formatDate,
   overdueDays
 }: LibraryReportsProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
+
   // Filter States
   const [dateRangePreset, setDateRangePreset] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
@@ -405,8 +408,26 @@ export function LibraryReports({
           </details>
         </div>
 
-        <details><summary className="cursor-pointer text-sm font-semibold text-primary">Filter reports</summary>
-        <Button type="button" variant="secondary" onClick={handleResetFilters} className="my-2 text-xs font-semibold">
+        <div>
+          <button
+            type="button"
+            tabIndex={0}
+            aria-expanded={filtersOpen}
+            aria-controls={filtersId}
+            onClick={() => setFiltersOpen(open => !open)}
+            onKeyDown={event => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                if (!event.repeat) setFiltersOpen(open => !open);
+              }
+            }}
+            className="flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-primary transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <span>Filter reports</span>
+            <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+          </button>
+          <div id={filtersId} hidden={!filtersOpen} className="pt-2">
+        <Button type="button" variant="secondary" onClick={event => { event.stopPropagation(); handleResetFilters(); }} className="my-2 text-xs font-semibold">
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset filters
         </Button>
         <p className="my-2 text-xs text-muted">Date, borrower, category, and status filters apply to the displayed loan and reservation reports.</p>
@@ -535,7 +556,8 @@ export function LibraryReports({
             </div>
           </div>
         )}
-        </details>
+          </div>
+        </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -552,7 +574,7 @@ export function LibraryReports({
                 <th className={dataTableHeaderCellClassName}>Book / copy</th>
                 <th className={dataTableHeaderCellClassName}>Due</th>
                 <th className={dataTableHeaderCellClassName}>Fine</th>
-                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
               </tr></DataTableHeader>
               <tbody>
             {overdueLoans.map(loan => {
@@ -567,7 +589,7 @@ export function LibraryReports({
                   <td className={dataTableCellClassName}><p className="font-semibold text-ink">{book?.title || loan.book_title || "Book"}</p><p className="text-xs text-muted">Copy {copy?.accession || loan.accession || "N/A"}</p></td>
                   <td className={`${dataTableCellClassName} font-semibold text-red-700`}>{loan.due_date}<p className="text-xs font-normal">{days} days overdue</p></td>
                   <td className={dataTableCellClassName}>{formatMoney(estFine)}</td>
-                  <td className={`${dataTableCellClassName} sticky right-0 bg-white text-right`}><Button
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50 text-right`}><Button
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab("Issue & return")}
@@ -591,7 +613,7 @@ export function LibraryReports({
               <th className={dataTableHeaderCellClassName}>Borrower</th>
               <th className={dataTableHeaderCellClassName}>Queue</th>
               <th className={dataTableHeaderCellClassName}>Status</th>
-              <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-surface-low text-right`}>Actions</th>
+              <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
             </tr></DataTableHeader>
             <tbody>
             {filteredReservations.map(res => {
@@ -602,7 +624,7 @@ export function LibraryReports({
                   <td className={dataTableCellClassName}><p className="font-semibold text-ink">{res.borrower_name}</p><p className="text-xs capitalize text-muted">{res.borrower_kind}</p></td>
                   <td className={dataTableCellClassName}>#{res.queue_position || 1}</td>
                   <td className={dataTableCellClassName}>{res.is_ready_to_issue ? <span className="font-semibold text-emerald-600">Ready to issue</span> : <span className="font-semibold text-amber-600">Waiting for return</span>}</td>
-                  <td className={`${dataTableCellClassName} sticky right-0 bg-white text-right`}><Button
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50 text-right`}><Button
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab(res.is_ready_to_issue ? "Issue & return" : "Reservations")}
