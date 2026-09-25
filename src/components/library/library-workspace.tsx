@@ -18,6 +18,7 @@ import { BorrowerSelector } from "./borrower-selector";
 import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
 import { LibraryTeamCard } from "./library-team-card";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { LibraryReports } from "./library-reports";
 import { LibraryDialog } from "./library-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -455,40 +456,34 @@ export function LibraryWorkspace({
       sub: `Across ${totalTitleCount} title${totalTitleCount === 1 ? "" : "s"}`,
       destination: "Catalogue",
       icon: BookCopy,
-      bg: "bg-blue-50",
-      fg: "text-blue-600",
-      accent: "border-t-blue-500",
+      tone: "blue" as const,
     },
     {
       label: "On loan",
+      sub: "Currently active loans",
       value: activeLoans.length,
       destination: "Loans & reservations",
       filter: "active",
       icon: BookOpen,
-      bg: "bg-emerald-50",
-      fg: "text-emerald-600",
-      accent: "border-t-emerald-500",
+      tone: "green" as const,
     },
     {
       label: "Overdue loans",
+      sub: "Active loans past their due date",
       value: overdue.length,
       destination: "Loans & reservations",
       filter: "overdue",
       icon: Clock3,
-      bg: "bg-red-50",
-      fg: "text-red-600",
-      accent: "border-t-red-500",
+      tone: "red" as const,
     },
     {
       label: "Reservations",
       value: waitingReservations.length,
       destination: "Loans & reservations",
       section: "library-waiting-list",
-      sub: readyReservations.length > 0 ? `${readyReservations.length} ready to issue` : undefined,
+      sub: readyReservations.length > 0 ? `${readyReservations.length} ready to issue` : "Pending waiting list requests",
       icon: Users,
-      bg: "bg-emerald-50",
-      fg: "text-emerald-600",
-      accent: "border-t-amber-500",
+      tone: "amber" as const,
     },
   ];
 
@@ -518,17 +513,10 @@ export function LibraryWorkspace({
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {kpiCards.map(({ label, value, sub, icon: Icon, bg, fg, accent, destination, filter, section }) => (
-          <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className={`flex min-w-0 items-center gap-2 rounded-2xl border border-outline/70 border-t-4 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary sm:gap-4 sm:p-5 ${accent}`}>
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${bg} ${fg}`}>
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs text-muted sm:text-sm">{label}</p>
-              <p className="text-xl font-bold text-ink sm:text-2xl">{value}</p>
-              {sub && <p className="hidden text-xs text-muted sm:block">{sub}</p>}
-            </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpiCards.map(({ label, value, sub, icon, tone, destination, filter, section }) => (
+          <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className="min-w-0 cursor-pointer rounded-[18px] text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <StatCard label={label} value={value} hint={sub} icon={icon} tone={tone} />
           </button>
         ))}
       </div>

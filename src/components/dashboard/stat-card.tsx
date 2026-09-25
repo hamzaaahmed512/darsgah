@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,8 @@ export function StatCard({
   trendTone = "neutral"
 }: {
   label: string;
-  value: string | number;
-  hint?: string;
+  value: ReactNode;
+  hint?: ReactNode;
   icon: LucideIcon;
   tone?: keyof typeof toneClasses;
   trend?: string;
