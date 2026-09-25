@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { getLibrary } from "@/lib/services/library";
 import { hasPermission } from "@/lib/permissions";
-import { DataTable, DataTableHeader, DataTableRow } from "@/components/library/library-table";
 import { CopyStatusEditor } from "@/components/library/copy-status-editor";
 
 function CopyStatus({ status }: { status: string }) {
@@ -24,11 +23,6 @@ export default async function BookInventoryPage({ params }: { params: Promise<{ 
   const copies = data.copies.filter((copy) => copy.book_id === book.id);
   const currentLoans = new Map(data.loans.filter((loan) => !loan.returned_at).map((loan) => [loan.copy_id, loan]));
   const canManage = hasPermission(user.role, "library:manage", user.permissions);
-
-  const copyRows = copies.map((copy) => ({
-    copy,
-    loan: currentLoans.get(copy.id),
-  }));
 
   return <>
     <Link href="/library" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-primary"><ArrowLeft className="h-4 w-4" /> Back to library</Link>
@@ -101,7 +95,6 @@ export default async function BookInventoryPage({ params }: { params: Promise<{ 
       </table>
     </div>
   )}
-</CardContent>
       </CardContent>
     </Card>
   </>;
