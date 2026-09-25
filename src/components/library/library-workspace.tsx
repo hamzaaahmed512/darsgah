@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, X, Info, UserCheck
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, Info, UserCheck, RotateCcw
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
@@ -155,36 +155,23 @@ function AddBookModal() {
         <Plus className="h-4 w-4" /> Add book
       </Button>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="dialog-panel w-full max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
-            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="font-display text-2xl font-bold text-ink">Add a book</h2>
-                <p className="mt-1 text-sm text-muted">
-                  Fill in the title details and set the number of copies to register. Copy IDs are generated automatically.
-                </p>
+        <LibraryDialog
+          title="Add a book"
+          description="Fill in the title details and set the number of copies to register. Copy IDs are generated automatically."
+          onClose={() => setOpen(false)}
+          className="max-w-2xl"
+        >
+          <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+            <Form action="add_book_with_copies" label="Add book" reset onSuccess={() => setOpen(false)}>
+              <BookFields />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Number of copies" hint="A unique Copy ID is generated for each.">
+                  <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
+                </Field>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="rounded-xl p-2 text-muted hover:bg-surface-low"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6">
-              <Form action="add_book_with_copies" label="Add book" reset>
-                <BookFields />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Number of copies" hint="A unique Copy ID is generated for each.">
-                    <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
-                  </Field>
-                </div>
-              </Form>
-            </div>
+            </Form>
           </div>
-        </div>
+        </LibraryDialog>
       )}
     </>
   );
@@ -245,9 +232,11 @@ function EditBookModal({ book }: { book: LibraryBook }) {
 
 function ArchiveBookButton({ book }: { book: LibraryBook }) {
   const router = useRouter();
+  const { pushToast } = useToast();
   const [pending, startTransition] = useTransition();
   const archive = !book.archived;
-  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Delete" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) router.refresh(); else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition disabled:opacity-50 ${archive ? "border-red-100 bg-red-50 text-red-600 hover:bg-red-100" : "border-outline/70 bg-white text-primary hover:bg-primary-soft"}`} aria-label={archive ? `Delete ${book.title}` : `Restore ${book.title}`} title={archive ? "Delete book" : "Restore book"}><Trash2 className="h-4 w-4" /></button>;
+  const label = archive ? `Archive ${book.title}` : `Restore ${book.title}`;
+  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Archive" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) { pushToast(archive ? "Book archived." : "Book restored.", "success"); router.refresh(); } else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold transition disabled:opacity-50 ${archive ? "w-10 border-red-100 bg-red-50 px-0 text-red-600 hover:bg-red-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} aria-label={label} title={archive ? "Archive book" : "Restore book"}>{archive ? <Trash2 className="h-4 w-4" /> : <><RotateCcw className="h-4 w-4" /><span>Restore</span></>}</button>;
 }
 
 function IssueBookModal({
