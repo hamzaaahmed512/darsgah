@@ -13,15 +13,13 @@ import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type Transaction
 import { formatCompactPKR, formatDatePK, formatPKR } from "@/lib/utils";
 import { TransactionFormModal } from "@/components/finance/transaction-form-modal";
 import { hasPermission } from "@/lib/permissions";
-import { createClient } from "@/lib/supabase/server";
-import { formatFullName } from "@/lib/student-name";
 
 function canViewFinancialReports(role: string) {
   return role !== "administrator";
 }
 
 const statTones = {
-  green: { tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", accent: "!border-t-emerald-500" }, red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-red-500" }, blue: { tile: "bg-blue-50 text-blue-600 ring-blue-100", accent: "!border-t-blue-500" }, purple: { tile: "bg-purple-50 text-purple-600 ring-purple-100", accent: "!border-t-purple-500" }, amber: { tile: "bg-amber-50 text-amber-600 ring-amber-100", accent: "!border-t-amber-500" }, slate: { tile: "bg-slate-50 text-slate-600 ring-slate-100", accent: "!border-t-slate-400" }
+  green: { tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", accent: "!border-t-emerald-500" }, red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-rose-500" }, blue: { tile: "bg-blue-50 text-blue-600 ring-blue-100", accent: "!border-t-blue-500" }, purple: { tile: "bg-purple-50 text-purple-600 ring-purple-100", accent: "!border-t-purple-500" }, amber: { tile: "bg-amber-50 text-amber-600 ring-amber-100", accent: "!border-t-amber-500" }, slate: { tile: "bg-slate-50 text-slate-600 ring-slate-100", accent: "!border-t-slate-400" }
 } as const;
 
 function FinanceStatCard({
@@ -42,7 +40,7 @@ function FinanceStatCard({
   const trendClass = trendTone === "positive" ? "text-emerald-600" : trendTone === "negative" ? "text-red-600" : "text-slate-500";
 
   return (
-    <Card className={`h-full !border-t-4 p-5 shadow-sm sm:p-6 ${statTones[tone].accent}`}>
+    <Card className={`kpi-card h-full !border-t-4 p-5 shadow-sm sm:p-6 ${statTones[tone].accent}`}>
       <div className="flex h-full items-start gap-5">
         <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-16 sm:w-16 ${statTones[tone].tile}`}>
           <Icon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
@@ -108,12 +106,6 @@ export default async function FinanceDashboardPage({ searchParams }: { searchPar
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
   const canViewReports = canViewFinancialReports(user.role);
   const summaryView = (["month", "year", "lifetime"].includes(params.view ?? "") ? params.view : "month") as "month" | "year" | "lifetime";
-  let students: Array<{ id: string; name: string; admissionNumber: string }> = [];
-  if (canManage) {
-    const supabase = await createClient();
-    const { data: studentRows } = await supabase.from("students").select("id,first_name,last_name,admission_number").eq("school_id", user.schoolId).eq("status", "active").order("first_name");
-    students = (studentRows ?? []).map((student) => ({ id: student.id, name: formatFullName(student.first_name, student.last_name), admissionNumber: student.admission_number }));
-  }
 
   if (!canViewReports) {
     const period = (["month", "year", "lifetime", "custom"].includes(params.period ?? "") ? params.period : "month") as "month" | "year" | "lifetime" | "custom";

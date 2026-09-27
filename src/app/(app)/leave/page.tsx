@@ -347,12 +347,12 @@ function LeaveBalanceCard({
   const style = isUnlimited
     ? { accent: "!border-t-slate-400", tile: "bg-slate-50 text-slate-500 ring-slate-100", bar: "bg-slate-300" }
     : over
-      ? { accent: "!border-t-red-500", tile: "bg-red-50 text-red-600 ring-red-100", bar: "bg-red-500" }
+      ? { accent: "!border-t-rose-500", tile: "bg-red-50 text-red-600 ring-red-100", bar: "bg-red-500" }
       : remaining === 0
         ? { accent: "!border-t-amber-500", tile: "bg-amber-50 text-amber-600 ring-amber-100", bar: "bg-amber-500" }
         : normalStyles;
   return (
-    <Card className={`h-full !border-t-4 p-4 shadow-sm sm:p-5 ${style.accent}`}>
+    <Card className={`kpi-card h-full !border-t-4 p-4 shadow-sm sm:p-5 ${style.accent}`}>
       <div className="flex items-start gap-4">
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-14 sm:w-14 ${style.tile}`}><CalendarRange className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">

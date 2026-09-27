@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { logActivity } from "@/lib/services/activity";
@@ -29,7 +30,7 @@ async function assertSubjectAssignableTeacher(
 }
 
 
-export async function getAcademicOptions(user: AppUser) {
+export const getAcademicOptions = cache(async function getAcademicOptions(user: AppUser) {
   const supabase = await createClient();
   const [years, grades, sections, subjects, classes, promotions] = await Promise.all([
     supabase.from("academic_years").select("*").eq("school_id", user.schoolId).order("starts_on", { ascending: false }),
@@ -75,7 +76,7 @@ export async function getAcademicOptions(user: AppUser) {
       ,allowed_majors: (row.class_allowed_majors ?? []).map((item: any) => item.major_key as string)
     }))),
   };
-}
+});
 
 export async function configureClassMajors(user: AppUser, classId: string, allowedMajors: string[]) {
   const supabase = await createClient();

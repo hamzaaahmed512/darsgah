@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { requirePublicSupabaseEnv } from "@/lib/supabase/env";
@@ -8,7 +9,8 @@ type CookieToSet = {
   options?: Parameters<Awaited<ReturnType<typeof cookies>>["set"]>[2];
 };
 
-export async function createClient() {
+// Request-scoped only: never share an authenticated client between users.
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies();
   const { url, anonKey } = requirePublicSupabaseEnv();
 
@@ -28,4 +30,4 @@ export async function createClient() {
       }
     }
   });
-}
+});

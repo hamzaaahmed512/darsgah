@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const toneClasses = {
   blue: { tile: "bg-blue-50 text-blue-600 ring-blue-100", accent: "!border-t-blue-500" },
   green: { tile: "bg-emerald-50 text-emerald-600 ring-emerald-100", accent: "!border-t-emerald-500" },
-  red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-red-500" },
+  red: { tile: "bg-red-50 text-red-600 ring-red-100", accent: "!border-t-rose-500" },
   amber: { tile: "bg-amber-50 text-amber-600 ring-amber-100", accent: "!border-t-amber-500" },
   purple: { tile: "bg-purple-50 text-purple-600 ring-purple-100", accent: "!border-t-purple-500" },
   slate: { tile: "bg-slate-50 text-slate-600 ring-slate-100", accent: "!border-t-slate-400" }
@@ -32,7 +32,7 @@ export function StatCard({
   const trendClass = trendTone === "positive" ? "text-emerald-600" : trendTone === "negative" ? "text-red-600" : "text-slate-500";
 
   return (
-    <Card className={cn("h-full !border-t-4 p-4 shadow-sm sm:p-5", toneClasses[tone].accent)}>
+    <Card className={cn("kpi-card h-full !border-t-4 p-4 shadow-sm sm:p-5", toneClasses[tone].accent)}>
       <div className="flex h-full items-start gap-4">
         <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-14 sm:w-14", toneClasses[tone].tile)}>
           <Icon className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />

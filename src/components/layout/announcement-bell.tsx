@@ -27,17 +27,21 @@ const PRIORITY_DOT: Record<AnnouncementPriority, string> = {
 export function AnnouncementBell({
   user,
   initialWorkflowNotifications = [],
+  initialAnnouncements = [],
+  initialLoading = false,
   open,
   onOpenChange
 }: {
   user: AppUser;
   initialWorkflowNotifications?: WorkflowNotification[];
+  initialAnnouncements?: AnnouncementWithRead[];
+  initialLoading?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [announcements, setAnnouncements] = useState<AnnouncementWithRead[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementWithRead[]>(initialAnnouncements);
   const [workflowNotifications, setWorkflowNotifications] = useState<WorkflowNotification[]>(initialWorkflowNotifications);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initialLoading);
   const [loadError, setLoadError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const supabase = useCallback(() => createClient(), []);
@@ -73,10 +77,14 @@ export function AnnouncementBell({
     }
   }, []);
 
+  useEffect(() => { setAnnouncements(initialAnnouncements); }, [initialAnnouncements]);
+  useEffect(() => { setWorkflowNotifications(initialWorkflowNotifications); }, [initialWorkflowNotifications]);
+  useEffect(() => { setLoading(initialLoading); }, [initialLoading]);
   useEffect(() => {
-    fetchAnnouncements();
-    fetchWorkflowNotifications();
-  }, [fetchAnnouncements, fetchWorkflowNotifications]);
+    if (!open) return;
+    void fetchAnnouncements();
+    void fetchWorkflowNotifications();
+  }, [open, fetchAnnouncements, fetchWorkflowNotifications]);
 
   useEffect(() => {
     function handleAnnouncementRead() {

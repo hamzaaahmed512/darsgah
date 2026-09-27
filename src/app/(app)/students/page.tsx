@@ -86,7 +86,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       />
 
       <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="h-full rounded-[24px] !border-t-4 !border-t-blue-500 p-5 shadow-sm sm:p-6">
+        <Card className="kpi-card h-full rounded-[24px] !border-t-4 !border-t-blue-500 p-5 shadow-sm sm:p-6">
           <div className="flex h-full items-start gap-5">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 sm:h-16 sm:w-16"><GraduationCap className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" /></span>
             <div className="min-w-0">

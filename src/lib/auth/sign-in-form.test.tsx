@@ -28,5 +28,5 @@ it("keeps sign-in fields available for retry after rejected credentials", async 
   fireEvent.submit(form);
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
   expect(signIn.mock.lastCall?.[0].password).toBe("corrected-password");
-  expect(refresh).toHaveBeenCalled();
+  expect(refresh).not.toHaveBeenCalled();
 });

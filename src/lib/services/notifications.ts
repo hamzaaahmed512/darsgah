@@ -137,6 +137,10 @@ async function getTeacherPendingHeadClasses(user: AppUser, today: string) {
 
 export async function getNotificationSummary(user: AppUser): Promise<NotificationSummary> {
   const { timeZone, preferences } = await getSchoolNotificationSettings(user);
+  // Independent counts start before attendance lookup; each handles its own error.
+  const leaveCount = preferences.leaveRequestNotificationsEnabled && hasPermission(user.role, "leave:manage", user.permissions)
+    ? getPendingLeaveCount(user).catch(() => 0) : Promise.resolve(0);
+  const queryCount = getOpenQueryCount(user).catch(() => 0);
   const now = getSchoolNow(timeZone);
   const deadline = timeToMinutes(preferences.attendanceDeadlineTime);
   const reminderStart = Math.max(0, deadline - 60);
@@ -179,7 +183,7 @@ export async function getNotificationSummary(user: AppUser): Promise<Notificatio
   }
 
   if (preferences.leaveRequestNotificationsEnabled && hasPermission(user.role, "leave:manage", user.permissions)) {
-    leaveBadge = await getPendingLeaveCount(user).catch(() => 0);
+    leaveBadge = await leaveCount;
     if (leaveBadge) {
       notifications.push({
         id: `pending-leaves-${leaveBadge}`,
@@ -192,7 +196,7 @@ export async function getNotificationSummary(user: AppUser): Promise<Notificatio
     }
   }
 
-  queriesBadge = await getOpenQueryCount(user).catch(() => 0);
+  queriesBadge = await queryCount;
 
   return {
     notifications,

@@ -59,8 +59,8 @@ export function ClassFilterForm({ grades, classes, years = [], selectedYearId = 
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_210px_220px_260px]">
-      <div className="relative">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="relative min-w-0">
         <Search
           className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
           aria-hidden="true"
@@ -70,17 +70,17 @@ export function ClassFilterForm({ grades, classes, years = [], selectedYearId = 
           name="q"
           defaultValue={currentQ}
           onChange={handleSearchChange}
-          className="h-14 w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-4 pl-12 text-sm font-medium shadow-none placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10"
+          className="h-14 min-w-0 w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-4 pl-12 text-sm font-medium shadow-none placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10"
           placeholder="Search classes by name, section, room..."
         />
       </div>
-      <div className="relative">
+      <div className="relative min-w-0">
         <CalendarDays className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
         <Select aria-label="Academic year" value={selectedYearId} onChange={(event) => pushFilters("all", "", "all", event.target.value)} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
           {years.map((year) => <option key={year.id} value={year.id}>{year.name}{year.is_active ? " (Current)" : ""}</option>)}
         </Select>
       </div>
-      <div className="relative">
+      <div className="relative min-w-0">
         <GraduationCap className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
         <Select aria-label="Grade" name="grade" value={currentGrade} onChange={handleGradeChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
           <option value="all">Select grade (all)</option>
@@ -91,7 +91,7 @@ export function ClassFilterForm({ grades, classes, years = [], selectedYearId = 
           ))}
         </Select>
       </div>
-      <div className="relative">
+      <div className="relative min-w-0">
         <Building2 className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
         <Select aria-label="Section" name="classId" value={selectedClass} onChange={handleClassChange} className="h-14 appearance-none rounded-2xl border-outline/65 bg-white pl-12 pr-10 text-sm font-medium shadow-none">
           <option value="all">Select section (all)</option>

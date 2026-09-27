@@ -17,6 +17,10 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
 import type { WorkflowNotification } from "@/lib/services/notifications";
 
+const EMPTY_BADGES = { attendance: 0, leave: 0, queries: 0 };
+const EMPTY_WORKFLOW: WorkflowNotification[] = [];
+const EMPTY_ANNOUNCEMENTS: AnnouncementWithRead[] = [];
+
 type SchoolBranding = {
   logoUrl: string | null;
   faviconUrl: string | null;
@@ -37,9 +41,9 @@ function formatNavDate(date: Date) {
 export function AppShell({
   user,
   branding,
-  sidebarBadges = { attendance: 0, leave: 0, queries: 0 },
-  initialWorkflowNotifications = [],
-  initialAttentionAnnouncements = [],
+  sidebarBadges = EMPTY_BADGES,
+  initialWorkflowNotifications = EMPTY_WORKFLOW,
+  initialAttentionAnnouncements = EMPTY_ANNOUNCEMENTS,
   principalCanAccessAcademicControl = false,
   children
 }: {
@@ -59,6 +63,30 @@ export function AppShell({
   const [navDate, setNavDate] = useState<string | null>(null);
   const [attentionAnnouncements, setAttentionAnnouncements] = useState(initialAttentionAnnouncements);
   const [currentSidebarBadges, setCurrentSidebarBadges] = useState(sidebarBadges);
+  const [workflowNotifications, setWorkflowNotifications] = useState(initialWorkflowNotifications);
+  const [shellAnnouncements, setShellAnnouncements] = useState<AnnouncementWithRead[]>([]);
+  const [shellReady, setShellReady] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadShell() {
+      try {
+        const response = await fetch("/api/shell", { signal: controller.signal, cache: "no-store" });
+        if (!response.ok) throw new Error("Shell data unavailable");
+        const data = await response.json();
+        setCurrentSidebarBadges(data.sidebarBadges);
+        setWorkflowNotifications(data.notifications);
+        setShellAnnouncements(data.announcements);
+        setAttentionAnnouncements(data.announcements.filter((item: AnnouncementWithRead) =>
+          ["Leave request rejected", "Result returned for revision"].includes(item.title) && !item.is_read));
+      } catch {
+        // Keep navigation usable; the bell can retry its own reads when opened.
+      } finally {
+        if (!controller.signal.aborted) setShellReady(true);
+      }
+    }
+    void loadShell();
+    return () => controller.abort();
+  }, [user.id, user.schoolId]);
   const menuRef = useRef<HTMLDivElement>(null);
   const sidebarNavRef = useRef<HTMLElement>(null);
   const sidebarScrollTimeoutRef = useRef<number | null>(null);
@@ -96,7 +124,7 @@ export function AppShell({
 
       workspace.querySelectorAll("table").forEach((table) => {
         const wrapper = table.closest<HTMLElement>(".overflow-x-auto");
-        if (!wrapper) return;
+        if (!wrapper || wrapper.dataset.responsiveTable === "desktop") return;
 
         const labels = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent?.trim().replace(/\s+/g, " ") ?? "");
         if (!labels.length) return;
@@ -400,7 +428,7 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-screen bg-background text-ink">
+    <div className="min-h-screen overflow-x-hidden bg-background text-ink">
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
       {attentionAnnouncements[0] ? (
@@ -440,7 +468,7 @@ export function AppShell({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Navigation</span>
-          <button className="rounded-xl p-2 text-slate-500 hover:bg-surface-low hover:text-slate-900" onClick={() => setOpen(false)} aria-label="Close navigation">
+          <button className="flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2 text-slate-500 hover:bg-surface-low hover:text-slate-900" onClick={() => setOpen(false)} aria-label="Close navigation">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -449,21 +477,21 @@ export function AppShell({
         </div>
       </div>
 
-      <div className="lg:pl-[292px]">
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:relative lg:h-[92px] lg:px-10">
+      <div className="min-w-0 lg:pl-[292px]">
+        <header className="sticky top-0 z-40 flex min-h-16 flex-col items-stretch justify-between py-3 sm:flex-row sm:flex-wrap sm:items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:relative lg:min-h-[92px] lg:px-8">
           <div className="absolute inset-y-0 left-0 hidden w-px bg-slate-200 lg:block" aria-hidden="true" />
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />
             </button>
-            <div className="hidden items-center gap-2 text-sm font-bold text-slate-900 sm:flex">
+            <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-900">
               <CalendarDays className="h-5 w-5 text-slate-700" aria-hidden="true" />
-              <span>{navDate ?? ""}</span>
+              <span className="break-words">{navDate ?? ""}</span>
             </div>
           </div>
-          <div className="relative flex items-center gap-3" ref={menuRef}>
+          <div className="relative flex shrink-0 items-center justify-end gap-3" ref={menuRef}>
             {hasPermission(user.role, "announcements:view", user.permissions) && (
-              <AnnouncementBell user={user} initialWorkflowNotifications={initialWorkflowNotifications} open={announcementsOpen} onOpenChange={(nextOpen) => {
+              <AnnouncementBell user={user} initialWorkflowNotifications={workflowNotifications} initialAnnouncements={shellAnnouncements} initialLoading={!shellReady} open={announcementsOpen} onOpenChange={(nextOpen) => {
                 setAnnouncementsOpen(nextOpen);
                 if (nextOpen) setProfileOpen(false);
               }} />
@@ -536,7 +564,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="app-workspace mx-auto w-full max-w-[1520px] px-4 py-5 sm:px-6 sm:py-8 lg:px-10"><PageTransition>{children}</PageTransition></main>
+        <main className="app-workspace mx-auto w-full max-w-[1520px] min-w-0 px-4 py-6 sm:px-6 lg:px-8"><PageTransition>{children}</PageTransition></main>
       </div>
     </div>
   );

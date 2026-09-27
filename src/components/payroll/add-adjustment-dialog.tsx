@@ -83,7 +83,7 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-soft hover:brightness-105"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-soft hover:brightness-105"
       >
         Add Adjustment
       </button>

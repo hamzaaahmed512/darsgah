@@ -44,14 +44,14 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
           name="month"
           type="month"
           defaultValue={month}
-          className="rounded-lg border border-outline/60 bg-surface-low px-3 py-2 text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="min-h-11 min-w-0 max-w-full rounded-lg border border-outline/60 bg-surface-low px-3 py-2 text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
-        <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:brightness-105">
+        <button type="submit" className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:brightness-105">
           Apply
         </button>
       </form>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Employees" value={stats.employees.toString()} hint="Active staff in payroll" icon={Users} tone="slate" />
         <StatCard label="Total Staff Pay" value={formatPKR(stats.totalPayable)} hint={`For ${formatMonth(month)}`} icon={Banknote} tone="blue" />
         <StatCard label="Paid" value={stats.paid.toString()} hint="Marked paid this month" icon={CheckCircle} tone="green" />

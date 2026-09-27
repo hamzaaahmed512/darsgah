@@ -106,5 +106,5 @@ export default async function QueriesPage() {
 
 function Metric({ label, value, icon: Icon, tone }: { label: string; value: number; icon: typeof Inbox; tone: "blue" | "amber" | "green" }) {
   const styles = { blue: "bg-blue-50 text-primary ring-blue-100", amber: "bg-amber-50 text-amber-600 ring-amber-100", green: "bg-emerald-50 text-emerald-600 ring-emerald-100" };
-  return <div className="rounded-[18px] border border-slate-200 border-t-4 border-t-blue-500 bg-white p-5 shadow-sm"><div className="flex items-center gap-4"><span className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${styles[tone]}`}><Icon className="h-6 w-6" /></span><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p><p className="mt-1 font-display text-3xl font-bold text-ink">{value}</p></div></div></div>;
+  return <div className="kpi-card rounded-[18px] border border-slate-200 border-t-4 !border-t-blue-500 bg-white p-5 shadow-sm"><div className="flex items-center gap-4"><span className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${styles[tone]}`}><Icon className="h-6 w-6" /></span><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p><p className="mt-1 font-display text-3xl font-bold text-ink">{value}</p></div></div></div>;
 }

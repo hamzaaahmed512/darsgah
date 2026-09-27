@@ -10,6 +10,9 @@ type CookieToSet = {
 
 export async function updateSession(request: NextRequest, forwardedHeaders = new Headers(request.headers)) {
   let response = NextResponse.next({ request: { headers: forwardedHeaders } });
+  // Cookie presence is only a fast-path hint. Server pages/APIs still verify
+  // claims and current membership; cookies alone never grant access.
+  if (!request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/.test(name))) return response;
   const { url, anonKey } = requirePublicSupabaseEnv();
 
   const supabase = createServerClient(

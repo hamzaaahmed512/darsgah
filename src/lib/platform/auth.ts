@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,7 +20,7 @@ export async function isPlatformAdminUser(userId: string) {
   return Boolean(data);
 }
 
-export async function requirePlatformAdmin() {
+export const requirePlatformAdmin = cache(async function requirePlatformAdmin() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
@@ -34,4 +35,4 @@ export async function requirePlatformAdmin() {
 
   const email = typeof data.claims.email === "string" ? data.claims.email : "Platform admin";
   return { id: userId, email };
-}
+});

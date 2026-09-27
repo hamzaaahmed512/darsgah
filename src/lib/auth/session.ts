@@ -66,6 +66,14 @@ async function loadCurrentUser(): Promise<AppUser | null> {
     };
   }
 
+  // A valid empty result means no membership. Only old deployments without
+  // the RPC should execute the compatibility path, never authorization failures.
+  if (!optimizedResult.error) return null;
+  if (!["PGRST202", "42883"].includes(optimizedResult.error.code)) {
+    console.error("Current user RPC failed.");
+    return null;
+  }
+
   const [profileResult, memberResult] = await Promise.all([
     supabase.from("profiles").select("full_name,email,avatar_url,must_change_password").eq("id", userId).maybeSingle(),
     supabase

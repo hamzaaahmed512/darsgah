@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
@@ -30,11 +31,11 @@ export async function logFinanceAction(
 // Feline structures
 // -------------------------------------------------------------
 
-export async function getFeeStructures(user: AppUser) {
+export const getFeeStructures = cache(async function getFeeStructures(user: AppUser) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("fee_structures")
-    .select("*, academic_years(name), classes(name, grades(name), sections(name))")
+    .select("id,school_id,academic_year_id,class_id,tuition_fee,admission_fee,examination_fee,library_fee,laboratory_fee,transport_fee,miscellaneous_charges,created_at,updated_at,academic_years(name),classes(name,grades(name),sections(name))")
     .eq("school_id", user.schoolId)
     .order("created_at", { ascending: false });
 
@@ -49,7 +50,7 @@ export async function getFeeStructures(user: AppUser) {
         }
       : null
   }));
-}
+});
 
 export async function createFeeStructure(user: AppUser, values: any) {
   if (!hasPermission(user.role, "finance:manage")) {

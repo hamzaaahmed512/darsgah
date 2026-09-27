@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
@@ -22,12 +22,23 @@ export async function middleware(request: NextRequest) {
   forwardedHeaders.set("Content-Security-Policy", policy);
   forwardedHeaders.set("x-nonce", nonce);
   forwardedHeaders.set("x-request-id", requestId);
-  const response = await updateSession(request, forwardedHeaders);
+  // Keep CSP on every HTML page, but refresh sessions only where needed.
+  const root = request.nextUrl.pathname.split("/")[1];
+  const sessionRoutes = new Set([
+    "academics", "activity", "admin", "announcements", "approvals", "attendance",
+    "classes", "dashboard", "exam-approvals", "finance", "help", "leave", "library",
+    "marks", "onboarding", "operations", "profile", "queries", "reports", "results",
+    "school-profile", "settings", "special-exams", "staff", "students", "subjects",
+    "teachers", "transport", "unauthorized", "platform", "change-password", "reset-password", "api"
+  ]);
+  const response = sessionRoutes.has(root)
+    ? await updateSession(request, forwardedHeaders)
+    : NextResponse.next({ request: { headers: forwardedHeaders } });
   response.headers.set("Content-Security-Policy", policy);
   response.headers.set("x-request-id", requestId);
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"]
+  matcher: ["/((?!_next/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|css|js|map)$).*)"]
 };

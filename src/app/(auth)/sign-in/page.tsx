@@ -35,7 +35,6 @@ export default function SignInPage() {
 
         if (result?.destination) {
           router.replace(result.destination);
-          router.refresh();
         }
       } catch (error) {
         setError("Unable to sign in right now. Please try again.");

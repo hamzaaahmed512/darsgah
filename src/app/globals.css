@@ -690,3 +690,19 @@ div[class*="fixed inset-0"][class*="z-"] > div > div:nth-child(3),
 div[class*="fixed inset-0"][class*="z-"] > form > div:nth-child(3) {
   flex-shrink: 0 !important;
 }
+
+/* KPI-only motion: transforms do not change layout or widen the card. */
+.kpi-card,
+.card-surface.kpi-card {
+  @apply transform-gpu transition-all duration-300 ease-in-out hover:-translate-y-1 hover:transform-gpu hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card,
+  .kpi-card:hover,
+  .card-surface.kpi-card,
+  .card-surface.kpi-card:hover {
+    transition: none;
+    transform: none;
+  }
+}

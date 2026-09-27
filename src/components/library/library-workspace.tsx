@@ -19,7 +19,11 @@ import { ReturnBookDialog } from "./return-book-dialog";
 import { RenewLoanDialog } from "./renew-loan-dialog";
 import { LibraryTeamCard } from "./library-team-card";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { LibraryReports } from "./library-reports";
+import dynamic from "next/dynamic";
+
+const LibraryReports = dynamic(() => import("./library-reports").then((module) => module.LibraryReports), {
+  loading: () => <div role="status" className="min-h-72 rounded-2xl bg-surface-low p-6 motion-safe:animate-pulse">Loading library reports…</div>
+});
 import { LibraryDialog } from "./library-dialog";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -515,7 +519,7 @@ export function LibraryWorkspace({
       {/* ── KPI cards ── */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map(({ label, value, sub, icon, tone, destination, filter, section }) => (
-          <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className="min-w-0 cursor-pointer rounded-[18px] text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <button type="button" key={label} onClick={() => { setTab(destination); setQuery(""); setPage(1); if (filter) setLoanFilter(filter); if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: "smooth" }), 0); }} className="min-w-0 cursor-pointer rounded-[18px] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <StatCard label={label} value={value} hint={sub} icon={icon} tone={tone} />
           </button>
         ))}

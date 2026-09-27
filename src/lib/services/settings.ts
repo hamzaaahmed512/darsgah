@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
@@ -46,12 +47,12 @@ function assertCanManageProtectedMember(
   }
 }
 
-async function loadSchoolProfile(user: AppUser) {
+const loadSchoolProfile = cache(async function loadSchoolProfile(user: AppUser) {
   const adminClient = createAdminClient();
 
   const [schoolRes, settingsRes] = await Promise.all([
     adminClient.from("schools").select("*").eq("id", user.schoolId).maybeSingle(),
-    adminClient.from("school_settings").select("*").eq("school_id", user.schoolId).maybeSingle()
+    adminClient.from("school_settings").select("settings").eq("school_id", user.schoolId).maybeSingle()
   ]);
 
   if (schoolRes.error) throw new Error(schoolRes.error.message);
@@ -61,7 +62,7 @@ async function loadSchoolProfile(user: AppUser) {
     school: schoolRes.data,
     settings: settingsRes.data?.settings ?? {}
   };
-}
+});
 
 export async function getSchoolProfile(user: AppUser) {
   return loadSchoolProfile(user);
