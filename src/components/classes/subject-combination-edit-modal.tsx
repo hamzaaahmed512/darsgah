@@ -128,7 +128,7 @@ export function SubjectCombinationEditModal({
 
       {open
         ? createPortal(
-            <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+            <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
               <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-4xl flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
                 <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
                   <div className="min-w-0 flex-1">
@@ -169,7 +169,7 @@ export function SubjectCombinationEditModal({
                           description="Choose where this combination should be available."
                           count={`${gradeIds.length} selected`}
                         >
-                          <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                          <div className="grid max-h-[320px] gap-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:grid-cols-2">
                             {grades.map((grade) => (
                               <SelectionChip
                                 key={grade.id}
@@ -197,7 +197,7 @@ export function SubjectCombinationEditModal({
                         description="Only selected subjects stay inside this combination."
                         count={`${subjectIds.length} selected`}
                       >
-                        <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                        <div className="grid max-h-[320px] gap-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:grid-cols-2">
                           {subjects.map((subject) => (
                             <SelectionChip
                               key={subject.id}

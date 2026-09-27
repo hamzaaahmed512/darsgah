@@ -267,7 +267,7 @@ export function BorrowerSelector({
           </div>
 
           {isOpen && (
-            <div className="max-h-60 overflow-y-auto rounded-xl border border-outline bg-white py-1 shadow-lift">
+            <div className="max-h-60 min-h-0 flex-1 overflow-y-auto rounded-xl border border-outline bg-white py-1 shadow-lift">
               {searchError && (
                 <div className="p-3 text-center text-xs font-semibold text-red-600">
                   {searchError}

@@ -154,7 +154,7 @@ export function CopySelector({
           )}
 
           {isOpen && (
-            <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-xl border border-outline bg-white py-1 shadow-lift">
+            <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 min-h-0 flex-1 overflow-y-auto rounded-xl border border-outline bg-white py-1 shadow-lift">
               {searchError && (
                 <div className="p-3 text-center text-xs font-semibold text-red-600">
                   {searchError}

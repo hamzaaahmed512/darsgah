@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Settings2, X } from "lucide-react";
 import { updateLeavePolicyAction } from "@/app/(app)/leave/actions";
@@ -13,6 +14,12 @@ export function LeavePolicyModal({ annualLimit, monthlyLimit, weeklyLimit }: { a
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,20 +44,23 @@ export function LeavePolicyModal({ annualLimit, monthlyLimit, weeklyLimit }: { a
       <Settings2 className="h-4 w-4" /> Leave policy
     </Button>
     {saved && <p role="status" className="text-sm font-semibold text-success">Leave policy saved.</p>}
-    {open && <div role="dialog" aria-modal="true" aria-labelledby="leave-policy-title" className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
-        <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
-          <div><h2 id="leave-policy-title" className="font-display text-2xl font-bold text-ink">Leave policy</h2><p className="mt-1 text-sm text-muted">Set limits applied to all staff. Leave a limit empty for no restriction.</p></div>
-          <button type="button" aria-label="Close leave policy" disabled={pending} onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>
+    {mounted && open ? createPortal(
+      <div role="dialog" aria-modal="true" aria-labelledby="leave-policy-title" className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+        <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+          <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
+            <div><h2 id="leave-policy-title" className="font-display text-2xl font-bold text-ink">Leave policy</h2><p className="mt-1 text-sm text-muted">Set limits applied to all staff. Leave optional limits empty for no restriction.</p></div>
+            <button type="button" aria-label="Close leave policy" disabled={pending} onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>
+          </div>
+          <form onSubmit={submit} className="min-h-0 flex-1 overflow-y-auto grid gap-4 p-5 sm:p-6" aria-busy={pending}>
+            <Field label="Annual leave limit (days)"><Input name="annual_limit" type="number" min="0" step="1" defaultValue={annualLimit ?? ""} placeholder="No yearly limit" disabled={pending} /></Field>
+            <Field label="Monthly leave limit (days) [Optional]"><Input name="monthly_limit" type="number" min="0" step="1" defaultValue={monthlyLimit ?? ""} placeholder="No monthly limit" disabled={pending} /></Field>
+            <Field label="Weekly leave limit (days) [Optional]"><Input name="weekly_limit" type="number" min="0" step="1" defaultValue={weeklyLimit ?? ""} placeholder="No weekly limit" disabled={pending} /></Field>
+            {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+            <div className="flex justify-end gap-3"><Button type="button" variant="secondary" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save policy"}</Button></div>
+          </form>
         </div>
-        <form onSubmit={submit} className="grid gap-4 p-5 sm:p-6" aria-busy={pending}>
-          <Field label="Yearly leave limit (days) [Optional]"><Input name="annual_limit" type="number" min="0" step="1" defaultValue={annualLimit ?? ""} placeholder="No yearly limit" disabled={pending} /></Field>
-          <Field label="Monthly leave limit (days) [Optional]"><Input name="monthly_limit" type="number" min="0" step="1" defaultValue={monthlyLimit ?? ""} placeholder="No monthly limit" disabled={pending} /></Field>
-          <Field label="Weekly leave limit (days) [Optional]"><Input name="weekly_limit" type="number" min="0" step="1" defaultValue={weeklyLimit ?? ""} placeholder="No weekly limit" disabled={pending} /></Field>
-          {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
-          <div className="flex justify-end gap-3"><Button type="button" variant="secondary" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save policy"}</Button></div>
-        </form>
-      </div>
-    </div>}
+      </div>,
+      document.body
+    ) : null}
   </>;
 }

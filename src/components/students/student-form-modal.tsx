@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import { Plus, UserRoundPlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import type { StudentFormValues } from "@/lib/validation/students";
 import type { StudentCombinationOption } from "@/lib/student-majors";
@@ -43,6 +44,12 @@ export function StudentFormModal({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(initialOpen);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   function close() {
     setOpen(false);
@@ -56,28 +63,31 @@ export function StudentFormModal({
         {triggerLabel}
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
-            <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
-                  <UserRoundPlus className="h-6 w-6" aria-hidden="true" />
+      {mounted ? createPortal(
+        open ? (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+            <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-4xl min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+              <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
+                    <UserRoundPlus className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-[1.9rem] font-bold text-ink">Add Student</h2>
+                    <p className="mt-1 text-sm text-muted">Create the student profile, guardian details, and optional class placement.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-display text-[1.9rem] font-bold text-ink">Add Student</h2>
-                  <p className="mt-1 text-sm text-muted">Create the student profile, guardian details, and optional class placement.</p>
-                </div>
+                <button type="button" onClick={close} className="rounded-2xl p-2 text-muted transition hover:bg-surface-low hover:text-ink" aria-label="Close student form">
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button type="button" onClick={close} className="rounded-2xl p-2 text-muted transition hover:bg-surface-low hover:text-ink" aria-label="Close student form">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto bg-slate-50/30 p-5 sm:p-6">
-              <StudentForm classes={classes} combinations={combinations} onSubmit={onSubmit} submitLabel={submitLabel} onCancel={close} />
+              <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+                <StudentForm classes={classes} combinations={combinations} onSubmit={onSubmit} submitLabel={submitLabel} onCancel={close} />
+              </div>
             </div>
           </div>
-        </div>
+        ) : null,
+        document.body
       ) : null}
     </>
   );

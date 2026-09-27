@@ -104,6 +104,16 @@ function teacherResultsItem(permission: Permission = "results:view"): NavItem {
   };
 }
 
+function teacherMyClassesItem(permission: Permission = "academics:view"): NavItem {
+  return {
+    href: "/academics",
+    label: "My Classes",
+    icon: BookOpen,
+    permission,
+    section: "ACADEMICS"
+  };
+}
+
 function principalAcademicControlItem(): NavItem {
   return {
     href: "/admin/academic-control",
@@ -165,6 +175,7 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
       if (role === "principal") {
         items.push(principalResultsManagementItem());
       } else if (role === "teacher" || role === "head_teacher") {
+        items.push(teacherMyClassesItem());
         items.push(assessmentsItem());
         items.push(teacherResultsItem());
       } else if (usesAcademicEvaluationTabs(role)) {

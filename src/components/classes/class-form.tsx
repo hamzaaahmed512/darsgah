@@ -170,7 +170,7 @@ export function ClassFormModal({
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl">
             <div className="flex shrink-0 items-center justify-between border-b border-outline/40 px-6 py-4">
               <h2 className="text-xl font-display font-bold">{editing ? "Edit Class" : "Create New Class"}</h2>
@@ -179,7 +179,7 @@ export function ClassFormModal({
               </button>
             </div>
             
-            <div className="overflow-y-auto p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               <section className="mb-6">
                 <h3 className="mb-4 text-sm font-bold text-ink">Class Details</h3>
                 <form id="class-details-form" onSubmit={handleSubmit(onSubmitClass)}>

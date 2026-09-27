@@ -69,10 +69,10 @@ export default async function RegistrarDashboardPage() {
 
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} hint="Active enrollment" icon={GraduationCap} />
-        <StatCard label="Collected Fees" value={formatPKR(finance.totalCollected)} hint="Total recorded payments" icon={Wallet} />
-        <StatCard label="Outstanding Fees" value={formatPKR(finance.totalOutstanding)} hint="Unpaid dues" icon={AlertCircle} />
-        <StatCard label="Overdue Accounts" value={finance.overduePayments.toString()} hint="Past due date" icon={AlertCircle} />
+        <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} hint="Active enrollment" icon={GraduationCap} tone="blue" />
+        <StatCard label="Collected Fees" value={formatPKR(finance.totalCollected)} hint="Total recorded payments" icon={Wallet} tone="green" />
+        <StatCard label="Outstanding Fees" value={formatPKR(finance.totalOutstanding)} hint="Unpaid dues" icon={AlertCircle} tone="amber" />
+        <StatCard label="Overdue Accounts" value={finance.overduePayments.toString()} hint="Past due date" icon={AlertCircle} tone="red" />
       </section>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">

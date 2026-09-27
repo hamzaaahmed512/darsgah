@@ -611,7 +611,7 @@ details:has(> summary[class*="border-primary"])[open] > summary::before {
   inset: 0;
   z-index: 90;
   background: rgb(15 23 42 / 0.4);
-  backdrop-filter: blur(2px);
+  /* backdrop-filter: blur(2px); */
 }
 
 details:has(> summary[class*="border-primary"])[open] > summary {
@@ -647,4 +647,46 @@ details:has(> summary[class*="border-primary"])[open] > div {
   overflow-y: auto;
   transform: translate(-50%, -50%);
   border-radius: 1.5rem;
+}
+
+/* =======================================================
+   GLOBAL MODAL FIXES
+   Ensure all modals are scrollable internally and never cut off
+   ======================================================= */
+/* Ensure fixed modal overlays don't push content off screen */
+div[class*="fixed inset-0"][class*="z-"] {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+}
+
+/* Ensure modal box has max height and flex layout */
+div[class*="fixed inset-0"][class*="z-"] > div:not([class*="fixed"]),
+div[class*="fixed inset-0"][class*="z-"] > form:not([class*="fixed"]) {
+  max-height: calc(100dvh - 2rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Ensure the modal header doesn't shrink */
+div[class*="fixed inset-0"][class*="z-"] > div > div:first-child,
+div[class*="fixed inset-0"][class*="z-"] > form > div:first-child {
+  flex-shrink: 0 !important;
+}
+
+/* Ensure the modal body/form can scroll */
+div[class*="fixed inset-0"][class*="z-"] > div > form,
+div[class*="fixed inset-0"][class*="z-"] > div > div:nth-child(2),
+div[class*="fixed inset-0"][class*="z-"] > form > div:nth-child(2) {
+  min-height: 0 !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  overflow-y: auto !important;
+}
+
+/* Optional: if there's a 3rd child (footer), it should not shrink */
+div[class*="fixed inset-0"][class*="z-"] > div > div:nth-child(3),
+div[class*="fixed inset-0"][class*="z-"] > form > div:nth-child(3) {
+  flex-shrink: 0 !important;
 }

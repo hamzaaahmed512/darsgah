@@ -36,7 +36,7 @@ export function ReviewModal({ request, onClose }: { request: ApprovalRequest; on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="dialog-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+      <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-lg rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-6 flex flex-wrap gap-3 items-center justify-between">
           <h2 className="text-xl font-display font-bold">Review Request</h2>
           <Badge tone={request.request_type === "admission" ? "blue" : "yellow"}>

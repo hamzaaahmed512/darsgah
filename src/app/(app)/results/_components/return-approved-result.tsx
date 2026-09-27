@@ -47,8 +47,8 @@ export function ReturnApprovedResult({ examId, compact = false }: { examId: stri
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby={`return-result-${examId}`}>
-          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-t-[24px] bg-white p-5 shadow-lift sm:rounded-[24px] sm:p-6">
+        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby={`return-result-${examId}`}>
+          <div className="max-h-[calc(100dvh-1rem)] w-full overflow-hidden flex flex-col max-w-lg min-h-0 flex-1 overflow-y-auto rounded-t-[24px] bg-white p-5 shadow-lift sm:rounded-[24px] sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 id={`return-result-${examId}`} className="font-display text-xl font-bold text-ink">Return approved result?</h2>

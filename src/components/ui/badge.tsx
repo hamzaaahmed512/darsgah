@@ -5,7 +5,9 @@ const toneClasses = {
   blue: "bg-primary-soft text-primary ring-primary/10",
   green: "bg-success-soft text-success ring-success/10",
   yellow: "bg-warning-soft text-warning ring-warning/10",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200/60",
   red: "bg-danger-soft text-danger ring-danger/10",
+  purple: "bg-purple-50 text-purple-700 ring-purple-200/60",
   gray: "bg-surface-low text-muted ring-outline"
 };
 

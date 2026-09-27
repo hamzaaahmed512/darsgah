@@ -187,7 +187,7 @@ export function StaffCreateModal({
       {mounted
         ? createPortal(
             open ? (
-              <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+              <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
                 <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-4xl min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
                   <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
                     <div className="min-w-0 flex-1">
@@ -379,7 +379,7 @@ export function StaffCreateModal({
                           </div>
                         </FormBlock>
 
-                        <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline/50 bg-white/95 px-4 pt-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+                        <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline/50 bg-white/95 px-4 pt-3 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
                           <Button type="button" variant="secondary" onClick={closeModal} disabled={pending}>
                             Cancel
                           </Button>
@@ -466,7 +466,7 @@ export function StaffCreateModal({
                           </div>
                         </FormBlock>
 
-                        <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline/50 bg-white/95 px-4 pt-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+                        <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-outline/50 bg-white/95 px-4 pt-3 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
                           <Button type="button" variant="secondary" disabled={pending} onClick={closeModal}>
                             Cancel
                           </Button>

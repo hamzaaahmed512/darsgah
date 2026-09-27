@@ -317,7 +317,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       </div>
 
       {showReports ? (
-        <div className="sticky bottom-0 z-30 mt-4 border-t border-outline/70 bg-white/95 px-4 py-3 backdrop-blur print:hidden">
+        <div className="sticky bottom-0 z-30 mt-4 border-t border-outline/70 bg-white/95 px-4 py-3 print:hidden">
           <div className="mx-auto flex flex-wrap max-w-[1520px] items-center justify-between gap-3">
             <p className="text-sm text-muted">
               Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
@@ -335,8 +335,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       ) : null}
 
       {isCollectOpen && selectedLedgerAccount && canManage && Number(selectedLedgerAccount.remaining_balance) > 0 ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="dialog-panel w-full max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-2xl rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Record Payment</h3>
@@ -391,8 +391,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       ) : null}
 
       {isDiscountOpen && selectedAccount ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <Card className="dialog-panel w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>
                 <h3 className="text-lg font-bold text-ink">Apply Fee Discount</h3>
@@ -452,7 +452,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
       ) : null}
 
       {selectedReceipt ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm print:static print:block print:bg-white print:p-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:bg-white print:p-0">
           <Card className="dialog-panel w-full max-w-2xl p-6 print:shadow-none print:ring-0">
             <div className="mb-5 flex items-start justify-between gap-4 border-b border-outline/60 pb-4 print:hidden">
               <div>

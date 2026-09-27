@@ -48,7 +48,7 @@ export function DeleteGradeModal({ gradeId, gradeName, sectionCount }: { gradeId
       <Trash2 className="h-4 w-4" /> Delete grade
     </Button>
     {mounted && open ? createPortal(
-      <div role="dialog" aria-modal="true" aria-labelledby="delete-grade-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div role="dialog" aria-modal="true" aria-labelledby="delete-grade-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
         <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-xl">
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-5 py-4 sm:px-6">
             <div className="min-w-0">
@@ -57,7 +57,7 @@ export function DeleteGradeModal({ gradeId, gradeName, sectionCount }: { gradeId
             </div>
             <button type="button" aria-label="Close" onClick={close} disabled={pending} className="rounded-xl p-2 text-muted transition hover:bg-surface-low hover:text-ink disabled:opacity-50"><X className="h-5 w-5" /></button>
           </div>
-          <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
             <p className="text-sm leading-6 text-ink">
               {sectionCount} class section record{sectionCount === 1 ? "" : "s"} across academic years, plus their teacher assignments, subject links, and combination settings, will be removed. Shared section names remain available to other grades.
             </p>

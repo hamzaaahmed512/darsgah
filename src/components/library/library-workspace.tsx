@@ -155,21 +155,34 @@ function AddBookModal() {
         <Plus className="h-4 w-4" /> Add book
       </Button>
       {open && (
-        <LibraryDialog
-          title="Add a book"
-          description="Fill in the title details and set the number of copies to register. Copy IDs are generated automatically."
-          onClose={() => setOpen(false)}
-          className="max-w-2xl"
-        >
-          <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
-            <Form action="add_book_with_copies" label="Add book" reset onSuccess={() => setOpen(false)}>
-              <BookFields />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Number of copies" hint="A unique Copy ID is generated for each.">
-                  <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
-                </Field>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
+            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">Add a book</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Fill in the title details and set the number of copies to register. Copy IDs are generated automatically.
+                </p>
               </div>
-            </Form>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="rounded-xl p-2 text-muted hover:bg-surface-low"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[80vh] min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+              <Form action="add_book_with_copies" label="Add book" reset>
+                <BookFields />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Number of copies" hint="A unique Copy ID is generated for each.">
+                    <Input name="quantity" type="number" required min="1" max="1000" defaultValue="1" />
+                  </Field>
+                </div>
+              </Form>
+            </div>
           </div>
         </LibraryDialog>
       )}
@@ -193,9 +206,24 @@ function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnl
         <Plus className="h-4 w-4" />{!iconOnly ? " Add copies" : null}
       </button>
       {open && (
-        <LibraryDialog title="Add copies" description={book.title} onClose={() => setOpen(false)} className="max-w-lg lg:max-w-2xl">
-            <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
-              <Form action="add_copies" label="Add copies" reset onSuccess={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-lg rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
+            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
+              <div>
+                <h2 className="font-display text-xl font-bold text-ink">Add copies</h2>
+                <p className="mt-1 text-sm font-semibold text-primary">{book.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="rounded-xl p-2 text-muted hover:bg-surface-low"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5 sm:p-6">
+              <Form action="add_copies" label="Add copies" reset>
                 <input type="hidden" name="book_id" value={book.id} />
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Field label="Quantity to add" hint="Up to 1,000 copies per batch. Copy IDs are generated automatically.">
@@ -218,16 +246,7 @@ function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnl
 
 function EditBookModal({ book }: { book: LibraryBook }) {
   const [open, setOpen] = useState(false);
-  return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft" aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" /></button>
-    {open ? (
-      <LibraryDialog title="Edit book" description={`Update the details for ${book.title}.`} onClose={() => setOpen(false)} className="max-w-2xl lg:max-w-4xl">
-        <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
-          <Form action="edit_book" id={book.id} onSuccess={() => setOpen(false)}><BookFields book={book} /></Form>
-        </div>
-      </LibraryDialog>
-    ) : null}
-  </>;
+  return <><button type="button" onClick={() => setOpen(true)} className={menuItem ? "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink hover:bg-surface-low" : "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft"} aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" />{menuItem ? "Edit book" : null}</button>{open ? <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"><div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]"><div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6"><div><h2 className="font-display text-2xl font-bold text-ink">Edit book</h2><p className="mt-1 text-sm text-muted">Update the details for {book.title}.</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="max-h-[80vh] min-h-0 flex-1 overflow-y-auto p-5 sm:p-6"><Form action="edit_book" id={book.id}><BookFields book={book} /></Form></div></div></div> : null}</>;
 }
 
 function ArchiveBookButton({ book }: { book: LibraryBook }) {
@@ -270,8 +289,16 @@ function IssueBookModal({
         className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
         title={availableCopies.length ? "Issue book" : "Reserve book"}>Issue Book</button>}
       {open && (
-        <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl lg:max-w-4xl">
-            <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-2xl rounded-t-[28px] bg-white shadow-xl sm:rounded-[28px]">
+            <div className="flex items-start justify-between border-b border-outline/50 px-5 py-4 sm:px-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">{availableCopies.length ? "Issue book" : "Reserve book"}</h2>
+                <p className="mt-1 text-sm text-muted">{book.title}</p>
+              </div>
+              <button type="button" onClick={close} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="max-h-[80vh] min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
               {availableCopies.length ? (
                 <Form action="issue" label="Issue book" reset disabled={!borrower || !copyId || !borrower.is_eligible}
                   onSuccess={() => { close(); setBorrower(null); onIssued(); }}>

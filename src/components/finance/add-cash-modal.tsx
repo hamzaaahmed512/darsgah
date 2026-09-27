@@ -42,8 +42,8 @@ export function AddCashModal() {
       <Coins className="h-4 w-4" />
       Add cash
     </Button>
-    {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="dialog-panel w-full max-w-md rounded-[20px] bg-white shadow-lift">
+    {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-md rounded-[20px] bg-white shadow-lift">
         <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
           <h2 className="font-display text-xl font-bold text-ink">Add cash</h2>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close">

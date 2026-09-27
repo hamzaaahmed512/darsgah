@@ -76,7 +76,7 @@ export function PlatformShell({ email, children }: { email: string; children: Re
         </span>
       </Link>
 
-      <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1" aria-label="Platform administration">
+      <nav className="flex-1 space-y-1.5 min-h-0 flex-1 overflow-y-auto pr-1" aria-label="Platform administration">
         {links.map(({ href, label, icon: Icon }) => {
           const active = href === "/platform" ? pathname === href : pathname.startsWith(href);
           return (

@@ -23,13 +23,13 @@ export function AddQueryRemark({ queryId }: { queryId: string }) {
       <MessageSquarePlus className="h-4 w-4" />Add Remark
     </button>
     {open && createPortal(
-      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
         <div role="dialog" aria-modal="true" aria-labelledby={`remark-title-${queryId}`} className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:rounded-[28px]">
           <div className="flex items-center justify-between border-b border-outline/40 px-5 py-4 sm:px-6">
             <h2 id={`remark-title-${queryId}`} className="font-display text-xl font-bold text-ink">Add Remark</h2>
             <button type="button" onClick={close} aria-label="Close" className="rounded-xl p-2 text-muted hover:bg-surface-low"><X className="h-5 w-5" /></button>
           </div>
-          <form className="min-h-0 overflow-y-auto p-5 sm:p-6" onSubmit={(event) => {
+          <form className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6" onSubmit={(event) => {
             event.preventDefault();
             const form = event.currentTarget;
             const formData = new FormData(form);

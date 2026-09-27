@@ -228,7 +228,7 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
 
       {/* Discount modal */}
       {isDiscountOpen && selectedAccount && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <Card className="dialog-panel w-full max-w-md">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <div>

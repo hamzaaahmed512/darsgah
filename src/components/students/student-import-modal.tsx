@@ -123,8 +123,8 @@ export function StudentImportModal({ isOpen, onClose }: Props) {
   const invalidCount = (records?.length || 0) - validCount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-      <div className="dialog-panel flex w-full max-w-4xl flex-col rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
+      <div className="dialog-panel flex w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-4xl flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline/30 px-6 py-4">
           <h2 className="text-xl font-bold text-ink">Import Students</h2>
           <button onClick={handleReset} className="rounded-full p-1 text-muted hover:bg-surface-low hover:text-ink">

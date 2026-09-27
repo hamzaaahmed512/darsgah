@@ -87,7 +87,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" /> Students ({rosterData.roster.length})</CardTitle></CardHeader>
-        <CardContent className="grid max-h-96 gap-2 overflow-y-auto">
+        <CardContent className="grid max-h-96 gap-2 min-h-0 flex-1 overflow-y-auto">
           {rosterData.roster.map((student: any) => {
             const major = student.major as string | null;
             return <div key={student.id} className="flex flex-col items-start justify-between gap-3 rounded-xl bg-surface-low px-4 py-3 sm:flex-row sm:items-center">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { createAdjustmentAction } from "@/app/(app)/finance/payroll/actions";
 import type { AdjustmentType } from "@/types/database";
@@ -17,6 +18,12 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
   const [staffSearch, setStaffSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const [form, setForm] = useState({
     staffId: "",
@@ -81,11 +88,14 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
         Add Adjustment
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="dialog-panel w-full max-w-md rounded-xl bg-white p-6 shadow-[0_32px_80px_rgba(27,28,29,0.18)]">
-            <h2 className="mb-4 font-display text-xl font-bold text-ink">Add Salary Adjustment</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      {mounted && open ? createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+            <div className="flex items-center justify-between border-b border-outline px-6 py-5">
+              <h2 className="font-display text-xl font-bold text-ink">Add Salary Adjustment</h2>
+            </div>
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="space-y-4 min-h-0 flex-1 overflow-y-auto p-6">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-ink">
                   Select Staff<span className="ml-0.5 text-danger" aria-hidden="true">*</span>
@@ -116,7 +126,7 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
                           autoFocus
                         />
                       </div>
-                      <div className="max-h-56 overflow-y-auto p-1" role="listbox">
+                      <div className="max-h-56 min-h-0 flex-1 overflow-y-auto p-1" role="listbox">
                         {!filteredStaff.length ? (
                           <p className="px-3 py-3 text-sm font-medium text-muted">No staff found.</p>
                         ) : (
@@ -192,8 +202,8 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
                   className="w-full rounded-lg border border-outline/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-              {error && <p className="text-sm font-semibold text-danger">{error}</p>}
-              <div className="flex flex-wrap justify-end gap-2">
+              </div>
+              <div className="flex justify-end gap-3 border-t border-outline px-6 py-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -214,8 +224,9 @@ export function AddAdjustmentDialog({ month, staff }: Props) {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      ) : null}
     </>
   );
 }

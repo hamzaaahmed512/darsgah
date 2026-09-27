@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CheckSquare, X } from "lucide-react";
 import { getPromotionRosterAction, promoteStudentsAction } from "@/app/(app)/classes/actions";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,13 @@ export function PromotionModal({ classIds, label }: { classIds: string[]; label:
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [isTerminalGrade, setIsTerminalGrade] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { pushToast } = useToast();
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   function show() {
     setOpen(true);
@@ -51,9 +58,9 @@ export function PromotionModal({ classIds, label }: { classIds: string[]; label:
   return (
     <>
       <Button type="button" size="sm" variant="secondary" onClick={show} className="rounded-xl text-primary"><CheckSquare className="h-4 w-4" /> Promote</Button>
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby="promotion-title" className="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-[24px] bg-white shadow-lift">
+      {mounted && open ? createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="promotion-title" className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
             <div className="flex items-start justify-between border-b border-outline px-6 py-5">
               <div>
                 <h2 id="promotion-title" className="font-display text-xl font-bold text-ink">{isTerminalGrade ? "Graduate" : "Promote"} {label}</h2>
@@ -61,7 +68,7 @@ export function PromotionModal({ classIds, label }: { classIds: string[]; label:
               </div>
               <button type="button" aria-label="Close promotion dialog" onClick={() => setOpen(false)} className="text-muted"><X className="h-5 w-5" /></button>
             </div>
-            <div className="overflow-y-auto p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               {confirming ? (
                 <div className="rounded-xl bg-warning-soft p-4 text-sm text-ink">
                   <p className="font-bold">Confirm {isTerminalGrade ? "graduation" : "promotion"}</p>
@@ -81,11 +88,12 @@ export function PromotionModal({ classIds, label }: { classIds: string[]; label:
               ) : <p className="rounded-xl bg-surface-low p-4 text-sm text-muted">There are no active students in this class.</p>}
             </div>
             <div className="flex justify-end gap-3 border-t border-outline px-6 py-4">
-              <Button type="button" variant="secondary" onClick={() => confirming ? setConfirming(false) : setOpen(false)}>{confirming ? "Back to students" : "Cancel"}</Button>
-              <Button disabled={pending} onClick={confirming ? submit : () => setConfirming(true)}>{confirming ? `Complete ${isTerminalGrade ? "graduation" : "promotion"}` : `Review ${isTerminalGrade ? "graduation" : "promotion"}`}</Button>
+               <Button type="button" variant="secondary" onClick={() => confirming ? setConfirming(false) : setOpen(false)}>{confirming ? "Back to students" : "Cancel"}</Button>
+               <Button disabled={pending} onClick={confirming ? submit : () => setConfirming(true)}>{confirming ? `Complete ${isTerminalGrade ? "graduation" : "promotion"}` : `Review ${isTerminalGrade ? "graduation" : "promotion"}`}</Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );

@@ -73,7 +73,7 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
 
       {mounted && rejecting ? createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`reject-leave-${leaveId}`}
@@ -98,7 +98,7 @@ export function LeaveReviewActions({ leaveId }: { leaveId: string }) {
               </button>
             </div>
 
-            <div className="overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
               <Field label="Reason for rejection (optional)">
                 <Textarea
                   value={remarks}

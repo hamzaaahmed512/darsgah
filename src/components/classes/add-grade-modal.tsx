@@ -54,7 +54,7 @@ export function AddGradeModal({ existingGradeNames }: { existingGradeNames: stri
         <Plus className="h-4 w-4" /> Add grade
       </Button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
@@ -72,7 +72,7 @@ export function AddGradeModal({ existingGradeNames }: { existingGradeNames: stri
               </button>
             </div>
             <form onSubmit={submit} className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
                 {error ? <div className="rounded-xl bg-rose-50 p-3 text-xs font-medium text-rose-700">{error}</div> : null}
                 <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
                   {DEFAULT_GRADE_NAMES.map((name) => {

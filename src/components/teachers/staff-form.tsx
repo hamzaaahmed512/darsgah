@@ -102,7 +102,7 @@ export function StaffFormModal({
       </Button>
 
       {mounted ? createPortal(open ? (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
           <div className={`flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] ${wider ? "max-w-xl" : "max-w-lg"}`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
               <div className="min-w-0 flex-1">

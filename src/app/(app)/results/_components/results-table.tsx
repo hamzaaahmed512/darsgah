@@ -47,7 +47,7 @@ export function ResultsTable({
 }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
-      <div className="flex flex-col items-start gap-2 px-5 py-4 sm:px-6">
+      <div className="flex flex-row items-center justify-between gap-4 border-b border-blue-100 px-5 py-4 sm:px-6">
         <h3 className="flex whitespace-nowrap items-center gap-2 font-display text-lg font-bold text-ink"><ClipboardCheck className="h-5 w-5 text-primary" />Result Register</h3>
         <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{rows.length} result{rows.length === 1 ? "" : "s"}</span>
       </div>

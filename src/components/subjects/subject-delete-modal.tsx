@@ -79,8 +79,8 @@ export function SubjectDeleteModal({ subjectId, subjectName }: { subjectId: stri
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="dialog-panel w-full max-w-lg  rounded-[20px] bg-white shadow-lift">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-lg  rounded-[20px] bg-white shadow-lift">
             <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
               <div className="flex items-center gap-3">
                 {step === "warning" ? (

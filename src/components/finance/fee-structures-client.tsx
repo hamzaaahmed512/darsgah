@@ -199,7 +199,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
       </Card>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <Card className="dialog-panel w-full max-w-lg">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <h3 className="text-lg font-bold text-ink">{editing ? "Edit Fee Structure" : "Add Fee Structure"}</h3>
@@ -208,7 +208,7 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
               </button>
             </div>
             <form onSubmit={submit}>
-              <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4">
+              <div className="max-h-[70vh] space-y-4 min-h-0 flex-1 overflow-y-auto p-4">
                 {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
                 {!editing ? (
                   <div className="grid grid-cols-2 gap-2 rounded-lg bg-surface-low p-1">

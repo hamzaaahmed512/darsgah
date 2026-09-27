@@ -57,9 +57,9 @@ export default async function TeacherDashboardPage() {
           </Link>
           <Link
             href="/academics"
-            className="group flex items-center gap-3 rounded-xl border border-outline/40 bg-surface-low p-4 transition hover:border-accent hover:bg-accent/5"
+            className="group flex items-center gap-3 rounded-xl border border-outline/40 bg-surface-low p-4 transition hover:border-purple-500 hover:bg-purple-50"
           >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white transition">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition">
               <BookOpen className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
@@ -75,10 +75,10 @@ export default async function TeacherDashboardPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="My students" value={dashboard.totalStudents.toLocaleString()} hint="Students in your head class" icon={GraduationCap} />
-        <StatCard label="Head classes" value={headClasses.length.toLocaleString()} hint="Classes assigned to you" icon={School} />
-        <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="In your head class" icon={CalendarX2} />
-        <StatCard label="Attendance completed" value={`${dashboard.attendanceCompleted}/${headClasses.length}`} hint="Head classes marked today" icon={CalendarCheck} />
+        <StatCard label="My students" value={dashboard.totalStudents.toLocaleString()} hint="Students in your head class" icon={GraduationCap} tone="blue" />
+        <StatCard label="Head classes" value={headClasses.length.toLocaleString()} hint="Classes assigned to you" icon={School} tone="purple" />
+        <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="In your head class" icon={CalendarX2} tone="red" />
+        <StatCard label="Attendance completed" value={`${dashboard.attendanceCompleted}/${headClasses.length}`} hint="Head classes marked today" icon={CalendarCheck} tone="green" />
       </section>
 
       {/* Head Teacher Classes */}

@@ -122,7 +122,7 @@ export function SchoolOnboardingWizard({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4">
       <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
         <div className="flex items-start justify-between gap-4 border-b border-outline/50 px-6 py-5">
           <div>
@@ -156,7 +156,7 @@ export function SchoolOnboardingWizard({
           </ol>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {error ? <div className="mb-4 rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
 
           {step === 1 ? (
@@ -216,7 +216,7 @@ export function SchoolOnboardingWizard({
                 </p>
               </div>
 
-              <div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
+              <div className="grid max-h-56 gap-2 min-h-0 flex-1 overflow-y-auto pr-1">
                 {seededSummary.map((item) => (
                   <div key={item.gradeName} className="rounded-[12px] border border-outline/60 bg-surface-low px-4 py-3">
                     <div className="flex items-center justify-between gap-2">

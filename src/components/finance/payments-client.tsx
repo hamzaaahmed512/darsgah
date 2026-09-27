@@ -167,7 +167,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
             </div>
           </Card>
 
-          <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-[60vh] space-y-2 min-h-0 flex-1 overflow-y-auto pr-1">
             {filteredAccounts.map((acc) => {
               const isSelected = acc.id === selectedAccountId;
               return (
@@ -410,7 +410,7 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
 
       {/* Void payment dialog */}
       {voidingPaymentId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <Card className="dialog-panel w-full max-w-md">
             <div className="flex items-center justify-between border-b border-outline/40 p-4">
               <h3 className="text-lg font-bold text-ink">Void Transaction</h3>

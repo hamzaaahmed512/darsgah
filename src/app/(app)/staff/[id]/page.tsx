@@ -371,7 +371,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                   {/* Class Assignments */}
                   <div>
                     <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Assigned Classes</p>
-                    <div className="grid gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <div className="grid gap-2 max-h-[280px] min-h-0 flex-1 overflow-y-auto pr-1">
                       {data.headClasses.map((row: any) => (
                         <Link
                           key={`head-${row.id}`}
@@ -470,7 +470,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                     {data.attendanceStats.recentRecords.length > 0 ? (
                       <div>
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Recent Attendance Entries</p>
-                        <div className="grid gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+                        <div className="grid gap-1.5 max-h-[220px] min-h-0 flex-1 overflow-y-auto pr-1">
                           {data.attendanceStats.recentRecords.map((rec) => (
                             <div
                               key={rec.date}
@@ -529,7 +529,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
                     {data.leaveStats.recentLeaves.length > 0 ? (
                       <div>
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Recent Leave Requests</p>
-                        <div className="grid gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+                        <div className="grid gap-1.5 max-h-[220px] min-h-0 flex-1 overflow-y-auto pr-1">
                           {data.leaveStats.recentLeaves.map((lv, i) => (
                             <div
                               key={i}

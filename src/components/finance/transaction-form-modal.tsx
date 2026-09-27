@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ArrowDownCircle, ArrowUpCircle, X } from "lucide-react";
 import { createManualTransactionAction } from "@/app/(app)/finance/actions";
@@ -30,6 +31,12 @@ export function TransactionFormModal({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
   const categories = direction === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const isIncome = direction === "income";
   const fallbackCategory = defaultCategory && categories.includes(defaultCategory as any) ? defaultCategory : categories[0];
@@ -58,31 +65,34 @@ export function TransactionFormModal({
       {isIncome ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowUpCircle className="h-4 w-4" />}
       {triggerLabel ?? (isIncome ? "Add income / payment" : "Add expense")}
     </Button>
-    {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-lift">
-        <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
-          <div><h2 className="font-display text-xl font-bold text-ink">{title ?? (isIncome ? "Add income or payment" : "Add expense")}</h2><p className="mt-1 text-sm text-muted">{description ?? "Record a manual ledger entry with its date and payment details."}</p></div>
-          <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
+    {mounted && open ? createPortal(
+      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+        <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+          <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
+            <div><h2 className="font-display text-xl font-bold text-ink">{title ?? (isIncome ? "Add income or payment" : "Add expense")}</h2><p className="mt-1 text-sm text-muted">{description ?? "Record a manual ledger entry with its date and payment details."}</p></div>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>
+          </div>
+          <form onSubmit={submit} className="grid gap-6 min-h-0 flex-1 overflow-y-auto bg-slate-50/30 p-6">
+            {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
+            <FormSectionCard
+              icon={isIncome ? <ArrowDownCircle className="h-5 w-5" /> : <ArrowUpCircle className="h-5 w-5" />}
+              title="Transaction Details"
+              description={isIncome ? "Choose the income type, amount, and payment method so the ledger stays clean." : "Record the expense type, amount, date, and payment method."}
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Type" required hint="Pick the category that best matches this entry.">
+                  <Select name="category" required defaultValue={fallbackCategory}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>
+                </Field>
+                <Field label="Amount (PKR)" hint="Enter the final amount exactly as paid or received."><Input name="amount" type="number" min="0.01" step="0.01" required /></Field>
+                <Field label="Date" hint="Use the actual transaction date for correct reporting."><Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></Field>
+                <Field label="Payment method" hint="This helps separate cash, bank, cheque, and online entries."><Select name="payment_method" defaultValue={defaultPaymentMethod}><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="cheque">Cheque</option><option value="online_payment">Online payment</option><option value="other">Other</option></Select></Field>
+              </div>
+            </FormSectionCard>
+            <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Saving..." : `Record ${direction}`}</Button></div>
+          </form>
         </div>
-        <form onSubmit={submit} className="grid gap-6 overflow-y-auto bg-slate-50/30 p-6">
-          {error ? <div className="rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
-          <FormSectionCard
-            icon={isIncome ? <ArrowDownCircle className="h-5 w-5" /> : <ArrowUpCircle className="h-5 w-5" />}
-            title="Transaction Details"
-            description={isIncome ? "Choose the income type, amount, and payment method so the ledger stays clean." : "Record the expense type, amount, date, and payment method."}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Type" required hint="Pick the category that best matches this entry.">
-                <Select name="category" required defaultValue={fallbackCategory}>{categories.map((category) => <option key={category} value={category}>{TRANSACTION_CATEGORY_LABELS[category]}</option>)}</Select>
-              </Field>
-              <Field label="Amount (PKR)" hint="Enter the final amount exactly as paid or received."><Input name="amount" type="number" min="0.01" step="0.01" required /></Field>
-              <Field label="Date" hint="Use the actual transaction date for correct reporting."><Input name="transaction_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></Field>
-              <Field label="Payment method" hint="This helps separate cash, bank, cheque, and online entries."><Select name="payment_method" defaultValue={defaultPaymentMethod}><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="cheque">Cheque</option><option value="online_payment">Online payment</option><option value="other">Other</option></Select></Field>
-            </div>
-          </FormSectionCard>
-          <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending}>{pending ? "Saving..." : `Record ${direction}`}</Button></div>
-        </form>
-      </div>
-    </div> : null}
+      </div>,
+      document.body
+    ) : null}
   </>;
 }

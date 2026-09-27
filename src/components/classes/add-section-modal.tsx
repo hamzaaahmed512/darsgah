@@ -49,8 +49,8 @@ export function AddSectionModal({
 
   return <>
     <Button type="button" variant="secondary" size="sm" className={triggerClassName} onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {triggerLabel}</Button>
-    {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="dialog-panel w-full max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
+    {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-md rounded-[28px] border border-outline/70 bg-white shadow-lift">
         <div className="flex items-start justify-between border-b border-outline/50 px-6 py-5">
           <div><h2 className="font-display text-xl font-bold text-ink">New {gradeName} section</h2><p className="mt-1 text-sm text-muted">Default grade subjects will be linked automatically.</p></div>
           <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-muted hover:bg-surface-low" aria-label="Close"><X className="h-5 w-5" /></button>

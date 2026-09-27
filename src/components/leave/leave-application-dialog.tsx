@@ -33,7 +33,7 @@ export function LeaveApplicationDialog({ migrationRequired }: { migrationRequire
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Apply for leave"
@@ -54,7 +54,7 @@ export function LeaveApplicationDialog({ migrationRequired }: { migrationRequire
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <div className="overflow-y-auto bg-slate-50/30 p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/30 p-5">
               {migrationRequired ? (
                 <EmptyState
                   title="Database migration required"

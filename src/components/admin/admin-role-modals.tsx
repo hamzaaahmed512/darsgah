@@ -55,7 +55,7 @@ function ModalShell({
   size?: "md" | "lg";
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/30 p-0 sm:items-center sm:p-4">
       <div className={`flex max-h-[calc(100dvh-0.75rem)] min-w-0 w-full flex-col overflow-hidden rounded-t-[20px] bg-white shadow-lift ring-1 ring-outline sm:max-h-[calc(100dvh-2rem)] sm:rounded-[20px] ${size === "md" ? "max-w-lg" : "max-w-4xl"}`}>
         <div className="shrink-0 border-b border-outline px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">

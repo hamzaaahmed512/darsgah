@@ -23,7 +23,7 @@ export function SiteHeader() {
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90">
       <div className="marketing-container flex h-[72px] items-center justify-between gap-6">
         <Brand />
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
@@ -67,7 +67,7 @@ export function SiteHeader() {
         </button>
       </div>
       {open ? (
-        <div className="max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain border-t border-outline bg-white px-4 pb-5 pt-3 lg:hidden">
+        <div className="max-h-[calc(100dvh-72px)] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-outline bg-white px-4 pb-5 pt-3 lg:hidden">
           <nav className="mx-auto grid max-w-7xl gap-1" aria-label="Mobile navigation">
             {navigation.map((item) => (
               <Link key={item.href} href={item.href} className="px-4 py-3 text-sm font-semibold text-muted hover:text-ink">

@@ -32,23 +32,34 @@ export default async function AcademicsPage() {
           </Card>
         ) : (
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {assignments.map((item: any) => (
-              <Card key={`${item.id}-${item.subject_name ?? "class"}`} className="overflow-hidden">
-                <div className="h-1.5 bg-primary" />
-                <div className="p-5">
-                  <Badge tone="blue">{item.subject_name ?? "General"}</Badge>
-                  <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
-                    {formatGradeSection(item.grade_name, item.section_name)}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-muted">
-                    {item.room ? `Room ${item.room}` : "No room assigned"}
-                  </p>
-                  <p className="mt-4 rounded-lg bg-surface-low p-3 text-xs font-bold uppercase tracking-wide text-muted">
-                    {item.academic_year_name ?? "Current academic year"}
-                  </p>
-                </div>
-              </Card>
-            ))}
+            {assignments.map((item: any, index: number) => {
+              const cardTones = [
+                { bar: "bg-blue-500", badge: "blue" as const },
+                { bar: "bg-purple-500", badge: "purple" as const },
+                { bar: "bg-emerald-500", badge: "green" as const },
+                { bar: "bg-amber-500", badge: "amber" as const },
+                { bar: "bg-rose-500", badge: "red" as const },
+                { bar: "bg-cyan-500", badge: "blue" as const },
+              ];
+              const tone = cardTones[index % cardTones.length];
+              return (
+                <Card key={`${item.id}-${item.subject_name ?? "class"}`} className="overflow-hidden">
+                  <div className={`h-1.5 ${tone.bar}`} />
+                  <div className="p-5">
+                    <Badge tone={tone.badge}>{item.subject_name ?? "General"}</Badge>
+                    <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
+                      {formatGradeSection(item.grade_name, item.section_name)}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {item.room ? `Room ${item.room}` : "No room assigned"}
+                    </p>
+                    <p className="mt-4 rounded-lg bg-surface-low p-3 text-xs font-bold uppercase tracking-wide text-muted">
+                      {item.academic_year_name ?? "Current academic year"}
+                    </p>
+                  </div>
+                </Card>
+              );
+            })}
           </section>
         )}
       </>

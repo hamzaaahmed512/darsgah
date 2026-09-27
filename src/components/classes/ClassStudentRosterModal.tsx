@@ -76,7 +76,7 @@ export function ClassStudentRosterModal({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="flex max-h-[85dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 px-6 py-4">
               <div>
@@ -88,7 +88,7 @@ export function ClassStudentRosterModal({
               </button>
             </div>
 
-            <div className="overflow-y-auto p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               {loading || pending ? (
                 <p className="text-sm text-muted">Loading roster...</p>
               ) : !roster.length ? (

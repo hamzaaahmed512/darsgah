@@ -115,8 +115,8 @@ export function TeacherAssignmentModal({
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="dialog-panel w-full max-w-lg rounded-[20px] bg-white shadow-lift">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-lg rounded-[20px] bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-outline/40 px-6 py-4">
               <div>
                 <h2 className="font-display text-xl font-bold text-ink">Assign Teacher</h2>
@@ -145,7 +145,7 @@ export function TeacherAssignmentModal({
               <div className="grid gap-2">
                 <p className="text-sm font-semibold text-ink">Subjects taught in this class</p>
                 {subjects.length ? (
-                  <div className="grid max-h-48 gap-2 overflow-y-auto pr-1">
+                  <div className="grid max-h-48 gap-2 min-h-0 flex-1 overflow-y-auto pr-1">
                     {(majorSubjectGroups.length ? majorSubjectGroups.flatMap((group) => group.subjects) : subjects)
                       .filter((subject, index, all) => all.findIndex((candidate) => candidate.id === subject.id) === index)
                       .map((subject) => {

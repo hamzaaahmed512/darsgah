@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ClipboardList, Plus, X } from "lucide-react";
 import { createExamAction } from "@/app/(app)/marks/actions";
@@ -56,7 +57,13 @@ export function CreateAssessmentDialog({
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [monthError, setMonthError] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
   const router = useRouter();
 
   const isGeneral = category === "general";
@@ -124,9 +131,9 @@ export function CreateAssessmentDialog({
         Create Assessment
       </Button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-lift ring-1 ring-outline">
+      {mounted && open ? createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b border-outline px-5 py-4">
               <div>
@@ -143,7 +150,7 @@ export function CreateAssessmentDialog({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-6 overflow-y-auto p-4 sm:p-5">
+            <form onSubmit={handleSubmit} className="grid gap-6 min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
               {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
               {/* Hidden identifiers */}
               <input type="hidden" name="class_id" value={classId} />
@@ -282,7 +289,8 @@ export function CreateAssessmentDialog({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );

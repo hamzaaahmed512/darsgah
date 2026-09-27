@@ -404,8 +404,8 @@ export function AppShell({
       <NavigationProgress />
       <BrandingFaviconSync faviconUrl={branding.faviconUrl} />
       {attentionAnnouncements[0] ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="attention-announcement-title">
-          <div className="dialog-panel w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-outline sm:p-7">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4" role="dialog" aria-modal="true" aria-labelledby="attention-announcement-title">
+          <div className="dialog-panel w-full flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden max-w-md rounded-[24px] bg-white p-6 shadow-2xl ring-1 ring-outline sm:p-7">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger">
               <X className="h-6 w-6" aria-hidden="true" />
             </div>
@@ -425,7 +425,7 @@ export function AppShell({
       <div className="fixed inset-y-0 left-0 z-40 hidden h-dvh w-[292px] overflow-hidden border-r border-slate-200 bg-white lg:block">{sidebar}</div>
       <div
         className={cn(
-          "fixed inset-0 z-50 h-dvh bg-black/50 backdrop-blur-[1px] transition-opacity duration-200 lg:hidden",
+          "fixed inset-0 z-50 h-dvh bg-black/50 transition-opacity duration-200 lg:hidden",
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={() => setOpen(false)}
