@@ -556,8 +556,28 @@ export function LibraryReports({
             </div>
           </div>
         )}
-          <div className="max-h-72 min-h-0 flex-1 overflow-y-auto space-y-2">
-            {filteredLoans.filter(l => l.returned_at === null && l.due_date < todayStr).map(loan => {
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          5. OVERDUE & RESERVATIONS FOCUSED LISTS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Overdue Loans List */}
+        <Panel title={`Overdue Loans (${filteredLoans.filter(l => l.returned_at === null && l.due_date < todayStr).length})`}>
+          {(() => {
+            const overdueLoans = filteredLoans.filter(loan => loan.returned_at === null && loan.due_date < todayStr);
+            return <DataTable ariaLabel="Overdue library loans" count={overdueLoans.length} itemLabel="loans" minWidthClassName="min-w-[620px]">
+              <DataTableHeader><tr>
+                <th className={dataTableHeaderCellClassName}>Borrower</th>
+                <th className={dataTableHeaderCellClassName}>Book / copy</th>
+                <th className={dataTableHeaderCellClassName}>Due</th>
+                <th className={dataTableHeaderCellClassName}>Fine</th>
+                <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
+              </tr></DataTableHeader>
+              <tbody>
+            {overdueLoans.map(loan => {
               const copy = copiesMap.get(loan.copy_id);
               const book = booksMap.get(copy?.book_id || loan.book_id || "");
               const days = overdueDays(loan.due_date);
@@ -587,7 +607,15 @@ export function LibraryReports({
 
         {/* Waiting Reservations List */}
         <Panel title={`Waiting Reservations (${filteredReservations.length})`}>
-          <div className="max-h-72 min-h-0 flex-1 overflow-y-auto space-y-2">
+          <DataTable ariaLabel="Library report reservations" count={filteredReservations.length} itemLabel="reservations" minWidthClassName="min-w-[620px]">
+            <DataTableHeader><tr>
+              <th className={dataTableHeaderCellClassName}>Book</th>
+              <th className={dataTableHeaderCellClassName}>Borrower</th>
+              <th className={dataTableHeaderCellClassName}>Queue</th>
+              <th className={dataTableHeaderCellClassName}>Status</th>
+              <th className={`${dataTableHeaderCellClassName} sticky right-0 bg-slate-50 text-right`}>Actions</th>
+            </tr></DataTableHeader>
+            <tbody>
             {filteredReservations.map(res => {
               const bookTitle = res.book_title || booksMap.get(res.book_id)?.title || "Book";
               return (
