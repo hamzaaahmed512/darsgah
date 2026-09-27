@@ -54,6 +54,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 }
 
 function LeaveReviewTable({ leaves, canReview }: { leaves: any[]; canReview: boolean }) {
+  async function reviewLeaveFormAction(formData: FormData) {
+    "use server";
+    await reviewLeaveAction(formData);
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
@@ -83,12 +88,12 @@ function LeaveReviewTable({ leaves, canReview }: { leaves: any[]; canReview: boo
                 <td className="min-w-[260px] py-3 pr-4">
                   {canReview ? (
                     <div className="grid gap-3">
-                      <form action={reviewLeaveAction}>
+                      <form action={reviewLeaveFormAction}>
                         <input type="hidden" name="leave_id" value={leave.id} />
                         <input type="hidden" name="decision" value="approved" />
                         <Button type="submit" size="sm">Approve</Button>
                       </form>
-                      <form action={reviewLeaveAction} className="grid gap-2">
+                      <form action={reviewLeaveFormAction} className="grid gap-2">
                         <input type="hidden" name="leave_id" value={leave.id} />
                         <input type="hidden" name="decision" value="rejected" />
                         <Field label="Denial comment">
