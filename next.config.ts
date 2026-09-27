@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
     // Keep recently visited authenticated route segments warm so moving back
     // and forth does not immediately repeat the same server work. Dynamic
     // routes are only warmed when the user shows intent by hovering a link.
-    staleTimes: { dynamic: 30, static: 300 },
+    staleTimes: { dynamic: 60, static: 300 },
     dynamicOnHover: true
   },
   async headers() {
