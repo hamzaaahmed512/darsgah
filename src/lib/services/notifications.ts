@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { getPendingAttendanceClasses } from "@/lib/services/dashboard";
@@ -80,8 +81,33 @@ async function getPendingLeaveCount(user: AppUser) {
 }
 
 async function getOpenQueryCount(user: AppUser) {
-  if (user.role !== "administrator" && user.role !== "principal") return 0;
   const supabase = await createClient();
+  if (user.role !== "administrator" && user.role !== "principal") {
+    const { data: queries, error: queryError } = await supabase
+      .from("internal_support_queries")
+      .select("id,created_at,updated_at,submitter_viewed_at")
+      .eq("school_id", user.schoolId)
+      .eq("submitted_by", user.id);
+    if (queryError) throw new Error(queryError.message);
+    if (!queries?.length) return 0;
+
+    const { data: remarks, error: remarksError } = await createAdminClient()
+      .from("internal_support_query_remarks")
+      .select("query_id,created_at")
+      .eq("school_id", user.schoolId)
+      .in("query_id", queries.map((query) => query.id));
+    if (remarksError) throw new Error(remarksError.message);
+    const latestRemarkByQuery = new Map<string, string>();
+    for (const remark of remarks ?? []) {
+      const latest = latestRemarkByQuery.get(remark.query_id);
+      if (!latest || remark.created_at > latest) latestRemarkByQuery.set(remark.query_id, remark.created_at);
+    }
+    return queries.filter((query) => {
+      const viewedAt = query.submitter_viewed_at ?? query.created_at;
+      const latestRemark = latestRemarkByQuery.get(query.id);
+      return query.updated_at > viewedAt || Boolean(latestRemark && latestRemark > viewedAt);
+    }).length;
+  }
   const { count, error } = await supabase.from("internal_support_queries").select("id", { count: "exact", head: true }).eq("school_id", user.schoolId).eq("status", "open");
   if (error) throw new Error(error.message);
   return count ?? 0;

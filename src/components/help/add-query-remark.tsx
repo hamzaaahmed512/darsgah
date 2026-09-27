@@ -19,7 +19,7 @@ export function AddQueryRemark({ queryId }: { queryId: string }) {
   }
 
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-100 px-3.5 text-sm font-bold text-ink hover:bg-slate-200">
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-bold text-white shadow-button hover:bg-primary-ink">
       <MessageSquarePlus className="h-4 w-4" />Add Remark
     </button>
     {open && createPortal(

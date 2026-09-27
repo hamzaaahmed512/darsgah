@@ -51,7 +51,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const reviewLeaves = canReviewLeaves ? await getLeaveRequestsForReview(user, "all", range) : [];
   const leaveCenter = canReviewLeaves ? { leaves: [], migrationRequired: false } : await getMyLeaveCenter(user, range);
   const { leaves, migrationRequired } = leaveCenter;
-  const leavePolicy = await getLeavePolicy(user).catch(() => ({ annualLimit: 36, monthlyLimit: 3, weeklyLimit: null }));
+  const leavePolicy = await getLeavePolicy(user).catch(() => ({ annualLimit: null, monthlyLimit: null, weeklyLimit: null }));
   const teacherLeaveStats = !canReviewLeaves ? await getTeacherLeaveStats(user, user.id).catch(() => null) : null;
   const teacherLeaveSummary = canReviewLeaves ? await getAllTeachersLeaveSummary(user).catch(() => ({ summaries: [], migrationRequired: false })) : { summaries: [], migrationRequired: false };
   const exportDate = new Date().toISOString().slice(0, 10);
@@ -123,12 +123,12 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                           <tr key={s.teacherId} className="border-t border-blue-50 transition-colors hover:bg-blue-50/25">
                             <td className="px-5 py-4 font-semibold">{s.teacherName}</td>
                             <td className="px-5 py-4">
-                              <span className={s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit}
+                              <span className={s.annualLimit !== null && s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit ?? <span className="text-muted">No limit</span>}
                             </td>
                             <td className="px-5 py-4">
                               <span className={s.monthlyLimit !== null && s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit ?? <span className="text-muted">No limit</span>}
                             </td>
-                            <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">N/A</span>}</td>
+                            <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">No limit</span>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -336,7 +336,7 @@ function LeaveBalanceCard({
   description: string;
 }) {
   const isUnlimited = limit === null;
-  const remaining = isUnlimited ? "N/A" : Math.max(0, limit - used);
+  const remaining = isUnlimited ? used : Math.max(0, limit - used);
   const over = !isUnlimited && used > limit;
   const pct = isUnlimited ? 0 : Math.min(100, limit > 0 ? (used / limit) * 100 : 0);
   const normalStyles = label === "Monthly leave"
@@ -357,16 +357,16 @@ function LeaveBalanceCard({
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 sm:h-14 sm:w-14 ${style.tile}`}><CalendarRange className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
           <p className="font-label text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>
-          <p className={`mt-2 font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight ${over ? "text-red-600" : "text-ink"}`}>{remaining}<span className="ml-1.5 text-sm font-medium text-muted">/ {isUnlimited ? "N/A" : limit}</span></p>
-          <p className="mt-2 text-sm font-medium leading-5 text-muted">{used} days taken · {description}</p>
+          <p className={`mt-2 font-display text-[clamp(1.35rem,1.9vw,1.875rem)] font-bold leading-none tracking-tight ${over ? "text-red-600" : "text-ink"}`}>{remaining}<span className="ml-1.5 text-sm font-medium text-muted">{isUnlimited ? "days taken" : `/ ${limit}`}</span></p>
+          <p className="mt-2 text-sm font-medium leading-5 text-muted">{isUnlimited ? description : `${used} days taken · ${description}`}</p>
         </div>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+      {!isUnlimited && <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
           className={`h-full rounded-full transition-all ${style.bar}`}
           style={{ width: `${pct}%` }}
         />
-      </div>
+      </div>}
     </Card>
   );
 }

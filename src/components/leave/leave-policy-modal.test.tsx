@@ -7,7 +7,7 @@ import { updateLeavePolicyAction } from "@/app/(app)/leave/actions";
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/(app)/leave/actions", () => ({ updateLeavePolicyAction: vi.fn() }));
-beforeEach(() => vi.stubGlobal("React", React));
+beforeEach(() => { vi.stubGlobal("React", React); vi.mocked(updateLeavePolicyAction).mockReset(); });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 function open() {
   render(<LeavePolicyModal annualLimit={36} monthlyLimit={2} weeklyLimit={null} />);
@@ -33,7 +33,7 @@ it("shows server errors without closing or clearing the form, and allows retry",
   open();
   fireEvent.click(screen.getByRole("button", { name: "Save policy" }));
   expect((await screen.findByRole("alert")).textContent).toContain("Unable to update settings");
-  expect((screen.getByLabelText(/Annual leave limit/) as HTMLInputElement).value).toBe("36");
+  expect((screen.getByLabelText(/Yearly leave limit/) as HTMLInputElement).value).toBe("36");
   const retry = await screen.findByRole("button", { name: "Save policy" });
   fireEvent.click(retry);
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

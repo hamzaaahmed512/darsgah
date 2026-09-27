@@ -6,9 +6,6 @@ import { leaveRequestSchema, leaveReviewSchema, type LeaveRequestValues, type Le
 import type { AppUser, StaffLeave, StaffLeaveStatus } from "@/types/database";
 import { formatDisplayName } from "@/lib/student-name";
 
-export const DEFAULT_ANNUAL_LEAVE_LIMIT = 36;
-export const DEFAULT_MONTHLY_LEAVE_LIMIT = 3;
-
 export function getDaysInRangeWithin(startDate: string, endDate: string, rangeStart: string, rangeEnd: string) {
   const start = new Date(startDate < rangeStart ? rangeStart : startDate);
   const end = new Date(endDate > rangeEnd ? rangeEnd : endDate);
@@ -17,7 +14,7 @@ export function getDaysInRangeWithin(startDate: string, endDate: string, rangeSt
 }
 
 export interface LeavePolicy {
-  annualLimit: number;
+  annualLimit: number | null;
   monthlyLimit: number | null;
   weeklyLimit: number | null;
 }
@@ -32,17 +29,17 @@ export async function getLeavePolicy(user: AppUser): Promise<LeavePolicy> {
   if (error) throw new Error(error.message);
   const settings = (data?.settings ?? {}) as Record<string, any>;
   return {
-    annualLimit: typeof settings.leave_annual_limit === "number" ? settings.leave_annual_limit : DEFAULT_ANNUAL_LEAVE_LIMIT,
+    annualLimit: typeof settings.leave_annual_limit === "number" ? settings.leave_annual_limit : null,
     monthlyLimit: typeof settings.leave_monthly_limit === "number" ? settings.leave_monthly_limit : null,
     weeklyLimit: typeof settings.leave_weekly_limit === "number" ? settings.leave_weekly_limit : null
   };
 }
 
-export async function updateLeavePolicy(user: AppUser, policy: { annualLimit: number; monthlyLimit: number | null; weeklyLimit: number | null }) {
+export async function updateLeavePolicy(user: AppUser, policy: LeavePolicy) {
   if (!hasPermission(user.role, "leave:manage", user.permissions)) {
     throw new Error("Only administrators and principals can update the leave policy.");
   }
-  if (!Number.isInteger(policy.annualLimit) || policy.annualLimit < 0) throw new Error("Annual limit must be a non-negative integer.");
+  if (policy.annualLimit !== null && (!Number.isInteger(policy.annualLimit) || policy.annualLimit < 0)) throw new Error("Annual limit must be a non-negative integer.");
   if (policy.monthlyLimit !== null && (!Number.isInteger(policy.monthlyLimit) || policy.monthlyLimit < 0)) throw new Error("Monthly limit must be a non-negative integer.");
   if (policy.weeklyLimit !== null && (!Number.isInteger(policy.weeklyLimit) || policy.weeklyLimit < 0)) throw new Error("Weekly limit must be a non-negative integer.");
   const adminClient = createAdminClient();
@@ -176,7 +173,7 @@ export async function getAllTeachersLeaveSummary(user: AppUser) {
       teacherName: formatDisplayName(teacher.full_name),
       annualLimit: policy.annualLimit,
       annualUsed: stats.annualUsed,
-      annualRemaining: Math.max(0, policy.annualLimit - stats.annualUsed),
+      annualRemaining: policy.annualLimit !== null ? Math.max(0, policy.annualLimit - stats.annualUsed) : null,
       monthlyLimit: policy.monthlyLimit,
       monthlyUsed: stats.monthlyUsed,
       monthlyRemaining: policy.monthlyLimit !== null ? Math.max(0, policy.monthlyLimit - stats.monthlyUsed) : null,
@@ -309,7 +306,7 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
       if (parsed.start_date >= monthStart && parsed.start_date <= monthEnd) addedMonthly = daysRequested;
       addedWeekly = getDaysInRangeWithin(parsed.start_date, parsed.end_date, weekStart, weekEnd);
 
-      if (stats.annualUsed >= policy.annualLimit || stats.annualUsed + addedAnnual > policy.annualLimit) {
+      if (policy.annualLimit !== null && (stats.annualUsed >= policy.annualLimit || stats.annualUsed + addedAnnual > policy.annualLimit)) {
         throw new Error("You have reached your allowed leave limit. You cannot apply for additional leaves.");
       }
       if (policy.monthlyLimit !== null && (stats.monthlyUsed >= policy.monthlyLimit || stats.monthlyUsed + addedMonthly > policy.monthlyLimit)) {

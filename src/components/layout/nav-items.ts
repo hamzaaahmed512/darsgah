@@ -148,8 +148,14 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
     }
     items.push(item);
 
-    if (item.href === "/help" && (role === "administrator" || role === "principal")) {
-      items.splice(items.length - 1, 0, { href: "/queries", label: "Staff Queries", icon: MessageSquareText, permission: "dashboard:view", section: "SUPPORT" });
+    if (item.href === "/help") {
+      items.push({
+        href: "/queries",
+        label: role === "administrator" || role === "principal" ? "Staff Queries" : "My Queries",
+        icon: MessageSquareText,
+        permission: "dashboard:view",
+        section: "SUPPORT"
+      });
     }
 
     if (item.href === "/classes") {

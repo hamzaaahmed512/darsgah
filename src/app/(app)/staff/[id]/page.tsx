@@ -86,7 +86,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const canViewStaffInsights = user.role === "administrator" || user.role === "principal";
 
   // Leave policy
-  let leavePolicy: LeavePolicy = { annualLimit: 36, monthlyLimit: 3, weeklyLimit: null };
+  let leavePolicy: LeavePolicy = { annualLimit: null, monthlyLimit: null, weeklyLimit: null };
   if (canViewStaffInsights && isTeacher) {
     try {
       leavePolicy = await getLeavePolicy(user);
@@ -584,7 +584,7 @@ function StatPill({ label, value, colorClass }: { label: string; value: number; 
 
 function LeaveQuota({ label, used, limit }: { label: string; used: number; limit: number | null }) {
   const isUnlimited = limit === null;
-  const remaining = isUnlimited ? "N/A" : Math.max(0, limit - used);
+  const remaining = isUnlimited ? used : Math.max(0, limit - used);
   const over = !isUnlimited && used > limit;
   const pct = isUnlimited ? 0 : Math.min(100, limit > 0 ? (used / limit) * 100 : 0);
 
@@ -595,16 +595,16 @@ function LeaveQuota({ label, used, limit }: { label: string; used: number; limit
         <span className={`font-display text-2xl font-bold leading-none ${over ? "text-red-600" : "text-ink"}`}>
           {remaining}
         </span>
-        <span className="mb-0.5 text-xs text-muted">/ {isUnlimited ? "N/A" : `${limit}d`}</span>
+        <span className="mb-0.5 text-xs text-muted">{isUnlimited ? "days taken" : `/ ${limit}d`}</span>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+      {!isUnlimited && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div
           className={`h-full rounded-full transition-all ${
             isUnlimited ? "bg-slate-200" : over ? "bg-red-500" : remaining === 0 ? "bg-amber-500" : "bg-primary"
           }`}
           style={{ width: `${pct}%` }}
         />
-      </div>
+      </div>}
     </div>
   );
 }

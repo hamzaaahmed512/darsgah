@@ -58,6 +58,7 @@ export function AppShell({
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [navDate, setNavDate] = useState<string | null>(null);
   const [attentionAnnouncements, setAttentionAnnouncements] = useState(initialAttentionAnnouncements);
+  const [currentSidebarBadges, setCurrentSidebarBadges] = useState(sidebarBadges);
   const menuRef = useRef<HTMLDivElement>(null);
   const sidebarNavRef = useRef<HTMLElement>(null);
   const sidebarScrollTimeoutRef = useRef<number | null>(null);
@@ -77,6 +78,16 @@ export function AppShell({
     setProfileOpen(false);
     setAnnouncementsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setCurrentSidebarBadges(sidebarBadges);
+  }, [sidebarBadges]);
+
+  useEffect(() => {
+    const clearQueryBadge = () => setCurrentSidebarBadges((current) => ({ ...current, queries: 0 }));
+    window.addEventListener("queries-viewed", clearQueryBadge);
+    return () => window.removeEventListener("queries-viewed", clearQueryBadge);
+  }, []);
 
   useEffect(() => {
     function enhanceTables() {
@@ -219,9 +230,9 @@ export function AppShell({
   }
 
   function badgeForHref(href: string) {
-    if (href === "/attendance") return sidebarBadges.attendance;
-    if (href === "/leave") return sidebarBadges.leave;
-    if (href === "/queries") return sidebarBadges.queries;
+    if (href === "/attendance") return currentSidebarBadges.attendance;
+    if (href === "/leave") return currentSidebarBadges.leave;
+    if (href === "/queries") return currentSidebarBadges.queries;
     return 0;
   }
 

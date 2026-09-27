@@ -51,15 +51,13 @@ export async function reviewLeaveAction(formData: FormData) {
 
 export async function updateLeavePolicyAction(formData: FormData) {
   const user = await requireUser("leave:manage");
-  const annualLimit = Number(formData.get("annual_limit") ?? 36);
+  const annualStr = formData.get("annual_limit")?.toString().trim();
+  const annualLimit = annualStr ? Number(annualStr) : null;
   const monthlyStr = formData.get("monthly_limit")?.toString().trim();
   const monthlyLimit = monthlyStr ? Number(monthlyStr) : null;
   const weeklyStr = formData.get("weekly_limit")?.toString().trim();
   const weeklyLimit = weeklyStr ? Number(weeklyStr) : null;
   try {
-    if (!String(formData.get("annual_limit") ?? "").trim()) {
-      return { error: "Annual leave limit is required." };
-    }
     await updateLeavePolicy(user, { annualLimit, monthlyLimit, weeklyLimit });
   } catch (error) {
     console.error("Leave policy update failed.");
@@ -68,4 +66,3 @@ export async function updateLeavePolicyAction(formData: FormData) {
   revalidatePath("/leave");
   return { success: true };
 }
-

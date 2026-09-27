@@ -5,7 +5,7 @@ import { Check, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { type BillingCycle, plans } from "./pricing-data";
 
-const sharedBenefits = ["Lifetime Software Updates", "AI Features", "WhatsApp Support"];
+const sharedBenefits = ["Lifetime Software Updates", "WhatsApp Support"];
 
 export function PricingSection({ compact = false }: { compact?: boolean }) {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
