@@ -403,6 +403,7 @@ export function AppShell({
                               <Link
                                 href={sub.href}
                                 key={sub.href}
+                                prefetch={true}
                                 onClick={() => setOpen(false)}
                                 className={cn(
                                   "flex items-center rounded-md px-3 py-2 text-xs font-semibold transition-all duration-150",
@@ -425,6 +426,7 @@ export function AppShell({
                   <Link
                     href={item.href}
                     key={item.href}
+                    prefetch={true}
                     onClick={() => setOpen(false)}
                     className={cn(
                       "group flex items-center justify-between gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-all duration-150",
@@ -557,6 +559,7 @@ export function AppShell({
               <div className="mt-2 grid gap-1">
                 <Link
                   href="/profile"
+                  prefetch={true}
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted transition hover:bg-surface-low hover:text-primary"
                   role="menuitem"
@@ -569,6 +572,7 @@ export function AppShell({
                 </Link>
                 <Link
                   href="/school-profile"
+                  prefetch={true}
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-low hover:text-primary"
                   role="menuitem"

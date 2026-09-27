@@ -27,9 +27,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     // Keep recently visited authenticated route segments warm so moving back
-    // and forth does not immediately repeat the same server work. Dynamic
-    // routes are only warmed when the user shows intent by hovering a link.
-    staleTimes: { dynamic: 60, static: 300 },
+    // and forth does not immediately repeat the same server work. Primary
+    // navigation routes are prefetched, while other dynamic routes warm on hover.
+    staleTimes: { dynamic: 30, static: 300 },
     dynamicOnHover: true
   },
   async headers() {
