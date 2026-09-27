@@ -13,7 +13,6 @@ import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
-import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
 import type { WorkflowNotification } from "@/lib/services/notifications";
 
@@ -590,7 +589,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="app-workspace mx-auto w-full max-w-[1520px] min-w-0 px-4 py-6 sm:px-6 lg:px-8"><PageTransition>{children}</PageTransition></main>
+        <main className="app-workspace mx-auto w-full max-w-[1520px] min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

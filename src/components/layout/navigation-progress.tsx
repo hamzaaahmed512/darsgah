@@ -9,35 +9,27 @@ export function NavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ProgressState>(null);
-  const delayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   const clearTimers = useCallback(() => {
-    if (delayRef.current) clearTimeout(delayRef.current);
     if (finishRef.current) clearTimeout(finishRef.current);
     if (safetyRef.current) clearTimeout(safetyRef.current);
-    delayRef.current = null;
     finishRef.current = null;
     safetyRef.current = null;
   }, []);
 
-  const start = useCallback((immediate = false) => {
+  const start = useCallback(() => {
     clearTimers();
-    setState(null);
-    // Avoid flashing an indicator for routes that complete almost instantly.
-    if (immediate) setState("loading");
-    else delayRef.current = setTimeout(() => setState("loading"), 180);
+    setState("loading");
     safetyRef.current = setTimeout(() => setState(null), 12_000);
   }, [clearTimers]);
 
   const finish = useCallback(() => {
-    if (delayRef.current) clearTimeout(delayRef.current);
-    delayRef.current = null;
     setState((current) => {
       if (current !== "loading") return null;
-      finishRef.current = setTimeout(() => setState(null), 220);
+      finishRef.current = setTimeout(() => setState(null), 180);
       return "finishing";
     });
     if (safetyRef.current) clearTimeout(safetyRef.current);
@@ -49,7 +41,7 @@ export function NavigationProgress() {
   }, [routeKey, finish]);
 
   useEffect(() => {
-    function handleClick(event: MouseEvent) {
+    function destinationFromEvent(event: MouseEvent) {
       if (
         event.defaultPrevented ||
         event.button !== 0 ||
@@ -57,16 +49,21 @@ export function NavigationProgress() {
         event.ctrlKey ||
         event.shiftKey ||
         event.altKey
-      ) return;
+      ) return null;
 
       const anchor = (event.target as Element | null)?.closest("a");
-      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return null;
 
       const destination = new URL(anchor.href, window.location.href);
-      if (destination.origin !== window.location.origin) return;
-      if (`${destination.pathname}${destination.search}` === `${window.location.pathname}${window.location.search}`) return;
+      if (destination.origin !== window.location.origin) return null;
+      if (`${destination.pathname}${destination.search}` === `${window.location.pathname}${window.location.search}`) return null;
+      return destination;
+    }
 
-      start(anchor.dataset.navigationProgress === "immediate");
+    function handleClick(event: MouseEvent) {
+      // The capture listener runs before Next handles the link, so the bar is
+      // visible while the destination route is being requested.
+      if (destinationFromEvent(event)) start();
     }
 
     function handlePopState() {

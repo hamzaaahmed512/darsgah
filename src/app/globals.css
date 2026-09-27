@@ -422,14 +422,15 @@ a {
 .navigation-progress {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 100;
-  height: 3px;
+  z-index: 2147483647;
+  height: 4px;
   pointer-events: none;
   opacity: 0;
   transform: scaleX(0);
   transform-origin: left;
   background: linear-gradient(90deg, #2563eb, #38bdf8);
-  box-shadow: 0 1px 8px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 1px 10px rgba(37, 99, 235, 0.5);
+  will-change: transform, opacity;
 }
 
 .navigation-progress--loading {
