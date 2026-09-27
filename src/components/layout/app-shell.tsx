@@ -38,6 +38,10 @@ function formatNavDate(date: Date) {
   return `${date.toLocaleDateString("en-GB", { weekday: "long" })}, ${date.getDate()}${ordinal(date.getDate())} ${date.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
 }
 
+function formatCompactNavDate(date: Date) {
+  return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
 export function AppShell({
   user,
   branding,
@@ -61,6 +65,7 @@ export function AppShell({
   const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [navDate, setNavDate] = useState<string | null>(null);
+  const [compactNavDate, setCompactNavDate] = useState<string | null>(null);
   const [attentionAnnouncements, setAttentionAnnouncements] = useState(initialAttentionAnnouncements);
   const [currentSidebarBadges, setCurrentSidebarBadges] = useState(sidebarBadges);
   const [workflowNotifications, setWorkflowNotifications] = useState(initialWorkflowNotifications);
@@ -167,7 +172,9 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    setNavDate(formatNavDate(new Date()));
+    const today = new Date();
+    setNavDate(formatNavDate(today));
+    setCompactNavDate(formatCompactNavDate(today));
   }, []);
 
   useEffect(() => {
@@ -478,18 +485,19 @@ export function AppShell({
       </div>
 
       <div className="min-w-0 lg:pl-[292px]">
-        <header className="sticky top-0 z-40 flex min-h-16 flex-col items-stretch justify-between py-3 sm:flex-row sm:flex-wrap sm:items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:relative lg:min-h-[92px] lg:px-8">
+        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 sm:gap-3 sm:px-6 lg:relative lg:min-h-[92px] lg:px-8">
           <div className="absolute inset-y-0 left-0 hidden w-px bg-slate-200 lg:block" aria-hidden="true" />
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-surface-low lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-900">
-              <CalendarDays className="h-5 w-5 text-slate-700" aria-hidden="true" />
-              <span className="break-words">{navDate ?? ""}</span>
+            <div className="flex min-w-0 items-center gap-2 text-xs font-bold text-slate-900 sm:text-sm">
+              <CalendarDays className="h-5 w-5 shrink-0 text-slate-700" aria-hidden="true" />
+              <span className="truncate sm:hidden">{compactNavDate ?? ""}</span>
+              <span className="hidden truncate sm:inline">{navDate ?? ""}</span>
             </div>
           </div>
-          <div className="relative flex shrink-0 items-center justify-end gap-3" ref={menuRef}>
+          <div className="relative flex shrink-0 items-center justify-end gap-1 sm:gap-3" ref={menuRef}>
             {hasPermission(user.role, "announcements:view", user.permissions) && (
               <AnnouncementBell user={user} initialWorkflowNotifications={workflowNotifications} initialAnnouncements={shellAnnouncements} initialLoading={!shellReady} open={announcementsOpen} onOpenChange={(nextOpen) => {
                 setAnnouncementsOpen(nextOpen);

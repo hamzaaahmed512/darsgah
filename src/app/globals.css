@@ -691,10 +691,21 @@ div[class*="fixed inset-0"][class*="z-"] > form > div:nth-child(3) {
   flex-shrink: 0 !important;
 }
 
-/* KPI-only motion: transforms do not change layout or widen the card. */
+/* KPI-only motion: lift the whole card without emphasizing its outline. */
 .kpi-card,
 .card-surface.kpi-card {
-  @apply transform-gpu transition-all duration-300 ease-in-out hover:-translate-y-1 hover:transform-gpu hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700;
+  transform: translateZ(0);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.kpi-card:hover,
+.card-surface.kpi-card:hover {
+  border-color: rgba(226, 232, 240, 0.78);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.11);
+  transform: translateY(-3px) scale(1.01);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -260,10 +260,10 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
 
       {mounted && open ? createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="fee-structure-title" className="w-full max-w-xl max-h-[85vh] supports-[height:100dvh]:max-h-[85dvh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="sticky top-0 shrink-0 bg-white dark:bg-slate-900 border-b p-4 px-6 z-10 flex items-center justify-between gap-3">
-              <h3 id="fee-structure-title" className="text-lg font-bold text-ink">{editing ? "Edit Fee Structure" : "Add Fee Structure"}</h3>
-              <button type="button" onClick={() => setOpen(false)} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-2.5 text-muted hover:bg-surface-low" aria-label="Close fee structure form">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="fee-structure-title" className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-outline/70 bg-white text-ink shadow-2xl supports-[height:100dvh]:max-h-[85dvh]">
+            <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-primary/10 bg-primary-soft/70 px-6 py-4">
+              <h3 id="fee-structure-title" className="font-display text-lg font-bold text-primary-ink">{editing ? "Edit Fee Structure" : "Add Fee Structure"}</h3>
+              <button type="button" onClick={() => setOpen(false)} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-2.5 text-muted transition hover:bg-white hover:text-primary" aria-label="Close fee structure form">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -271,11 +271,11 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
               <div className="overflow-y-auto overscroll-contain p-6 space-y-4 min-h-0 flex-1">
                 {error ? <div className="rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</div> : null}
                 {!editing ? (
-                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-surface-low p-1">
-                    <button type="button" onClick={() => setScope("one")} className={`min-h-11 rounded-md px-3 py-2.5 text-sm font-semibold ${scope === "one" ? "bg-white text-primary shadow-sm" : "text-muted"}`}>
+                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-outline/60 bg-surface-low p-1">
+                    <button type="button" onClick={() => setScope("one")} className={`min-h-11 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${scope === "one" ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-white hover:text-primary"}`}>
                       One class
                     </button>
-                    <button type="button" onClick={() => setScope("all")} className={`min-h-11 rounded-md px-3 py-2.5 text-sm font-semibold ${scope === "all" ? "bg-white text-primary shadow-sm" : "text-muted"}`}>
+                    <button type="button" onClick={() => setScope("all")} className={`min-h-11 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${scope === "all" ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-white hover:text-primary"}`}>
                       All classes
                     </button>
                   </div>
@@ -301,16 +301,16 @@ export function FeeStructuresClient({ user, classes, sessions, structures, initi
                     <Input type="number" min="0" step="0.01" value={misc} onChange={(event) => setMisc(event.target.value)} />
                   </Field>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-low p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/15 bg-primary-soft/60 p-3">
                   <span className="text-sm font-semibold text-muted">Total</span>
-                  <span className="break-words font-display text-lg font-bold text-ink">{formatPKR(total)}</span>
+                  <span className="break-words font-display text-lg font-bold text-primary-ink">{formatPKR(total)}</span>
                 </div>
               </div>
-              <div className="sticky bottom-0 shrink-0 bg-slate-50 dark:bg-slate-800 p-4 px-6 border-t flex flex-wrap justify-end gap-3 z-10">
-                <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-lg bg-surface-low px-4 py-2.5 text-sm font-semibold text-muted">
+              <div className="sticky bottom-0 z-10 flex shrink-0 flex-wrap justify-end gap-3 border-t border-outline/70 bg-surface-low px-6 py-4">
+                <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-lg border border-outline bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-mid hover:text-primary">
                   Cancel
                 </button>
-                <button type="submit" disabled={pending} className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:bg-outline">
+                <button type="submit" disabled={pending} className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-button transition hover:bg-primary-ink disabled:bg-outline disabled:shadow-none">
                   {pending ? "Saving..." : editing ? "Save Structure" : scope === "all" ? "Save for All Classes" : "Save Structure"}
                 </button>
               </div>
