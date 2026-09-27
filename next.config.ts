@@ -25,6 +25,13 @@ if (process.env.NODE_ENV === "production") {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Keep recently visited authenticated route segments warm so moving back
+    // and forth does not immediately repeat the same server work. Dynamic
+    // routes are only warmed when the user shows intent by hovering a link.
+    staleTimes: { dynamic: 30, static: 300 },
+    dynamicOnHover: true
+  },
   async headers() {
     return [{ source: "/(.*)", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

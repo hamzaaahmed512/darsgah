@@ -35,14 +35,10 @@ type CurrentUserRow = {
 
 async function loadCurrentUser(): Promise<AppUser | null> {
   const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims().catch(() => ({ data: null, error: new Error("Invalid auth session") }));
-  const userId = claimsData?.claims?.sub;
 
-  if (claimsError || !userId) return null;
-
-  // New installations resolve the profile, membership, permissions, school and
-  // branding in one database request. Keep the old path as a rolling-deploy
-  // fallback until the accompanying migration reaches every environment.
+  // PostgREST validates the bearer token before this authenticated RPC runs, so
+  // it safely combines session verification with the user/profile lookup in one
+  // network round trip. Middleware remains responsible for refreshing tokens.
   const optimizedResult = await supabase.rpc("get_current_app_user").maybeSingle<CurrentUserRow>();
   if (!optimizedResult.error && optimizedResult.data) {
     const row = optimizedResult.data;
@@ -73,6 +69,10 @@ async function loadCurrentUser(): Promise<AppUser | null> {
     console.error("Current user RPC failed.");
     return null;
   }
+
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims().catch(() => ({ data: null, error: new Error("Invalid auth session") }));
+  const userId = claimsData?.claims?.sub;
+  if (claimsError || !userId) return null;
 
   const [profileResult, memberResult] = await Promise.all([
     supabase.from("profiles").select("full_name,email,avatar_url,must_change_password").eq("id", userId).maybeSingle(),
