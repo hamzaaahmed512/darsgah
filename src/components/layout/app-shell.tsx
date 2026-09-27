@@ -96,13 +96,10 @@ export function AppShell({
   const sidebarNavRef = useRef<HTMLElement>(null);
   const sidebarScrollTimeoutRef = useRef<number | null>(null);
   const [sidebarScrolling, setSidebarScrolling] = useState(false);
-  const items = getNavItems(user.role, { principalCanAccessAcademicControl }).filter((item) => {
-    if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) {
-      return false;
-    }
-
+  const items = useMemo(() => getNavItems(user.role, { principalCanAccessAcademicControl }).filter((item) => {
+    if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) return false;
     return navItemVisible(user.role, item.permission, user.permissions, item.anyPermissions);
-  });
+  }), [principalCanAccessAcademicControl, user.permissions, user.role]);
   const supabase = useMemo(() => createClient(), []);
   const schoolDisplayName = branding.shortName ?? branding.fullName;
 
@@ -123,34 +120,55 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    function enhanceTables() {
-      const workspace = document.querySelector("main.app-workspace");
-      if (!workspace) return;
-
-      workspace.querySelectorAll("table").forEach((table) => {
-        const wrapper = table.closest<HTMLElement>(".overflow-x-auto");
-        if (!wrapper || wrapper.dataset.responsiveTable === "desktop") return;
-
-        const labels = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent?.trim().replace(/\s+/g, " ") ?? "");
-        if (!labels.length) return;
-
-        wrapper.classList.add("responsive-table-cards");
-        table.querySelectorAll("tbody tr").forEach((row) => {
-          row.querySelectorAll("td").forEach((cell, index) => {
-            if (labels[index]) cell.setAttribute("data-label", labels[index]);
-          });
-        });
-      });
-
-      return workspace;
-    }
-
-    const workspace = enhanceTables();
+    const workspace = document.querySelector("main.app-workspace");
     if (!workspace) return;
 
-    const observer = new MutationObserver(enhanceTables);
+    function enhanceTable(table: HTMLTableElement) {
+      const wrapper = table.closest<HTMLElement>(".overflow-x-auto");
+      if (!wrapper || wrapper.dataset.responsiveTable === "desktop") return;
+
+      const labels = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent?.trim().replace(/\s+/g, " ") ?? "");
+      if (!labels.length) return;
+
+      wrapper.classList.add("responsive-table-cards");
+      table.querySelectorAll("tbody tr").forEach((row) => {
+        row.querySelectorAll("td").forEach((cell, index) => {
+          if (labels[index] && cell.dataset.label !== labels[index]) cell.dataset.label = labels[index];
+        });
+      });
+    }
+
+    workspace.querySelectorAll("table").forEach(enhanceTable);
+
+    let animationFrame: number | null = null;
+    const pendingTables = new Set<HTMLTableElement>();
+
+    function schedule(table: HTMLTableElement) {
+      pendingTables.add(table);
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        pendingTables.forEach(enhanceTable);
+        pendingTables.clear();
+        animationFrame = null;
+      });
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const parentTable = mutation.target instanceof Element ? mutation.target.closest("table") : null;
+        if (parentTable) schedule(parentTable);
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node instanceof HTMLTableElement) schedule(node);
+          node.querySelectorAll("table").forEach(schedule);
+        });
+      }
+    });
     observer.observe(workspace, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -290,7 +308,7 @@ export function AppShell({
   );
 
   // Group visible items by their section label, preserving order
-  const groupedItems = items.reduce<{ section: string; items: typeof items }[]>((acc, item) => {
+  const groupedItems = useMemo(() => items.reduce<{ section: string; items: typeof items }[]>((acc, item) => {
     const sectionLabel = item.section ?? "";
     const last = acc[acc.length - 1];
     if (last && last.section === sectionLabel) {
@@ -299,7 +317,7 @@ export function AppShell({
       acc.push({ section: sectionLabel, items: [item] });
     }
     return acc;
-  }, []);
+  }, []), [items]);
 
   const sidebar = (
     <aside className="flex h-full min-h-0 w-full flex-col bg-white">

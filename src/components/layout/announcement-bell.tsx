@@ -94,18 +94,35 @@ export function AnnouncementBell({
     return () => window.removeEventListener("announcement-read", handleAnnouncementRead);
   }, [fetchAnnouncements]);
 
-  // Realtime subscription
+  // Realtime is non-critical during first paint. Connect once the browser is
+  // idle so the initial route can hydrate without competing for main-thread time.
   useEffect(() => {
-    const client = supabase();
-    const channel = client
-      .channel("announcements_bell")
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcements", filter: `school_id=eq.${user.schoolId}` }, () => {
-        fetchAnnouncements();
-      })
-      .subscribe();
+    let stopped = false;
+    let disconnect: (() => void) | null = null;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      if (stopped) return;
+      const client = supabase();
+      const channel = client
+        .channel("announcements_bell")
+        .on("postgres_changes", { event: "*", schema: "public", table: "announcements", filter: `school_id=eq.${user.schoolId}` }, () => {
+          void fetchAnnouncements();
+        })
+        .subscribe();
+      disconnect = () => { void client.removeChannel(channel); };
+    }
+
+    const idleId = "requestIdleCallback" in window
+      ? window.requestIdleCallback(connect, { timeout: 2_000 })
+      : null;
+    if (idleId === null) fallbackTimer = setTimeout(connect, 750);
 
     return () => {
-      client.removeChannel(channel);
+      stopped = true;
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      disconnect?.();
     };
   }, [user.schoolId, supabase, fetchAnnouncements]);
 

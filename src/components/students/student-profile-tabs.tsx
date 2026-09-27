@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { CalendarDays, Download, Mail, MapPin, Phone, TrendingUp, UserRound, UsersRound, WalletCards, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,13 @@ type Props = {
 };
 
 const money = new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 });
+const StudentAttendanceChart = dynamic(
+  () => import("./student-attendance-chart").then((module) => module.StudentAttendanceChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-64 animate-pulse rounded-2xl bg-surface-low" aria-hidden="true" />
+  }
+);
 const tabs: { id: Tab; label: string }[] = [
   { id: "bio", label: "Bio Data" },
   { id: "attendance", label: "Attendance" },
@@ -130,7 +137,7 @@ function AttendanceTab({ rows }: { rows: any[] }) {
   const distribution = ["present", "absent", "excused", "late"].map((name) => ({ name: labelize(name), value: filtered.filter((row) => row.status === name).length }));
   const colors = ["#22c55e", "#ef4444", "#f59e0b", "#eab308"];
   return <div className="space-y-5"><FilterCard><Select label="Preset" value={preset} onChange={setPreset} options={[["all","All Time"],["yearly","Yearly"],["monthly","Monthly"],["weekly","Weekly"]]} /><DateField label="From date" value={from} onChange={setFrom} /><DateField label="To date" value={to} onChange={setTo} /><Select label="Status" value={status} onChange={setStatus} options={[["all","All"],["present","Present"],["absent","Absent"],["excused","Excused"],["late","Late"]]} /><button type="button" className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white" onClick={() => { setFrom(from); setTo(to); }}>Apply</button></FilterCard>
-    <ChartCard title="Attendance percentage" description={`${filtered.length} attendance records in this view`}><div className="h-64"><ResponsiveContainer><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="75%" paddingAngle={3}>{distribution.map((_, i) => <Cell key={i} fill={colors[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><div className="flex flex-wrap justify-center gap-4">{distribution.map((item, i) => <span key={item.name} className="flex items-center gap-2 text-xs font-medium text-muted"><i className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i] }} />{item.name}: {item.value}</span>)}</div></ChartCard>
+    <ChartCard title="Attendance percentage" description={`${filtered.length} attendance records in this view`}><StudentAttendanceChart data={distribution} colors={colors} /><div className="flex flex-wrap justify-center gap-4">{distribution.map((item, i) => <span key={item.name} className="flex items-center gap-2 text-xs font-medium text-muted"><i className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i] }} />{item.name}: {item.value}</span>)}</div></ChartCard>
     <DataCard title="Attendance records"><HistoryTable headers={["Date","Class","Status","Note"]} rows={filtered.map((row) => [formatDatePK(row.attendance_date), formatGradeSection(row.classes?.grades?.name, row.classes?.sections?.name) || row.classes?.name || "—", <StatusBadge key="s" status={row.status} />, row.note || "—"])} empty="No attendance records match these filters." /></DataCard></div>;
 }
 

@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+const SESSION_ROUTES = new Set([
+  "academics", "activity", "admin", "announcements", "approvals", "attendance",
+  "classes", "dashboard", "exam-approvals", "finance", "help", "leave", "library",
+  "marks", "onboarding", "operations", "profile", "queries", "reports", "results",
+  "school-profile", "settings", "special-exams", "staff", "students", "subjects",
+  "teachers", "transport", "unauthorized", "platform", "change-password", "reset-password", "api"
+]);
+
 export async function middleware(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const nonce = crypto.randomUUID().replace(/-/g, "");
@@ -24,14 +32,7 @@ export async function middleware(request: NextRequest) {
   forwardedHeaders.set("x-request-id", requestId);
   // Keep CSP on every HTML page, but refresh sessions only where needed.
   const root = request.nextUrl.pathname.split("/")[1];
-  const sessionRoutes = new Set([
-    "academics", "activity", "admin", "announcements", "approvals", "attendance",
-    "classes", "dashboard", "exam-approvals", "finance", "help", "leave", "library",
-    "marks", "onboarding", "operations", "profile", "queries", "reports", "results",
-    "school-profile", "settings", "special-exams", "staff", "students", "subjects",
-    "teachers", "transport", "unauthorized", "platform", "change-password", "reset-password", "api"
-  ]);
-  const response = sessionRoutes.has(root)
+  const response = SESSION_ROUTES.has(root)
     ? await updateSession(request, forwardedHeaders)
     : NextResponse.next({ request: { headers: forwardedHeaders } });
   response.headers.set("Content-Security-Policy", policy);
