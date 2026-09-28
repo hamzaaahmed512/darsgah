@@ -142,6 +142,7 @@ export type Enrollment = {
   academic_year_id: string | null;
   status: "active" | "completed" | "withdrawn";
   roll_no: string | null;
+  major: string | null;
   starts_on: string;
   ends_on: string | null;
 };

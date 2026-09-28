@@ -225,6 +225,24 @@ export function isStudentEligibleForAssessmentSubject(values: {
   return !isSubjectExcludedForMajor(gradeName, studentMajor, subjectName);
 }
 
+/** Use the enrollment's historical combination and subjects for printable cards. */
+export function isResultCardSubjectEligible(values: {
+  major: string | null;
+  subjectId: string;
+  subjectName: string;
+  gradeName: string;
+  enrolledSubjectIds: Set<string>;
+  hasMark: boolean;
+  combinationOptions: StudentCombinationOption[];
+}) {
+  const { major, subjectId, subjectName, gradeName, enrolledSubjectIds, hasMark, combinationOptions } = values;
+  if (!major) return enrolledSubjectIds.has(subjectId) || hasMark;
+  const option = combinationOptions.find((item) => item.value === major);
+  if (option?.subjectIds?.length) return option.subjectIds.includes(subjectId);
+  if (major.startsWith("custom:")) return enrolledSubjectIds.has(subjectId) || hasMark;
+  return !isSubjectExcludedForMajor(gradeName, major, subjectName);
+}
+
 export async function getEligibleSubjectRoster(user: AppUser, classId: string, subjectId: string) {
   const admin = createAdminClient();
   const [classResult, subjectResult, enrollmentResult, directResult] = await Promise.all([
@@ -908,7 +926,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { sessionI
   const adminClient = createAdminClient();
   const readiness = await getResultReadiness(user, filters.classId, filters.examType, filters.month);
   const [classResult, settingsResult] = await Promise.all([
-    supabase.from("classes").select("id,name,academic_year_id,grades(name),sections(name),academic_years(name)").eq("school_id", user.schoolId).eq("id", filters.classId).maybeSingle(),
+    supabase.from("classes").select("id,name,academic_year_id,grades(name),sections(name),academic_years(name,is_active)").eq("school_id", user.schoolId).eq("id", filters.classId).maybeSingle(),
     adminClient.from("school_settings").select("settings").eq("school_id", user.schoolId).maybeSingle()
   ]);
   const { data: classRow, error: classError } = classResult;
@@ -934,7 +952,7 @@ export async function getPrintableResultCards(user: AppUser, filters: { sessionI
 
   let studentsQuery = supabase
     .from("enrollments")
-    .select("students(id,first_name,last_name,admission_number)")
+    .select("major,students(id,first_name,last_name,admission_number)")
     .eq("school_id", user.schoolId)
     .eq("class_id", filters.classId)
     .order("created_at");
@@ -999,18 +1017,16 @@ export async function getPrintableResultCards(user: AppUser, filters: { sessionI
     const marksForStudent = marksByStudent.get(student?.id) ?? [];
     const enrolledSubjects = (subjectEnrollments.data ?? []).filter((item: any) => item.student_id === student?.id);
     const enrolledSubjectIds = new Set(enrolledSubjects.map((item: any) => item.subject_id as string));
-    const major = majorsByStudentId.get(student?.id ?? "") ?? null;
+    const major = row.major ?? ((classRow as any).academic_years?.is_active ? majorsByStudentId.get(student?.id ?? "") ?? null : null);
     const rows = (approvedExams.data ?? []).filter((exam: any) => {
-      const enrolledSubject = enrolledSubjects.find((item: any) => item.subject_id === exam.subject_id);
-      if (enrolledSubject) return true;
       const examSubjectName = Array.isArray(exam.subjects) ? exam.subjects[0]?.name ?? "" : exam.subjects?.name ?? "";
-      return isStudentEligibleForAssessmentSubject({
-        studentId: student?.id ?? "",
-        studentMajor: major,
+      return isResultCardSubjectEligible({
+        major,
         subjectId: exam.subject_id,
         subjectName: examSubjectName,
         gradeName,
-        directStudentIds: enrolledSubjectIds,
+        enrolledSubjectIds,
+        hasMark: marksForStudent.some((item: any) => item.exams?.id === exam.id),
         combinationOptions
       });
     }).map((exam: any) => {

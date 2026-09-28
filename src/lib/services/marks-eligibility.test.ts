@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPrintOfficialResultCard, isStudentEligibleForAssessmentSubject } from "@/lib/services/marks";
+import { canPrintOfficialResultCard, isResultCardSubjectEligible, isStudentEligibleForAssessmentSubject } from "@/lib/services/marks";
 
 const base = {
   studentId: "student-1",
@@ -33,6 +33,31 @@ describe("dynamic assessment subject eligibility", () => {
       studentMajor: "pre_engineering",
       combinationOptions: [{ value: "pre_engineering", label: "Pre-Engineering", kind: "default", subjectIds: ["computer"] }]
     })).toBe(true);
+  });
+});
+
+describe("historical result card subjects", () => {
+  it("uses the session combination even when a stale direct enrollment exists", () => {
+    expect(isResultCardSubjectEligible({
+      major: "biology", subjectId: "computer", subjectName: "Computer Science", gradeName: "Grade 9",
+      enrolledSubjectIds: new Set(["computer"]), hasMark: true,
+      combinationOptions: [{ value: "biology", label: "Biology", kind: "default", subjectIds: ["biology"] }]
+    })).toBe(false);
+  });
+
+  it("includes a combination subject without marks as a pending row", () => {
+    expect(isResultCardSubjectEligible({
+      major: "computer", subjectId: "computer", subjectName: "Computer Science", gradeName: "Grade 10",
+      enrolledSubjectIds: new Set(), hasMark: false,
+      combinationOptions: [{ value: "computer", label: "Computer", kind: "default", subjectIds: ["computer"] }]
+    })).toBe(true);
+  });
+
+  it("uses historical subject enrollment or a mark when the legacy combination is missing", () => {
+    const legacy = { major: null, subjectId: "biology", subjectName: "Biology", gradeName: "Grade 11", combinationOptions: [] };
+    expect(isResultCardSubjectEligible({ ...legacy, enrolledSubjectIds: new Set(["biology"]), hasMark: false })).toBe(true);
+    expect(isResultCardSubjectEligible({ ...legacy, enrolledSubjectIds: new Set(), hasMark: true })).toBe(true);
+    expect(isResultCardSubjectEligible({ ...legacy, enrolledSubjectIds: new Set(), hasMark: false })).toBe(false);
   });
 });
 
