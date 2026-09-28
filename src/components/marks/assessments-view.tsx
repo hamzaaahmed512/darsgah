@@ -12,6 +12,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getTeacherMarksWorkspace } from "@/lib/services/marks";
 import { paginateRows } from "@/lib/pagination";
 import { StudentPagination } from "@/components/students/student-pagination";
+import { redirect } from "next/navigation";
 
 const rangeFilters = [
   { value: "all", label: "All" },
@@ -58,6 +59,7 @@ export async function AssessmentsView({
 }) {
   const params = await searchParams;
   const user = await requireUser("academics:view");
+  if (user.role === "principal") redirect("/exam-approvals");
   const range = rangeFilters.some((item) => item.value === params.range) ? (params.range as RangeFilter) : "all";
   const workspace = await getTeacherMarksWorkspace(user, {
     classId: params.classId,

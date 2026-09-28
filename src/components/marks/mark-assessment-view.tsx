@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth/session";
 import { calculateGrade } from "@/lib/grades";
 import { formatExamType, getTeacherMarksWorkspace } from "@/lib/services/marks";
 import { saveMarksAction, submitExamForApprovalAction } from "@/app/(app)/marks/actions";
+import { redirect } from "next/navigation";
 
 function assessmentsHref(basePath: string, classId?: string, subjectId?: string) {
   const query = new URLSearchParams();
@@ -31,6 +32,7 @@ export async function MarkAssessmentView({
 }) {
   const [{ examId }, query] = await Promise.all([params, searchParams]);
   const user = await requireUser("academics:view");
+  if (user.role === "principal") redirect("/exam-approvals");
   const workspace = await getTeacherMarksWorkspace(user, {
     classId: query.classId,
     subjectId: query.subjectId,
@@ -100,6 +102,7 @@ export async function MarkAssessmentView({
                       <th className="py-3 pr-3">Student</th>
                       <th className="py-3 pr-3">Admission #</th>
                       <th className="py-3 pr-3">Marks</th>
+                      <th className="py-3 pr-3">Absent</th>
                       <th className="py-3 pr-3">Grade</th>
                       <th className="py-3 pr-3">Comment</th>
                     </tr>
@@ -107,7 +110,7 @@ export async function MarkAssessmentView({
                   <tbody>
                     {workspace.roster.map((student) => {
                       const value = student.mark?.marks_obtained ?? "";
-                      const grade = student.mark?.grade ?? (value === "" ? "-" : calculateGrade(Number(value), Number(selectedExam.max_marks)));
+                      const grade = student.mark?.is_absent ? "Absent" : student.mark?.grade ?? (value === "" ? "-" : calculateGrade(Number(value), Number(selectedExam.max_marks)));
                       return (
                         <tr key={student.student_id} className="border-b border-outline/25">
                           <td className="py-3 pr-3 font-semibold">{student.student_name}</td>
@@ -121,8 +124,10 @@ export async function MarkAssessmentView({
                               step="1"
                               defaultValue={value}
                               disabled={inputDisabled}
-                              required
                             />
+                          </td>
+                          <td className="py-3 pr-3">
+                            <input type="checkbox" name={`absent_${student.student_id}`} defaultChecked={Boolean(student.mark?.is_absent)} disabled={inputDisabled} aria-label={`Mark ${student.student_name} absent`} />
                           </td>
                           <td className="py-3 pr-3">
                             <Badge tone={grade === "F" ? "red" : grade === "-" ? "gray" : "green"}>{grade}</Badge>

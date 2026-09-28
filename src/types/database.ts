@@ -235,6 +235,7 @@ export type Mark = {
   subject_id: string;
   teacher_id: string;
   marks_obtained: number;
+  is_absent: boolean;
   grade: string;
   status: MarkStatus;
   teacher_comment: string | null;

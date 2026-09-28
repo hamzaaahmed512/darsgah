@@ -144,7 +144,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
                     <td className="py-3 pr-3 font-semibold">{row.student_name}</td>
                     <td className="py-3 pr-3 text-muted">{row.admission_number}</td>
                     <td className="py-3 pr-3">
-                      {row.marks_obtained} / {Number(exam.max_marks)}
+                      {row.is_absent ? "Absent" : row.marks_obtained} / {Number(exam.max_marks)}
                     </td>
                     <td className="py-3 pr-3 font-bold">{row.grade}</td>
                     <td className="py-3 pr-3 text-muted">{row.teacher_comment || "—"}</td>

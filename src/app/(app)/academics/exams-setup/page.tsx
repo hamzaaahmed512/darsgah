@@ -8,13 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { defaultGradeScale } from "@/lib/grades";
 import { hasPermission } from "@/lib/permissions";
-import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 
 export default async function ExamsSetupPage(props: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser("academics:view");
   if (user.role === "principal") {
-    if (!(await principalCanAccessAcademicControl(user))) redirect("/classes");
-    return <AssessmentsView searchParams={props.searchParams} />;
+    redirect("/exam-approvals");
   }
   if (hasPermission(user.role, "marks:manage", user.permissions)) return <AssessmentsView searchParams={props.searchParams} />;
 

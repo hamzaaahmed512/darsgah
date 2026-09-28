@@ -124,8 +124,9 @@ export const markEntrySchema = z.object({
       z.object({
         student_id: z.string().uuid(),
         marks_obtained: z.coerce.number().min(0),
+        is_absent: z.boolean().default(false),
         teacher_comment: z.string().trim().max(240).optional().nullable()
-      })
+      }).refine((record) => !record.is_absent || record.marks_obtained === 0, "Absent students must have zero marks")
     )
     .min(1, "At least one mark is required")
 });

@@ -19,7 +19,7 @@ import {
 import type { Permission } from "@/lib/permissions";
 import { hasPermission } from "@/lib/permissions";
 import type { UserRole } from "@/types/database";
-import { usesAcademicEvaluationTabs, usesPrincipalAcademicControl } from "@/lib/roles";
+import { usesAcademicEvaluationTabs } from "@/lib/roles";
 
 export interface NavItem {
   href: string;
@@ -114,17 +114,6 @@ function teacherMyClassesItem(permission: Permission = "academics:view"): NavIte
   };
 }
 
-function principalAcademicControlItem(): NavItem {
-  return {
-    href: "/admin/academic-control",
-    label: "Academic Control",
-    icon: BarChart3,
-    permission: "marks:approve",
-    section: "ACADEMICS",
-    anyPermissions: ["results:view"]
-  };
-}
-
 function principalResultsManagementItem(): NavItem {
   return {
     href: "/results",
@@ -169,9 +158,6 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
     }
 
     if (item.href === "/classes") {
-      if (usesPrincipalAcademicControl(role) && options.principalCanAccessAcademicControl) {
-        items.push(principalAcademicControlItem());
-      }
       if (role === "principal") {
         items.push(principalResultsManagementItem());
       } else if (role === "teacher" || role === "head_teacher") {
