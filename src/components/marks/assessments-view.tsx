@@ -97,7 +97,6 @@ export async function AssessmentsView({
               </div>
               <div>
                 <CardTitle className="text-[1.6rem]">Assessment List</CardTitle>
-                <p className="mt-1 text-sm text-muted">Create, manage, and mark assessments for your classes.</p>
               </div>
             </div>
           </CardHeader>

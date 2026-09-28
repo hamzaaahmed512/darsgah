@@ -61,7 +61,7 @@ export default async function ClassesPage({
         title="Classes"
         description="Organize the academic structure, assign teachers, and manage each class from one place."
         actions={
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-2.5 sm:w-auto">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <ReportGenerator 
               headers={["Grade", "Class Name", "Section", "Head Teacher", "Room"]}
               data={filteredClasses.map((row: any) => [
@@ -83,14 +83,14 @@ export default async function ClassesPage({
         }
       />
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 [&>div>div]:flex-col [&>div>div>div:last-child]:w-full">
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Grades" value={academicData.grades.length} hint="Academic levels configured" icon={GraduationCap} tone="blue" />
         <StatCard label="Sections" value={academicData.classes.length} hint="Available class sections" icon={Layers3} tone="purple" />
         <StatCard label="Students" value={totalStudents.toLocaleString()} hint="Across all class sections" icon={Users} tone="green" />
         <StatCard label="Head teachers" value={assignedTeachers} hint="Assigned to a class section" icon={UserCheck} tone="amber" />
       </section>
 
-      <Card className="mb-6 rounded-[24px] border border-blue-100 bg-white p-4 shadow-[0_12px_34px_rgba(37,99,235,0.05)]">
+      <Card className="mb-5 rounded-[24px] border border-blue-100 bg-white p-4 shadow-[0_12px_34px_rgba(37,99,235,0.05)]">
         <Suspense>
           <ClassFilterForm grades={academicData.grades} classes={classesForYear} years={academicData.years} selectedYearId={selectedYearId} />
         </Suspense>
@@ -102,15 +102,17 @@ export default async function ClassesPage({
           description="Add a grade or try clearing your search filters."
         />
       ) : (
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-4 px-1">
+        <section className="overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 px-5 py-4 sm:px-6">
             <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><School className="h-5 w-5 text-primary" />Class Structure</h2>
-            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{classesForYear.length} sections{selectedYear ? ` · ${selectedYear.name}` : ""}</span>
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filteredClasses.length} sections{selectedYear ? ` · ${selectedYear.name}` : ""}</span>
           </div>
-        <ClassGradeList
-          classDetails={classDetails}
-          groups={sortedGradeNames.map((gradeName) => ({ gradeName, classes: classesByGrade[gradeName] }))}
-        />
+          <div className="bg-slate-50/35 p-3 sm:p-5">
+            <ClassGradeList
+              classDetails={classDetails}
+              groups={sortedGradeNames.map((gradeName) => ({ gradeName, classes: classesByGrade[gradeName] }))}
+            />
+          </div>
         </section>
       )}
     </>
