@@ -37,7 +37,7 @@ describe("dynamic assessment subject eligibility", () => {
 });
 
 describe("official result card access", () => {
-  const approvedMonthly = { requiresApproval: true, workflowStatus: "approved" as const, examType: "monthly" as const };
+  const approvedMonthly = { requiresApproval: true, workflowStatus: "approved" as const, examType: "monthly" as const, month: 9 };
 
   it("gives principals the same approved-card printing capability as student-management staff", () => {
     expect(canPrintOfficialResultCard({ role: "principal", permissions: [] }, approvedMonthly)).toBe(true);
@@ -47,5 +47,16 @@ describe("official result card access", () => {
   it("does not print unapproved or unsupported assessments", () => {
     expect(canPrintOfficialResultCard({ role: "principal", permissions: [] }, { ...approvedMonthly, workflowStatus: "pending_approval" })).toBe(false);
     expect(canPrintOfficialResultCard({ role: "principal", permissions: [] }, { ...approvedMonthly, examType: "quiz" })).toBe(false);
+  });
+
+  it("recovers the month from the exam date for older records and rejects incomplete monthly records", () => {
+    expect(canPrintOfficialResultCard(
+      { role: "principal", permissions: [] },
+      { ...approvedMonthly, month: null, examDate: "2026-09-15" }
+    )).toBe(true);
+    expect(canPrintOfficialResultCard(
+      { role: "principal", permissions: [] },
+      { ...approvedMonthly, month: null, examDate: null }
+    )).toBe(false);
   });
 });

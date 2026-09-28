@@ -23,14 +23,32 @@ export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "se
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
 export const majorAssessmentTypes: ExamType[] = requiredResultExamTypes;
 
+function resolveResultMonth(exam: { examType: ExamType; month?: number | null; examDate?: string | null }) {
+  if (exam.examType !== "monthly") return exam.month ?? null;
+
+  const explicitMonth = Number(exam.month);
+  if (Number.isInteger(explicitMonth) && explicitMonth >= 1 && explicitMonth <= 12) return explicitMonth;
+
+  const dateMonth = exam.examDate?.match(/^\d{4}-(\d{2})/)?.[1];
+  const inferredMonth = Number(dateMonth);
+  return Number.isInteger(inferredMonth) && inferredMonth >= 1 && inferredMonth <= 12 ? inferredMonth : null;
+}
+
 export function canPrintOfficialResultCard(
   user: Pick<AppUser, "role" | "permissions">,
-  exam: { requiresApproval: boolean; workflowStatus: ResultWorkflowStatus; examType: ExamType }
+  exam: {
+    requiresApproval: boolean;
+    workflowStatus: ResultWorkflowStatus;
+    examType: ExamType;
+    month?: number | null;
+    examDate?: string | null;
+  }
 ) {
   return hasPermission(user.role, "results:generate", user.permissions)
     && exam.requiresApproval
     && exam.workflowStatus === "approved"
-    && requiredResultExamTypes.includes(exam.examType);
+    && requiredResultExamTypes.includes(exam.examType)
+    && (exam.examType !== "monthly" || resolveResultMonth(exam) !== null);
 }
 
 const examTypeLabels: Record<ExamType, string> = {
@@ -677,7 +695,7 @@ export async function getResultsManagementWorkspace(
   let query = supabase
     .from("exams")
     .select(
-      "id,class_id,title,exam_type,assessment_category,requires_approval,term,status,approval_status,exam_date,uploaded_by_teacher_id,uploaded_by_teacher_name,uploaded_at,approved_by_principal_id,approved_by_principal_name,approved_at,rejection_reason,created_at,classes(name,grades(name),sections(name)),subjects(name),creator:profiles!exams_created_by_fkey(id,full_name),result_approvals(id,status,principal_comment,submitted_at,reviewed_at)"
+      "id,class_id,title,exam_type,month,assessment_category,requires_approval,term,status,approval_status,exam_date,uploaded_by_teacher_id,uploaded_by_teacher_name,uploaded_at,approved_by_principal_id,approved_by_principal_name,approved_at,rejection_reason,created_at,classes(name,grades(name),sections(name)),subjects(name),creator:profiles!exams_created_by_fkey(id,full_name),result_approvals(id,status,principal_comment,submitted_at,reviewed_at)"
     )
     .eq("school_id", user.schoolId)
     .order("created_at", { ascending: false });
@@ -704,8 +722,10 @@ export async function getResultsManagementWorkspace(
   return (data ?? []).map((row: any) => {
     const workflowStatus = getWorkflowStatusFromExam(row);
     const approval = Array.isArray(row.result_approvals) ? row.result_approvals[0] : row.result_approvals;
+    const month = resolveResultMonth({ examType: row.exam_type, month: row.month, examDate: row.exam_date });
     return {
       ...row,
+      month,
       workflowStatus,
       approvalId: approval?.id ?? null,
       uploadedByTeacherId: row.uploaded_by_teacher_id ?? row.creator?.id ?? null,
@@ -716,7 +736,9 @@ export async function getResultsManagementWorkspace(
       canPrint: canPrintOfficialResultCard(user, {
         requiresApproval: row.requires_approval,
         workflowStatus,
-        examType: row.exam_type
+        examType: row.exam_type,
+        month,
+        examDate: row.exam_date
       })
     };
   });
@@ -754,9 +776,10 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
 
   const workflowStatus = getWorkflowStatusFromExam(exam);
   const approval = Array.isArray(exam.result_approvals) ? exam.result_approvals[0] : exam.result_approvals;
+  const month = resolveResultMonth({ examType: exam.exam_type, month: exam.month, examDate: exam.exam_date });
 
   return {
-    exam: { ...exam, workflowStatus },
+    exam: { ...exam, month, workflowStatus },
     approval,
     marks: (marks ?? []).map((row: any) => ({
       student_name: formatFullName(row.students?.first_name, row.students?.last_name),
@@ -771,7 +794,9 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
     canPrint: canPrintOfficialResultCard(user, {
       requiresApproval: exam.requires_approval,
       workflowStatus,
-      examType: exam.exam_type
+      examType: exam.exam_type,
+      month,
+      examDate: exam.exam_date
     })
   };
 }
