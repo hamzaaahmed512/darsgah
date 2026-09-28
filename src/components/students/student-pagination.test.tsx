@@ -29,19 +29,16 @@ describe("StudentPagination", () => {
     searchParams.set("pageSize", "25");
     render(<StudentPagination count={70} page={1} pageSize={25} />);
 
-    expect(screen.getByRole("button", { name: "Previous page" })).toHaveProperty("disabled", true);
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
-
-    expect(replace).toHaveBeenCalledWith("/students?status=active&pageSize=25&page=2");
+    expect(screen.getByLabelText("Previous page").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("link", { name: "Next page" }).getAttribute("href"))
+      .toBe("/students?status=active&pageSize=25&page=2");
   });
 
   it("moves back to the first page and removes the page parameter", () => {
     searchParams.set("page", "2");
     render(<StudentPagination count={30} page={2} pageSize={10} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
-
-    expect(replace).toHaveBeenCalledWith("/students");
+    expect(screen.getByRole("link", { name: "Previous page" }).getAttribute("href")).toBe("/students");
   });
 
   it("resets to page one when the page size changes", () => {
