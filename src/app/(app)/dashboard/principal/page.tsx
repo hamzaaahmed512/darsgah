@@ -9,7 +9,7 @@ import { LazyClassDistributionChart } from "@/components/dashboard/lazy-responsi
 import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components/finance/lazy-finance-dashboard-charts";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
-import { formatCompactPKR, formatPKR } from "@/lib/utils";
+import { formatCompactPKR } from "@/lib/utils";
 import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { getStudentGenderCounts } from "@/lib/services/students";
@@ -57,7 +57,7 @@ function OverviewFinanceStatCard({
 }
 
 function formatFinanceAmount(amount: number) {
-  return Math.abs(amount) >= 1_000_000 ? formatCompactPKR(amount) : formatPKR(amount);
+  return formatCompactPKR(amount);
 }
 
 function contributionText(current: number, lifetime: number) {

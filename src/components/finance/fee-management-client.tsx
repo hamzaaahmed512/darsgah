@@ -179,8 +179,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   return (
     <>
       <div id="fee-management-report" className="pb-24">
-        <Card className="overflow-hidden rounded-[30px] border border-blue-100 bg-white shadow-[0_16px_44px_rgba(37,99,235,0.06)]">
-          <div className="border-b border-blue-100 px-5 py-5 sm:px-6">
+        <Card className="rounded-[24px] border border-blue-200 bg-white px-5 py-5 shadow-[0_12px_34px_rgba(37,99,235,0.05)] sm:px-6">
+          <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-[1.5rem] font-bold text-ink">Student Fee Accounts</h2>
@@ -226,26 +226,27 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <span>Show discounted accounts only</span>
             </label>
           </div>
+        </Card>
 
           {!filtered.length ? (
-            <div className="p-5">
+            <Card className="mt-5 rounded-[22px] border border-blue-200 bg-white p-5 shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
               <EmptyState title="No fee accounts found" description="Try adjusting your search or filter criteria." />
-            </div>
+            </Card>
           ) : (
-          <>
-          <div className="border-b border-blue-100 px-5 py-4 sm:px-6"><div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Student Fee Accounts</h3><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filtered.length} account{filtered.length === 1 ? "" : "s"}</span></div></div>
-          <div className="responsive-table-cards overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
+          <Card className="mt-5 min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+          <div className="border-b border-blue-200 px-5 py-4 sm:px-6"><div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Student Fee Accounts</h3><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filtered.length} account{filtered.length === 1 ? "" : "s"}</span></div></div>
+          <div className="hidden max-w-full overflow-x-auto lg:block">
+            <table className="w-full min-w-[1120px] text-left text-sm">
+              <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-5 py-4">Student</th>
-                  <th className="px-5 py-4">Class</th>
-                  <th className="px-5 py-4">Payable</th>
-                  <th className="px-5 py-4">Paid</th>
-                  <th className="px-5 py-4">Remaining</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Receipt</th>
-                  {canManage && <th className="px-5 py-4 text-right"><span className="sr-only">Actions</span></th>}
+                  <th className="px-6 py-4">Student</th>
+                  <th className="px-6 py-4">Class</th>
+                  <th className="px-6 py-4">Payable</th>
+                  <th className="px-6 py-4">Paid</th>
+                  <th className="px-6 py-4">Remaining</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Receipt</th>
+                  {canManage && <th className="px-6 py-4 text-right"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -255,51 +256,57 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   return (
                     <tr
                       key={acc.id}
-                      className={`border-t border-blue-100/70 ${isSelected ? "bg-blue-50/70" : "hover:bg-blue-50/35"}`}
+                      className={`border-t border-slate-100 transition ${isSelected ? "bg-blue-50/70" : "hover:bg-blue-50/30"}`}
                     >
-                      <td data-label="Student" className="px-5 py-4">
+                      <td data-label="Student" className="px-6 py-5">
                         <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="flex items-center gap-3 text-left">
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-primary">{acc.student_name.slice(0, 1).toUpperCase()}</span><span><p className="font-semibold text-ink">{acc.student_name}</p><p className="text-xs text-muted">Adm: {acc.admission_number}</p></span>
                         </button>
                       </td>
-                      <td data-label="Class" className="px-5 py-4">
+                      <td data-label="Class" className="px-6 py-5">
                         <span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span>
                       </td>
-                      <td data-label="Payable" className="px-5 py-4 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
-                      <td data-label="Paid" className="px-5 py-4 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
-                      <td data-label="Remaining" className="px-5 py-4 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
-                      <td data-label="Status" className="px-5 py-4">
+                      <td data-label="Payable" className="px-6 py-5 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
+                      <td data-label="Paid" className="px-6 py-5 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
+                      <td data-label="Remaining" className="px-6 py-5 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
+                      <td data-label="Status" className="px-6 py-5">
                         <FeeStatus status={acc.payment_status} />
                       </td>
-                      <td data-label="Receipt" className="px-5 py-4">
+                      <td data-label="Receipt" className="px-6 py-5">
                         {receipt ? (
                           <button
                             type="button"
                             onClick={() => setSelectedReceipt(receipt)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary transition hover:bg-blue-100"
+                            aria-label={`View or print receipt for ${acc.student_name}`}
+                            title="View or print receipt"
                           >
-                            <Receipt className="h-3.5 w-3.5" /> View/Print
+                            <Receipt className="h-4 w-4" aria-hidden="true" />
                           </button>
                         ) : (
                           <span className="text-xs text-muted">No receipt yet</span>
                         )}
                       </td>
                       {canManage && (
-                        <td className="responsive-table-actions px-5 py-4 text-right">
+                        <td className="px-6 py-5 text-right">
                           <div className="flex justify-end gap-2 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => handleOpenCollect(acc.id)}
-                              className="inline-flex min-h-9 whitespace-nowrap items-center gap-1 rounded-xl bg-primary-soft px-3 py-1.5 text-xs font-bold text-primary hover:brightness-95"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary transition hover:brightness-95"
+                              aria-label={`Collect payment from ${acc.student_name}`}
+                              title="Collect payment"
                             >
-                              <Wallet className="h-3 w-3" /> Collect
+                              <Wallet className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleOpenDiscount(acc)}
-                              className="inline-flex min-h-9 whitespace-nowrap items-center gap-1 rounded-xl bg-success-soft px-3 py-1.5 text-xs font-bold text-success hover:brightness-95"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success transition hover:brightness-95"
+                              aria-label={`Apply discount for ${acc.student_name}`}
+                              title="Apply discount"
                             >
-                              <Percent className="h-3 w-3" /> Discount
+                              <Percent className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         </td>
@@ -310,9 +317,35 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               </tbody>
             </table>
           </div>
-          </>
+          <div className="grid gap-3 p-4 lg:hidden">
+            {filtered.map((acc) => {
+              const receipt = latestReceiptByAccount.get(acc.id);
+              const isSelected = selectedAccountId === acc.id;
+              return (
+                <article key={acc.id} className={`min-w-0 overflow-hidden rounded-[20px] border bg-white p-4 shadow-sm ${isSelected ? "border-blue-300 bg-blue-50/40" : "border-slate-200"}`}>
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                    <button type="button" onClick={() => setSelectedAccountId(acc.id)} className="flex min-w-0 items-center gap-3 text-left">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-primary">{acc.student_name.slice(0, 1).toUpperCase()}</span>
+                      <span className="min-w-0"><span className="block truncate font-semibold text-ink">{acc.student_name}</span><span className="block text-xs text-muted">Adm: {acc.admission_number}</span></span>
+                    </button>
+                    <FeeStatus status={acc.payment_status} />
+                  </div>
+                  <div className="mt-3"><span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span></div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                    <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Payable</dt><dd className="mt-1 font-semibold text-ink">{formatPKR(Number(acc.total_payable))}</dd></div>
+                    <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Paid</dt><dd className="mt-1 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</dd></div>
+                    <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Remaining</dt><dd className="mt-1 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</dd></div>
+                  </dl>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                    {receipt ? <button type="button" onClick={() => setSelectedReceipt(receipt)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary" aria-label={`View or print receipt for ${acc.student_name}`} title="View or print receipt"><Receipt className="h-4 w-4" aria-hidden="true" /></button> : <span className="mr-auto text-xs text-muted">No receipt yet</span>}
+                    {canManage ? <><button type="button" onClick={() => handleOpenCollect(acc.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-label={`Collect payment from ${acc.student_name}`} title="Collect payment"><Wallet className="h-4 w-4" aria-hidden="true" /></button><button type="button" onClick={() => handleOpenDiscount(acc)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success" aria-label={`Apply discount for ${acc.student_name}`} title="Apply discount"><Percent className="h-4 w-4" aria-hidden="true" /></button></> : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          </Card>
           )}
-        </Card>
 
       </div>
 

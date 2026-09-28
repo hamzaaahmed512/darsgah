@@ -89,54 +89,67 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <div className="flex flex-col gap-6">
 
           {/* Teacher Leave Usage Table (Principal/Admin) */}
-          <Card className="order-3 rounded-[30px] border border-outline/70 bg-white shadow-card">
-            <CardHeader className="gap-4 border-b border-outline/50 pb-5">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
-                  <Users className="h-6 w-6" aria-hidden="true" />
-                </div>
-                <div>
-                  <CardTitle className="text-[1.8rem]">Teacher Leave Usage</CardTitle>
-                  <p className="mt-1 text-base text-muted">Monitor leave limits and usage across all teaching staff.</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-8 pt-6">
+          <Card className="order-3 min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-xl"><Users className="h-5 w-5 text-primary" aria-hidden="true" />Teacher Leave Usage</CardTitle>
+              {!teacherLeaveSummary.migrationRequired ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{teacherLeaveSummary.summaries.length} teachers</span> : null}
+            </div>
+            <div>
               {teacherLeaveSummary.migrationRequired ? (
-                <EmptyState title="Leave data unavailable" description="The hosted database does not have the staff leave table yet." />
+                <div className="p-5"><EmptyState title="Leave data unavailable" description="The hosted database does not have the staff leave table yet." /></div>
               ) : !teacherLeaveSummary.summaries.length ? (
-                <EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." />
+                <div className="p-5"><EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." /></div>
               ) : (
-                <div className="overflow-hidden rounded-[24px] border border-blue-200/90 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.04)]">
-                  <div className="overflow-x-auto !rounded-none !border-0 !shadow-none">
+                <>
+                  <div className="hidden overflow-x-auto lg:block">
                     <table className="min-w-full text-left text-sm">
-                      <thead className="bg-blue-50/35 font-label text-xs uppercase tracking-[0.14em] text-muted">
+                      <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                         <tr>
-                          <th className="px-5 py-4">Teacher Name</th>
-                          <th className="px-5 py-4">Annual (Used/Limit)</th>
-                          <th className="px-5 py-4">Monthly (Used/Limit)</th>
-                          <th className="px-5 py-4">Weekly Limit</th>
+                          <th className="px-6 py-4">Teacher</th>
+                          <th className="px-6 py-4">Annual Used / Limit</th>
+                          <th className="px-6 py-4">Monthly Used / Limit</th>
+                          <th className="px-6 py-4">Weekly Limit</th>
                         </tr>
                       </thead>
                       <tbody>
                         {teacherLeaveSummary.summaries.map((s) => (
-                          <tr key={s.teacherId} className="border-t border-blue-50 transition-colors hover:bg-blue-50/25">
-                            <td className="px-5 py-4 font-semibold">{s.teacherName}</td>
-                            <td className="px-5 py-4">
+                          <tr key={s.teacherId} className="border-t border-slate-100 transition hover:bg-blue-50/30">
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-3">
+                                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses(s.teacherName)}`}>{getInitials(s.teacherName)}</span>
+                                <span className="font-semibold text-slate-900">{s.teacherName}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5 text-slate-600">
                               <span className={s.annualLimit !== null && s.annualUsed > s.annualLimit ? "font-semibold text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit ?? <span className="text-muted">No limit</span>}
                             </td>
-                            <td className="px-5 py-4">
+                            <td className="px-6 py-5 text-slate-600">
                               <span className={s.monthlyLimit !== null && s.monthlyUsed > s.monthlyLimit ? "font-semibold text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit ?? <span className="text-muted">No limit</span>}
                             </td>
-                            <td className="px-5 py-4">{s.weeklyLimit ?? <span className="text-muted">No limit</span>}</td>
+                            <td className="px-6 py-5 text-slate-600">{s.weeklyLimit ?? <span className="text-muted">No limit</span>}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                  <div className="grid gap-3 p-4 lg:hidden">
+                    {teacherLeaveSummary.summaries.map((s) => (
+                      <article key={s.teacherId} className="min-w-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex min-w-0 items-center gap-3 border-b border-slate-100 pb-3">
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses(s.teacherName)}`}>{getInitials(s.teacherName)}</span>
+                          <p className="truncate font-semibold text-slate-900">{s.teacherName}</p>
+                        </div>
+                        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                          <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Annual</dt><dd className="mt-1 font-semibold text-slate-700"><span className={s.annualLimit !== null && s.annualUsed > s.annualLimit ? "text-red-600" : ""}>{s.annualUsed}</span> / {s.annualLimit ?? "No limit"}</dd></div>
+                          <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Monthly</dt><dd className="mt-1 font-semibold text-slate-700"><span className={s.monthlyLimit !== null && s.monthlyUsed > s.monthlyLimit ? "text-red-600" : ""}>{s.monthlyUsed}</span> / {s.monthlyLimit ?? "No limit"}</dd></div>
+                          <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Weekly limit</dt><dd className="mt-1 font-semibold text-slate-700">{s.weeklyLimit ?? "No limit"}</dd></div>
+                        </dl>
+                      </article>
+                    ))}
+                  </div>
+                </>
               )}
-            </CardContent>
+            </div>
           </Card>
 
           {/* Staff Leave Requests Card */}

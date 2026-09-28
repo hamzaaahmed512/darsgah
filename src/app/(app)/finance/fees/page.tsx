@@ -6,7 +6,7 @@ import { getAcademicOptions } from "@/lib/services/academics";
 import { PageHeader } from "@/components/layout/page-header";
 import { FeeManagementClient } from "@/components/finance/fee-management-client";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { formatPKR } from "@/lib/utils";
+import { formatCompactPKR } from "@/lib/utils";
 import { hasPermission } from "@/lib/permissions";
 
 export default async function FeeManagementPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
@@ -47,21 +47,21 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Expected Billing"
-          value={formatPKR(dashboard.totalExpected)}
+          value={formatCompactPKR(dashboard.totalExpected)}
           icon={Banknote}
           tone="blue"
           trend="Total payable across fee accounts"
         />
         <StatCard
           label="Collected"
-          value={formatPKR(dashboard.totalCollected)}
+          value={formatCompactPKR(dashboard.totalCollected)}
           icon={Banknote}
           tone="green"
           trend="Payments posted against fee accounts"
         />
         <StatCard
           label="Outstanding"
-          value={formatPKR(dashboard.totalOutstanding)}
+          value={formatCompactPKR(dashboard.totalOutstanding)}
           icon={AlertCircle}
           tone="red"
           trend={`${dashboard.pendingPayments} pending account${dashboard.pendingPayments === 1 ? "" : "s"}`}
@@ -69,7 +69,7 @@ export default async function FeeManagementPage({ searchParams }: { searchParams
         />
         <StatCard
           label="Discounts"
-          value={formatPKR(dashboard.totalDiscounts)}
+          value={formatCompactPKR(dashboard.totalDiscounts)}
           icon={Percent}
           tone="amber"
           trend="Approved fee adjustments"

@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { TRANSACTION_CATEGORY_LABELS, type TransactionCategory, type TransactionDirection } from "@/lib/finance-transactions";
 import { getFinanceTransactions } from "@/lib/services/finance";
-import { formatDatePK, formatPKR } from "@/lib/utils";
+import { formatCompactPKR, formatDatePK, formatPKR } from "@/lib/utils";
 
 function canViewFinancialReports(role: string) {
   return role !== "administrator";
@@ -43,9 +43,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
     {showTotals ? (
       <section className="mb-5 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Income" value={formatPKR(data.totals.income)} hint="Transactions in selected range" icon={ArrowDownCircle} tone="green" />
-        <StatCard label="Expenses" value={formatPKR(data.totals.expenses)} hint="Transactions in selected range" icon={ArrowUpCircle} tone="red" />
-        <StatCard label="Net" value={formatPKR(data.totals.income - data.totals.expenses)} hint="Income minus expenses" icon={ArrowDownCircle} tone="blue" />
+        <StatCard label="Income" value={formatCompactPKR(data.totals.income)} hint="Transactions in selected range" icon={ArrowDownCircle} tone="green" />
+        <StatCard label="Expenses" value={formatCompactPKR(data.totals.expenses)} hint="Transactions in selected range" icon={ArrowUpCircle} tone="red" />
+        <StatCard label="Net" value={formatCompactPKR(data.totals.income - data.totals.expenses)} hint="Income minus expenses" icon={ArrowDownCircle} tone="blue" />
       </section>
     ) : null}
 

@@ -71,7 +71,7 @@ function percentDelta(
 }
 
 function formatFinanceAmount(amount: number) {
-  return Math.abs(amount) >= 1_000_000 ? formatCompactPKR(amount) : formatPKR(amount);
+  return formatCompactPKR(amount);
 }
 
 function formatMargin(value: number) {

@@ -6,7 +6,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { StaffPayTable } from "@/components/payroll/staff-pay-table";
 import { AddAdjustmentDialog } from "@/components/payroll/add-adjustment-dialog";
-import { formatPKR } from "@/lib/utils";
+import { formatCompactPKR } from "@/lib/utils";
 import { Banknote, CheckCircle, Clock, Users } from "lucide-react";
 
 export default async function PayrollDashboardPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
@@ -53,7 +53,7 @@ export default async function PayrollDashboardPage({ searchParams }: { searchPar
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Employees" value={stats.employees.toString()} hint="Active staff in payroll" icon={Users} tone="slate" />
-        <StatCard label="Total Staff Pay" value={formatPKR(stats.totalPayable)} hint={`For ${formatMonth(month)}`} icon={Banknote} tone="blue" />
+        <StatCard label="Total Staff Pay" value={formatCompactPKR(stats.totalPayable)} hint={`For ${formatMonth(month)}`} icon={Banknote} tone="blue" />
         <StatCard label="Paid" value={stats.paid.toString()} hint="Marked paid this month" icon={CheckCircle} tone="green" />
         <StatCard label="Unpaid" value={stats.unpaid.toString()} hint="Pending payment" icon={Clock} tone="amber" />
       </div>

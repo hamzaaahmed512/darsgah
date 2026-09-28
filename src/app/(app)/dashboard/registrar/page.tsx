@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { formatPKR, formatDatePK } from "@/lib/utils";
+import { formatCompactPKR, formatPKR, formatDatePK } from "@/lib/utils";
 import { GraduationCap, Wallet, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -70,8 +70,8 @@ export default async function RegistrarDashboardPage() {
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} hint="Active enrollment" icon={GraduationCap} tone="blue" />
-        <StatCard label="Collected Fees" value={formatPKR(finance.totalCollected)} hint="Total recorded payments" icon={Wallet} tone="green" />
-        <StatCard label="Outstanding Fees" value={formatPKR(finance.totalOutstanding)} hint="Unpaid dues" icon={AlertCircle} tone="amber" />
+        <StatCard label="Collected Fees" value={formatCompactPKR(finance.totalCollected)} hint="Total recorded payments" icon={Wallet} tone="green" />
+        <StatCard label="Outstanding Fees" value={formatCompactPKR(finance.totalOutstanding)} hint="Unpaid dues" icon={AlertCircle} tone="amber" />
         <StatCard label="Overdue Accounts" value={finance.overduePayments.toString()} hint="Past due date" icon={AlertCircle} tone="red" />
       </section>
 
