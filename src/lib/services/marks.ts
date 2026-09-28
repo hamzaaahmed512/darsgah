@@ -670,21 +670,27 @@ export async function returnApprovedExam(user: AppUser, examId: string, reason: 
   await logActivity(user, "approved_exam_returned_to_teacher", "exam", examId, { reason: comment });
 }
 
-export async function getResultCardsWorkspace(user: AppUser, filters: { classId?: string; examType?: ExamType; month?: number } = {}) {
+export async function getResultCardsWorkspace(user: AppUser, filters: { sessionId?: string; classId?: string; examType?: ExamType; month?: number } = {}) {
   if (!hasPermission(user.role, "results:generate", user.permissions)) throw new Error("You do not have permission to generate result cards.");
   const supabase = await createClient();
   const examType = requiredResultExamTypes.includes(filters.examType as ExamType) ? filters.examType as ExamType : "monthly";
   const month = examType === "monthly" ? filters.month ?? new Date().getMonth() + 1 : undefined;
+  const { data: sessions, error: sessionError } = await supabase
+    .from("academic_years").select("id,name,is_active").eq("school_id", user.schoolId).order("starts_on", { ascending: false });
+  if (sessionError) throw new Error(sessionError.message);
+  const selectedSessionId = filters.sessionId && sessions?.some((year) => year.id === filters.sessionId)
+    ? filters.sessionId : sessions?.find((year) => year.is_active)?.id ?? sessions?.[0]?.id;
   const { data: classes, error: classError } = await supabase
     .from("classes")
     .select("id,name,grades(name),sections(name)")
     .eq("school_id", user.schoolId)
+    .eq("academic_year_id", selectedSessionId ?? "00000000-0000-0000-0000-000000000000")
     .order("name");
   if (classError) throw new Error(classError.message);
 
-  const selectedClassId = filters.classId ?? classes?.[0]?.id;
+  const selectedClassId = classes?.some((item) => item.id === filters.classId) ? filters.classId : classes?.[0]?.id;
   const readiness = selectedClassId ? await getResultReadiness(user, selectedClassId, examType, month) : null;
-  return { classes: classes ?? [], selectedClassId, examType, month, readiness };
+  return { sessions: sessions ?? [], selectedSessionId, classes: classes ?? [], selectedClassId, examType, month, readiness };
 }
 
 export async function getResultsManagementWorkspace(
@@ -823,7 +829,6 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
       .select("students(id,first_name,last_name,admission_number)")
       .eq("school_id", user.schoolId)
       .eq("class_id", classId)
-      .eq("status", "active")
       .order("created_at")
   ]);
 
@@ -895,7 +900,7 @@ async function getResultReadiness(user: AppUser, classId: string, examType: Exam
   };
 }
 
-export async function getPrintableResultCards(user: AppUser, filters: { classId: string; examType: ExamType; month?: number; studentId?: string }) {
+export async function getPrintableResultCards(user: AppUser, filters: { sessionId?: string; classId: string; examType: ExamType; month?: number; studentId?: string }) {
   if (!hasPermission(user.role, "results:generate", user.permissions)) throw new Error("You do not have permission to generate result cards.");
   if (!requiredResultExamTypes.includes(filters.examType)) throw new Error("Result cards are limited to the four approved exam types.");
   if (filters.examType === "monthly" && (!filters.month || filters.month < 1 || filters.month > 12)) throw new Error("Choose a valid month.");
@@ -903,12 +908,13 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
   const adminClient = createAdminClient();
   const readiness = await getResultReadiness(user, filters.classId, filters.examType, filters.month);
   const [classResult, settingsResult] = await Promise.all([
-    supabase.from("classes").select("id,name,grades(name),sections(name),academic_years(name)").eq("school_id", user.schoolId).eq("id", filters.classId).maybeSingle(),
+    supabase.from("classes").select("id,name,academic_year_id,grades(name),sections(name),academic_years(name)").eq("school_id", user.schoolId).eq("id", filters.classId).maybeSingle(),
     adminClient.from("school_settings").select("settings").eq("school_id", user.schoolId).maybeSingle()
   ]);
   const { data: classRow, error: classError } = classResult;
   if (classError) throw new Error(classError.message);
   if (!classRow) throw new Error("Class not found.");
+  if (filters.sessionId && classRow.academic_year_id !== filters.sessionId) throw new Error("The class does not belong to the selected session.");
 
   if (settingsResult.error) throw new Error(settingsResult.error.message);
   const schoolSettings = (settingsResult.data?.settings ?? {}) as Record<string, any>;
@@ -931,7 +937,6 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
     .select("students(id,first_name,last_name,admission_number)")
     .eq("school_id", user.schoolId)
     .eq("class_id", filters.classId)
-    .eq("status", "active")
     .order("created_at");
 
   if (filters.studentId) studentsQuery = studentsQuery.eq("student_id", filters.studentId);
@@ -942,7 +947,6 @@ export async function getPrintableResultCards(user: AppUser, filters: { classId:
         .from("marks")
         .select("student_id,marks_obtained,grade,teacher_comment,exams!inner(id,title,exam_type,month,max_marks,status,subjects(name),requires_approval,approval_status)")
         .eq("school_id", user.schoolId)
-        .eq("class_id", filters.classId)
         .in("exam_id", approvedExamIds)
         .order("student_id")
     : Promise.resolve({ data: [], error: null });

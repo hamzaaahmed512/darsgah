@@ -11,7 +11,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
   const classId = params.classId ?? "";
   const examType = (params.examType ?? "monthly") as ExamType;
   const month = params.month ? Number(params.month) : undefined;
-  const result = await getPrintableResultCards(user, { classId, examType, month, studentId: params.studentId });
+  const result = await getPrintableResultCards(user, { sessionId: params.sessionId, classId, examType, month, studentId: params.studentId });
   const classRow: any = result.classRow;
   const template = result.template;
   const examLabel = `${formatExamType(examType)}${examType === "monthly" && month ? ` / ${new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, month - 1, 1))}` : ""}`;

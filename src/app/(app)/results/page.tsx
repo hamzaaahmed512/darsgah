@@ -42,7 +42,8 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const [results, cardsWorkspace] = await Promise.all([
     getResultsManagementWorkspace(user, { classId: params.classId, term: params.term, status }),
     canGenerateCards
-      ? getResultCardsWorkspace(user, {
+        ? getResultCardsWorkspace(user, {
+          sessionId: params.sessionId,
           classId: params.classId,
           examType: params.examType as any,
           month: params.month ? Number(params.month) : undefined
