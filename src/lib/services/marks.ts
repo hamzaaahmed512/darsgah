@@ -23,6 +23,16 @@ export const requiredResultExamTypes: ExamType[] = ["monthly", "first_term", "se
 export const regularAssessmentTypes: ExamType[] = ["quiz", "class_test", "assignment", "presentation", "lab", "viva", "attendance"];
 export const majorAssessmentTypes: ExamType[] = requiredResultExamTypes;
 
+export function canPrintOfficialResultCard(
+  user: Pick<AppUser, "role" | "permissions">,
+  exam: { requiresApproval: boolean; workflowStatus: ResultWorkflowStatus; examType: ExamType }
+) {
+  return hasPermission(user.role, "results:generate", user.permissions)
+    && exam.requiresApproval
+    && exam.workflowStatus === "approved"
+    && requiredResultExamTypes.includes(exam.examType);
+}
+
 const examTypeLabels: Record<ExamType, string> = {
   quiz: "Quiz",
   class_test: "Class Test",
@@ -703,11 +713,11 @@ export async function getResultsManagementWorkspace(
       canApprove: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canReject: filters.scope !== "teacher" && user.role === "principal" && row.requires_approval && workflowStatus === "pending_approval",
       canReturn: filters.scope !== "teacher" && (user.role === "principal" || user.role === "administrator") && row.requires_approval && workflowStatus === "approved",
-      canPrint:
-        user.role === "student_staff" &&
-        row.requires_approval &&
-        workflowStatus === "approved" &&
-        requiredResultExamTypes.includes(row.exam_type)
+      canPrint: canPrintOfficialResultCard(user, {
+        requiresApproval: row.requires_approval,
+        workflowStatus,
+        examType: row.exam_type
+      })
     };
   });
 }
@@ -758,11 +768,11 @@ export async function getExamResultDetail(user: AppUser, examId: string) {
     canApprove: user.role === "principal" && exam.requires_approval && workflowStatus === "pending_approval",
     canReject: user.role === "principal" && exam.requires_approval && workflowStatus === "pending_approval",
     canReturn: (user.role === "principal" || user.role === "administrator") && exam.requires_approval && workflowStatus === "approved",
-    canPrint:
-      user.role === "student_staff" &&
-      exam.requires_approval &&
-      workflowStatus === "approved" &&
-      requiredResultExamTypes.includes(exam.exam_type)
+    canPrint: canPrintOfficialResultCard(user, {
+      requiresApproval: exam.requires_approval,
+      workflowStatus,
+      examType: exam.exam_type
+    })
   };
 }
 

@@ -25,7 +25,7 @@ const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string 
 
 function roleDescription(role: UserRole) {
   if (role === "teacher") return "Review every result you have uploaded, including approval status for major examinations.";
-  if (role === "principal") return "Review uploaded major examination results, approve or reject them, and track ownership.";
+  if (role === "principal") return "Review and approve uploaded results, then generate and print official result cards for the school.";
   if (role === "student_staff") return "View approved major examinations and print official result cards when ready.";
   return "Monitor result uploads, approval status, and registrar printing readiness.";
 }
@@ -176,7 +176,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
               <ResultsTable
                 rows={results}
                 showApprovalColumns
-                showPrint={user.role === "student_staff"}
+                showPrint={canGenerateCards}
                 inlineApproval={user.role === "principal"}
               />
           )}

@@ -33,7 +33,8 @@ describe("role permissions", () => {
   it("limits exam approval and result-card capabilities by role", () => {
     expect(hasPermission("principal", "marks:approve")).toBe(true);
     expect(hasPermission("principal", "marks:manage")).toBe(false);
-    expect(hasPermission("principal", "results:generate")).toBe(false);
+    expect(hasPermission("principal", "results:generate")).toBe(true);
+    expect(hasPermission("principal", "results:generate", [])).toBe(true);
     expect(hasPermission("teacher", "marks:manage")).toBe(true);
     expect(hasPermission("teacher", "marks:approve")).toBe(false);
     expect(hasPermission("student_staff", "results:generate")).toBe(true);
