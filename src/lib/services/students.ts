@@ -896,35 +896,64 @@ export async function archiveStudent(user: AppUser, id: string) {
 
 export async function exportStudents(user: AppUser, filters: StudentFilters = {}) {
   const supabase = await createClient();
-  let query = supabase
-    .from("student_directory")
-    .select("admission_number, name_en, father_name_en, father_phone, gender, class_name, grade_name, section_name, status, date_of_birth, email, phone, address")
-    .eq("school_id", user.schoolId)
-    .order("last_name");
+  const isTeacher = user.role === "teacher" || user.role === "head_teacher";
+  let headClassIds: string[] | null = null;
 
-  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
-  if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
-  if (filters.q) { const q = postgrestSearchTerm(filters.q); if (q) query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,name_en.ilike.%${q}%,father_name_en.ilike.%${q}%,father_phone.ilike.%${q}%,admission_number.ilike.%${q}%`); }
+  if (isTeacher) {
+    const { data, error } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("school_id", user.schoolId)
+      .eq("head_teacher_id", user.id);
+    if (error) throw new Error(error.message);
+    headClassIds = (data ?? []).map((row) => row.id);
+    if (!headClassIds.length) return [];
+  }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  // PostgREST applies a maximum row count to a single response. Fetch the
+  // complete filtered directory in deterministic batches so CSV exports are
+  // never tied to the visible page or silently truncated by that limit.
+  const batchSize = 500;
+  const data: any[] = [];
+  for (let from = 0; ; from += batchSize) {
+    let query = supabase
+      .from("student_directory")
+      .select("id, admission_number, first_name, last_name, name_en, guardian_name, father_name_en, father_phone, gender, class_name, grade_name, section_name, status, date_of_birth, email, phone, address")
+      .eq("school_id", user.schoolId)
+      .order("last_name")
+      .order("id");
 
-  if (!data || data.length === 0) return [];
+    if (headClassIds) query = query.in("class_id", headClassIds);
+    if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+    if (filters.classId && filters.classId !== "all") query = query.eq("class_id", filters.classId);
+    if (filters.q) {
+      const q = postgrestSearchTerm(filters.q);
+      if (q) query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,name_en.ilike.%${q}%,father_name_en.ilike.%${q}%,father_phone.ilike.%${q}%,admission_number.ilike.%${q}%`);
+    }
+
+    const result = await query.range(from, from + batchSize - 1);
+    if (result.error) throw new Error(result.error.message);
+    const batch = result.data ?? [];
+    data.push(...batch);
+    if (batch.length < batchSize) break;
+  }
+
+  if (!data.length) return [];
   
   return data.map(s => ({
     "Admission No": s.admission_number || "",
-    "Name (EN)": s.name_en || "",
-    "Father Name": s.father_name_en || "",
-    "Father Phone": s.father_phone || "",
+    "Name (EN)": formatDisplayName(s.name_en) || formatDisplayName(`${s.first_name ?? ""} ${s.last_name ?? ""}`),
+    "Father Name": isTeacher ? "" : formatDisplayName(s.father_name_en || s.guardian_name),
+    "Father Phone": isTeacher ? "" : s.father_phone || "",
     "Gender": s.gender || "",
     "Grade": s.grade_name || "",
     "Class": s.class_name || "",
     "Section": s.section_name || "",
     "Status": s.status || "",
     "DOB": s.date_of_birth || "",
-    "Email": s.email || "",
-    "Phone": s.phone || "",
-    "Address": s.address || ""
+    "Email": isTeacher ? "" : s.email || "",
+    "Phone": isTeacher ? "" : s.phone || "",
+    "Address": isTeacher ? "" : s.address || ""
   }));
 }
 

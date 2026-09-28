@@ -15,7 +15,8 @@ export function StudentPagination({ count, page, pageSize }: { count: number; pa
     const params = new URLSearchParams(searchParams);
     if (nextPage > 1) params.set("page", String(nextPage)); else params.delete("page");
     if (nextPageSize !== 10) params.set("pageSize", String(nextPageSize)); else params.delete("pageSize");
-    router.replace(params.size ? `${pathname}?${params}` : pathname);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
   }
 
   const visiblePages = Array.from({ length: pageCount }, (_, index) => index + 1).filter(

@@ -69,6 +69,34 @@ it("reserves a preview window before asynchronous generation and displays the PD
   await waitFor(() => expect(viewer.location.replace).toHaveBeenCalledWith("blob:report"));
   expect(viewer.opener).toBeNull();
 });
+it("opens CSV files in the in-app spreadsheet preview", async () => {
+  const viewer = { postMessage: vi.fn(), close: vi.fn(), closed: false };
+  vi.stubGlobal("open", vi.fn(() => viewer));
+  vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("preview-123");
+  render(<DownloadActionModal
+    title="Students Report"
+    filename="students.csv"
+    generate={async () => ({ blob: new Blob(["Name,Amount\nAli,1200"], { type: "text/csv" }), filename: "students.csv" })}
+    onClose={() => {}}
+  />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Preview Spreadsheet" }));
+  expect(window.open).toHaveBeenCalledWith("/spreadsheet-preview?preview=preview-123", "_blank");
+  window.dispatchEvent(new MessageEvent("message", {
+    origin: window.location.origin,
+    source: viewer as unknown as MessageEventSource,
+    data: { type: "darsgah:spreadsheet-preview-ready", previewId: "preview-123" }
+  }));
+
+  await waitFor(() => expect(viewer.postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: "darsgah:spreadsheet-preview",
+      previewId: "preview-123",
+      payload: expect.objectContaining({ filename: "students.csv" })
+    }),
+    window.location.origin
+  ));
+});
 it("uses native file sharing when supported", async () => {
   const share = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "canShare", { configurable: true, value: vi.fn(() => true) });

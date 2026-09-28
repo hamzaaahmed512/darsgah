@@ -4,6 +4,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, ExternalLink, Loader2, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  isSpreadsheetFile,
+  readSpreadsheetPreview,
+  SPREADSHEET_PREVIEW_MESSAGE,
+  SPREADSHEET_PREVIEW_READY_MESSAGE,
+  type SpreadsheetPreviewPayload
+} from "@/lib/spreadsheet-preview";
 
 export type DownloadDocument = { blob: Blob; filename: string };
 export type DownloadActionOptions = {
@@ -19,6 +26,43 @@ export function requestDownload(options: DownloadActionOptions) {
   window.dispatchEvent(new CustomEvent("document-action", { detail: options }));
 }
 
+function createPreviewHandshake(viewer: Window, previewId: string) {
+  let settled = false;
+  let cancelReady = () => {};
+
+  const ready = new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("The spreadsheet preview did not open. Please try again."));
+    }, 60_000);
+
+    function receive(event: MessageEvent) {
+      if (event.origin !== window.location.origin || event.source !== viewer) return;
+      if (event.data?.type !== SPREADSHEET_PREVIEW_READY_MESSAGE || event.data.previewId !== previewId) return;
+      cleanup();
+      resolve();
+    }
+
+    function cleanup() {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      window.removeEventListener("message", receive);
+    }
+
+    cancelReady = () => {
+      cleanup();
+      resolve();
+    };
+    window.addEventListener("message", receive);
+  });
+
+  return {
+    ready,
+    cancel: cancelReady
+  };
+}
+
 export function DownloadActionModal({ title, description, filename = "report.pdf", url, generate, shareUrl, onClose }: DownloadActionOptions & { onClose: () => void }) {
   const id = useId();
   const dialog = useRef<HTMLDivElement>(null);
@@ -32,6 +76,7 @@ export function DownloadActionModal({ title, description, filename = "report.pdf
   const [emailPrompt, setEmailPrompt] = useState(false);
   const [failed, setFailed] = useState(false);
   const isPdf = filename.toLowerCase().endsWith(".pdf");
+  const isSpreadsheet = isSpreadsheetFile(filename);
   useEffect(() => {
     active.current = true;
     const previous = document.activeElement as HTMLElement | null;
@@ -66,8 +111,14 @@ export function DownloadActionModal({ title, description, filename = "report.pdf
     busy.current = true;
     setPending(action); setMessage(""); setFailed(false); setEmailPrompt(false);
     // Reserve the window during the click so async generation does not trigger popup blockers.
-    const viewer = action === "preview" ? window.open("about:blank", "_blank") : null;
-    if (viewer) { viewer.opener = null; viewer.document.title = "Preparing document…"; }
+    const spreadsheetPreview = action === "preview" && isSpreadsheet;
+    const previewId = spreadsheetPreview
+      ? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      : null;
+    const previewUrl = previewId ? `/spreadsheet-preview?preview=${encodeURIComponent(previewId)}` : "about:blank";
+    const viewer = action === "preview" ? window.open(previewUrl, "_blank") : null;
+    const handshake = viewer && previewId ? createPreviewHandshake(viewer, previewId) : null;
+    if (viewer && !spreadsheetPreview) { viewer.opener = null; viewer.document.title = "Preparing document…"; }
     try {
       if (action === "preview" && !viewer) throw new Error("Allow pop-ups to preview this document.");
       if (!cached.current) {
@@ -92,6 +143,18 @@ export function DownloadActionModal({ title, description, filename = "report.pdf
           setEmailPrompt(true);
           setMessage("File sharing is unavailable in this browser. Download the file, then attach it to an email.");
         }
+      } else if (action === "preview" && viewer && previewId && handshake) {
+        const sheets = await readSpreadsheetPreview(file.blob);
+        if (!sheets.length) throw new Error("This spreadsheet does not contain any rows to preview.");
+        const payload: SpreadsheetPreviewPayload = {
+          previewId,
+          title,
+          filename: file.filename,
+          createdAt: Date.now(),
+          sheets
+        };
+        await handshake.ready;
+        viewer.postMessage({ type: SPREADSHEET_PREVIEW_MESSAGE, previewId, payload }, window.location.origin);
       } else if (action === "preview" && viewer) {
         let previewBlob = file.blob;
         if (!file.blob.type.includes("pdf") && !file.blob.type.startsWith("image/")) {
@@ -121,16 +184,20 @@ export function DownloadActionModal({ title, description, filename = "report.pdf
       if (active.current && !(error instanceof Error && error.name === "AbortError")) {
         setFailed(true); setMessage(error instanceof Error ? error.message : "Could not prepare this document. Please try again.");
       }
-    } finally { busy.current = false; if (active.current) setPending(null); }
+    } finally {
+      handshake?.cancel();
+      busy.current = false;
+      if (active.current) setPending(null);
+    }
   }
 
   return createPortal(<div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
       <div className="flex items-start justify-between gap-4"><h2 id={`${id}-title`} className="text-xl font-bold text-ink">{title}</h2><button type="button" aria-label="Close report" onClick={onClose} className="rounded-full p-2 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
-      <p id={`${id}-description`} className="mt-3 text-sm text-muted">{description ?? (isPdf ? "Your report uses the school's standard A4 template. Open the PDF to preview or print it." : "Download, preview or print, or share this file.")}</p>
+      <p id={`${id}-description`} className="mt-3 text-sm text-muted">{description ?? (isPdf ? "Your report uses the school's standard A4 template. Open the PDF to preview or print it." : isSpreadsheet ? "Open this file in the secure spreadsheet preview, download it, or share it." : "Download, preview or print, or share this file.")}</p>
       <div className="mt-6 grid gap-3">{([
         ["download", isPdf ? "Download PDF" : "Download File", Download],
-        ["preview", isPdf ? "Preview / Print PDF" : "Preview / Print File", ExternalLink],
+        ["preview", isPdf ? "Preview / Print PDF" : isSpreadsheet ? "Preview Spreadsheet" : "Preview / Print File", ExternalLink],
         ["share", isPdf ? "Share PDF" : "Share File", Share2]
       ] as const).map(([action, label, Icon]) => <Button key={action} type="button" variant={action === "download" ? "primary" : "secondary"} disabled={!!pending} aria-busy={pending === action} onClick={() => void perform(action)}>{pending === action ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}{pending === action ? "Preparing…" : label}</Button>)}</div>
       {emailPrompt && <a className="mt-4 inline-block font-semibold text-primary" href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent("Please attach the downloaded document before sending.")}`}>Compose email</a>}
