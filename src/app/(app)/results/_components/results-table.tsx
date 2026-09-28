@@ -5,6 +5,7 @@ import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-st
 import { ButtonLink } from "@/components/ui/button";
 import { formatExamType } from "@/lib/services/marks";
 import type { ResultWorkflowStatus } from "@/types/database";
+import { StudentPagination } from "@/components/students/student-pagination";
 
 type ResultRow = {
   id: string;
@@ -74,18 +75,21 @@ export function ResultsTable({
   rows,
   showApprovalColumns = true,
   showPrint = false,
-  inlineApproval = false
+  inlineApproval = false,
+  pagination
 }: {
   rows: ResultRow[];
   showApprovalColumns?: boolean;
   showPrint?: boolean;
   inlineApproval?: boolean;
+  pagination?: { count: number; page: number; pageSize: number };
 }) {
+  const resultCount = pagination?.count ?? rows.length;
   return (
     <div className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
         <h3 className="flex whitespace-nowrap items-center gap-2 font-display text-xl font-bold text-ink"><ClipboardCheck className="h-5 w-5 text-primary" />Result Register</h3>
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{rows.length} result{rows.length === 1 ? "" : "s"}</span>
+        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{resultCount} result{resultCount === 1 ? "" : "s"}</span>
       </div>
       <div className="results-table-scroll scrollbar-thin hidden max-w-full overflow-x-auto lg:block">
       <table className="w-full min-w-[1020px] text-left text-sm">
@@ -158,6 +162,7 @@ export function ResultsTable({
           </article>
         ))}
       </div>
+      {pagination ? <StudentPagination {...pagination} itemLabel="results" /> : null}
     </div>
   );
 }

@@ -5,10 +5,14 @@ import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth/session";
 import { formatDisplayName } from "@/lib/student-name";
 import { getActivityLogs } from "@/lib/services/reports";
+import { StudentPagination } from "@/components/students/student-pagination";
+import { paginateRows } from "@/lib/pagination";
 
-export default async function ActivityPage() {
+export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
   const user = await requireUser("activity:view");
   const activity = await getActivityLogs(user);
+  const paginatedActivity = paginateRows(activity, params.page, params.pageSize);
   const distinctActors = new Set(activity.map((item: any) => item.profiles?.full_name).filter(Boolean)).size;
   const todayCount = activity.filter((item: any) => isToday(new Date(item.created_at))).length;
   const actionTypes = new Set(activity.map((item: any) => item.action)).size;
@@ -38,9 +42,9 @@ export default async function ActivityPage() {
             <p className="text-sm text-muted">Latest events first</p>
           </CardHeader>
           <CardContent className="p-0">
-            {activity.length ? (
+            {paginatedActivity.rows.length ? (
               <ol className="divide-y divide-outline/70">
-                {activity.map((item: any) => (
+                {paginatedActivity.rows.map((item: any) => (
                   <li key={item.id} className="group flex gap-4 px-5 py-4 transition-colors hover:bg-surface-low sm:px-6">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary ring-1 ring-primary/10">
                       <Activity className="h-4 w-4" aria-hidden="true" />
@@ -65,6 +69,7 @@ export default async function ActivityPage() {
               </div>
             )}
           </CardContent>
+          {activity.length ? <StudentPagination count={paginatedActivity.count} page={paginatedActivity.page} pageSize={paginatedActivity.pageSize} itemLabel="events" /> : null}
         </Card>
       </section>
     </>

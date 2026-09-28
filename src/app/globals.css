@@ -245,6 +245,37 @@ tbody tr {
   box-shadow: none;
 }
 
+/* Transaction Ledger owns the outer border, just like the Students List. */
+.app-workspace .transaction-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-workspace .transaction-table-scroll table,
+.app-workspace .transaction-table-scroll thead {
+  border-radius: 0;
+}
+
+/* Administrator member table uses the outer list card for its border. */
+.app-workspace .admin-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-workspace .admin-table-scroll table,
+.app-workspace .admin-table-scroll thead {
+  border-radius: 0;
+}
+
+/* Leave tables already sit inside their own rounded list containers. */
+.app-workspace .leave-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .app-workspace table thead {
   background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
 }

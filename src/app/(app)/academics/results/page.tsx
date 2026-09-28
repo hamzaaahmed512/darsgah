@@ -13,6 +13,7 @@ import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { getResultsManagementWorkspace } from "@/lib/services/marks";
 import type { ResultWorkflowStatus } from "@/types/database";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { paginateRows } from "@/lib/pagination";
 
 const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -42,6 +43,7 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
   const approvedCount = results.filter((row) => row.workflowStatus === "approved").length;
   const pendingCount = results.filter((row) => row.workflowStatus === "pending_approval").length;
   const returnedCount = results.filter((row) => row.workflowStatus === "rejected").length;
+  const paginatedResults = paginateRows(results, params.page, params.pageSize);
 
   return (
     <>
@@ -114,7 +116,13 @@ export default async function AcademicResultsPage(props: { searchParams: Promise
               description="Assessments appear here after marks are saved. Major examinations show their approval status."
             />
       ) : (
-            <ResultsTable rows={results} showApprovalColumns showPrint={false} inlineApproval={false} />
+            <ResultsTable
+              rows={paginatedResults.rows}
+              showApprovalColumns
+              showPrint={false}
+              inlineApproval={false}
+              pagination={{ count: paginatedResults.count, page: paginatedResults.page, pageSize: paginatedResults.pageSize }}
+            />
       )}
     </>
   );

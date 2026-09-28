@@ -578,13 +578,15 @@ export async function getFinanceTransactions(user: AppUser, filters: {
   direction?: TransactionDirection | "all";
   q?: string;
   page?: number;
+  pageSize?: number;
   includeTotals?: boolean;
 } = {}) {
   const supabase = await createClient();
   const now = new Date();
   const period = filters.period ?? "month";
   const page = Math.max(filters.page ?? 1, 1);
-  const pageSize = 50;
+  const requestedPageSize = Number(filters.pageSize ?? 10);
+  const pageSize = [10, 25, 50].includes(requestedPageSize) ? requestedPageSize : 10;
   let dateFrom = filters.dateFrom;
   let dateTo = filters.dateTo;
   if (period === "month") {

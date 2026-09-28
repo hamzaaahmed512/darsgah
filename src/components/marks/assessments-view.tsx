@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getTeacherMarksWorkspace } from "@/lib/services/marks";
+import { paginateRows } from "@/lib/pagination";
+import { StudentPagination } from "@/components/students/student-pagination";
 
 const rangeFilters = [
   { value: "all", label: "All" },
@@ -65,6 +67,7 @@ export async function AssessmentsView({
   const markedCount = visibleExams.filter((exam: any) => exam.is_marked).length;
   const unmarkedCount = visibleExams.length - markedCount;
   const studentsAwaitingMarks = visibleExams.reduce((total: number, exam: any) => total + Math.max(0, Number(exam.roster_count ?? 0) - Number(exam.marked_count ?? 0)), 0);
+  const paginatedExams = paginateRows(visibleExams, params.page, params.pageSize);
 
   return (
     <>
@@ -134,7 +137,7 @@ export async function AssessmentsView({
               <EmptyState title="No assessments found" description="Create an assessment or switch the filter to view another period." />
             ) : (
               <div className="overflow-hidden rounded-[20px] border border-blue-200 bg-white">
-                {visibleExams.map((exam: any) => (
+                {paginatedExams.rows.map((exam: any) => (
                   <div key={exam.id} className="border-b border-blue-100 p-4 last:border-b-0 transition-colors hover:bg-blue-50/35 sm:px-5 sm:py-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -176,24 +179,9 @@ export async function AssessmentsView({
                     </div>
                   </div>
                 ))}
+                <StudentPagination count={paginatedExams.count} page={paginatedExams.page} pageSize={paginatedExams.pageSize} itemLabel="assessments" />
               </div>
             )}
-            {visibleExams.length ? (
-              <div className="mt-4 flex flex-col items-stretch gap-3 rounded-[18px] border border-blue-200 bg-blue-50/30 px-4 py-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                <p>Showing 1 to {visibleExams.length} of {visibleExams.length} assessments</p>
-                <div className="flex items-center justify-end gap-2">
-                  <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
-                    ‹
-                  </button>
-                  <button type="button" className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary-soft px-3 font-semibold text-primary">
-                    1
-                  </button>
-                  <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
-                    ›
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </CardContent>
         </Card>
         </>

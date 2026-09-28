@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Edit3, RotateCcw, X } from "lucide-react";
+import { CheckCircle, Edit3, RotateCcw, UsersRound, X } from "lucide-react";
 import { saveStaffPayAction, setStaffPayStatusAction } from "@/app/(app)/finance/payroll/actions";
 import type { StaffPayRow } from "@/lib/services/payroll";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Textarea } from "@/components/ui/form-field";
 import { formatDatePK, formatPKR } from "@/lib/utils";
+import { StudentPagination } from "@/components/students/student-pagination";
 
 type Props = {
   rows: StaffPayRow[];
   month: string;
   canManage: boolean;
+  pagination?: { count: number; page: number; pageSize: number };
 };
 
-export function StaffPayTable({ rows, month, canManage }: Props) {
+export function StaffPayTable({ rows, month, canManage, pagination }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<StaffPayRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -41,32 +43,38 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
 
   function renderActions(row: StaffPayRow) {
     return (
-      <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
         <button
           type="button"
           onClick={() => setEditing(row)}
           disabled={row.status === "paid"}
-          className="inline-flex min-h-11 whitespace-nowrap items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-ink ring-1 ring-outline hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label={`Edit pay for ${row.name}`}
+          title="Edit pay"
         >
-          <Edit3 className="h-3.5 w-3.5" /> Edit
+          <Edit3 className="h-4 w-4" aria-hidden="true" />
         </button>
         {row.status === "paid" ? (
           <button
             type="button"
             disabled={isPending && pendingStaffId === row.staffId}
             onClick={() => handleStatus(row, "unpaid")}
-            className="inline-flex min-h-11 whitespace-nowrap items-center justify-center gap-1.5 rounded-lg bg-warning px-4 py-2.5 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning transition hover:brightness-95 disabled:opacity-50"
+            aria-label={`Mark ${row.name} unpaid`}
+            title="Mark unpaid"
           >
-            <RotateCcw className="h-3.5 w-3.5" /> Mark Unpaid
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : (
           <button
             type="button"
             disabled={(isPending && pendingStaffId === row.staffId) || row.baseSalary <= 0}
             onClick={() => handleStatus(row, "paid")}
-            className="inline-flex min-h-11 whitespace-nowrap items-center justify-center gap-1.5 rounded-lg bg-success px-4 py-2.5 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-60"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success transition hover:brightness-95 disabled:opacity-50"
+            aria-label={`Mark ${row.name} paid`}
+            title="Mark paid"
           >
-            <CheckCircle className="h-3.5 w-3.5" /> Mark Paid
+            <CheckCircle className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -76,15 +84,19 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
   return (
     <>
       {actionError ? <div className="mb-4 rounded-lg bg-danger-soft p-3 text-sm font-semibold text-danger">{actionError}</div> : null}
-      <Card className="min-w-0 border-0 bg-transparent shadow-none lg:border lg:bg-white">
+      <Card className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
+          <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />Staff Pay</h2>
+          {pagination ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{pagination.count} employee{pagination.count === 1 ? "" : "s"}</span> : null}
+        </div>
         <CardContent className="p-0">
           {!rows.length ? (
-            <EmptyState title="No active staff found" description="Active employees will appear here for payroll." />
+            <div className="p-5"><EmptyState title="No active staff found" description="Active employees will appear here for payroll." /></div>
           ) : (
             <>
-              <div className="grid min-w-0 gap-4 lg:hidden">
+              <div className="grid min-w-0 gap-3 p-4 lg:hidden">
                 {rows.map((row) => (
-                  <article key={row.staffId} className="min-w-0 rounded-xl border border-outline/60 bg-white p-4 shadow-sm">
+                  <article key={row.staffId} className="min-w-0 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="min-w-0 border-b border-outline/60 pb-3">
                       <h2 className="truncate font-semibold text-ink" title={row.name}>{row.name}</h2>
                       <p className="truncate text-xs capitalize text-muted">{row.jobTitle || row.role.replace("_", " ")}</p>
@@ -113,40 +125,40 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
                   </article>
                 ))}
               </div>
-              <div className="hidden max-w-full overflow-x-auto lg:block" data-responsive-table="desktop" role="region" aria-label="Staff payroll" tabIndex={0}>
+              <div className="student-table-scroll hidden max-w-full overflow-x-auto lg:block" data-responsive-table="desktop" role="region" aria-label="Staff payroll" tabIndex={0}>
                 <table className="w-full min-w-[1100px] text-left text-sm">
-                  <thead className="bg-surface-low font-label text-xs uppercase tracking-wide text-muted">
+                  <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">Employee</th>
-                      <th className="px-4 py-3">Base salary</th>
-                      <th className="px-4 py-3">Bonus</th>
-                      <th className="px-4 py-3">Deduction</th>
-                      <th className="px-4 py-3">Net salary</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Paid this year</th>
-                      <th className="px-4 py-3">Payment date</th>
-                      {canManage ? <th className="px-4 py-3 text-right">Actions</th> : null}
+                      <th className="px-6 py-4">Employee</th>
+                      <th className="px-6 py-4">Base salary</th>
+                      <th className="px-6 py-4">Bonus</th>
+                      <th className="px-6 py-4">Deduction</th>
+                      <th className="px-6 py-4">Net salary</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Paid this year</th>
+                      <th className="px-6 py-4">Payment date</th>
+                      {canManage ? <th className="px-6 py-4 text-right">Actions</th> : null}
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row) => (
-                      <tr key={row.staffId} className="border-t border-outline/60 hover:bg-surface-low/70">
-                        <td className="max-w-[220px] px-4 py-4">
+                      <tr key={row.staffId} className="border-t border-slate-100 transition hover:bg-blue-50/30">
+                        <td className="max-w-[220px] px-6 py-5">
                           <p className="truncate font-semibold text-ink" title={row.name}>{row.name}</p>
                           <p className="truncate text-xs capitalize text-muted">{row.jobTitle || row.role.replace("_", " ")}</p>
                           {row.email ? <p className="truncate text-xs text-muted" title={row.email}>{row.email}</p> : null}
                         </td>
-                        <td className="px-4 py-4 font-semibold">{row.baseSalary > 0 ? formatPKR(row.baseSalary) : "Not set"}</td>
-                        <td className="px-4 py-4 font-semibold text-success">{formatPKR(row.bonus)}</td>
-                        <td className="px-4 py-4 font-semibold text-danger">{formatPKR(row.deduction)}</td>
-                        <td className="px-4 py-4 font-bold text-ink">{row.baseSalary > 0 ? formatPKR(row.netSalary) : "-"}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-6 py-5 font-semibold">{row.baseSalary > 0 ? formatPKR(row.baseSalary) : "Not set"}</td>
+                        <td className="px-6 py-5 font-semibold text-success">{formatPKR(row.bonus)}</td>
+                        <td className="px-6 py-5 font-semibold text-danger">{formatPKR(row.deduction)}</td>
+                        <td className="px-6 py-5 font-bold text-ink">{row.baseSalary > 0 ? formatPKR(row.netSalary) : "-"}</td>
+                        <td className="px-6 py-5">
                           <Badge tone={row.status === "paid" ? "green" : "amber"}>{row.status === "paid" ? "PAID" : "UNPAID"}</Badge>
                         </td>
-                        <td className="px-4 py-4 font-semibold">{formatPKR(row.yearlyPaidTotal)}</td>
-                        <td className="px-4 py-4 text-muted">{row.paymentDate ? formatDatePK(row.paymentDate) : "-"}</td>
+                        <td className="px-6 py-5 font-semibold">{formatPKR(row.yearlyPaidTotal)}</td>
+                        <td className="px-6 py-5 text-muted">{row.paymentDate ? formatDatePK(row.paymentDate) : "-"}</td>
                         {canManage ? (
-                          <td className="responsive-table-actions px-4 py-4">
+                          <td className="px-6 py-5">
                             {renderActions(row)}
                           </td>
                         ) : null}
@@ -157,6 +169,7 @@ export function StaffPayTable({ rows, month, canManage }: Props) {
               </div>
             </>
           )}
+          {pagination && rows.length ? <StudentPagination {...pagination} itemLabel="employees" /> : null}
         </CardContent>
       </Card>
       {editing ? (

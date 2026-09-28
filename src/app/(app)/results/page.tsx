@@ -14,6 +14,7 @@ import { getResultCardsWorkspace, getResultsManagementWorkspace } from "@/lib/se
 import type { ResultWorkflowStatus, UserRole } from "@/types/database";
 import { ReportGenerator } from "@/components/reports/report-generator";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { paginateRows } from "@/lib/pagination";
 
 const statusFilters: Array<{ value: ResultWorkflowStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -53,6 +54,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const approvedCount = results.filter((row) => row.workflowStatus === "approved").length;
   const returnedCount = results.filter((row) => row.workflowStatus === "rejected").length;
   const showCards = canGenerateCards && (user.role === "student_staff" || view === "cards");
+  const paginatedResults = paginateRows(results, params.page, params.pageSize);
 
   return (
     <>
@@ -174,10 +176,11 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
               />
           ) : (
               <ResultsTable
-                rows={results}
+                rows={paginatedResults.rows}
                 showApprovalColumns
                 showPrint={canGenerateCards}
                 inlineApproval={user.role === "principal"}
+                pagination={{ count: paginatedResults.count, page: paginatedResults.page, pageSize: paginatedResults.pageSize }}
               />
           )}
         </>

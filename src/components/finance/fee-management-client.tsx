@@ -15,6 +15,8 @@ import type { AppUser } from "@/types/database";
 import { formatClassDisplayName, formatPKR, formatDatePK, formatGradeSection } from "@/lib/utils";
 import { ReportExport } from "@/components/reports/ReportExport";
 import { ReportGenerator } from "@/components/reports/report-generator";
+import { paginateRows } from "@/lib/pagination";
+import { StudentPagination } from "@/components/students/student-pagination";
 
 interface FeeManagementClientProps {
   user: AppUser;
@@ -52,6 +54,8 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   const [discountReason, setDiscountReason] = useState<"scholarship" | "sibling_discount" | "merit" | "need_based" | "special_approval">("scholarship");
   const [discountRemarks, setDiscountRemarks] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [accountPage, setAccountPage] = useState(1);
+  const [accountPageSize, setAccountPageSize] = useState(10);
 
   const canManage = hasPermission(user.role, "finance:manage", user.permissions);
   const showReports = canViewFinancialReports(user.role);
@@ -79,6 +83,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
     const matchesDiscount = !onlyDiscounted || acc.discount_type !== "none";
     return matchesQ && matchesClass && matchesStatus && matchesSession && matchesDiscount;
   });
+  const paginatedAccounts = paginateRows(filtered, accountPage, accountPageSize);
 
   const selectedLedgerAccount = accounts.find((acc) => acc.id === selectedAccountId) ?? null;
   const totals = filtered.reduce(
@@ -190,9 +195,9 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <div className="relative md:col-span-2">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 pl-11 shadow-none placeholder:text-slate-400 focus:bg-white" placeholder="Search student or admission..." />
+                <Input value={q} onChange={(e) => { setQ(e.target.value); setAccountPage(1); }} className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 pl-11 shadow-none placeholder:text-slate-400 focus:bg-white" placeholder="Search student or admission..." />
               </div>
-              <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+              <Select value={classId} onChange={(e) => { setClassId(e.target.value); setAccountPage(1); }} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Classes</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -200,14 +205,14 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   </option>
                 ))}
               </Select>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+              <Select value={status} onChange={(e) => { setStatus(e.target.value); setAccountPage(1); }} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="partially_paid">Partially Paid</option>
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
               </Select>
-              <Select value={session} onChange={(e) => setSession(e.target.value)} className="h-12 rounded-2xl border-outline/70 shadow-none">
+              <Select value={session} onChange={(e) => { setSession(e.target.value); setAccountPage(1); }} className="h-12 rounded-2xl border-outline/70 shadow-none">
                 <option value="all">All Sessions</option>
                 {sessions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -220,7 +225,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               <input
                 type="checkbox"
                 checked={onlyDiscounted}
-                onChange={(e) => setOnlyDiscounted(e.target.checked)}
+                onChange={(e) => { setOnlyDiscounted(e.target.checked); setAccountPage(1); }}
                 className="h-4 w-4 rounded border-outline text-primary focus:ring-0"
               />
               <span>Show discounted accounts only</span>
@@ -250,7 +255,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((acc) => {
+                {paginatedAccounts.rows.map((acc) => {
                   const receipt = latestReceiptByAccount.get(acc.id);
                   const isSelected = selectedAccountId === acc.id;
                   return (
@@ -318,7 +323,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
             </table>
           </div>
           <div className="grid gap-3 p-4 lg:hidden">
-            {filtered.map((acc) => {
+            {paginatedAccounts.rows.map((acc) => {
               const receipt = latestReceiptByAccount.get(acc.id);
               const isSelected = selectedAccountId === acc.id;
               return (
@@ -344,6 +349,14 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               );
             })}
           </div>
+          <StudentPagination
+            count={paginatedAccounts.count}
+            page={paginatedAccounts.page}
+            pageSize={paginatedAccounts.pageSize}
+            itemLabel="accounts"
+            onPageChange={setAccountPage}
+            onPageSizeChange={(nextPageSize) => { setAccountPageSize(nextPageSize); setAccountPage(1); }}
+          />
           </Card>
           )}
 

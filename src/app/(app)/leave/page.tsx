@@ -101,7 +101,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                 <div className="p-5"><EmptyState title="No teachers found" description="There are no teachers to show leave tracking for." /></div>
               ) : (
                 <>
-                  <div className="hidden overflow-x-auto lg:block">
+                  <div className="leave-table-scroll hidden overflow-x-auto lg:block">
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                         <tr>
@@ -172,7 +172,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               <EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." />
             ) : (
               <div className="overflow-hidden rounded-[24px] border border-outline/50">
-                <div className="overflow-x-auto">
+                <div className="leave-table-scroll overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
                     <tr>
