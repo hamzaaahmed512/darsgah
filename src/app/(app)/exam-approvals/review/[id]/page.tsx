@@ -48,7 +48,6 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
 
       <PageHeader
         eyebrow="Review Results"
-        title={exam.title}
         description="Verify marks and grades before approving this result set for publication."
       />
 
@@ -89,7 +88,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                       <td className="px-4 py-3">
                         {m.grade ? <Badge tone="blue">{m.grade}</Badge> : "—"}
                       </td>
-                      <td className="px-4 py-3 text-muted max-w-[200px] truncate" title={m.teacher_comment}>
+                      <td className="px-4 py-3 text-muted max-w-[200px] truncate">
                         {m.teacher_comment || "—"}
                       </td>
                     </tr>
@@ -160,15 +159,15 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
             <CardContent className="pt-4">
               {isPending ? (
                 <div className="grid gap-4">
-                  <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid gap-3">
+                  <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid justify-items-end gap-3">
                     <Textarea name="principal_comment" placeholder="Correction instructions" className="min-h-[100px]" required />
-                    <Button type="submit" name="decision" value="returned" variant="secondary" className="w-full border border-warning/20 text-warning hover:bg-warning-soft">
-                      <XCircle className="mr-2 h-4 w-4" /> Return to teacher
+                    <Button type="submit" name="decision" value="returned" variant="secondary" className="h-10 w-10 rounded-xl border border-warning/20 px-0 text-warning hover:bg-warning-soft" aria-label="Return result to teacher">
+                      <XCircle className="h-4 w-4" />
                     </Button>
                   </form>
-                  <form action={reviewExamApprovalAction.bind(null, approval.id)}>
-                    <Button type="submit" name="decision" value="approved" className="bg-success text-white hover:bg-success/90 w-full">
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
+                  <form action={reviewExamApprovalAction.bind(null, approval.id)} className="flex justify-end">
+                    <Button type="submit" name="decision" value="approved" className="h-10 w-10 rounded-xl bg-success px-0 text-white hover:bg-success/90" aria-label="Approve result">
+                      <CheckCircle2 className="h-4 w-4" />
                     </Button>
                   </form>
                 </div>

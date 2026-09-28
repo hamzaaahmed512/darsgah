@@ -310,10 +310,10 @@ function FeesTab({ rows, student, portalMode = false }: { rows: any[]; student?:
                   <div key="a" className="flex min-w-max items-center gap-3">
                     <Link
                       href={`/finance/challans?month=${(r.fee_month || "").slice(0, 7)}`}
-                      className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 p-0 text-primary hover:bg-blue-100"
+                      aria-label="View fee challan PDF"
                     >
-                      <Download className="h-3.5 w-3.5" />
-                      View / PDF
+                      <Download className="h-4 w-4" />
                     </Link>
                     {r.outstanding > 0 ? (
                       <button

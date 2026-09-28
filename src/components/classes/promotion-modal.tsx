@@ -57,7 +57,7 @@ export function PromotionModal({ classIds, label }: { classIds: string[]; label:
 
   return (
     <>
-      <Button type="button" size="sm" variant="secondary" onClick={show} className="rounded-xl text-primary"><CheckSquare className="h-4 w-4" /> Promote</Button>
+      <Button type="button" size="sm" variant="secondary" onClick={show} className="h-10 w-10 rounded-xl px-0 text-primary" aria-label={`Promote ${label}`}><CheckSquare className="h-4 w-4" /></Button>
       {mounted && open ? createPortal(
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
           <div role="dialog" aria-modal="true" aria-labelledby="promotion-title" className="flex max-h-[calc(100dvh-0.75rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-outline/70 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">

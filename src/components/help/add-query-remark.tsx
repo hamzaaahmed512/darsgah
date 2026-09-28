@@ -19,8 +19,8 @@ export function AddQueryRemark({ queryId }: { queryId: string }) {
   }
 
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-bold text-white shadow-button hover:bg-primary-ink">
-      <MessageSquarePlus className="h-4 w-4" />Add Remark
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary p-0 text-white shadow-button hover:bg-primary-ink" aria-label="Add remark">
+      <MessageSquarePlus className="h-4 w-4" />
     </button>
     {open && createPortal(
       <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>

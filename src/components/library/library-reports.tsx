@@ -6,7 +6,9 @@ import {
   Download,
   ChevronDown,
   RotateCcw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  ListChecks
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, DataTableHeader, DataTableRow, dataTableCellClassName, dataTableHeaderCellClassName } from "@/components/library/library-table";
@@ -593,9 +595,10 @@ export function LibraryReports({
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab("Issue & return")}
-                    className="h-9 min-h-9 text-xs border-red-300 text-red-700 hover:bg-red-100"
+                    className="h-9 min-h-9 w-9 rounded-xl border-red-300 px-0 text-red-700 hover:bg-red-100"
+                    aria-label="Manage overdue loan"
                   >
-                    Manage
+                    <Eye className="h-4 w-4" />
                   </Button></td>
                 </DataTableRow>
               );
@@ -628,9 +631,10 @@ export function LibraryReports({
                     type="button"
                     variant="secondary"
                     onClick={() => onNavigateTab(res.is_ready_to_issue ? "Issue & return" : "Reservations")}
-                    className="h-9 min-h-9 text-xs"
+                    className="h-9 min-h-9 w-9 rounded-xl px-0"
+                    aria-label={res.is_ready_to_issue ? "Fulfil reservation" : "View reservation queue"}
                   >
-                    {res.is_ready_to_issue ? "Fulfil" : "View queue"}
+                    {res.is_ready_to_issue ? <RotateCcw className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
                   </Button></td>
                 </DataTableRow>
               );

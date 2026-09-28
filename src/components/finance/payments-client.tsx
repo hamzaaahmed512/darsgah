@@ -378,15 +378,16 @@ export function PaymentsClient({ user, accounts, classes, payments }: PaymentsCl
                           <div className="mt-3 pt-3 border-t border-outline/40 flex justify-between items-center text-xxs text-muted">
                             <span>Collected By: {p.received_by_name}</span>
                             <div className="flex items-center gap-2">
-                              <Link href="/finance/fees" className="inline-flex items-center gap-1 font-bold text-primary hover:underline">
-                                <Receipt className="h-3 w-3" /> View Receipt
+                              <Link href="/finance/fees" className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 p-0 text-primary hover:bg-blue-100" aria-label="View receipt">
+                                <Receipt className="h-4 w-4" />
                               </Link>
                               {canManage && !p.is_voided && (
                                 <button
                                   onClick={() => setVoidingPaymentId(p.id)}
-                                  className="inline-flex items-center gap-1 font-bold text-danger hover:underline ml-2"
+                                  className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-danger-soft p-0 text-danger hover:bg-red-100"
+                                  aria-label="Void payment"
                                 >
-                                  <Trash2 className="h-3 w-3" /> Void
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
                             </div>

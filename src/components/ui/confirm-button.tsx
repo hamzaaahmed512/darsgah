@@ -10,7 +10,8 @@ export function ConfirmButton({
   action,
   variant = "danger",
   icon,
-  className
+  className,
+  iconOnly = false
 }: {
   label: string;
   confirmText: string;
@@ -18,6 +19,7 @@ export function ConfirmButton({
   variant?: "primary" | "secondary" | "ghost" | "danger";
   icon?: ReactNode;
   className?: string;
+  iconOnly?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -25,7 +27,8 @@ export function ConfirmButton({
     <Button
       type="button"
       variant={variant}
-      className={className}
+      className={iconOnly ? `h-10 w-10 rounded-xl px-0 ${className ?? ""}` : className}
+      aria-label={iconOnly ? label : undefined}
       disabled={pending}
       onClick={() => {
         if (!window.confirm(confirmText)) return;
@@ -34,8 +37,8 @@ export function ConfirmButton({
         });
       }}
     >
-      {!pending ? icon : null}
-      {pending ? "Working..." : label}
+      {icon}
+      {!iconOnly ? (pending ? "Working..." : label) : null}
     </Button>
   );
 }

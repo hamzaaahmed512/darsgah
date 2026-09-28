@@ -61,8 +61,8 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <DownloadReportButton type="student" data={reportData} />
-          {hasPermission(user.role, "students:update", user.permissions) ? <ButtonLink href={`/students/${id}/edit`} variant="secondary"><Pencil className="h-4 w-4" />Edit</ButtonLink> : null}
-          {hasPermission(user.role, "students:archive", user.permissions) && student.status !== "archived" && !student.status.startsWith("pending") ? <ConfirmButton label={user.role === "student_staff" ? "Request Cancellation" : "Archive"} confirmText={user.role === "student_staff" ? "Submit a cancellation request for this student to the Principal?" : "Archive this student? This keeps the record but removes it from active lists."} action={archive} variant="secondary" icon={<Archive className="h-4 w-4" />} /> : null}
+          {hasPermission(user.role, "students:update", user.permissions) ? <ButtonLink href={`/students/${id}/edit`} variant="secondary" className="h-10 w-10 rounded-xl px-0" aria-label="Edit student"><Pencil className="h-4 w-4" /></ButtonLink> : null}
+          {hasPermission(user.role, "students:archive", user.permissions) && student.status !== "archived" && !student.status.startsWith("pending") ? <ConfirmButton label={user.role === "student_staff" ? "Request Cancellation" : "Archive"} confirmText={user.role === "student_staff" ? "Submit a cancellation request for this student to the Principal?" : "Archive this student? This keeps the record but removes it from active lists."} action={archive} variant="secondary" icon={<Archive className="h-4 w-4" />} iconOnly /> : null}
           <ButtonLink href="/students" className="min-w-24"><ArrowLeft className="h-4 w-4" />Back</ButtonLink>
         </div>
       </div>

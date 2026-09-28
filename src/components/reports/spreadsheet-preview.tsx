@@ -178,8 +178,8 @@ export function SpreadsheetPreview() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
-          <Button type="button" variant="secondary" onClick={downloadCsv}><Download className="h-4 w-4" />Download CSV</Button>
-          <Button type="button" variant="secondary" onClick={printAllRows}><Printer className="h-4 w-4" />Print</Button>
+          <Button type="button" variant="secondary" onClick={downloadCsv} className="h-10 w-10 rounded-xl px-0" aria-label="Download CSV"><Download className="h-4 w-4" /></Button>
+          <Button type="button" variant="secondary" onClick={printAllRows} className="h-10 w-10 rounded-xl px-0" aria-label="Print spreadsheet"><Printer className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -214,7 +214,7 @@ export function SpreadsheetPreview() {
               {headers.map((heading, column) => {
                 const value = cells[column] ?? "";
                 const formatted = displayCell(value, heading);
-                return <td key={column} title={value || "Empty cell"} className={cn("max-w-[28rem] border-b border-r border-slate-200 px-4 py-3 align-top text-slate-700", !formatted && "bg-amber-50/70 text-amber-700")}>
+                return <td key={column} className={cn("max-w-[28rem] border-b border-r border-slate-200 px-4 py-3 align-top text-slate-700", !formatted && "bg-amber-50/70 text-amber-700")}>
                   <span className="block whitespace-pre-wrap break-words">{formatted ?? <span className="italic">—</span>}</span>
                 </td>;
               })}

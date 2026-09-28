@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { ReactNode } from "react";
-import { AtSign, Building2, ChevronDown, KeyRound, Mail, Phone, ShieldCheck, UserCheck, UserCog, UserPlus, Users } from "lucide-react";
+import { AtSign, Building2, ChevronDown, Eye, KeyRound, Mail, Phone, ShieldCheck, UserCheck, UserCog, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +67,6 @@ export default async function StaffPage({
     <>
       <PageHeader
         eyebrow="School Directory"
-        title="Staff"
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
         actions={
           <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -80,8 +79,7 @@ export default async function StaffPage({
                 row.phone || "Not provided",
                 row.email || "N/A",
                 row.status || ""
-              ])}
-              title="Staff Directory Report" 
+              ])} 
               filters={{ Search: params.q, Role: params.role }} 
             />
             {canCreateUsers ? <StaffCreateModal allowedRoles={[...allowedRoles]} customRoles={customRoles ?? []} /> : null}
@@ -104,7 +102,6 @@ export default async function StaffPage({
 
       {!staff.length ? (
         <EmptyState
-          title="No staff found"
           description="Try a different search or role filter, or add a new staff record from this page."
         />
       ) : (
@@ -193,7 +190,7 @@ export default async function StaffPage({
                     </p>
                   </div>
                 </div>
-                {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm" className="min-w-[152px] justify-center rounded-2xl">View full profile</ButtonLink></div> : null}
+                {!member.is_record_only ? <div className="flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm" className="h-10 w-10 justify-center rounded-xl px-0" aria-label={`View ${member.full_name} profile`}><Eye className="h-4 w-4" /></ButtonLink></div> : null}
               </div>
             </details>
           ))}

@@ -51,7 +51,7 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
   }
 
   return <>
-    <Button type="button" variant="secondary" onClick={() => setOpen(true)}><Pencil className="h-4 w-4" /> Edit profile</Button>
+    <Button type="button" variant="secondary" onClick={() => setOpen(true)} className="h-10 w-10 rounded-xl px-0" aria-label="Edit staff profile"><Pencil className="h-4 w-4" /></Button>
     {mounted && open ? createPortal(<div role="dialog" aria-modal="true" aria-labelledby="edit-staff-profile-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[calc(100dvh-2rem)] min-w-0 w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-xl">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline/40 px-4 py-4 sm:px-6">
@@ -61,8 +61,8 @@ export function StaffProfileEditModal({ staffId, initial }: { staffId: string; i
         <form action={submit} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50/30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
           {error ? <p className="mb-4 rounded-xl bg-danger-soft p-3 text-sm font-semibold text-danger">{error}</p> : null}
           <FormSectionCard
-            icon={<BriefcaseBusiness className="h-5 w-5" />}
             title="Profile Details"
+            icon={<BriefcaseBusiness className="h-5 w-5" />}
             description="Update the staff member's contact and work details here. Salary is still managed separately in Payroll."
           >
             <div className="grid gap-4 sm:grid-cols-2">

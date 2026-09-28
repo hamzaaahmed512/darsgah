@@ -211,10 +211,10 @@ export function StudentFeesClient({ user, accounts, classes, sessions }: Student
                       <td className="px-4 py-4 text-right">
                         <button
                           onClick={() => handleOpenDiscount(acc)}
-                          className="inline-flex items-center gap-1 rounded bg-success-soft px-2.5 py-1 text-xs font-bold text-success hover:brightness-95"
-                          title="Apply Discount Policy"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft p-0 text-success hover:brightness-95"
+                          aria-label={`Apply discount for ${acc.student_name}`}
                         >
-                          <Percent className="h-3 w-3" /> Discount
+                          <Percent className="h-4 w-4" />
                         </button>
                       </td>
                     )}

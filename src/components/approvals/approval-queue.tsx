@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApprovalRequest } from "@/types/database";
 import { formatFullName } from "@/lib/student-name";
+import { Eye } from "lucide-react";
 
 export function ApprovalQueue({ initialRequests, canReview }: { initialRequests: ApprovalRequest[]; canReview: boolean }) {
   const requests = initialRequests;
@@ -49,8 +50,8 @@ export function ApprovalQueue({ initialRequests, canReview }: { initialRequests:
                   </td>
                   <td className="py-3 pr-4 text-right">
                     {canReview ? (
-                      <Button onClick={() => setSelectedRequest(request)} variant="secondary" size="sm">
-                        Review
+                      <Button onClick={() => setSelectedRequest(request)} variant="secondary" size="sm" className="h-9 w-9 rounded-xl px-0" aria-label={`Review ${request.request_type} request`}>
+                        <Eye className="h-4 w-4" />
                       </Button>
                     ) : (
                       <Badge tone={request.status === "pending" ? "yellow" : "gray"}>{request.status}</Badge>

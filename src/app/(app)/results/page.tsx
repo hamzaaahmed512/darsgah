@@ -91,7 +91,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
             href="/results?view=management"
             className={`inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition ${view !== "cards" ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:bg-surface-low"}`}
           >
-            Approved Results
+            <CheckCircle2 className="h-4 w-4" />
           </Link>
           <Link
             href="/results?view=cards"

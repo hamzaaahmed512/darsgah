@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -87,9 +88,10 @@ export default async function ExamApprovalsPage({ searchParams }: { searchParams
                     <div className="flex justify-end pt-2">
                       <Link
                         href={`/exam-approvals/review/${approval.id}`}
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary p-0 text-white transition-colors hover:bg-primary/90"
+                        aria-label="Review and decide"
                       >
-                        Review and Decide
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </div>
                   ) : (

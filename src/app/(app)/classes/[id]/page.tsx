@@ -96,7 +96,7 @@ export default async function ManageSectionPage({ params }: { params: Promise<{ 
             </div>;
           })}
           {!rosterData.roster.length ? <EmptyState title="No active students" description="Add students from Student Management." className="min-h-32" /> : null}
-          <ButtonLink href={`/students?classId=${cls.id}`} variant="secondary" size="sm" className="mt-2">Open student management</ButtonLink>
+          <ButtonLink href={`/students?classId=${cls.id}`} variant="secondary" size="sm" className="mt-2 h-9 w-9 rounded-xl px-0" aria-label="Open student management"><Users className="h-4 w-4" /></ButtonLink>
         </CardContent>
       </Card>
     </section>

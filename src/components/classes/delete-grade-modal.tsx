@@ -44,8 +44,8 @@ export function DeleteGradeModal({ gradeId, gradeName, sectionCount }: { gradeId
   }
 
   return <>
-    <Button type="button" variant="danger" size="sm" className="rounded-2xl border border-red-200 bg-red-50 px-4 text-red-700 shadow-none hover:bg-red-100" onClick={() => setOpen(true)}>
-      <Trash2 className="h-4 w-4" /> Delete grade
+    <Button type="button" variant="danger" size="sm" className="h-10 w-10 rounded-xl border border-red-200 bg-red-50 px-0 text-red-700 shadow-none hover:bg-red-100" onClick={() => setOpen(true)} aria-label={`Delete ${gradeName}`}>
+      <Trash2 className="h-4 w-4" />
     </Button>
     {mounted && open ? createPortal(
       <div role="dialog" aria-modal="true" aria-labelledby="delete-grade-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">

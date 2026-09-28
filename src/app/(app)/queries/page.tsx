@@ -39,7 +39,7 @@ export default async function QueriesPage() {
 
     return <>
       <MarkQueriesViewed />
-      <PageHeader eyebrow="Support" title="My Queries" description="Review every query you have sent to the Principal, including remarks and the latest status." />
+      <PageHeader eyebrow="Support" description="Review every query you have sent to the Principal, including remarks and the latest status." />
       {queries.length ? <section className="overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 px-5 py-4 sm:px-6"><h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary ring-1 ring-blue-100"><MessageSquareText className="h-5 w-5" aria-hidden="true" /></span>My Queries</h2><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{queries.length} {queries.length === 1 ? "query" : "queries"}</span></div>
         <div className="overflow-x-auto"><table className="min-w-[840px] w-full text-left text-sm"><caption className="sr-only">Your query history and leadership responses</caption><thead className="bg-blue-50/40 text-xs font-bold uppercase tracking-[0.12em] text-muted"><tr><th scope="col" className="px-5 py-4 sm:px-6">Query</th><th scope="col" className="px-5 py-4">Sent</th><th scope="col" className="px-5 py-4">Status</th><th scope="col" className="px-5 py-4">Response</th><th scope="col" className="px-5 py-4 sm:px-6"><span className="sr-only">Actions</span></th></tr></thead><tbody>
@@ -54,7 +54,7 @@ export default async function QueriesPage() {
             </tr>;
           })}
         </tbody></table></div>
-      </section> : <EmptyState title="No queries sent yet" description="Use Help & Support to send a query to the Principal." />}
+      </section> : <EmptyState description="Use Help & Support to send a query to the Principal." />}
     </>;
   }
   const { data, error } = await db.from("internal_support_queries").select("id,subject,message,status,assigned_role,created_at,profiles!internal_support_queries_submitted_by_fkey(full_name)").eq("school_id", user.schoolId).order("created_at", { ascending: false });
@@ -68,7 +68,7 @@ export default async function QueriesPage() {
   for (const remark of (remarks ?? []) as Remark[]) remarksByQuery.set(remark.query_id, [...(remarksByQuery.get(remark.query_id) ?? []), remark]);
 
   return <>
-    <PageHeader eyebrow="Support" title="Staff Queries" description="Review staff questions, add remarks, mark them solved, or pass them to the other school leader." />
+    <PageHeader eyebrow="Support" description="Review staff questions, add remarks, mark them solved, or pass them to the other school leader." />
     <section className="mb-5 grid gap-4 sm:grid-cols-3">
       <Metric label="Open" value={queries.filter((item) => item.status === "open").length} icon={Inbox} tone="blue" />
       <Metric label="Assigned to me" value={queries.filter((item) => item.status === "open" && item.assigned_role === user.role).length} icon={MessageSquareText} tone="amber" />
@@ -86,8 +86,8 @@ export default async function QueriesPage() {
           <div className="flex shrink-0 flex-wrap gap-2">
             <AddQueryRemark queryId={query.id} />
             {query.status === "open" && <>
-              <form action={updateInternalQueryAction.bind(null, query.id, "solved")}><button className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-50 px-3.5 text-sm font-bold text-emerald-700"><CheckCircle2 className="h-4 w-4" />Mark solved</button></form>
-              <form action={updateInternalQueryAction.bind(null, query.id, "handoff")}><button className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-blue-50 px-3.5 text-sm font-bold text-primary"><Forward className="h-4 w-4" />Send to {user.role === "principal" ? "Admin" : "Principal"}</button></form>
+              <form action={updateInternalQueryAction.bind(null, query.id, "solved")}><button className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 p-0 text-emerald-700" aria-label="Mark query solved"><CheckCircle2 className="h-4 w-4" /></button></form>
+              <form action={updateInternalQueryAction.bind(null, query.id, "handoff")}><button className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 p-0 text-primary" aria-label={`Send query to ${user.role === "principal" ? "Admin" : "Principal"}`}><Forward className="h-4 w-4" /></button></form>
             </>}
           </div>
         </div>
@@ -100,7 +100,7 @@ export default async function QueriesPage() {
           </div>)}
         </div>}
       </article>)}
-    </section> : <EmptyState title="No staff queries" description="New staff queries will appear here." />}
+    </section> : <EmptyState description="New staff queries will appear here." />}
   </>;
 }
 

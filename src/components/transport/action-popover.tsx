@@ -58,17 +58,7 @@ export function TransportActionPopover({
 
   return (
     <div className="relative">
-      <Button
-        type="button"
-        onClick={() => setOpen(true)}
-        variant={variant}
-        size={variant === "secondary" ? "sm" : "md"}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        {icons[icon]}
-        {triggerLabel}
-      </Button>
+      <Button type="button" onClick={() => setOpen(true)} variant={variant} size={variant === "secondary" ? "sm" : "md"} aria-haspopup="dialog" aria-expanded={open} aria-label={triggerLabel} className="h-10 w-10 rounded-xl px-0 justify-center">{icons[icon]}</Button>
 
       {open ? createPortal(
         <div

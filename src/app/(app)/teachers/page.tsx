@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getStaff } from "@/lib/services/staff";
 import { StaffFormModal } from "@/components/teachers/staff-form";
 import { ButtonLink } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 
 export default async function TeachersPage() {
   const user = await requireUser("teachers:manage");
@@ -16,8 +17,8 @@ export default async function TeachersPage() {
   return (
     <>
       <PageHeader 
+        title="Teacher & Staff Management"
         eyebrow="Staff" 
-        title="Teacher & Staff Management" 
         description="Manage teaching and administrative staff accounts, statuses, and class assignments."
         actions={<StaffFormModal allowedRoles={["teacher", "student_staff"]} triggerLabel="Add User" />}
       />
@@ -53,7 +54,7 @@ export default async function TeachersPage() {
                   {/* Class assignment forms/UI would go here */}
                 </div>
               </div>
-              <div className="mt-4 flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm">View full profile</ButtonLink></div>
+              <div className="mt-4 flex justify-end"><ButtonLink href={`/staff/${member.user_id}`} variant="secondary" size="sm" className="h-10 w-10 rounded-xl px-0" aria-label={`View ${member.full_name} profile`}><Eye className="h-4 w-4" /></ButtonLink></div>
             </CardContent>
           </Card>
         ))}

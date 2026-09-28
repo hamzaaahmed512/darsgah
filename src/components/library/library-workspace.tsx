@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, Info, UserCheck, RotateCcw
+  BookOpen, BookCopy, Clock3, Users, Pencil, Plus, Trash2, Eye, UserRound, Info, UserCheck, RotateCcw, CornerDownLeft, RefreshCw, BookUp
 } from "lucide-react";
 import { libraryAction } from "@/app/(app)/library/actions";
 import type {
@@ -113,7 +113,7 @@ function Tag({ children }: { children: ReactNode }) {
 
 function BookMeta({ label, value }: { label: string; value?: string | null }) {
   const display = value?.trim() || "—";
-  return <div className="min-w-0">{label ? <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">{label}</p> : null}<p title={display} className={`${label ? "mt-1 " : ""}truncate text-sm font-semibold text-ink`}>{display}</p></div>;
+  return <div className="min-w-0">{label ? <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">{label}</p> : null}<p className={`${label ? "mt-1 " : ""}truncate text-sm font-semibold text-ink`}>{display}</p></div>;
 }
 
 // ─── Book fields (shared by add-book and edit-book forms) ─────────────────────
@@ -192,7 +192,6 @@ function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnl
         onClick={() => setOpen(true)}
         className={iconOnly ? "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-outline/70 bg-white text-primary transition hover:bg-primary-soft" : "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-3.5 text-sm font-semibold text-ink ring-1 ring-outline hover:bg-surface-low hover:text-primary"}
         aria-label="Add copies"
-        title="Add copies"
       >
         <Plus className="h-4 w-4" />{!iconOnly ? " Add copies" : null}
       </button>
@@ -223,7 +222,7 @@ function AddCopiesModal({ book, iconOnly = false }: { book: LibraryBook; iconOnl
 function EditBookModal({ book }: { book: LibraryBook }) {
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft" aria-label={`Edit ${book.title}`} title="Edit book"><Pencil className="h-4 w-4" /></button>
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 text-primary transition hover:bg-primary-soft" aria-label={`Edit ${book.title}`}><Pencil className="h-4 w-4" /></button>
     {open ? (
       <LibraryDialog title="Edit book" description={`Update the details for ${book.title}.`} onClose={() => setOpen(false)} className="max-w-2xl lg:max-w-4xl">
         <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
@@ -240,7 +239,7 @@ function ArchiveBookButton({ book }: { book: LibraryBook }) {
   const [pending, startTransition] = useTransition();
   const archive = !book.archived;
   const label = archive ? `Archive ${book.title}` : `Restore ${book.title}`;
-  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Archive" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) { pushToast(archive ? "Book archived." : "Book restored.", "success"); router.refresh(); } else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold transition disabled:opacity-50 ${archive ? "w-10 border-red-100 bg-red-50 px-0 text-red-600 hover:bg-red-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} aria-label={label} title={archive ? "Archive book" : "Restore book"}>{archive ? <Trash2 className="h-4 w-4" /> : <><RotateCcw className="h-4 w-4" /><span>Restore</span></>}</button>;
+  return <button type="button" disabled={pending} onClick={() => { if (!confirm(`${archive ? "Archive" : "Restore"} “${book.title}”?`)) return; startTransition(async () => { const payload = new FormData(); payload.set("action", "archive"); payload.set("id", book.id); payload.set("archived", String(archive)); const result = await libraryAction(payload); if (result.ok) { pushToast(archive ? "Book archived." : "Book restored.", "success"); router.refresh(); } else alert(result.error ?? "Unable to update this book."); }); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border p-0 transition disabled:opacity-50 ${archive ? "border-red-100 bg-red-50 text-red-600 hover:bg-red-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} aria-label={label}>{archive ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}</button>;
 }
 
 function IssueBookModal({
@@ -271,8 +270,8 @@ function IssueBookModal({
   return (
     <>
       {showTrigger && <button type="button" disabled={book.archived} onClick={() => setOpen(true)}
-        className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
-        title={availableCopies.length ? "Issue book" : "Reserve book"}>Issue Book</button>}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 p-0 text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
+        aria-label={availableCopies.length ? `Issue ${book.title}` : `Reserve ${book.title}`}><BookUp className="h-4 w-4" /></button>}
       {open && (
         <LibraryDialog title={availableCopies.length ? "Issue book" : "Reserve book"} description={book.title} onClose={close} className="max-w-2xl lg:max-w-4xl">
             <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
@@ -324,7 +323,7 @@ function BookActions({ book, stock, grades, sections, settings, canManage }: {
   const availableCopies = stock.filter(copy => copy.status === "available").map(copy => ({ id: copy.id, accession: copy.accession, status: copy.status, book_id: book.id, book_title: book.title, author: book.author, isbn: book.isbn, shelf: book.shelf, is_eligible: true, ineligibility_reason: null }));
 
   return <div className="flex flex-wrap items-center justify-end gap-2">
-    <Link href={`/library/${book.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"><Eye className="h-4 w-4" />View copies</Link>
+    <Link href={`/library/${book.id}`} aria-label="View copies" className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white p-0 text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary"><Eye className="h-4 w-4" /></Link>
     {canManage && <>
       <IssueBookModal book={book} availableCopies={availableCopies} grades={grades} sections={sections} settings={settings} onIssued={() => {}} onReserved={() => {}} />
       <AddCopiesModal book={book} iconOnly />
@@ -507,9 +506,10 @@ export function LibraryWorkspace({
               <button
                 type="button"
                 onClick={() => setTab("Rules & team")}
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-0 text-ink ring-1 ring-outline transition hover:bg-surface-low hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                aria-label="Manage library team"
               >
-                <UserRound className="h-4 w-4" /> Manage team
+                <UserRound className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -559,7 +559,7 @@ export function LibraryWorkspace({
           </div>
 
           {!filteredBooks.length && (
-            <Panel title="No books found">
+            <Panel>
               <p className="text-muted">Add a title, then copies with unique Copy IDs will be generated automatically.</p>
             </Panel>
           )}
@@ -582,10 +582,10 @@ export function LibraryWorkspace({
                 <DataTableRow key={book.id}>
                   <td className={`${dataTableCellClassName} min-w-0`}>
                     <div className="flex min-w-0 items-center gap-2">
-                      <h2 title={book.title} className="truncate font-display text-base font-bold text-ink">{book.title}</h2>
+                      <h2 className="truncate font-display text-base font-bold text-ink">{book.title}</h2>
                       {book.archived && <Tag>Archived</Tag>}
                     </div>
-                    <p title={book.author || ""} className="mt-1 truncate text-sm font-semibold text-primary">{book.author || "Unknown author"}</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-primary">{book.author || "Unknown author"}</p>
                   </td>
                   <td className={dataTableCellClassName}><div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     {book.category && <span className="break-words">{book.category}</span>}
@@ -635,7 +635,7 @@ export function LibraryWorkspace({
           </div>
 
           {!filteredLoans.length && (
-            <Panel title="No matching loans">
+            <Panel>
               <p className="text-muted">Issued books and their return history will appear here.</p>
             </Panel>
           )}
@@ -667,9 +667,9 @@ export function LibraryWorkspace({
                     <div className="col-span-2"><dt className="font-bold text-muted">Renewals</dt><dd className="mt-1 text-ink">{loan.renewals} of {maxAllowedRenewals}</dd></div>
                   </dl>
                   {canManage && !loan.returned_at && (
-                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-outline/50 pt-4">
-                      <Button type="button" onClick={() => setActiveReturnLoan(loan)} className="w-full text-xs">Return</Button>
-                      <Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="w-full text-xs">Renew</Button>
+                    <div className="mt-4 flex justify-end gap-2 border-t border-outline/50 pt-4">
+                      <Button type="button" onClick={() => setActiveReturnLoan(loan)} className="h-10 w-10 rounded-xl px-0" aria-label="Return book"><CornerDownLeft className="h-4 w-4" /></Button>
+                      <Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="h-10 w-10 rounded-xl px-0" aria-label="Renew loan"><RefreshCw className="h-4 w-4" /></Button>
                     </div>
                   )}
                 </article>
@@ -694,7 +694,7 @@ export function LibraryWorkspace({
                   <td className={`${dataTableCellClassName} text-muted`}>{formatDate(loan.issued_at)}</td>
                   <td className={`${dataTableCellClassName} font-semibold ${!loan.returned_at && days > 0 ? "text-red-700" : "text-ink"}`}>{formatDate(loan.due_date)}</td>
                   <td className={dataTableCellClassName}><Tag>{loan.returned_at ? `${loan.outcome || "Returned"} · ${formatDate(loan.returned_at)}` : days ? `${days} days overdue` : "On loan"}</Tag></td>
-                  <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50`}><div className="flex justify-end gap-2 whitespace-nowrap">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="text-xs">Return</Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="text-xs">Renew</Button></>}</div></td>
+                  <td className={`${dataTableCellClassName} sticky right-0 bg-white group-hover:bg-blue-50`}><div className="flex justify-end gap-2 whitespace-nowrap">{canManage && !loan.returned_at && <><Button type="button" onClick={() => setActiveReturnLoan(loan)} className="h-10 w-10 rounded-xl px-0" aria-label="Return book"><CornerDownLeft className="h-4 w-4" /></Button><Button type="button" variant="secondary" onClick={() => setActiveRenewLoan(loan)} className="h-10 w-10 rounded-xl px-0" aria-label="Renew loan"><RefreshCw className="h-4 w-4" /></Button></>}</div></td>
                 </DataTableRow>
               );
             })}
@@ -731,7 +731,7 @@ export function LibraryWorkspace({
         <div id="library-waiting-list" className="scroll-mt-24 space-y-6">
           <div className="space-y-6">
             {/* Detailed Waiting Queue Management */}
-            <Panel title="Waiting queue management">
+            <Panel>
               <div className="mb-4 flex gap-3 rounded-xl bg-blue-50 p-3 text-xs text-blue-800">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
                 <p>
@@ -841,10 +841,9 @@ export function LibraryWorkspace({
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Borrowing Rules */}
           <Panel
-            title="Borrowing rules"
             actions={canAdmin && canManage ? (
-              <ButtonLink href="/library/rules/edit" size="sm">
-                <Pencil className="h-4 w-4" /> Edit rules
+              <ButtonLink href="/library/rules/edit" size="sm" className="h-10 w-10 rounded-xl px-0" aria-label="Edit borrowing rules">
+                <Pencil className="h-4 w-4" />
               </ButtonLink>
             ) : undefined}
           >

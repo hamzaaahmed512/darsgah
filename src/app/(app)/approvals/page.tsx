@@ -9,6 +9,7 @@ import { getApprovalRequests } from "@/lib/services/approvals";
 import { getLeaveRequestsForReview } from "@/lib/services/leaves";
 import { hasPermission } from "@/lib/permissions";
 import { reviewLeaveAction } from "@/app/(app)/leave/actions";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -25,7 +26,6 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader 
         eyebrow="Action Center" 
-        title="Approval Workflows" 
         description="Review and manage pending admissions, cancellations, and other gated requests." 
       />
 
@@ -91,7 +91,7 @@ function LeaveReviewTable({ leaves, canReview }: { leaves: any[]; canReview: boo
                       <form action={reviewLeaveFormAction}>
                         <input type="hidden" name="leave_id" value={leave.id} />
                         <input type="hidden" name="decision" value="approved" />
-                        <Button type="submit" size="sm">Approve</Button>
+                        <Button type="submit" size="sm" className="h-9 w-9 rounded-xl px-0" aria-label="Approve leave"><CheckCircle2 className="h-4 w-4" /></Button>
                       </form>
                       <form action={reviewLeaveFormAction} className="grid gap-2">
                         <input type="hidden" name="leave_id" value={leave.id} />
@@ -99,7 +99,7 @@ function LeaveReviewTable({ leaves, canReview }: { leaves: any[]; canReview: boo
                         <Field label="Denial comment">
                           <Textarea name="principal_remarks" required className="min-h-20" />
                         </Field>
-                        <Button type="submit" variant="danger" size="sm">Deny</Button>
+                        <Button type="submit" variant="danger" size="sm" className="h-9 w-9 justify-self-end rounded-xl px-0" aria-label="Deny leave"><XCircle className="h-4 w-4" /></Button>
                       </form>
                     </div>
                   ) : (

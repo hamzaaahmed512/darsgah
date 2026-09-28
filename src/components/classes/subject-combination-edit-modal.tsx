@@ -115,14 +115,13 @@ export function SubjectCombinationEditModal({
         <button
           type="button"
           onClick={handleOpen}
-          className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-primary/15 bg-primary-soft/45 px-4 text-sm font-semibold text-primary shadow-none transition hover:bg-primary-soft"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary-soft/45 p-0 text-primary shadow-none transition hover:bg-primary-soft"
+          aria-label="Edit subject combination"
         >
           <Edit2 className="h-4 w-4" />
-          Edit
         </button>
-        <Button type="button" variant="danger" onClick={handleDelete} disabled={pending} className="rounded-2xl border border-red-200 bg-red-50 px-4 text-red-700 shadow-none hover:bg-red-100">
+        <Button type="button" variant="danger" onClick={handleDelete} disabled={pending} className="h-10 w-10 rounded-xl border border-red-200 bg-red-50 p-0 text-red-700 shadow-none hover:bg-red-100" aria-label="Delete subject combination">
           <Trash2 className="h-4 w-4" />
-          Delete
         </Button>
       </div>
 

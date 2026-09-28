@@ -72,8 +72,8 @@ export async function AssessmentsView({
   return (
     <>
       <PageHeader
-        eyebrow="Academics"
         title="Assessments"
+        eyebrow="Academics"
         description="Create assessments for your assigned classes, then open each assessment for marking."
         actions={
           workspace.selected ? (
@@ -173,10 +173,10 @@ export async function AssessmentsView({
                           href={buildMarkingHref(basePath, exam)}
                           variant="secondary"
                           size="sm"
-                          className="min-h-10 w-full justify-center rounded-2xl border-primary/40 px-4 text-sm text-primary hover:bg-primary-soft sm:w-auto"
+                          className="h-10 w-10 justify-center rounded-xl border-primary/40 px-0 text-primary hover:bg-primary-soft"
+                          aria-label={exam.is_marked ? `Edit marks for ${exam.title}` : `Mark ${exam.title}`}
                         >
                           {exam.is_marked ? <Edit3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                          {exam.is_marked ? "Edit Marks" : "Do Marking"}
                         </ButtonLink>
                       </div>
                     </div>

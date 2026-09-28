@@ -17,7 +17,7 @@ export function StudentTable({
   if (!rows.length) {
     return (
       <EmptyState 
-        title="No students found" 
+        title="No students found"
         description="Try a different search, status, class filter, or add a new student." 
         action={!limitedView ? (
           <Link href="/students?action=new" className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-ink">
@@ -86,7 +86,6 @@ export function StudentTable({
                     href={`/students/${student.id}`}
                     prefetch={false}
                     aria-label={`View profile for ${formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}`}
-                    title="View profile"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary transition hover:bg-blue-100"
                   >
                     <Eye className="h-4 w-4" aria-hidden="true" />
@@ -122,7 +121,7 @@ export function StudentTable({
               <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
                 {formatGradeSection(student.grade_name, student.section_name) || "Unassigned"}
               </span>
-              <span className="text-sm font-semibold text-primary">View Profile</span>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary"><Eye className="h-4 w-4" aria-hidden="true" /></span>
             </div>
           </Link>
         ))}

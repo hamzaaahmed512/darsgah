@@ -51,7 +51,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         actions={
           <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <StaffFormModal allowedRoles={[...allowedRoles]} customRoles={customRoles} triggerLabel="Add User" wider />
-            {user.role === "principal" ? <ButtonLink href="/admin/roles" variant="secondary">View Roles</ButtonLink> : null}
+            {user.role === "principal" ? <ButtonLink href="/admin/roles" variant="secondary" className="h-10 w-10 rounded-xl px-0" aria-label="View roles"><ShieldCheck className="h-4 w-4" /></ButtonLink> : null}
             <CreateRoleModal currentUserRole={user.role} />
           </div>
         }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Banknote, Bus, ChevronDown, MapPin, UserRound, Users } from "lucide-react";
+import { Banknote, Bus, ChevronDown, MapPin, UserMinus, UserRound, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,8 @@ export default async function TransportPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Operations"
         title="Transport Dashboard"
+        eyebrow="Operations"
         description="Manage routes, drivers, vehicles, passengers, and student transport billing."
         actions={
           canManage ? (
@@ -133,7 +133,7 @@ export default async function TransportPage() {
                               {canManage ? (
                                 <TransportRefreshForm action={item.kind === "staff" ? removeStaffTransportAction : removeTransportAction} confirmText={`Remove ${item.name} from this transport?`}>
                                   <input type="hidden" name="assignment_id" value={item.id} />
-                                  <Button type="submit" variant="ghost" size="sm">Remove</Button>
+                                  <Button type="submit" variant="ghost" size="sm" className="h-9 w-9 rounded-xl px-0 text-danger" aria-label={`Remove ${item.name} from transport`}><UserMinus className="h-4 w-4" /></Button>
                                 </TransportRefreshForm>
                               ) : null}
                             </div>

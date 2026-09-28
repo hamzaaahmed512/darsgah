@@ -27,7 +27,6 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
     <>
       <PageHeader
         eyebrow="Result detail"
-        title={exam.title}
         description={`${formatExamType(exam.exam_type)} / ${exam.term} / ${exam.subjects?.name ?? "Subject"}`}
         actions={
           <ButtonLink href="/results" variant="secondary">
@@ -113,8 +112,8 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
 
       {detail.canPrint ? (
         <div className="mb-6 flex justify-end">
-          <ButtonLink href={`/results/print?classId=${exam.class_id}&examType=${exam.exam_type}${exam.month ? `&month=${exam.month}` : ""}`} target="_blank">
-            <Printer className="h-4 w-4" /> Print Result Cards
+          <ButtonLink href={`/results/print?classId=${exam.class_id}&examType=${exam.exam_type}${exam.month ? `&month=${exam.month}` : ""}`} target="_blank" className="h-10 w-10 rounded-xl px-0" aria-label="Print result cards">
+            <Printer className="h-4 w-4" />
           </ButtonLink>
         </div>
       ) : null}

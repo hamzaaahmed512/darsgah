@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form-field";
 import { resolveNotificationPreferences } from "@/lib/notification-preferences";
 import { formatClassDisplayName } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 interface Props {
   user: any;
@@ -458,9 +459,10 @@ export function SettingsTabs({
                           <button
                             type="button"
                             onClick={() => handleDeleteYear(year.id)}
-                            className="text-xs font-semibold text-danger hover:underline"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-danger-soft p-0 text-danger hover:bg-red-100"
+                            aria-label={`Delete academic session ${year.name}`}
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         ) : null}
                       </td>
