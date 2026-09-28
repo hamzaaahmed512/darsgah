@@ -47,6 +47,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
       </div>
 
       <PageHeader
+        title="Review Results"
         eyebrow="Review Results"
         description="Verify marks and grades before approving this result set for publication."
       />

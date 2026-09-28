@@ -26,6 +26,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
   return (
     <>
       <PageHeader
+        title={exam.title}
         eyebrow="Result detail"
         description={`${formatExamType(exam.exam_type)} / ${exam.term} / ${exam.subjects?.name ?? "Subject"}`}
         actions={
