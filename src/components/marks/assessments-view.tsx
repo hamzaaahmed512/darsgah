@@ -92,6 +92,38 @@ export async function AssessmentsView({
           <StatCard label="To mark" value={unmarkedCount} hint="Assessments awaiting marks" icon={Edit3} tone="amber" trend={unmarkedCount ? "Action needed" : "All caught up"} trendTone={unmarkedCount ? "negative" : "positive"} />
           <StatCard label="Student entries" value={studentsAwaitingMarks} hint="Marks still to enter" icon={Users} tone="purple" trend={studentsAwaitingMarks ? "Across selected assessments" : "No pending entries"} />
         </section>
+
+        <Card className="mb-5 rounded-[24px] border border-blue-200 bg-white p-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(420px,640px)_1fr] xl:items-end">
+            <div className="rounded-2xl bg-blue-50/45 p-1">
+              <ClassSubjectSelect
+                options={workspace.options}
+                selectedClassId={workspace.selected?.class_id}
+                selectedSubjectId={workspace.selected?.subject_id}
+                range={range}
+                basePath={basePath}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              {rangeFilters.map((item) => (
+                <ButtonLink
+                  key={item.value}
+                  href={buildAssessmentsHref(basePath, {
+                    classId: workspace.selected?.class_id,
+                    subjectId: workspace.selected?.subject_id,
+                    range: item.value
+                  })}
+                  variant={range === item.value ? "primary" : "secondary"}
+                  size="sm"
+                  className="min-h-10 rounded-2xl px-4 text-sm"
+                >
+                  {item.label}
+                </ButtonLink>
+              ))}
+            </div>
+          </div>
+        </Card>
+
         <Card className="overflow-hidden rounded-[24px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
           <CardHeader className="gap-4 border-b border-blue-200 pb-5">
             <div className="flex items-start gap-4">
@@ -104,35 +136,6 @@ export async function AssessmentsView({
             </div>
           </CardHeader>
           <CardContent className="pt-5">
-            <div className="mb-5 grid gap-4 rounded-[18px] border border-blue-100 bg-blue-50/45 p-4 xl:grid-cols-[minmax(420px,640px)_1fr] xl:items-end">
-              <div className="rounded-2xl bg-white/70 p-1">
-                <ClassSubjectSelect
-                  options={workspace.options}
-                  selectedClassId={workspace.selected?.class_id}
-                  selectedSubjectId={workspace.selected?.subject_id}
-                  range={range}
-                  basePath={basePath}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 xl:justify-end">
-                {rangeFilters.map((item) => (
-                  <ButtonLink
-                    key={item.value}
-                    href={buildAssessmentsHref(basePath, {
-                      classId: workspace.selected?.class_id,
-                      subjectId: workspace.selected?.subject_id,
-                      range: item.value
-                    })}
-                    variant={range === item.value ? "primary" : "secondary"}
-                    size="sm"
-                    className="min-h-10 rounded-2xl px-4 text-sm"
-                  >
-                    {item.label}
-                  </ButtonLink>
-                ))}
-              </div>
-            </div>
-
             {!visibleExams.length ? (
               <EmptyState title="No assessments found" description="Create an assessment or switch the filter to view another period." />
             ) : (

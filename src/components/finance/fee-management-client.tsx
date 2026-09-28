@@ -240,7 +240,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
           ) : (
           <Card className="mt-5 min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
           <div className="border-b border-blue-200 px-5 py-4 sm:px-6"><div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><UsersRound className="h-5 w-5 text-primary" />Student Fee Accounts</h3><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{filtered.length} account{filtered.length === 1 ? "" : "s"}</span></div></div>
-          <div className="hidden max-w-full overflow-x-auto lg:block">
+          <div className="fee-accounts-table-scroll hidden max-w-full overflow-x-auto lg:block">
             <table className="w-full min-w-[1120px] text-left text-sm">
               <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>

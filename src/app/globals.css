@@ -269,6 +269,18 @@ tbody tr {
   border-radius: 0;
 }
 
+/* Fee Accounts owns the outer list boundary; the scrolling table stays square. */
+.app-workspace .fee-accounts-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-workspace .fee-accounts-table-scroll table,
+.app-workspace .fee-accounts-table-scroll thead {
+  border-radius: 0;
+}
+
 /* Leave tables already sit inside their own rounded list containers. */
 .app-workspace .leave-table-scroll.overflow-x-auto {
   border: 0;
