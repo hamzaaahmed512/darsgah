@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatGradeSection } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatStudentName } from "@/lib/student-name";
-import { ArrowRight, ArrowUpDown, Eye, UsersRound } from "lucide-react";
+import { ArrowUpDown, Eye, UsersRound } from "lucide-react";
 import { StudentPagination } from "@/components/students/student-pagination";
 
 export function StudentTable({
@@ -85,9 +85,11 @@ export function StudentTable({
                     data-navigation-progress="immediate"
                     href={`/students/${student.id}`}
                     prefetch={false}
-                    className="inline-flex min-h-9 items-center gap-1.5 justify-center rounded-xl bg-blue-50 px-3 text-sm font-semibold text-primary transition hover:bg-blue-100"
+                    aria-label={`View profile for ${formatStudentName({ name: student.name_en, firstName: student.first_name, lastName: student.last_name })}`}
+                    title="View profile"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary transition hover:bg-blue-100"
                   >
-                    <Eye className="h-4 w-4" />View Profile<ArrowRight className="h-3.5 w-3.5" />
+                    <Eye className="h-4 w-4" aria-hidden="true" />
                   </Link>
                 </td> : null}
               </tr>
