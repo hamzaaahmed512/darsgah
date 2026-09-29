@@ -9,6 +9,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { normalizeEmail } from "@/lib/email";
 import { consumeAuthRateLimit } from "@/lib/auth/rate-limit";
+import {
+  countSchoolDescriptionWords,
+  SCHOOL_DESCRIPTION_MAX_CHARACTERS,
+  SCHOOL_DESCRIPTION_MAX_WORDS
+} from "@/lib/school-profile-description";
 
 const SCHOOL_BRANDING_BUCKET = "school-branding";
 const MAX_ASSET_SIZE_BYTES = 5 * 1024 * 1024;
@@ -90,7 +95,7 @@ export async function saveSchoolProfileAction(formData: FormData) {
     const user = await requireUser("settings:manage");
     const name = readString(formData, "name").slice(0, 120);
     const shortName = readString(formData, "shortName").toUpperCase().slice(0, 20);
-    const description = readString(formData, "description").slice(0, 300);
+    const description = readString(formData, "description");
     const timezone = readString(formData, "timezone");
     const email = normalizeEmail(readString(formData, "email"));
     const phone = formatPakistaniPhoneForStorage(readString(formData, "phone"));
@@ -106,6 +111,12 @@ export async function saveSchoolProfileAction(formData: FormData) {
 
     if (!name) {
       throw new Error("School name is required.");
+    }
+    if (description.length > SCHOOL_DESCRIPTION_MAX_CHARACTERS) {
+      throw new Error(`Short description must be ${SCHOOL_DESCRIPTION_MAX_CHARACTERS} characters or fewer.`);
+    }
+    if (countSchoolDescriptionWords(description) > SCHOOL_DESCRIPTION_MAX_WORDS) {
+      throw new Error(`Short description must be ${SCHOOL_DESCRIPTION_MAX_WORDS} words or fewer.`);
     }
 
     const settings: Record<string, any> = {

@@ -121,35 +121,11 @@ export async function getParentChildren(session: ParentPortalSession) {
 
 export async function getParentComplaints(session: ParentPortalSession) {
   const admin = createAdminClient();
-  const { data: enrollment, error: enrollmentError } = await admin.from("enrollments")
-    .select("class_id,classes!inner(head_teacher_id)")
-    .eq("school_id", session.schoolId).eq("student_id", session.studentId).eq("status", "active")
-    .order("starts_on", { ascending: false }).limit(1).maybeSingle();
-  if (enrollmentError) throw new Error("Unable to load the student’s current class.");
-
-  const classRecord: any = Array.isArray(enrollment?.classes) ? enrollment.classes[0] : enrollment?.classes;
-  const classId = enrollment?.class_id;
-  const { data: assignments, error: assignmentError } = classId
-    ? await admin.from("teacher_assignments").select("teacher_id,profiles!teacher_assignments_teacher_id_fkey(full_name)").eq("school_id", session.schoolId).eq("class_id", classId)
-    : { data: [], error: null };
-  if (assignmentError) throw new Error("Unable to load the class teachers.");
-
-  const teacherIds = new Set<string>();
-  const teachers: Array<{ id: string; name: string }> = [];
-  for (const assignment of assignments ?? []) {
-    const profile: any = Array.isArray(assignment.profiles) ? assignment.profiles[0] : assignment.profiles;
-    if (!teacherIds.has(assignment.teacher_id)) { teacherIds.add(assignment.teacher_id); teachers.push({ id: assignment.teacher_id, name: profile?.full_name ?? "Teacher" }); }
-  }
-  if (classRecord?.head_teacher_id && !teacherIds.has(classRecord.head_teacher_id)) {
-    const { data: headTeacher } = await admin.from("profiles").select("full_name").eq("id", classRecord.head_teacher_id).maybeSingle();
-    teachers.unshift({ id: classRecord.head_teacher_id, name: headTeacher?.full_name ?? "Head Teacher" });
-  }
-
   const { data: complaints, error: complaintError } = await admin.from("parent_complaints")
     .select("id,category,subject,details,status,admin_response,created_at,complained_teacher:profiles!parent_complaints_complained_teacher_id_fkey(full_name),reviewer:profiles!parent_complaints_reviewed_by_fkey(full_name)")
     .eq("school_id", session.schoolId).eq("student_id", session.studentId).order("created_at", { ascending: false });
   if (complaintError) throw new Error("Unable to load complaint history.");
-  return { teachers, complaints: complaints ?? [] };
+  return { complaints: complaints ?? [] };
 }
 
 export async function getParentStudent(session: ParentPortalSession, studentId: string) {

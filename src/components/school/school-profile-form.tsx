@@ -9,6 +9,12 @@ import { saveSchoolProfileAction } from "@/app/(app)/school-profile/actions";
 import { initials } from "@/lib/utils";
 import { formatPakistaniPhone } from "@/lib/pakistan-format";
 import { normalizeEmail } from "@/lib/email";
+import {
+  countSchoolDescriptionWords,
+  limitSchoolDescription,
+  SCHOOL_DESCRIPTION_MAX_CHARACTERS,
+  SCHOOL_DESCRIPTION_MAX_WORDS
+} from "@/lib/school-profile-description";
 
 type Props = {
   canManage: boolean;
@@ -62,6 +68,7 @@ export function SchoolProfileForm({
   });
 
   const displayName = form.shortName.trim() || form.name.trim() || schoolName;
+  const descriptionWordCount = countSchoolDescriptionWords(form.description);
   useEffect(() => {
     if (!logoFile) {
       setLogoObjectUrl(null);
@@ -257,19 +264,25 @@ export function SchoolProfileForm({
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Short Description" hint="Optional; shown with the school logo in the student portal.">
+            <Field label="Short Description" hint={`Optional; shown with the school logo in the student portal. Maximum ${SCHOOL_DESCRIPTION_MAX_WORDS} words.`}>
               {readOnly ? (
                 <div className="min-h-20 rounded-lg border border-outline/60 bg-surface-low px-3 py-2.5 text-sm leading-6 text-ink">
                   {displayValue(form.description)}
                 </div>
               ) : (
-                <Textarea
-                  value={form.description}
-                  onChange={(event) => updateField("description", event.target.value.slice(0, 300))}
-                  placeholder="Write a short introduction to your school."
-                  maxLength={300}
-                  rows={4}
-                />
+                <div>
+                  <Textarea
+                    value={form.description}
+                    onChange={(event) => updateField("description", limitSchoolDescription(event.target.value))}
+                    placeholder="Write a short introduction to your school."
+                    maxLength={SCHOOL_DESCRIPTION_MAX_CHARACTERS}
+                    rows={4}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-muted" aria-live="polite">
+                    <span>Up to {SCHOOL_DESCRIPTION_MAX_WORDS} words</span>
+                    <span className="tabular-nums">{descriptionWordCount}/{SCHOOL_DESCRIPTION_MAX_WORDS} words · {form.description.length}/{SCHOOL_DESCRIPTION_MAX_CHARACTERS} characters</span>
+                  </div>
+                </div>
               )}
             </Field>
           </div>
