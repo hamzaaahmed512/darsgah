@@ -10,6 +10,7 @@ function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
 
   if (audienceValue === `user:${user.id}`) return true;
   if (announcement.audience_type === "all") return true;
+  if (announcement.audience_type === "parents") return hasPermission(user.role, "announcements:manage", user.permissions);
   if (announcement.audience_type === "teachers") return user.role === "teacher" || user.role === "head_teacher" || user.role === "principal";
   if (announcement.audience_type === "registrar") return user.role === "student_staff";
   if (announcement.audience_type === "admin") return user.role === "administrator" || user.role === "principal";
@@ -77,14 +78,15 @@ export async function getUnreadAnnouncementCount(user: AppUser): Promise<number>
   // Get all non-archived, published announcements for this school
   const { data: announcements } = await supabase
     .from("announcements")
-    .select("id")
+    .select("id,title,description,priority,type,audience_type,audience_value,publish_date,expiry_date,attachment_url,is_archived,created_by,created_at,updated_at,school_id")
     .eq("school_id", user.schoolId)
     .eq("is_archived", false)
     .lte("publish_date", today);
 
-  if (!announcements?.length) return 0;
+  const visibleAnnouncements = (announcements ?? []).filter((announcement: any) => announcementVisibleToUser(announcement, user));
+  if (!visibleAnnouncements.length) return 0;
 
-  const ids = announcements.map((a) => a.id);
+  const ids = visibleAnnouncements.map((a) => a.id);
 
   // Get reads for this user
   const { data: reads } = await supabase
@@ -112,14 +114,15 @@ export async function markAllAnnouncementsRead(user: AppUser) {
 
   const { data: announcements } = await supabase
     .from("announcements")
-    .select("id")
+    .select("id,title,description,priority,type,audience_type,audience_value,publish_date,expiry_date,attachment_url,is_archived,created_by,created_at,updated_at,school_id")
     .eq("school_id", user.schoolId)
     .eq("is_archived", false)
     .lte("publish_date", today);
 
-  if (!announcements?.length) return;
+  const visibleAnnouncements = (announcements ?? []).filter((announcement: any) => announcementVisibleToUser(announcement, user));
+  if (!visibleAnnouncements.length) return;
 
-  const inserts = announcements.map((a) => ({
+  const inserts = visibleAnnouncements.map((a) => ({
     school_id: user.schoolId,
     announcement_id: a.id,
     user_id: user.id

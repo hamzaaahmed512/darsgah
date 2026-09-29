@@ -387,7 +387,7 @@ export type TransportVehicle = {
 
 export type AnnouncementPriority = "low" | "medium" | "high" | "critical";
 export type AnnouncementType = "general" | "academic" | "holiday" | "emergency" | "meeting" | "examination" | "urgent";
-export type AnnouncementAudienceType = "all" | "teachers" | "registrar" | "admin" | "class" | "department" | "roles";
+export type AnnouncementAudienceType = "all" | "parents" | "teachers" | "registrar" | "admin" | "class" | "department" | "roles";
 
 export type Announcement = {
   id: string;

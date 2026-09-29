@@ -9,10 +9,12 @@ import type { AnnouncementPriority, AnnouncementType, AnnouncementAudienceType }
 export function CreateAnnouncementDialog({
   triggerLabel = "New Announcement",
   triggerClassName,
+  defaultAudience = "all",
   onSuccess
 }: {
   triggerLabel?: string;
   triggerClassName?: string;
+  defaultAudience?: "all" | "parents";
   onSuccess?: () => void | Promise<void>;
 }) {
   const router = useRouter();
@@ -27,7 +29,7 @@ export function CreateAnnouncementDialog({
     description: "",
     priority: "medium" as AnnouncementPriority,
     type: "general" as AnnouncementType,
-    audience_type: "all" as AnnouncementAudienceType,
+    audience_type: defaultAudience as AnnouncementAudienceType,
     audience_value: "",
     publish_date: today,
     expiry_date: ""
@@ -59,7 +61,7 @@ export function CreateAnnouncementDialog({
         setError(res.error);
       } else {
         setOpen(false);
-        setForm({ title: "", description: "", priority: "medium", type: "general", audience_type: "all", audience_value: "", publish_date: today, expiry_date: "" });
+        setForm({ title: "", description: "", priority: "medium", type: "general", audience_type: defaultAudience, audience_value: "", publish_date: today, expiry_date: "" });
         if (onSuccess) {
           await onSuccess();
         }
@@ -73,7 +75,7 @@ export function CreateAnnouncementDialog({
       <div className="max-h-[calc(100dvh-1.5rem)] w-full overflow-hidden flex flex-col max-w-lg min-h-0 flex-1 overflow-y-auto rounded-[20px] bg-white shadow-lift ring-1 ring-outline sm:max-h-[calc(100dvh-2rem)]">
         <div className="border-b border-outline px-4 py-4 sm:px-6 sm:py-5">
           <h2 className="font-display text-xl font-bold text-ink">New Announcement</h2>
-          <p className="text-sm text-muted">Broadcast a message to all school staff members.</p>
+          <p className="text-sm text-muted">Send a notification to parents or members of the school staff.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:p-6">
           <div>
@@ -111,6 +113,7 @@ export function CreateAnnouncementDialog({
             <label className="mb-1 block text-sm font-semibold text-ink">Audience</label>
             <select value={form.audience_type} onChange={(e) => set("audience_type", e.target.value)} className="w-full rounded-xl border border-outline px-4 py-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
               <option value="all">All Staff</option>
+              <option value="parents">All Parents</option>
               <option value="teachers">Teachers Only</option>
               <option value="registrar">Registrar Only</option>
               <option value="admin">Admin Only</option>

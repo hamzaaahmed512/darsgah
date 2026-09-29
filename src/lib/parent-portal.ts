@@ -121,16 +121,25 @@ export async function getParentChildren(session: ParentPortalSession) {
 export async function getParentStudent(session: ParentPortalSession, studentId: string) {
   if (studentId !== session.studentId) return null;
   const admin = createAdminClient();
-  const [student, guardians, attendance, marks, challans, school, schoolSettings] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [student, guardians, attendance, marks, challans, school, schoolSettings, parentAnnouncements] = await Promise.all([
     admin.from("student_directory").select("id,first_name,last_name,name_en,admission_number,student_cnic,status,class_id,class_name,grade_name,section_name,guardian_name,attendance_rate,date_of_birth,gender,father_name_en,father_phone,photo_url,email,phone,address,admission_date").eq("school_id", session.schoolId).eq("id", studentId).maybeSingle(),
     admin.from("student_guardian_details").select("student_id,guardian_id,is_primary,full_name,relationship,email,phone,cnic").eq("school_id", session.schoolId).eq("student_id", studentId).order("is_primary", { ascending: false }),
     admin.from("attendance_records").select("id,attendance_date,status,note,classes(name,grades(name),sections(name))").eq("school_id", session.schoolId).eq("student_id", studentId).order("attendance_date", { ascending: false }),
     admin.from("marks").select("id,marks_obtained,is_absent,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)").eq("school_id", session.schoolId).eq("student_id", studentId).order("created_at", { ascending: false }),
     admin.from("fee_challans").select("id,fee_month,amount,due_date,created_at,student_fee_accounts(total_payable,fee_payments(amount,payment_date,is_voided))").eq("school_id", session.schoolId).eq("student_id", studentId).order("fee_month", { ascending: false }),
     admin.from("schools").select("name,contact_email").eq("id", session.schoolId).maybeSingle(),
-    admin.from("school_settings").select("settings").eq("school_id", session.schoolId).maybeSingle()
+    admin.from("school_settings").select("settings").eq("school_id", session.schoolId).maybeSingle(),
+    admin.from("announcements")
+      .select("id,title,description,priority,type,publish_date,created_at")
+      .eq("school_id", session.schoolId)
+      .eq("audience_type", "parents")
+      .eq("is_archived", false)
+      .lte("publish_date", today)
+      .or(`expiry_date.is.null,expiry_date.gte.${today}`)
+      .order("created_at", { ascending: false })
   ]);
-  if (student.error || guardians.error || attendance.error || marks.error || challans.error || school.error || schoolSettings.error) throw new Error("Unable to load the student profile.");
+  if (student.error || guardians.error || attendance.error || marks.error || challans.error || school.error || schoolSettings.error || parentAnnouncements.error) throw new Error("Unable to load the student profile.");
   const settings = (schoolSettings.data?.settings ?? {}) as Record<string, unknown>;
   const schoolInfo = school.data ? {
     name: school.data.name,
@@ -149,5 +158,5 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
     const overdue = outstanding > 0 && row.due_date && new Date(`${row.due_date}T23:59:59`).getTime() < Date.now();
     return { ...row, amount, outstanding, payment_status: outstanding <= 0 ? "paid" : paidForMonth > 0 ? "partial" : overdue ? "overdue" : "unpaid" };
   });
-  return { student: student.data, school: schoolInfo, guardians: guardians.data ?? [], attendance: attendance.data ?? [], marks: marks.data ?? [], challans: portalChallans, summaries: { attendance: { total: attendance.data?.length ?? 0, present: attendance.data?.filter((row: any) => ["present", "late"].includes(row.status)).length ?? 0, rate: attendance.data?.length ? ((attendance.data.filter((row: any) => ["present", "late"].includes(row.status)).length / attendance.data.length) * 100) : null }, exams: { total: marks.data?.length ?? 0, average: null }, fees: { total: portalChallans.reduce((total, row) => total + row.amount, 0), outstanding: portalChallans.reduce((total, row) => total + row.outstanding, 0) } } };
+  return { student: student.data, school: schoolInfo, notifications: parentAnnouncements.data ?? [], guardians: guardians.data ?? [], attendance: attendance.data ?? [], marks: marks.data ?? [], challans: portalChallans, summaries: { attendance: { total: attendance.data?.length ?? 0, present: attendance.data?.filter((row: any) => ["present", "late"].includes(row.status)).length ?? 0, rate: attendance.data?.length ? ((attendance.data.filter((row: any) => ["present", "late"].includes(row.status)).length / attendance.data.length) * 100) : null }, exams: { total: marks.data?.length ?? 0, average: null }, fees: { total: portalChallans.reduce((total, row) => total + row.amount, 0), outstanding: portalChallans.reduce((total, row) => total + row.outstanding, 0) } } };
 }

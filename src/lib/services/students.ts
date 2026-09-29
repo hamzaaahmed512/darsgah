@@ -339,12 +339,7 @@ export async function getStudentRecord(
       .eq("student_id", id)
       .order("is_primary", { ascending: false }),
     attendanceQuery,
-    supabase
-      .from("marks")
-      .select("id,marks_obtained,is_absent,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)")
-      .eq("school_id", user.schoolId)
-      .eq("student_id", id)
-      .order("created_at", { ascending: false }),
+    getStudentMarksForProfile(supabase, user.schoolId, id),
     filters.includeFinance
       ? supabase
           .from("fee_challans")
@@ -400,6 +395,38 @@ export async function getStudentRecord(
       exams: { total: marksRows.length, average: markPercentages.length ? markPercentages.reduce((sum, value) => sum + value, 0) / markPercentages.length : null },
       fees: { total: challanRows.length, outstanding: challanRows.reduce((sum, row) => sum + row.outstanding, 0) }
     }
+  };
+}
+
+async function getStudentMarksForProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  schoolId: string,
+  studentId: string
+) {
+  const fields = "id,marks_obtained,is_absent,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)";
+  const result = await supabase
+    .from("marks")
+    .select(fields)
+    .eq("school_id", schoolId)
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+
+  if (!result.error) return result;
+
+  const missingAbsentColumn = result.error.code === "42703"
+    || result.error.message.toLowerCase().includes("is_absent");
+  if (!missingAbsentColumn) return result;
+
+  const fallback = await supabase
+    .from("marks")
+    .select("id,marks_obtained,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)")
+    .eq("school_id", schoolId)
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+
+  return {
+    ...fallback,
+    data: fallback.data?.map((row: any) => ({ ...row, is_absent: false })) ?? fallback.data
   };
 }
 

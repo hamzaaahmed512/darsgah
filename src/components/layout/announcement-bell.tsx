@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Archive, Bell } from "lucide-react";
+import { Archive, Bell, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { CreateAnnouncementDialog } from "@/components/announcements/create-announcement-dialog";
 import { archiveAnnouncementAction } from "@/app/(app)/announcements/actions";
@@ -43,6 +43,7 @@ export function AnnouncementBell({
   const [workflowNotifications, setWorkflowNotifications] = useState<WorkflowNotification[]>(initialWorkflowNotifications);
   const [loading, setLoading] = useState(initialLoading);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [channel, setChannel] = useState<"staff" | "parents">("staff");
   const panelRef = useRef<HTMLDivElement>(null);
   const supabase = useCallback(() => createClient(), []);
   const canManage = hasPermission(user.role, "announcements:manage", user.permissions);
@@ -50,6 +51,8 @@ export function AnnouncementBell({
 
   const unreadAnnouncementCount = announcements.filter((a) => !a.is_read && !a.is_archived && a.publish_date <= today).length;
   const unreadCount = unreadAnnouncementCount + workflowNotifications.length;
+  const displayedAnnouncements = announcements.filter((announcement) => channel === "parents" ? announcement.audience_type === "parents" : announcement.audience_type !== "parents");
+  const displayedWorkflowNotifications = channel === "staff" ? workflowNotifications : [];
 
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
@@ -212,6 +215,13 @@ export function AnnouncementBell({
           </div>
         </div>
 
+        {canManage ? (
+          <div className="grid grid-cols-2 gap-2 border-b border-outline/60 bg-slate-50/70 p-3">
+            <button type="button" onClick={() => setChannel("staff")} className={cn("flex min-h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition", channel === "staff" ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:text-primary")}><UsersRound className="h-4 w-4" />Staff</button>
+            <button type="button" onClick={() => setChannel("parents")} className={cn("flex min-h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition", channel === "parents" ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:text-primary")}><Bell className="h-4 w-4" />Parents</button>
+          </div>
+        ) : null}
+
         {/* Body */}
         <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto sm:max-h-[400px]">
           {loading ? (
@@ -221,14 +231,14 @@ export function AnnouncementBell({
               <p className="text-sm font-semibold text-danger">{loadError}</p>
               <button type="button" onClick={() => void fetchAnnouncements()} className="mt-3 text-sm font-semibold text-primary hover:underline">Try again</button>
             </div>
-          ) : !announcements.length && !workflowNotifications.length ? (
+          ) : !displayedAnnouncements.length && !displayedWorkflowNotifications.length ? (
             <div className="py-10 text-center">
               <Bell className="mx-auto mb-2 h-8 w-8 text-outline" />
               <p className="text-sm text-muted">No active notifications</p>
             </div>
           ) : (
             <div className="divide-y divide-outline/30">
-              {workflowNotifications.map((item) => (
+              {displayedWorkflowNotifications.map((item) => (
                 <a key={item.id} href={item.href} className="block px-4 py-3 transition hover:bg-surface-low">
                   <div className="flex items-start gap-3">
                     <span className={cn("mt-1.5 inline-flex h-2 w-2 rounded-full", PRIORITY_DOT[item.priority])} />
@@ -242,7 +252,7 @@ export function AnnouncementBell({
                   </div>
                 </a>
               ))}
-              {announcements.map((a) => {
+              {displayedAnnouncements.map((a) => {
                 const isExpired = Boolean(a.expiry_date && a.expiry_date < today);
                 return (
                 <div
@@ -315,8 +325,10 @@ export function AnnouncementBell({
         <div className="shrink-0 border-t border-outline bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:py-3">
           {canManage ? (
             <CreateAnnouncementDialog
-              triggerLabel="Make Announcement"
+              key={channel}
+              triggerLabel={channel === "parents" ? "Notify Parents" : "Notify Staff"}
               triggerClassName="inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-button hover:bg-primary-ink"
+              defaultAudience={channel === "parents" ? "parents" : "all"}
               onSuccess={fetchAnnouncements}
             />
           ) : null}
