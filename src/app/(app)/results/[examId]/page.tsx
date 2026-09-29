@@ -1,21 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, Printer, UsersRound } from "lucide-react";
+import { ArrowLeft, Printer, Activity, School, Target } from "lucide-react";
 import { ApprovalActions } from "@/app/(app)/results/_components/approval-actions";
 import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
-import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
+import { ResultDetailTable } from "@/app/(app)/results/[examId]/_components/result-detail-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultDetail } from "@/lib/services/marks";
-import { formatDisplayName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 
-function formatDateTime(value: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
-}
 
 export default async function ResultDetailPage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
@@ -23,9 +19,20 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
   const detail = await getExamResultDetail(user, examId);
   const exam: any = detail.exam;
 
+  const marksList = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null).map((m: any) => Number(m.marks_obtained));
+  const highestMarks = marksList.length > 0 ? Math.max(...marksList) : 0;
+  const lowestMarks = marksList.length > 0 ? Math.min(...marksList) : 0;
+  const totalStudents = detail.marks.length;
+  const failedStudentsCount = detail.marks.filter((m: any) => m.grade === "F").length;
+  const passedStudentsCount = totalStudents - failedStudentsCount;
+  const passedPercentage = totalStudents > 0 ? Math.round((passedStudentsCount / totalStudents) * 100) : 0;
+  const maxMarks = Number(exam.max_marks);
+  const above90Count = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null && (Number(m.marks_obtained) / maxMarks) >= 0.9).length;
+
   return (
     <>
       <PageHeader
+        title={exam.title}
         eyebrow="Result detail"
         description={`${formatExamType(exam.exam_type)} / ${exam.term} / ${exam.subjects?.name ?? "Subject"}`}
         actions={
@@ -35,45 +42,43 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
         }
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Status</CardTitle>
-            <WorkflowStatusBadge status={exam.workflowStatus} />
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Uploaded By</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">{formatDisplayName(exam.uploaded_by_teacher_name) || formatDisplayName(exam.creator?.full_name) || "Teacher"}</p>
-            <p className="text-xs text-muted">{exam.uploaded_by_teacher_id ?? exam.creator?.id ?? "—"}</p>
-            <p className="mt-2 text-sm text-muted">{formatDateTime(exam.uploaded_at)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Class / Section</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">
+      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Class / Section"
+          value={
+            <span className="text-xl">
               {formatClassDisplayName(exam.classes?.grades?.name, exam.classes?.name, exam.classes?.sections?.name) || "Class"}
-            </p>
-            {exam.classes?.room ? <p className="text-sm text-muted">Room: {exam.classes.room}</p> : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Approved By</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">{exam.approved_by_principal_name ?? "—"}</p>
-            <p className="text-xs text-muted">{exam.approved_by_principal_id ?? "—"}</p>
-            <p className="mt-2 text-sm text-muted">{formatDateTime(exam.approved_at)}</p>
-          </CardContent>
-        </Card>
-      </div>
+            </span>
+          }
+          hint={exam.classes?.room ? `Room: ${exam.classes.room}` : "No room assigned"}
+          icon={School}
+          tone="amber"
+        />
+        <StatCard
+          label="Total Marks"
+          value={<span className="text-xl">{exam.max_marks}</span>}
+          hint={
+            <span className="flex flex-col gap-1 mt-1 text-xs">
+              <span className="font-semibold text-emerald-600">Highest {highestMarks}</span>
+              <span className="font-semibold text-red-500">Lowest {lowestMarks}</span>
+            </span>
+          }
+          icon={Activity}
+          tone="purple"
+        />
+        <StatCard
+          label="Student Performance"
+          value={<span className="text-xl">{passedPercentage}% Students Passed</span>}
+          hint={
+            <span className="flex flex-col gap-1 mt-1 text-xs">
+              <span className="font-semibold text-emerald-600">{above90Count} student{above90Count === 1 ? "" : "s"} scored above 90%</span>
+              <span className="font-semibold text-red-500">{failedStudentsCount} student{failedStudentsCount === 1 ? "" : "s"} failed</span>
+            </span>
+          }
+          icon={Target}
+          tone="green"
+        />
+      </section>
 
       {exam.rejection_reason ? (
         <Card className="mb-6 border-danger/30">
@@ -118,69 +123,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
         </div>
       ) : null}
 
-      <Card className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
-        <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-2 text-xl"><UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />Student Marks</CardTitle>
-          <Badge tone={exam.requires_approval ? "yellow" : "blue"}>
-            {exam.requires_approval ? "Major assessment" : "Regular assessment"}
-          </Badge>
-        </div>
-        {detail.marks.length ? (
-          <>
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-blue-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
-                  <tr>
-                    <th className="px-6 py-4">Student</th>
-                    <th className="px-6 py-4">Admission No.</th>
-                    <th className="px-6 py-4">Marks</th>
-                    <th className="px-6 py-4">Grade</th>
-                    <th className="px-6 py-4">Comment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.marks.map((row, index) => (
-                    <tr key={`${row.admission_number}-${index}`} className="border-t border-slate-100 transition hover:bg-blue-50/30">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(row.student_name)}`}>{getInitials(row.student_name)}</span>
-                          <span className="font-semibold text-slate-900">{row.student_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 font-semibold text-slate-700">{row.admission_number}</td>
-                      <td className="px-6 py-5 text-slate-700">{row.marks_obtained} / {Number(exam.max_marks)}</td>
-                      <td className="px-6 py-5"><span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{row.grade}</span></td>
-                      <td className="max-w-sm px-6 py-5 text-slate-600">{row.teacher_comment || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="grid gap-3 p-4 lg:hidden">
-              {detail.marks.map((row, index) => (
-                <article key={`${row.admission_number}-${index}`} className="min-w-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getStudentAvatarTone(row.student_name)}`}>{getInitials(row.student_name)}</span>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900">{row.student_name}</p>
-                        <p className="text-xs text-slate-500">{row.admission_number}</p>
-                      </div>
-                    </div>
-                    <span className="inline-flex min-w-10 items-center justify-center rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{row.grade}</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
-                    <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Marks</p><p className="mt-1 font-semibold text-slate-700">{row.marks_obtained} / {Number(exam.max_marks)}</p></div>
-                    <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Comment</p><p className="mt-1 text-sm text-slate-600">{row.teacher_comment || "—"}</p></div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="px-6 py-10 text-center text-sm text-muted">No marks recorded yet.</p>
-        )}
-      </Card>
+      <ResultDetailTable marks={detail.marks as any} maxMarks={Number(exam.max_marks)} requiresApproval={exam.requires_approval} />
 
       {user.role === "teacher" && exam.workflowStatus === "rejected" ? (
         <p className="mt-4 text-sm text-muted">
@@ -193,25 +136,4 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
       ) : null}
     </>
   );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-function getStudentAvatarTone(name: string) {
-  const tones = [
-    "border-blue-100 bg-blue-50 text-blue-600",
-    "border-emerald-100 bg-emerald-50 text-emerald-600",
-    "border-violet-100 bg-violet-50 text-violet-600",
-    "border-amber-100 bg-amber-50 text-amber-600",
-    "border-cyan-100 bg-cyan-50 text-cyan-600"
-  ];
-  const hash = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[hash % tones.length];
 }

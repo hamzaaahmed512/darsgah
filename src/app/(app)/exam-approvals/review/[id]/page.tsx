@@ -1,6 +1,6 @@
 import { CheckCircle2, ChevronLeft, XCircle } from "lucide-react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/form-field";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultsForReviewByApprovalId } from "@/lib/services/marks";
-import { principalCanAccessAcademicControl } from "@/lib/services/academics";
 import { reviewExamApprovalAction } from "@/app/(app)/exam-approvals/actions";
 import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
 import { formatDisplayName, formatFullName } from "@/lib/student-name";
@@ -17,7 +16,6 @@ import { formatClassDisplayName } from "@/lib/utils";
 export default async function ExamApprovalReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser("marks:approve");
-  if (!(await principalCanAccessAcademicControl(user))) redirect("/unauthorized");
 
   let reviewData;
   try {
@@ -26,11 +24,11 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
     notFound();
   }
 
-  const { approval, exam, marks } = reviewData;
+  const { approval, exam, marks, rosterCount, missingCount } = reviewData;
 
   // Calculate statistics
-  const totalStudents = marks.length;
-  const gradedCount = marks.filter((m: any) => m.marks_obtained !== null).length;
+  const totalStudents = rosterCount;
+  const gradedCount = rosterCount - missingCount;
   const validMarks = marks.filter((m: any) => typeof m.marks_obtained === "number").map((m: any) => m.marks_obtained);
   const averageMarks = validMarks.length ? (validMarks.reduce((a: number, b: number) => a + b, 0) / validMarks.length).toFixed(1) : "N/A";
   const highestMarks = validMarks.length ? Math.max(...validMarks) : "N/A";
@@ -47,6 +45,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
       </div>
 
       <PageHeader
+        title="Review Results"
         eyebrow="Review Results"
         description="Verify marks and grades before approving this result set for publication."
       />
@@ -78,7 +77,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                       </td>
                       <td className="px-4 py-3 text-muted">{m.students?.admission_number || "—"}</td>
                       <td className="px-4 py-3">
-                        {m.marks_obtained !== null ? (
+                        {m.is_absent ? <span className="font-semibold text-ink">Absent</span> : m.marks_obtained !== null ? (
                           <span className="font-semibold text-ink">{m.marks_obtained}</span>
                         ) : (
                           <span className="text-muted italic">N/A</span>
@@ -159,6 +158,11 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
             <CardContent className="pt-4">
               {isPending ? (
                 <div className="grid gap-4">
+                  {missingCount > 0 || rosterCount === 0 ? (
+                    <p className="rounded-lg bg-warning-soft p-3 text-sm font-semibold text-warning">
+                      {rosterCount === 0 ? "No enrolled students are assigned to this subject." : `${missingCount} student${missingCount === 1 ? "" : "s"} missing marks or Absent status for ${exam.subjects?.name ?? "this subject"}.`}
+                    </p>
+                  ) : null}
                   <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid justify-items-end gap-3">
                     <Textarea name="principal_comment" placeholder="Correction instructions (optional)" className="min-h-[100px]" />
                     <Button type="submit" name="decision" value="returned" variant="secondary" className="h-10 w-10 rounded-xl border border-warning/20 px-0 text-warning hover:bg-warning-soft" aria-label="Return result to teacher">
@@ -166,7 +170,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
                     </Button>
                   </form>
                   <form action={reviewExamApprovalAction.bind(null, approval.id)} className="flex justify-end">
-                    <Button type="submit" name="decision" value="approved" className="h-10 w-10 rounded-xl bg-success px-0 text-white hover:bg-success/90" aria-label="Approve result">
+                    <Button type="submit" name="decision" value="approved" disabled={missingCount > 0 || rosterCount === 0} className="h-10 w-10 rounded-xl bg-success px-0 text-white hover:bg-success/90" aria-label="Approve result">
                       <CheckCircle2 className="h-4 w-4" />
                     </Button>
                   </form>

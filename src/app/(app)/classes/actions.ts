@@ -10,6 +10,8 @@ import { createStudentSubjectCombination, updateStudentSubjectCombination, delet
 import { classNameSchema, englishNameSchema } from "@/lib/validation/names";
 import { createClient } from "@/lib/supabase/server";
 import { publicActionError } from "@/lib/public-error";
+import { getSubjectCombinationCatalog } from "@/lib/services/student-combinations";
+import { defaultCombinationOptionsForGrade, gradeNumber } from "@/lib/student-majors";
 
 
 const classSchema = z.object({
@@ -128,9 +130,9 @@ export async function getPromotionRosterAction(classIds: string[]) {
   const parsedClassIds = z.array(z.string().uuid()).min(1).parse(classIds);
   const supabase = await createClient();
   const [{ data, error }, { data: selectedClasses, error: classError }, { data: grades, error: gradeError }] = await Promise.all([
-    supabase.from("enrollments").select("student_id,class_id,students(first_name,last_name,admission_number)").eq("school_id", user.schoolId).in("class_id", parsedClassIds).eq("status", "active"),
-    supabase.from("classes").select("id,grade_id,academic_year_id,grades(sort_order)").eq("school_id", user.schoolId).in("id", parsedClassIds),
-    supabase.from("grades").select("sort_order").eq("school_id", user.schoolId).order("sort_order", { ascending: false }).limit(1)
+    supabase.from("enrollments").select("student_id,class_id,students(first_name,last_name,admission_number,major)").eq("school_id", user.schoolId).in("class_id", parsedClassIds).eq("status", "active"),
+    supabase.from("classes").select("id,grade_id,section_id,academic_year_id,grades(name,sort_order)").eq("school_id", user.schoolId).in("id", parsedClassIds),
+    supabase.from("grades").select("id,name,sort_order").eq("school_id", user.schoolId).order("sort_order")
   ]);
   if (error) throw new Error(publicActionError(error));
   if (classError) throw new Error(publicActionError(classError));
@@ -139,15 +141,44 @@ export async function getPromotionRosterAction(classIds: string[]) {
   const academicYearIds = new Set((selectedClasses ?? []).map((item: any) => item.academic_year_id));
   const gradeOrders = new Set((selectedClasses ?? []).map((item: any) => item.grades?.sort_order));
   if (academicYearIds.size !== 1 || gradeOrders.size !== 1) throw new Error("Promote classes from one grade and academic year at a time.");
-  const highestGradeOrder = grades?.[0]?.sort_order;
+  const highestGradeOrder = grades?.[grades.length - 1]?.sort_order;
   const selectedGradeOrder = (selectedClasses?.[0] as any)?.grades?.sort_order;
+  const nextGrade = grades?.find((grade) => grade.sort_order > selectedGradeOrder);
+  const combinationRequired = [9, 11].includes(gradeNumber(nextGrade?.name) ?? 0);
+  const catalog = combinationRequired ? await getSubjectCombinationCatalog(user) : null;
+  const disabled = combinationRequired && nextGrade
+    ? await supabase.from("student_subject_combinations").select("combination_key").eq("school_id", user.schoolId).eq("grade_id", nextGrade.id).eq("is_active", false).not("combination_key", "is", null)
+    : null;
+  if (disabled?.error) throw new Error(publicActionError(disabled.error));
+  const disabledKeys = new Set((disabled?.data ?? []).map((row: any) => row.combination_key as string));
+  const combinationOptions = combinationRequired && nextGrade ? [
+    ...defaultCombinationOptionsForGrade(nextGrade.name).filter((option) => !disabledKeys.has(option.value)).map((option) => ({ value: option.value, label: option.label })),
+    ...(catalog?.customCombinations ?? []).filter((item) => item.gradeIds.includes(nextGrade.id)).map((item) => ({ value: item.value, label: item.name }))
+  ] : [];
+  const { data: years, error: yearsError } = combinationRequired
+    ? await supabase.from("academic_years").select("id,starts_on").eq("school_id", user.schoolId).order("starts_on")
+    : { data: [], error: null };
+  if (yearsError) throw new Error(publicActionError(yearsError));
+  const sourceYear = years?.find((year) => year.id === (selectedClasses?.[0] as any)?.academic_year_id);
+  const nextYear = years?.find((year) => sourceYear && year.starts_on > sourceYear.starts_on);
+  const { data: targetClasses, error: targetError } = nextYear && nextGrade
+    ? await supabase.from("classes").select("id,section_id,class_allowed_majors(major_key)").eq("school_id", user.schoolId).eq("academic_year_id", nextYear.id).eq("grade_id", nextGrade.id)
+    : { data: [], error: null };
+  if (targetError) throw new Error(publicActionError(targetError));
+  const sourceClassById = new Map((selectedClasses ?? []).map((cls: any) => [cls.id as string, cls]));
   return {
-    students: (data ?? []).map((row: any) => ({ id: row.student_id, classId: row.class_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admissionNumber: row.students?.admission_number ?? null })),
-    isTerminalGrade: highestGradeOrder !== undefined && selectedGradeOrder === highestGradeOrder
+    students: (data ?? []).map((row: any) => {
+      const sourceClass: any = sourceClassById.get(row.class_id);
+      const target: any = (targetClasses ?? []).find((cls: any) => cls.section_id === sourceClass?.section_id);
+      const allowed = new Set<string>((target?.class_allowed_majors ?? []).map((item: any) => item.major_key));
+      return { id: row.student_id, classId: row.class_id, name: `${row.students?.first_name ?? ""} ${row.students?.last_name ?? ""}`.trim(), admissionNumber: row.students?.admission_number ?? null, major: row.students?.major ?? null, combinationOptions: combinationOptions.filter((option) => !allowed.size || allowed.has(option.value)) };
+    }),
+    isTerminalGrade: highestGradeOrder !== undefined && selectedGradeOrder === highestGradeOrder,
+    combinationRequired
   };
 }
 
-export async function promoteStudentsAction(classIds: string[], promotedStudentIds: string[], retainedStudentIds: string[], graduateStudentIds: string[] = []) {
+export async function promoteStudentsAction(classIds: string[], promotedStudentIds: string[], retainedStudentIds: string[], graduateStudentIds: string[] = [], combinations: Record<string, string> = {}) {
   const user = await requireUser("classes:manage");
   const ids = z.array(z.string().uuid());
   const parsedClassIds = ids.min(1).parse(classIds);
@@ -155,7 +186,27 @@ export async function promoteStudentsAction(classIds: string[], promotedStudentI
   const retained = ids.parse(retainedStudentIds);
   const graduated = ids.parse(graduateStudentIds);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: parsedClassIds, p_promoted_student_ids: promoted, p_retained_student_ids: retained, p_graduate_student_ids: graduated });
+  const [{ data: classes, error: classError }, { data: grades, error: gradeError }] = await Promise.all([
+    supabase.from("classes").select("id,grades(sort_order)").eq("school_id", user.schoolId).in("id", parsedClassIds),
+    supabase.from("grades").select("name,sort_order").eq("school_id", user.schoolId).order("sort_order")
+  ]);
+  if (classError) throw new Error(publicActionError(classError));
+  if (gradeError) throw new Error(publicActionError(gradeError));
+  if ((classes ?? []).length !== parsedClassIds.length) throw new Error("One or more selected classes were not found.");
+  const requiresCombinations = (classes ?? []).some((cls: any) => [9, 11].includes(gradeNumber(grades?.find((grade) => grade.sort_order > cls.grades?.sort_order)?.name) ?? 0));
+  if (requiresCombinations && promoted.length) {
+    const roster = await getPromotionRosterAction(parsedClassIds);
+    const selected = new Set(promoted);
+    if (Object.keys(combinations).some((id) => !selected.has(id))) throw new Error("Combination assignments contain a student outside the promotion selection.");
+    for (const student of roster.students.filter((item) => selected.has(item.id))) {
+      if (!student.combinationOptions.some((option) => option.value === combinations[student.id])) {
+        throw new Error(`Choose an available subject combination for ${student.name}.`);
+      }
+    }
+  }
+  const { error } = requiresCombinations && promoted.length
+    ? await supabase.rpc("promote_class_students_with_combinations", { p_school_id: user.schoolId, p_class_ids: parsedClassIds, p_promoted_student_ids: promoted, p_retained_student_ids: retained, p_graduate_student_ids: graduated, p_student_majors: combinations })
+    : await supabase.rpc("promote_class_students", { p_school_id: user.schoolId, p_class_ids: parsedClassIds, p_promoted_student_ids: promoted, p_retained_student_ids: retained, p_graduate_student_ids: graduated });
   if (error) throw new Error(publicActionError(error));
   revalidatePath("/classes"); revalidatePath("/students"); revalidatePath("/dashboard");
 }

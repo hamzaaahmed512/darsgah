@@ -11,7 +11,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
   const classId = params.classId ?? "";
   const examType = (params.examType ?? "monthly") as ExamType;
   const month = params.month ? Number(params.month) : undefined;
-  const result = await getPrintableResultCards(user, { classId, examType, month, studentId: params.studentId });
+  const result = await getPrintableResultCards(user, { sessionId: params.sessionId, classId, examType, month, studentId: params.studentId });
   const classRow: any = result.classRow;
   const template = result.template;
   const examLabel = `${formatExamType(examType)}${examType === "monthly" && month ? ` / ${new Intl.DateTimeFormat("en", { month: "long" }).format(new Date(2026, month - 1, 1))}` : ""}`;
@@ -22,18 +22,19 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
     sections: result.cards.map((card) => ({
       title: card.student.name,
       subtitle: `${template.title} / ${formatClassDisplayName(classRow?.grades?.name, classRow?.name, classRow?.sections?.name)} / ${examLabel}`,
-      status: result.complete ? "All subject results approved" : result.status === "pending" ? "Pending - no finalized subject results" : "Partial results - some subjects pending approval",
+      status: card.incomplete ? "Incomplete" : "All subject results approved",
       metrics: [
         { label: "Total marks", value: `${card.totalObtained} / ${card.totalMax}` },
-        { label: "Percentage", value: `${card.percentage.toFixed(1)}%` },
-        { label: "Overall grade", value: card.overallGrade }
+        { label: "Percentage", value: card.percentage === null ? "Incomplete" : `${card.percentage.toFixed(1)}%` },
+        { label: "Overall grade", value: card.incomplete ? "Incomplete" : card.overallGrade }
       ],
       details: [
         ...(template.showAdmissionNumber ? [["Admission ID", card.student.admission_number] as [string, string]] : []),
+        ...([["Roll number", card.student.roll_no ?? "—"]] as [string, string][]),
         ...(template.showAcademicYear ? [["Academic year", classRow?.academic_years?.name ?? "Current"] as [string, string]] : [])
       ],
       headers: ["Subject", "Exam", "Marks", "Grade", ...(template.showTeacherComments ? ["Comment"] : [])],
-      rows: card.rows.map((row) => [row.subject_name, `${row.exam_title} (${formatExamType(row.exam_type)})`, row.marks_obtained === null ? "Pending" : `${row.marks_obtained} / ${row.max_marks}`, row.grade, ...(template.showTeacherComments ? [row.teacher_comment || "-"] : [])]),
+      rows: card.rows.map((row) => [row.subject_name, `${row.exam_title} (${formatExamType(row.exam_type)})`, row.marks_obtained === null ? "Pending" : row.is_absent ? `Absent / ${row.max_marks}` : `${row.marks_obtained} / ${row.max_marks}`, row.grade, ...(template.showTeacherComments ? [row.teacher_comment || "-"] : [])]),
       note: result.missing.length ? `Missing or pending approval: ${result.missing.join(", ")}` : undefined,
       signatures: template.signatureLabels
     }))
@@ -84,6 +85,10 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
                 <p className="text-xs font-bold uppercase text-muted">Admission #</p>
                 <p className="font-semibold">{card.student.admission_number}</p>
               </div> : null}
+              <div>
+                <p className="text-xs font-bold uppercase text-muted">Roll number</p>
+                <p className="font-semibold">{card.student.roll_no ?? "—"}</p>
+              </div>
               {template.showAcademicYear ? <div>
                 <p className="text-xs font-bold uppercase text-muted">Academic Year</p>
                 <p className="font-semibold">{classRow?.academic_years?.name ?? "Current"}</p>
@@ -106,7 +111,7 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
                   <tr key={`${row.subject_name}-${row.exam_type}-${index}`} className="border-b border-outline/25">
                     <td className="py-3 pr-3 font-semibold">{row.subject_name}</td>
                     <td className="py-3 pr-3">{row.exam_title} ({formatExamType(row.exam_type)})</td>
-                    <td className="py-3 pr-3">{row.marks_obtained === null ? "Pending" : `${row.marks_obtained} / ${row.max_marks}`}</td>
+                    <td className="py-3 pr-3">{row.marks_obtained === null ? "Pending" : row.is_absent ? `Absent / ${row.max_marks}` : `${row.marks_obtained} / ${row.max_marks}`}</td>
                     <td className="py-3 pr-3 font-bold">{row.grade}</td>
                     {template.showTeacherComments ? <td className="py-3 pr-3">{row.teacher_comment || "—"}</td> : null}
                   </tr>
@@ -122,11 +127,11 @@ export default async function PrintableResultsPage({ searchParams }: { searchPar
               </div>
               <div>
                 <p className="text-xs font-bold uppercase text-muted">Percentage</p>
-                <p className="text-xl font-bold">{card.percentage.toFixed(1)}%</p>
+                <p className="text-xl font-bold">{card.percentage === null ? "Incomplete" : `${card.percentage.toFixed(1)}%`}</p>
               </div>
               <div>
                 <p className="text-xs font-bold uppercase text-muted">Overall Grade</p>
-                <p className="text-xl font-bold">{card.overallGrade}</p>
+                <p className="text-xl font-bold">{card.incomplete ? "Incomplete" : card.overallGrade}</p>
               </div>
             </footer>
             {template.signatureLabels.length ? (

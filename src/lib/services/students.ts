@@ -341,7 +341,7 @@ export async function getStudentRecord(
     attendanceQuery,
     supabase
       .from("marks")
-      .select("id,marks_obtained,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)")
+      .select("id,marks_obtained,is_absent,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)")
       .eq("school_id", user.schoolId)
       .eq("student_id", id)
       .order("created_at", { ascending: false }),
@@ -459,119 +459,51 @@ export async function createStudent(user: AppUser, values: StudentFormValues) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, normalizedMajor);
   }
 
-  let admissionNumber = parsed.admission_number;
-  let student: { id: string } | null = null;
-  let error: { message: string; code?: string } | null = null;
-
+  const studentData = {
+    admission_number: parsed.admission_number,
+    student_cnic: parsed.student_cnic || null,
+    guardian_cnic: parsed.father_cnic || null,
+    guardian_phone: guardianPhone ?? fatherPhone ?? null,
+    first_name: studentName.firstName,
+    last_name: studentName.lastName,
+    name_en: parsed.name_en,
+    father_name_en: parsed.father_name_en || null,
+    father_phone: fatherPhone,
+    father_cnic: parsed.father_cnic || null,
+    father_alive: studentBioFieldsSupported ? parsed.father_alive !== "no" : true,
+    photo_url: parsed.photo_url || null,
+    major: studentMajorsSupported ? normalizedMajor || null : null,
+    date_of_birth: parsed.date_of_birth,
+    gender: parsed.gender,
+    religion: studentBioFieldsSupported ? parsed.religion : null,
+    email: parsed.email || null,
+    phone,
+    address: parsed.address || null,
+    admission_date: parsed.admission_date || new Date().toISOString().slice(0, 10),
+    status: initialStatus
+  };
+  const guardianData = {
+    full_name: parsed.guardian_name || parsed.father_name_en,
+    relationship: parsed.guardian_relationship || "Father",
+    email: parsed.guardian_email || null,
+    phone: guardianPhone ?? fatherPhone ?? "",
+    cnic: parsed.father_cnic || null
+  };
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    admissionNumber = admissionNumber || await getNextAdmissionNumber(user);
-
-    const insertResult = await supabase
-      .from("students")
-      .insert({
-        school_id: user.schoolId,
-        admission_number: admissionNumber,
-        student_cnic: parsed.student_cnic || null,
-        guardian_cnic: parsed.father_cnic || null,
-        guardian_phone: guardianPhone ?? fatherPhone ?? null,
-        first_name: studentName.firstName,
-        last_name: studentName.lastName,
-        name_en: parsed.name_en,
-        father_name_en: parsed.father_name_en || null,
-        father_phone: fatherPhone,
-        father_cnic: parsed.father_cnic || null,
-        ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
-        photo_url: parsed.photo_url || null,
-        class_id: initialStatus === "pending_approval" ? parsed.class_id || null : null,
-        ...(studentMajorsSupported ? { major: initialStatus === "pending_approval" ? normalizedMajor || null : null } : {}),
-        date_of_birth: parsed.date_of_birth || null,
-        gender: parsed.gender || null,
-        ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
-        email: parsed.email || null,
-        phone,
-        address: parsed.address || null,
-        admission_date: parsed.admission_date || new Date().toISOString().split("T")[0],
-        status: initialStatus
-      })
-      .select("id")
-      .single();
-
-    student = insertResult.data;
-    error = insertResult.error;
-
-    if (!error) break;
-    if (parsed.admission_number || error.code !== "23505") break;
-    admissionNumber = null;
+    studentData.admission_number = parsed.admission_number || await getNextAdmissionNumber(user);
+    const { data, error } = await supabase.rpc("create_student_atomic", {
+      p_school_id: user.schoolId,
+      p_student: studentData,
+      p_guardian: guardianData,
+      p_class_id: parsed.class_id || null
+    });
+    if (!error && data) return data as string;
+    if (!error) throw new Error("Failed to create student.");
+    if (parsed.admission_number || error.code !== "23505" || !error.message.includes("admission_number") || attempt === 2) {
+      throw new Error(error.message);
+    }
   }
-
-  if (error) throw new Error(error.message);
-  if (!student) throw new Error("Failed to create student.");
-
-  if (parsed.guardian_name || parsed.father_name_en) {
-    await upsertPrimaryGuardianForStudent(supabase, user, {
-      studentId: student.id,
-      guardianName: parsed.guardian_name || parsed.father_name_en,
-      guardianRelationship: parsed.guardian_relationship || "Father",
-      guardianEmail: parsed.guardian_email || null,
-      guardianPhone: guardianPhone ?? fatherPhone ?? "",
-      guardianCnic: parsed.father_cnic
-    });
-  }
-
-  if (parsed.class_id && initialStatus !== "pending_approval") {
-    const { data: activeYear } = await supabase
-      .from("academic_years")
-      .select("id")
-      .eq("school_id", user.schoolId)
-      .eq("is_active", true)
-      .maybeSingle();
-    const { error: enrollmentError } = await supabase.from("enrollments").insert({
-      school_id: user.schoolId,
-      student_id: student.id,
-      class_id: parsed.class_id,
-      academic_year_id: activeYear?.id,
-      status: "active"
-    });
-    if (enrollmentError) throw new Error(enrollmentError.message);
-
-    const { error: studentClassError } = await supabase
-      .from("students")
-      .update({
-        class_id: parsed.class_id,
-        ...(studentMajorsSupported ? { major: normalizedMajor || null } : {})
-      })
-      .eq("school_id", user.schoolId)
-      .eq("id", student.id);
-    if (studentClassError) throw new Error(studentClassError.message);
-  } else if (parsed.class_id && initialStatus === "pending_approval") {
-    // We store the requested class assignment in the approval request metadata if needed,
-    // or just rely on the form having passed it. We'll store it in metadata so the principal
-    // can enroll them on approval.
-    const { error: reqError } = await supabase.from("approval_requests").insert({
-      school_id: user.schoolId,
-      request_type: "admission",
-      student_id: student.id,
-      submitted_by: user.id,
-      status: "pending",
-      metadata: { requested_class_id: parsed.class_id }
-    });
-    if (reqError) throw new Error(reqError.message);
-    await logActivity(user, "admission_request_submitted", "approval_request", student.id, {
-      admission_number: admissionNumber,
-      name: formatDisplayName(parsed.name_en)
-    });
-    return student.id as string;
-  }
-
-  if (!isStaff) {
-    if (studentMajorsSupported && parsed.class_id && normalizedMajor) await removeExcludedStudentSubjects(user, student.id, parsed.class_id, normalizedMajor);
-    await logActivity(user, "student_created", "student", student.id, {
-      admission_number: admissionNumber,
-      name: formatDisplayName(parsed.name_en)
-    });
-  }
-
-  return student.id as string;
+  throw new Error("Failed to allocate an admission number.");
 }
 
 export async function updateStudent(user: AppUser, id: string, values: StudentFormValues) {
@@ -593,9 +525,10 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
   if (studentMajorsSupported && parsed.class_id && normalizedMajor) {
     await assertMajorAvailableForClass(supabase, user, parsed.class_id, normalizedMajor);
   }
-  const { error } = await supabase
-    .from("students")
-    .update({
+  const { error } = await supabase.rpc("update_student_atomic", {
+    p_school_id: user.schoolId,
+    p_student_id: id,
+    p_student: {
       admission_number: parsed.admission_number,
       student_cnic: parsed.student_cnic || null,
       guardian_cnic: parsed.father_cnic || null,
@@ -606,80 +539,28 @@ export async function updateStudent(user: AppUser, id: string, values: StudentFo
       father_name_en: parsed.father_name_en || null,
       father_phone: fatherPhone,
       father_cnic: parsed.father_cnic || null,
-      ...(studentBioFieldsSupported ? { father_alive: parsed.father_alive !== "no" } : {}),
+      father_alive: studentBioFieldsSupported ? parsed.father_alive !== "no" : true,
       photo_url: parsed.photo_url || null,
-      class_id: parsed.class_id || null,
-      ...(studentMajorsSupported ? { major: normalizedMajor || null } : {}),
-      date_of_birth: parsed.date_of_birth || null,
-      gender: parsed.gender || null,
-      ...(studentBioFieldsSupported ? { religion: parsed.religion } : {}),
+      major: studentMajorsSupported ? normalizedMajor || null : null,
+      date_of_birth: parsed.date_of_birth,
+      gender: parsed.gender,
+      religion: studentBioFieldsSupported ? parsed.religion : null,
       email: parsed.email || null,
       phone,
       address: parsed.address || null,
       admission_date: parsed.admission_date,
       status: parsed.status
-    })
-    .eq("school_id", user.schoolId)
-    .eq("id", id);
-
+    },
+    p_guardian: {
+      full_name: parsed.guardian_name || parsed.father_name_en,
+      relationship: parsed.guardian_relationship || "Father",
+      email: parsed.guardian_email || null,
+      phone: guardianPhone ?? fatherPhone ?? "",
+      cnic: parsed.father_cnic || null
+    },
+    p_class_id: parsed.class_id || null
+  });
   if (error) throw new Error(error.message);
-
-  if (parsed.guardian_name || parsed.father_name_en) {
-    await upsertPrimaryGuardianForStudent(supabase, user, {
-      studentId: id,
-      guardianName: parsed.guardian_name || parsed.father_name_en,
-      guardianRelationship: parsed.guardian_relationship || "Father",
-      guardianEmail: parsed.guardian_email || null,
-      guardianPhone: guardianPhone ?? fatherPhone ?? "",
-      guardianCnic: parsed.father_cnic
-    });
-  }
-
-  // Handle class assignment: upsert or withdraw enrollment
-  if (parsed.class_id) {
-    const { data: activeYear } = await supabase
-      .from("academic_years")
-      .select("id")
-      .eq("school_id", user.schoolId)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    // Withdraw any other active enrollments first
-    await supabase
-      .from("enrollments")
-      .update({ status: "withdrawn" })
-      .eq("school_id", user.schoolId)
-      .eq("student_id", id)
-      .eq("status", "active")
-      .neq("class_id", parsed.class_id);
-
-    // Upsert the new enrollment
-    const { error: enrollError } = await supabase
-      .from("enrollments")
-      .upsert(
-        {
-          school_id: user.schoolId,
-          student_id: id,
-          class_id: parsed.class_id,
-          academic_year_id: activeYear?.id ?? null,
-          status: "active"
-        },
-        { onConflict: "school_id,student_id,class_id,academic_year_id", ignoreDuplicates: false }
-      );
-
-    if (enrollError) throw new Error(enrollError.message);
-    if (studentMajorsSupported && normalizedMajor) await removeExcludedStudentSubjects(user, id, parsed.class_id, normalizedMajor);
-  } else {
-    // No class selected — withdraw any active enrollments
-    await supabase
-      .from("enrollments")
-      .update({ status: "withdrawn" })
-      .eq("school_id", user.schoolId)
-      .eq("student_id", id)
-      .eq("status", "active");
-  }
-
-  await logActivity(user, "student_updated", "student", id, { admission_number: parsed.admission_number });
 }
 
 async function supportsStudentMajors(supabase: Awaited<ReturnType<typeof createClient>>) {

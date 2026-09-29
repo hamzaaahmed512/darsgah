@@ -85,88 +85,11 @@ export async function submitCancellationRequest(user: AppUser, studentId: string
 
 export async function reviewRequest(user: AppUser, requestId: string, decision: "approved" | "denied", denialReason?: string) {
   const supabase = await createClient();
-  
-  const { data: request, error: fetchError } = await supabase
-    .from("approval_requests")
-    .select("*")
-    .eq("school_id", user.schoolId)
-    .eq("id", requestId)
-    .single();
-
-  if (fetchError || !request) throw new Error("Request not found");
-  if (request.status !== "pending") throw new Error("Request has already been reviewed");
-
-  const newStudentStatus = 
-    decision === "approved" 
-      ? (request.request_type === "admission" ? "active" : "cancelled")
-      : (request.request_type === "admission" ? "pending_approval" : "active"); // Revert status if denied
-
-  // Update student
-  const { error: studentError } = await supabase
-    .from("students")
-    .update({ 
-      status: newStudentStatus,
-      ...(decision === "approved" && request.request_type === "cancellation" ? { archived_at: new Date().toISOString() } : {})
-    })
-    .eq("school_id", user.schoolId)
-    .eq("id", request.student_id);
-
-  if (studentError) throw new Error(studentError.message);
-
-  if (decision === "approved" && request.request_type === "cancellation") {
-    const { error: withdrawError } = await supabase
-      .from("enrollments")
-      .update({ status: "withdrawn", ends_on: new Date().toISOString().slice(0, 10) })
-      .eq("school_id", user.schoolId)
-      .eq("student_id", request.student_id)
-      .eq("status", "active");
-
-    if (withdrawError) throw new Error(withdrawError.message);
-  }
-
-  // On admission approval: create the enrollment if a class was requested
-  if (decision === "approved" && request.request_type === "admission") {
-    const requestedClassId = request.metadata?.requested_class_id as string | undefined;
-    if (requestedClassId) {
-      const { data: activeYear } = await supabase
-        .from("academic_years")
-        .select("id")
-        .eq("school_id", user.schoolId)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      const { error: enrollError } = await supabase
-        .from("enrollments")
-        .insert({
-          school_id: user.schoolId,
-          student_id: request.student_id,
-          class_id: requestedClassId,
-          academic_year_id: activeYear?.id ?? null,
-          status: "active"
-        });
-
-      if (enrollError) throw new Error(enrollError.message);
-    }
-  }
-
-  // Update request
-  const { error: updateError } = await supabase
-    .from("approval_requests")
-    .update({
-      status: decision,
-      reviewed_by: user.id,
-      reviewed_at: new Date().toISOString(),
-      denial_reason: decision === "denied" ? denialReason : null
-    })
-    .eq("id", requestId);
-
-  if (updateError) throw new Error(updateError.message);
-
-  await logActivity(
-    user, 
-    `request_${decision}`, 
-    "approval_request", 
-    requestId, 
-    { request_type: request.request_type }
-  );
+  const { error } = await supabase.rpc("review_approval_request_atomic", {
+    p_school_id: user.schoolId,
+    p_request_id: requestId,
+    p_decision: decision,
+    p_denial_reason: denialReason ?? null
+  });
+  if (error) throw new Error(error.message);
 }

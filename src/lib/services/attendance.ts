@@ -60,7 +60,8 @@ export async function getAttendanceContext(
           .select("id, student_id, students(id, first_name, last_name, admission_number)")
           .eq("school_id", user.schoolId)
           .eq("class_id", selectedClassId)
-          .eq("status", "active")
+          .lte("starts_on", attendanceDate)
+          .or(`ends_on.is.null,ends_on.gte.${attendanceDate}`)
           .order("created_at"),
         supabase
           .from("attendance_records")
@@ -70,6 +71,9 @@ export async function getAttendanceContext(
           .eq("attendance_date", attendanceDate)
       ])
     : [{ data: [] }, { data: [] }];
+
+  if (enrollments.error) throw new Error(enrollments.error.message);
+  if (records.error) throw new Error(records.error.message);
 
   const recordMap = new Map((records.data ?? []).map((record: any) => [record.student_id, record]));
   const roster = (enrollments.data ?? [])
@@ -242,102 +246,14 @@ export async function getTeacherAttendanceContext(user: AppUser, date?: string) 
 export async function submitAttendance(user: AppUser, values: AttendanceSubmission) {
   const parsed = attendanceSubmissionSchema.parse(values);
   const supabase = await createClient();
-
-  const { data: targetClass, error: classError } = await supabase
-    .from("classes")
-    .select("id,head_teacher_id")
-    .eq("school_id", user.schoolId)
-    .eq("id", parsed.class_id)
-    .maybeSingle();
-
-  if (classError) throw new Error(classError.message);
-  if (!targetClass) throw new Error("Class not found.");
-  const { data: existingSession, error: existingError } = await supabase
-    .from("attendance_sessions")
-    .select("id,status,reopened_at,reopened_by")
-    .eq("school_id", user.schoolId)
-    .eq("class_id", parsed.class_id)
-    .eq("attendance_date", parsed.attendance_date)
-    .maybeSingle();
-
-  if (existingError) throw new Error(existingError.message);
-  if (existingSession) {
-    const reopenedAt = existingSession.reopened_at ? new Date(existingSession.reopened_at).getTime() : 0;
-    const editWindowOpen = existingSession.status === "submitted" && reopenedAt && Date.now() - reopenedAt < 24 * 60 * 60 * 1_000;
-    if (!editWindowOpen) {
-      throw new Error(existingSession.reopened_at ? "The attendance edit window has expired. Ask the principal to reopen it." : "Attendance already marked for today.");
-    }
-    const canResubmit = editWindowOpen && existingSession.reopened_by === user.id && (targetClass.head_teacher_id === user.id || user.role === "principal");
-    if (!canResubmit) throw new Error("Attendance is not open for editing. Ask the principal to reopen it.");
-
-    const { error: recordsError } = await supabase.from("attendance_records").upsert(
-      parsed.records.map((record) => ({
-        school_id: user.schoolId,
-        session_id: existingSession.id,
-        class_id: parsed.class_id,
-        student_id: record.student_id,
-        attendance_date: parsed.attendance_date,
-        status: record.status,
-        note: record.note || null,
-        recorded_by: user.id
-      })),
-      { onConflict: "school_id,student_id,class_id,attendance_date" }
-    );
-    if (recordsError) throw new Error(recordsError.message);
-
-    const { error: resubmitError } = await supabase
-      .from("attendance_sessions")
-      .update({ status: "submitted", submitted_at: new Date().toISOString(), submitted_by: user.id, reopened_at: null, reopened_by: null })
-      .eq("id", existingSession.id);
-    if (resubmitError) throw new Error(resubmitError.message);
-
-    await logActivity(user, "attendance_resubmitted", "attendance_session", existingSession.id, {
-      class_id: parsed.class_id,
-      attendance_date: parsed.attendance_date,
-      records: parsed.records.length
-    });
-    return;
-  }
-
-  if (targetClass.head_teacher_id !== user.id) {
-    throw new Error("Only the head teacher can mark attendance.");
-  }
-
-  const { data: session, error: sessionError } = await supabase
-    .from("attendance_sessions")
-    .insert({
-      school_id: user.schoolId,
-      class_id: parsed.class_id,
-      attendance_date: parsed.attendance_date,
-      submitted_by: user.id,
-      submitted_at: new Date().toISOString(),
-      status: "submitted"
-    })
-    .select("id")
-    .single();
-
-  if (sessionError?.code === "23505") throw new Error("Attendance already marked for today.");
-  if (sessionError) throw new Error(sessionError.message);
-
-  const { error: recordsError } = await supabase.from("attendance_records").insert(
-    parsed.records.map((record) => ({
-      school_id: user.schoolId,
-      session_id: session.id,
-      class_id: parsed.class_id,
-      student_id: record.student_id,
-      attendance_date: parsed.attendance_date,
-      status: record.status,
-      note: record.note || null,
-      recorded_by: user.id
-    })),
-  );
-
-  if (recordsError) throw new Error(recordsError.message);
-  await logActivity(user, "attendance_submitted", "attendance_session", session.id, {
-    class_id: parsed.class_id,
-    attendance_date: parsed.attendance_date,
-    records: parsed.records.length
+  const { error } = await supabase.rpc("submit_attendance_atomic", {
+    p_school_id: user.schoolId,
+    p_class_id: parsed.class_id,
+    p_attendance_date: parsed.attendance_date,
+    p_records: parsed.records
   });
+  if (error?.code === "23505") throw new Error("Attendance already marked for today.");
+  if (error) throw new Error(error.message);
 }
 
 export async function submitTeacherAttendance(user: AppUser, values: TeacherAttendanceSubmission) {

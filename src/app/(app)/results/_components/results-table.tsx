@@ -88,11 +88,11 @@ export function ResultsTable({
   return (
     <div className="min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
       <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
-        <h3 className="flex whitespace-nowrap items-center gap-2 font-display text-xl font-bold text-ink"><ClipboardCheck className="h-5 w-5 text-primary" />Result Register</h3>
+        <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><ClipboardCheck className="h-5 w-5 text-primary" />Result Register</h2>
         <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{resultCount} result{resultCount === 1 ? "" : "s"}</span>
       </div>
-      <div className="results-table-scroll scrollbar-thin hidden max-w-full overflow-x-auto lg:block">
-      <table className="w-full min-w-[1020px] text-left text-sm">
+      <div className="results-table-scroll hidden overflow-x-auto lg:block">
+      <table className="min-w-full text-left text-sm">
         <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
           <tr>
             <th className="px-6 py-4">Exam Type</th>
@@ -106,17 +106,17 @@ export function ResultsTable({
                 <th className="px-6 py-4">Approved By</th>
               </>
             ) : null}
-            <th className="min-w-[160px] px-6 py-4">Actions</th>
+            <th className="px-6 py-4">Action</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-slate-100 align-top transition hover:bg-blue-50/30">
-              <td className="min-w-[155px] px-6 py-5">
+            <tr key={row.id} className="border-t border-slate-100 transition hover:bg-blue-50/30">
+              <td className="px-6 py-5">
                 <p className="font-semibold text-ink">{formatExamType(row.exam_type as any)}</p><p className="mt-0.5 text-xs text-muted">{row.title}</p>
               </td>
-              <td className="px-6 py-5"><span title={row.subjects?.name ?? "—"} className="inline-flex max-w-[150px] truncate rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-bold text-violet-700">{row.subjects?.name ?? "—"}</span></td>
-              <td className="px-6 py-5"><span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</span></td>
+              <td className="px-6 py-5"><span title={row.subjects?.name ?? "—"} className="inline-flex rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700">{row.subjects?.name ?? "—"}</span></td>
+              <td className="px-6 py-5"><span className="inline-flex rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—"}</span></td>
               <td className="px-6 py-5">
                 <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><UserRound className="h-4 w-4" /></span><div><p className="font-semibold">{row.uploadedByTeacherName}</p><p className="text-xs text-muted">Teacher</p></div></div>
               </td>

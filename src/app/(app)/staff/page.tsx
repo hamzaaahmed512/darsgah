@@ -65,11 +65,13 @@ export default async function StaffPage({
   return (
     <>
       <PageHeader
+        title="Staff Directory"
         eyebrow="School Directory"
         description="View all staff profiles, departments, roles, statuses, and class assignment summaries."
         actions={
           <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <ReportGenerator 
+              title="Staff Directory"
               headers={["Name", "Role", "Department", "Phone", "Email", "Status"]}
               data={staff.map((row: any) => [
                 row.full_name || "",
@@ -100,6 +102,7 @@ export default async function StaffPage({
 
       {!staff.length ? (
         <EmptyState
+          title="No staff found"
           description="Try a different search or role filter, or add a new staff record from this page."
         />
       ) : (

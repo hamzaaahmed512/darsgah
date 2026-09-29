@@ -467,103 +467,16 @@ export async function saveStaffPay(
   if (!Number.isFinite(values.bonus) || !Number.isFinite(values.deduction) || values.bonus < 0 || values.deduction < 0) throw new Error("Bonus and deduction must be valid nonnegative amounts");
 
   const supabase = await createClient();
-  const effectiveDate = `${values.month}-01`;
-  const netSalary = Math.max(0, values.baseSalary + values.bonus - values.deduction);
-
-  const { data: otherStaff, error: otherStaffError } = await supabase.from("other_staff_records")
-    .select("id, monthly_salary").eq("school_id", user.schoolId).eq("id", values.staffId).eq("status", "active").maybeSingle();
-  if (otherStaffError) throw new Error(otherStaffError.message);
-  if (otherStaff) {
-    const { data: existing, error: existingError } = await supabase.from("payroll")
-      .select("id, status").eq("school_id", user.schoolId).eq("other_staff_id", values.staffId).eq("month", values.month).maybeSingle();
-    if (existingError) throw new Error(existingError.message);
-    if (existing?.status === "paid") throw new Error("Mark this salary as unpaid before editing it.");
-    const previousSalary = Number(otherStaff.monthly_salary ?? 0);
-    const { error: salaryError } = await supabase.from("other_staff_records").update({ monthly_salary: values.baseSalary })
-      .eq("school_id", user.schoolId).eq("id", values.staffId);
-    if (salaryError) throw new Error(salaryError.message);
-    if (previousSalary !== values.baseSalary) {
-      const { error: historyError } = await supabase.from("salary_history").insert({
-        school_id: user.schoolId, other_staff_id: values.staffId, previous_salary: previousSalary,
-        new_salary: values.baseSalary, action_type: previousSalary === 0 ? "initial" : values.baseSalary > previousSalary ? "increase" : "decrease",
-        effective_date: effectiveDate, approved_by: user.id, remarks: values.remarks ?? null
-      });
-      if (historyError) throw new Error(historyError.message);
-    }
-    const payrollValues = { school_id: user.schoolId, other_staff_id: values.staffId, month: values.month,
-      base_salary: values.baseSalary, total_bonus: values.bonus, total_deductions: values.deduction,
-      net_salary: netSalary, status: "generated" as PayrollStatus, payment_date: null,
-      approved_by: user.id, remarks: values.remarks || null };
-    const { error: writeError } = existing
-      ? await supabase.from("payroll").update(payrollValues).eq("id", existing.id).eq("school_id", user.schoolId)
-      : await supabase.from("payroll").insert(payrollValues);
-    if (writeError) throw new Error(writeError.message);
-    return;
-  }
-
-  const [{ data: currentPayroll, error: payrollError }, { data: employment, error: employmentError }] = await Promise.all([
-    supabase
-      .from("payroll")
-      .select("id, status")
-      .eq("school_id", user.schoolId)
-      .eq("teacher_id", values.staffId)
-      .eq("month", values.month)
-      .maybeSingle(),
-    supabase
-      .from("teacher_employment_details")
-      .select("*")
-      .eq("school_id", user.schoolId)
-      .eq("teacher_id", values.staffId)
-      .maybeSingle()
-  ]);
-
-  if (payrollError) throw new Error(payrollError.message);
-  if (employmentError) throw new Error(employmentError.message);
-  if (currentPayroll?.status === "paid") throw new Error("Mark this salary as unpaid before editing it.");
-
-  const previousSalary = Number(employment?.monthly_salary ?? 0);
-  const salaryChanged = previousSalary !== values.baseSalary;
-
-  const { error: employmentUpsertError } = await supabase.from("teacher_employment_details").upsert({
-    teacher_id: values.staffId,
-    school_id: user.schoolId,
-    designation: employment?.designation ?? null,
-    department: employment?.department ?? null,
-    joining_date: employment?.joining_date ?? effectiveDate,
-    monthly_salary: values.baseSalary,
-    payment_method: employment?.payment_method ?? "cash",
-    salary_start_date: salaryChanged ? effectiveDate : employment?.salary_start_date ?? effectiveDate,
-    employment_status: employment?.employment_status ?? "active"
+  const { error } = await supabase.rpc("save_staff_pay_atomic", {
+    p_school_id: user.schoolId,
+    p_staff_id: values.staffId,
+    p_month: values.month,
+    p_base_salary: values.baseSalary,
+    p_bonus: values.bonus,
+    p_deduction: values.deduction,
+    p_remarks: values.remarks ?? null
   });
-  if (employmentUpsertError) throw new Error(employmentUpsertError.message);
-
-  if (salaryChanged) {
-    await recordSalaryChange(
-      user,
-      values.staffId,
-      previousSalary,
-      values.baseSalary,
-      previousSalary === 0 ? "initial" : values.baseSalary > previousSalary ? "increase" : "decrease",
-      effectiveDate,
-      values.remarks ?? undefined
-    );
-  }
-
-  const { error: payrollUpsertError } = await supabase.from("payroll").upsert({
-    school_id: user.schoolId,
-    teacher_id: values.staffId,
-    month: values.month,
-    base_salary: values.baseSalary,
-    total_bonus: values.bonus,
-    total_deductions: values.deduction,
-    net_salary: netSalary,
-    status: "generated" satisfies PayrollStatus,
-    payment_date: null,
-    approved_by: user.id,
-    remarks: values.remarks || null
-  }, { onConflict: "school_id,teacher_id,month" });
-
-  if (payrollUpsertError) throw new Error(payrollUpsertError.message);
+  if (error) throw new Error(error.message);
 }
 
 export async function setStaffPayStatus(user: AppUser, staffId: string, month: string, status: "paid" | "unpaid") {

@@ -50,7 +50,7 @@ export async function createExamAction(formData: FormData) {
     revalidatePath("/admin/academic-control");
     revalidatePath("/results");
     return { success: true as const };
-  } catch (error) {
+  } catch {
     return { error: "Assessment could not be created." };
   }
 }
@@ -62,13 +62,18 @@ export async function saveMarksAction(formData: FormData) {
     .filter(([key]) => key.startsWith("mark_"))
     .map(([key, value]) => {
       const studentId = key.replace("mark_", "");
+      const isAbsent = formData.get(`absent_${studentId}`) === "on";
       return {
         student_id: studentId,
-        marks_obtained: Number(value),
+        marks_obtained: isAbsent ? 0 : value === "" ? Number.NaN : Number(value),
+        is_absent: isAbsent,
         teacher_comment: String(formData.get(`comment_${studentId}`) ?? "")
       };
-    })
-    .filter((record) => Number.isFinite(record.marks_obtained));
+    });
+
+  if (records.some((record) => !Number.isFinite(record.marks_obtained))) {
+    throw new Error("Enter marks or select Absent for every student.");
+  }
 
   await saveMarks(user, { exam_id: examId, records });
   revalidatePath("/marks");

@@ -7,6 +7,8 @@ import { formatExamType, requiredResultExamTypes } from "@/lib/services/marks";
 import { formatClassDisplayName } from "@/lib/utils";
 
 type ResultCardsWorkspace = {
+  sessions: Array<{ id: string; name: string; is_active: boolean }>;
+  selectedSessionId?: string;
   classes: any[];
   selectedClassId?: string;
   examType: string;
@@ -25,7 +27,7 @@ type ResultCardsWorkspace = {
 
 export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspace }) {
   const selectedClass = workspace.classes.find((item) => item.id === workspace.selectedClassId);
-  const printHref = `/results/print?classId=${workspace.selectedClassId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}`;
+  const printHref = `/results/print?classId=${workspace.selectedClassId}&sessionId=${workspace.selectedSessionId}&examType=${workspace.examType}${workspace.month ? `&month=${workspace.month}` : ""}`;
 
   if (!workspace.selectedClassId || !workspace.readiness) {
     return <EmptyState title="No classes available" description="Create classes and enroll students before generating result cards." />;
@@ -103,8 +105,13 @@ export function ResultCardsPanel({ workspace }: { workspace: ResultCardsWorkspac
 
 export function ResultCardsFilters({ workspace }: { workspace: ResultCardsWorkspace }) {
   return (
-    <form className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_220px_180px_auto]" action="/results">
+    <form className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-[200px_minmax(0,1fr)_220px_180px_auto]" action="/results">
       <input type="hidden" name="view" value="cards" />
+      <Field label="Session">
+        <Select name="sessionId" defaultValue={workspace.selectedSessionId ?? ""} className="h-12 rounded-2xl border-outline/70 shadow-none">
+          {workspace.sessions.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
+        </Select>
+      </Field>
       <Field label="Class">
         <Select name="classId" defaultValue={workspace.selectedClassId ?? ""} className="h-12 rounded-2xl border-outline/70 shadow-none">
           {workspace.classes.map((item) => (

@@ -559,7 +559,7 @@ export function LibraryWorkspace({
           </div>
 
           {!filteredBooks.length && (
-            <Panel>
+            <Panel title="No titles found">
               <p className="text-muted">Add a title, then copies with unique Copy IDs will be generated automatically.</p>
             </Panel>
           )}
@@ -635,7 +635,7 @@ export function LibraryWorkspace({
           </div>
 
           {!filteredLoans.length && (
-            <Panel>
+            <Panel title="No loans found">
               <p className="text-muted">Issued books and their return history will appear here.</p>
             </Panel>
           )}
@@ -731,7 +731,7 @@ export function LibraryWorkspace({
         <div id="library-waiting-list" className="scroll-mt-24 space-y-6">
           <div className="space-y-6">
             {/* Detailed Waiting Queue Management */}
-            <Panel>
+            <Panel title="Waiting list">
               <div className="mb-4 flex gap-3 rounded-xl bg-blue-50 p-3 text-xs text-blue-800">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
                 <p>
@@ -841,6 +841,7 @@ export function LibraryWorkspace({
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Borrowing Rules */}
           <Panel
+            title="Borrowing Rules"
             actions={canAdmin && canManage ? (
               <ButtonLink href="/library/rules/edit" size="sm" className="h-10 w-10 rounded-xl px-0" aria-label="Edit borrowing rules">
                 <Pencil className="h-4 w-4" />

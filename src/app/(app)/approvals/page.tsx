@@ -25,6 +25,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader 
+        title="Approvals"
         eyebrow="Action Center" 
         description="Review and manage pending admissions, cancellations, and other gated requests." 
       />

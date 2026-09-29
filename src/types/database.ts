@@ -134,6 +134,19 @@ export type StudentListRow = Student & {
   attendance_rate: number | null;
 };
 
+export type Enrollment = {
+  id: string;
+  school_id: string;
+  student_id: string;
+  class_id: string;
+  academic_year_id: string | null;
+  status: "active" | "completed" | "withdrawn";
+  roll_no: string | null;
+  major: string | null;
+  starts_on: string;
+  ends_on: string | null;
+};
+
 export type ClassRow = {
   id: string;
   school_id: string;
@@ -222,6 +235,7 @@ export type Mark = {
   subject_id: string;
   teacher_id: string;
   marks_obtained: number;
+  is_absent: boolean;
   grade: string;
   status: MarkStatus;
   teacher_comment: string | null;
