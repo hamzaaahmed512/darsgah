@@ -23,10 +23,6 @@ export function ReturnApprovedResult({ examId, compact = false }: { examId: stri
 
   function submit() {
     const comment = reason.trim();
-    if (!comment) {
-      setError("Enter a reason for returning this result.");
-      return;
-    }
     setError("");
     startTransition(async () => {
       const result = await returnApprovedResultAction(examId, comment);
@@ -42,7 +38,7 @@ export function ReturnApprovedResult({ examId, compact = false }: { examId: stri
 
   return (
     <>
-      <Button type="button" variant="secondary" size={compact ? "sm" : "md"} className="h-9 w-9 rounded-xl px-0 text-warning hover:bg-warning-soft" onClick={() => setOpen(true)} aria-label="Return for revision">
+      <Button type="button" variant="secondary" size={compact ? "sm" : "md"} className="h-9 w-9 rounded-xl px-0 text-warning hover:bg-warning-soft" onClick={() => setOpen(true)} aria-label="Return for revision" title={compact ? "Return for revision" : undefined}>
         <Undo2 className="h-4 w-4" />
       </Button>
 
@@ -59,13 +55,13 @@ export function ReturnApprovedResult({ examId, compact = false }: { examId: stri
               </button>
             </div>
 
-            <Field label="Reason for revision" required error={error || undefined}>
-              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="For example: Please correct the marks entered for the listed students." required disabled={pending} />
+            <Field label="Reason for revision (optional)" error={error || undefined}>
+              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="For example: Please correct the marks entered for the listed students." disabled={pending} />
             </Field>
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="secondary" onClick={close} disabled={pending}>Cancel</Button>
-              <Button type="button" variant="danger" onClick={submit} disabled={pending || !reason.trim()}>
+              <Button type="button" variant="danger" onClick={submit} disabled={pending}>
                 <Undo2 className="h-4 w-4" /> {pending ? "Returning…" : "Return to Teacher"}
               </Button>
             </div>

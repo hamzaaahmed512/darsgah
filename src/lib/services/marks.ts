@@ -643,7 +643,6 @@ export async function getExamResultsForReviewByApprovalId(user: AppUser, approva
 
 export async function reviewExamApproval(user: AppUser, approvalId: string, decision: "approved" | "returned", principalComment?: string | null) {
   if (user.role !== "principal") throw new Error("Only the principal can approve or reject results.");
-  if (decision === "returned" && !principalComment?.trim()) throw new Error("Explain what the teacher needs to correct before returning the result.");
   const supabase = await createClient();
   const databaseDecision = decision === "returned" ? "rejected" : "approved";
   const { error } = await supabase.rpc("review_special_exam", {
@@ -655,12 +654,11 @@ export async function reviewExamApproval(user: AppUser, approvalId: string, deci
   await logActivity(user, decision === "returned" ? "exam_returned_to_teacher" : "exam_approved", "result_approval", approvalId, { principal_comment: principalComment || null });
 }
 
-export async function returnApprovedExam(user: AppUser, examId: string, reason: string) {
+export async function returnApprovedExam(user: AppUser, examId: string, reason?: string | null) {
   if (user.role !== "principal" && user.role !== "administrator") {
     throw new Error("Only a Principal or Administrator can return approved results.");
   }
-  const comment = reason.trim();
-  if (!comment) throw new Error("A reason is required when returning an approved result.");
+  const comment = reason?.trim() || null;
   const supabase = await createClient();
   const { error } = await supabase.rpc("return_approved_exam", { p_exam_id: examId, p_comment: comment });
   if (error?.code === "PGRST202" || error?.message?.includes("return_approved_exam")) {

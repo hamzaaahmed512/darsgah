@@ -22,6 +22,7 @@ export default async function SchoolProfilePage() {
         canManage={canManageSchoolProfile}
         schoolName={schoolProfile.school?.name ?? user.schoolName}
         shortName={settings.schoolShortName ?? ""}
+        description={settings.schoolDescription ?? ""}
         schoolTimezone={schoolProfile.school?.timezone ?? "UTC"}
         email={settings.schoolEmail ?? ""}
         phone={settings.schoolPhone ?? ""}

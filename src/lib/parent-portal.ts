@@ -132,7 +132,14 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
   ]);
   if (student.error || guardians.error || attendance.error || marks.error || challans.error || school.error || schoolSettings.error) throw new Error("Unable to load the student profile.");
   const settings = (schoolSettings.data?.settings ?? {}) as Record<string, unknown>;
-  const schoolInfo = school.data ? { name: school.data.name, contactEmail: school.data.contact_email, phone: typeof settings.schoolPhone === "string" ? settings.schoolPhone : null } : null;
+  const schoolInfo = school.data ? {
+    name: school.data.name,
+    shortName: typeof settings.schoolShortName === "string" ? settings.schoolShortName : null,
+    description: typeof settings.schoolDescription === "string" ? settings.schoolDescription : null,
+    logoUrl: typeof settings.schoolLogoUrl === "string" ? settings.schoolLogoUrl : null,
+    contactEmail: typeof settings.schoolEmail === "string" ? settings.schoolEmail : school.data.contact_email,
+    phone: typeof settings.schoolPhone === "string" ? settings.schoolPhone : null
+  } : null;
   const portalChallans = (challans.data ?? []).map((row: any) => {
     const paidForMonth = (row.student_fee_accounts?.fee_payments ?? [])
       .filter((payment: any) => !payment.is_voided && String(payment.payment_date ?? "").startsWith(String(row.fee_month).slice(0, 7)))

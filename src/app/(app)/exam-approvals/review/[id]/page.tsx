@@ -160,7 +160,7 @@ export default async function ExamApprovalReviewPage({ params }: { params: Promi
               {isPending ? (
                 <div className="grid gap-4">
                   <form action={reviewExamApprovalAction.bind(null, approval.id)} className="grid justify-items-end gap-3">
-                    <Textarea name="principal_comment" placeholder="Correction instructions" className="min-h-[100px]" required />
+                    <Textarea name="principal_comment" placeholder="Correction instructions (optional)" className="min-h-[100px]" />
                     <Button type="submit" name="decision" value="returned" variant="secondary" className="h-10 w-10 rounded-xl border border-warning/20 px-0 text-warning hover:bg-warning-soft" aria-label="Return result to teacher">
                       <XCircle className="h-4 w-4" />
                     </Button>

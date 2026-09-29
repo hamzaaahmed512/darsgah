@@ -15,7 +15,7 @@ export async function reviewExamApprovalAction(approvalId: string, formData: For
   revalidatePath("/exam-approvals");
 }
 
-export async function returnApprovedResultAction(examId: string, reason: string) {
+export async function returnApprovedResultAction(examId: string, reason?: string) {
   try {
     const user = await requireUser("results:view");
     await returnApprovedExam(user, examId, reason);

@@ -153,28 +153,25 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Card>
 
           {/* Staff Leave Requests Card */}
-          <Card className="order-2 rounded-[30px] border border-outline/70 bg-white shadow-card">
-            <CardHeader className="gap-4 border-b border-outline/50 pb-5">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-blue-50 text-primary">
-                <CalendarRange className="h-6 w-6" aria-hidden="true" />
-              </div>
-              <div>
-                <CardTitle className="text-[1.8rem]">Staff Leave Requests</CardTitle>
-                <p className="mt-1 text-base text-muted">View, filter and manage leave requests.</p>
+          <Card className="order-1 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
+            <LeavePeriodFilters bare mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
+          </Card>
+
+          <Card className="order-2 min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-xl"><CalendarRange className="h-5 w-5 text-primary" aria-hidden="true" />Staff Leave Requests</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{reviewLeaves.length} requests</span>
+                <CsvExport rows={reviewExportRows} filename={`staff-leave-requests-${exportDate}.csv`} />
               </div>
             </div>
-            <CsvExport rows={reviewExportRows} filename={`staff-leave-requests-${exportDate}.csv`} />
-          </CardHeader>
-          <CardContent className="pb-8 pt-6">
-            <LeavePeriodFilters mode={range.mode} from={params.from ?? range.from} to={params.to ?? range.to} />
             {!reviewLeaves.length ? (
-              <EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." />
+              <div className="p-5"><EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." /></div>
             ) : (
-              <div className="overflow-hidden rounded-[24px] border border-outline/50">
+              <>
                 <div className="leave-table-scroll overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-50/80 font-label text-xs uppercase tracking-[0.14em] text-muted">
+                  <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                     <tr>
                       <th className="px-5 py-4">Staff</th>
                       <th className="px-5 py-4">Type</th>
@@ -186,7 +183,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                   </thead>
                   <tbody>
                     {reviewLeaves.map((leave) => (
-                      <tr key={leave.id} className="border-t border-outline/50 align-top">
+                      <tr key={leave.id} className="border-t border-slate-100 align-top transition hover:bg-blue-50/30">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses((leave as any).applicant_name ?? "Employee")}`}>
@@ -218,7 +215,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                   </tbody>
                 </table>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-t border-outline/50 px-5 py-4 text-sm text-muted">
+                <div className="flex items-center justify-between gap-3 border-t border-blue-200 px-5 py-4 text-sm text-muted">
                   <p>Showing 1 to {reviewLeaves.length} of {reviewLeaves.length} requests</p>
                   <div className="flex items-center gap-2">
                     <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
@@ -232,10 +229,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                     </button>
                   </div>
                 </div>
-              </div>
+              </>
             )}
-          </CardContent>
-        </Card>
+          </Card>
         </div>
       ) : (
         <>

@@ -44,7 +44,7 @@ function ResultActions({ row, showPrint, inlineApproval }: { row: ResultRow; sho
         size="sm"
         className="h-9 w-9 rounded-xl bg-blue-50 px-0 text-primary hover:bg-blue-100"
         aria-label={`View ${row.title}`}
-        
+        title="View result"
       >
         <Eye className="h-4 w-4" aria-hidden="true" />
       </ButtonLink>
@@ -55,7 +55,7 @@ function ResultActions({ row, showPrint, inlineApproval }: { row: ResultRow; sho
           size="sm"
           className="h-9 w-9 rounded-xl px-0"
           aria-label={`Print ${row.title}`}
-          
+          title="Print result"
         >
           <Printer className="h-4 w-4" aria-hidden="true" />
         </ButtonLink>
@@ -66,7 +66,7 @@ function ResultActions({ row, showPrint, inlineApproval }: { row: ResultRow; sho
         </span>
       ) : null}
       {row.canReturn ? <ReturnApprovedResult examId={row.id} compact /> : null}
-      {inlineApproval && row.canApprove && row.approvalId ? <ApprovalActions approvalId={row.approvalId} /> : null}
+      {inlineApproval && row.canApprove && row.approvalId ? <ApprovalActions approvalId={row.approvalId} showTooltips /> : null}
     </div>
   );
 }

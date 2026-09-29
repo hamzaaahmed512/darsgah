@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Download, Globe, Lock, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/form-field";
+import { Field, Input, Textarea } from "@/components/ui/form-field";
 import { saveSchoolProfileAction } from "@/app/(app)/school-profile/actions";
 import { initials } from "@/lib/utils";
 import { formatPakistaniPhone } from "@/lib/pakistan-format";
@@ -14,6 +14,7 @@ type Props = {
   canManage: boolean;
   schoolName: string;
   shortName: string;
+  description: string;
   schoolTimezone: string;
   email: string;
   phone: string;
@@ -31,6 +32,7 @@ export function SchoolProfileForm({
   canManage,
   schoolName,
   shortName,
+  description,
   schoolTimezone,
   email,
   phone,
@@ -50,6 +52,7 @@ export function SchoolProfileForm({
   const [form, setForm] = useState({
     name: schoolName,
     shortName: shortName.toUpperCase(),
+    description,
     timezone: schoolTimezone,
     email: normalizeEmail(email),
     phone: formatPakistaniPhone(phone),
@@ -104,6 +107,7 @@ export function SchoolProfileForm({
       const payload = new FormData();
       payload.set("name", form.name.trim());
       payload.set("shortName", form.shortName.trim());
+      payload.set("description", form.description.trim());
       payload.set("timezone", form.timezone);
       payload.set("email", normalizeEmail(form.email));
       payload.set("phone", form.phone.trim());
@@ -156,6 +160,7 @@ export function SchoolProfileForm({
           </div>
           <h2 className="mt-5 font-display text-2xl font-bold leading-tight tracking-tight text-ink">{displayName}</h2>
           {form.shortName.trim() ? <p className="mt-1 text-sm font-medium leading-snug text-muted">{form.name}</p> : null}
+          {form.description.trim() ? <p className="mt-3 text-sm leading-6 text-muted">{form.description}</p> : null}
           <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">School Profile</p>
         </div>
 
@@ -251,6 +256,24 @@ export function SchoolProfileForm({
             {readOnly ? lockedField(form.shortName, "Not set") : <Input value={form.shortName} onChange={(event) => updateField("shortName", event.target.value.toUpperCase().slice(0, 20))} placeholder="NGSS" maxLength={20} />}
           </Field>
 
+          <div className="md:col-span-2">
+            <Field label="Short Description" hint="Optional; shown with the school logo in the student portal.">
+              {readOnly ? (
+                <div className="min-h-20 rounded-lg border border-outline/60 bg-surface-low px-3 py-2.5 text-sm leading-6 text-ink">
+                  {displayValue(form.description)}
+                </div>
+              ) : (
+                <Textarea
+                  value={form.description}
+                  onChange={(event) => updateField("description", event.target.value.slice(0, 300))}
+                  placeholder="Write a short introduction to your school."
+                  maxLength={300}
+                  rows={4}
+                />
+              )}
+            </Field>
+          </div>
+
           <Field label="School Email">
             {readOnly ? (
               lockedField(form.email)
@@ -332,6 +355,7 @@ export function SchoolProfileForm({
                     setForm({
                       name: schoolName,
                       shortName: shortName.toUpperCase(),
+                      description,
                       timezone: schoolTimezone,
                       email,
                       phone: formatPakistaniPhone(phone),

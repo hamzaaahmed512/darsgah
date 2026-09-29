@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { ReactNode } from "react";
-import { AtSign, Building2, ChevronDown, Eye, KeyRound, Mail, Phone, ShieldCheck, UserCheck, UserCog, UserPlus, Users } from "lucide-react";
+import { AtSign, Building2, ChevronDown, Eye, KeyRound, Mail, Phone, ShieldCheck, UserCog, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +59,6 @@ export default async function StaffPage({
       : user.role === "principal"
         ? (["administrator", "teacher", "staff", "student_staff", "cashier", "librarian"] as const)
         : (["teacher", "staff", "student_staff", "cashier", "librarian"] as const);
-  const activeStaff = allStaff.filter((member: any) => member.status === "active");
   const teacherCount = allStaff.filter((member: any) => canReceiveClassAssignments(member.role)).length;
   const accountStaff = allStaff.filter((member: any) => !member.is_record_only).length;
 
@@ -87,9 +86,8 @@ export default async function StaffPage({
         }
       />
 
-      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard label="Total staff" value={allStaff.length} hint={`${teacherCount} teacher${teacherCount === 1 ? "" : "s"} in the directory`} icon={Users} tone="blue" />
-        <StatCard label="Active staff" value={activeStaff.length} hint="Currently active staff records" icon={UserCheck} tone="purple" trend="Active directory" trendTone="positive" />
         <StatCard label="Teachers" value={teacherCount} hint={`Out of ${allStaff.length} total staff`} icon={UserCog} tone="green" />
         <StatCard label="Account staff" value={accountStaff} hint="Staff with app login access" icon={UserPlus} tone="red" />
       </section>

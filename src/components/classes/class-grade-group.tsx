@@ -77,7 +77,7 @@ export function ClassGradeGroup({ gradeName, classes, classDetails, expanded, on
           ) : null}
         </div>
       ) : null}
-        {gradeId ? <div className="mt-auto flex flex-wrap justify-end gap-2 border-t border-blue-100 p-4">{classes.some((cls) => !cls.is_promoted) ? <PromotionModal classIds={classes.filter((cls) => !cls.is_promoted).map((cls) => cls.id)} label={gradeName} /> : null}<ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="h-10 w-10 rounded-xl px-0 text-primary" aria-label={`Manage ${gradeName}`}><Settings className="h-4 w-4" /></ButtonLink></div> : null}
+        {gradeId ? <div className="mt-auto flex flex-wrap justify-end gap-2 p-4">{classes.some((cls) => !cls.is_promoted) ? <PromotionModal classIds={classes.filter((cls) => !cls.is_promoted).map((cls) => cls.id)} label={gradeName} /> : null}<ButtonLink href={`/classes/grades/${gradeId}`} size="sm" variant="secondary" className="h-10 w-10 rounded-xl px-0 text-primary" aria-label={`Manage ${gradeName}`}><Settings className="h-4 w-4" /></ButtonLink></div> : null}
     </div>
   );
 }

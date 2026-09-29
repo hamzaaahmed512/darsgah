@@ -8,15 +8,16 @@ type LeavePeriodFiltersProps = {
   from: string;
   to: string;
   action?: string;
+  bare?: boolean;
 };
 
-export function LeavePeriodFilters({ mode, from, to, action = "/leave" }: LeavePeriodFiltersProps) {
+export function LeavePeriodFilters({ mode, from, to, action = "/leave", bare = false }: LeavePeriodFiltersProps) {
   function submit(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     event.currentTarget.form?.requestSubmit();
   }
 
   return (
-    <div className="mb-6 rounded-[24px] border border-outline/60 bg-slate-50/65 p-4">
+    <div className={bare ? "" : "mb-6 rounded-[24px] border border-outline/60 bg-slate-50/65 p-4"}>
       <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_auto] xl:items-end">
         <form action={action} className="relative">
           <Select name="range" value={mode === "custom" ? "" : mode} onChange={submit} className="h-12 rounded-2xl border-outline/70 bg-white font-semibold shadow-none">

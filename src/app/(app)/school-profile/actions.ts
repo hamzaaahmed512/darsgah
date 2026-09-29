@@ -90,6 +90,7 @@ export async function saveSchoolProfileAction(formData: FormData) {
     const user = await requireUser("settings:manage");
     const name = readString(formData, "name").slice(0, 120);
     const shortName = readString(formData, "shortName").toUpperCase().slice(0, 20);
+    const description = readString(formData, "description").slice(0, 300);
     const timezone = readString(formData, "timezone");
     const email = normalizeEmail(readString(formData, "email"));
     const phone = formatPakistaniPhoneForStorage(readString(formData, "phone"));
@@ -109,6 +110,7 @@ export async function saveSchoolProfileAction(formData: FormData) {
 
     const settings: Record<string, any> = {
       schoolShortName: shortName,
+      schoolDescription: description,
       schoolEmail: email,
       schoolPhone: phone,
       schoolWebsite: website

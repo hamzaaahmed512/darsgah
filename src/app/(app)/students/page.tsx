@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { CircleMinus, GraduationCap, UserCheck, UsersRound } from "lucide-react";
+import { GraduationCap, UserCheck, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentTable } from "@/components/students/student-table";
@@ -41,7 +41,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
   const newThisMonth = studentMetrics.filter((student) => student.admission_date && new Date(student.admission_date) >= monthStart).length;
-  const withdrawn = studentMetrics.filter((student) => student.status === "withdrawn" || student.status === "cancelled").length;
   const activeStudents = studentMetrics.filter((student) => student.status === "active").length;
 
   return (
@@ -85,7 +84,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="kpi-card h-full rounded-[24px] !border-t-4 !border-t-blue-500 p-5 shadow-sm sm:p-6">
           <div className="flex h-full items-start gap-5">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 sm:h-16 sm:w-16"><GraduationCap className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" /></span>
@@ -98,7 +97,6 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         </Card>
         <StatCard label="Active students" value={activeStudents} hint="Currently enrolled and active" icon={UsersRound} tone="purple" trend="Active records" trendTone="positive" />
         <StatCard label="New admissions" value={newThisMonth} hint="Students added this month" icon={UserCheck} tone="green" trend="This month" trendTone="positive" />
-        <StatCard label="Withdrawn" value={withdrawn} hint="Cancelled or withdrawn records" icon={CircleMinus} tone="red" trend="School records" trendTone="negative" />
       </section>
 
       {pendingStudentRequests.length ? (
