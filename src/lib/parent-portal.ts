@@ -131,9 +131,9 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
     admin.from("schools").select("name,contact_email").eq("id", session.schoolId).maybeSingle(),
     admin.from("school_settings").select("settings").eq("school_id", session.schoolId).maybeSingle(),
     admin.from("announcements")
-      .select("id,title,description,priority,type,publish_date,created_at")
+      .select("id,title,description,priority,type,audience_type,audience_value,publish_date,created_at")
       .eq("school_id", session.schoolId)
-      .eq("audience_type", "parents")
+      .in("audience_type", ["parents", "roles"])
       .eq("is_archived", false)
       .lte("publish_date", today)
       .or(`expiry_date.is.null,expiry_date.gte.${today}`)
@@ -158,5 +158,6 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
     const overdue = outstanding > 0 && row.due_date && new Date(`${row.due_date}T23:59:59`).getTime() < Date.now();
     return { ...row, amount, outstanding, payment_status: outstanding <= 0 ? "paid" : paidForMonth > 0 ? "partial" : overdue ? "overdue" : "unpaid" };
   });
-  return { student: student.data, school: schoolInfo, notifications: parentAnnouncements.data ?? [], guardians: guardians.data ?? [], attendance: attendance.data ?? [], marks: marks.data ?? [], challans: portalChallans, summaries: { attendance: { total: attendance.data?.length ?? 0, present: attendance.data?.filter((row: any) => ["present", "late"].includes(row.status)).length ?? 0, rate: attendance.data?.length ? ((attendance.data.filter((row: any) => ["present", "late"].includes(row.status)).length / attendance.data.length) * 100) : null }, exams: { total: marks.data?.length ?? 0, average: null }, fees: { total: portalChallans.reduce((total, row) => total + row.amount, 0), outstanding: portalChallans.reduce((total, row) => total + row.outstanding, 0) } } };
+  const parentNotifications = (parentAnnouncements.data ?? []).filter((announcement: any) => announcement.audience_type === "parents" || (announcement.audience_type === "roles" && announcement.audience_value?.trim() === "parents"));
+  return { student: student.data, school: schoolInfo, notifications: parentNotifications, guardians: guardians.data ?? [], attendance: attendance.data ?? [], marks: marks.data ?? [], challans: portalChallans, summaries: { attendance: { total: attendance.data?.length ?? 0, present: attendance.data?.filter((row: any) => ["present", "late"].includes(row.status)).length ?? 0, rate: attendance.data?.length ? ((attendance.data.filter((row: any) => ["present", "late"].includes(row.status)).length / attendance.data.length) * 100) : null }, exams: { total: marks.data?.length ?? 0, average: null }, fees: { total: portalChallans.reduce((total, row) => total + row.amount, 0), outstanding: portalChallans.reduce((total, row) => total + row.outstanding, 0) } } };
 }

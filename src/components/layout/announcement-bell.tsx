@@ -24,6 +24,11 @@ const PRIORITY_DOT: Record<AnnouncementPriority, string> = {
   critical: "bg-danger"
 };
 
+function isParentAnnouncement(announcement: AnnouncementWithRead) {
+  return announcement.audience_type === "parents"
+    || (announcement.audience_type === "roles" && announcement.audience_value?.trim() === "parents");
+}
+
 export function AnnouncementBell({
   user,
   initialWorkflowNotifications = [],
@@ -51,7 +56,7 @@ export function AnnouncementBell({
 
   const unreadAnnouncementCount = announcements.filter((a) => !a.is_read && !a.is_archived && a.publish_date <= today).length;
   const unreadCount = unreadAnnouncementCount + workflowNotifications.length;
-  const displayedAnnouncements = announcements.filter((announcement) => channel === "parents" ? announcement.audience_type === "parents" : announcement.audience_type !== "parents");
+  const displayedAnnouncements = announcements.filter((announcement) => channel === "parents" ? isParentAnnouncement(announcement) : !isParentAnnouncement(announcement));
   const displayedWorkflowNotifications = channel === "staff" ? workflowNotifications : [];
 
   const fetchAnnouncements = useCallback(async () => {
@@ -132,6 +137,7 @@ export function AnnouncementBell({
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
+      if (e.target instanceof Element && e.target.closest("[data-announcement-dialog]")) return;
       if (!panelRef.current?.contains(e.target as Node)) onOpenChange(false);
     }
     document.addEventListener("mousedown", handleClick);

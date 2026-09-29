@@ -10,7 +10,9 @@ function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
 
   if (audienceValue === `user:${user.id}`) return true;
   if (announcement.audience_type === "all") return true;
-  if (announcement.audience_type === "parents") return hasPermission(user.role, "announcements:manage", user.permissions);
+  if (announcement.audience_type === "parents" || (announcement.audience_type === "roles" && audienceValue === "parents")) {
+    return hasPermission(user.role, "announcements:manage", user.permissions);
+  }
   if (announcement.audience_type === "teachers") return user.role === "teacher" || user.role === "head_teacher" || user.role === "principal";
   if (announcement.audience_type === "registrar") return user.role === "student_staff";
   if (announcement.audience_type === "admin") return user.role === "administrator" || user.role === "principal";
@@ -144,11 +146,23 @@ export async function createAnnouncement(
     throw new Error("Only principals and administrators can create announcements");
   }
   const supabase = await createClient();
-  const { error } = await supabase.from("announcements").insert({
+  const announcement = {
     school_id: user.schoolId,
     created_by: user.id,
     ...values
-  });
+  };
+  let { error } = await supabase.from("announcements").insert(announcement);
+
+  // Older deployed schemas do not yet include `parents` in the audience check.
+  // Store a compatible sentinel until the migration is applied, while readers
+  // continue treating it as a parent-only announcement.
+  if (error?.code === "23514" && values.audience_type === "parents") {
+    ({ error } = await supabase.from("announcements").insert({
+      ...announcement,
+      audience_type: "roles",
+      audience_value: "parents"
+    }));
+  }
   if (error) throw new Error(error.message);
 }
 

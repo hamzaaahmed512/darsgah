@@ -20,7 +20,7 @@ export async function createAnnouncementAction(
     revalidatePath("/dashboard");
     return { ok: true };
   } catch (err: any) {
-    return { error: publicActionError() };
+    return { error: publicActionError(err) };
   }
 }
 

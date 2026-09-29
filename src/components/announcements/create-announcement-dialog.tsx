@@ -82,7 +82,7 @@ export function CreateAnnouncementDialog({
   }
 
   const modal = open ? (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 p-3 sm:p-4">
+    <div data-announcement-dialog className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 p-3 sm:p-4">
       <div className="max-h-[calc(100dvh-1.5rem)] w-full overflow-hidden flex flex-col max-w-lg min-h-0 flex-1 overflow-y-auto rounded-[20px] bg-white shadow-lift ring-1 ring-outline sm:max-h-[calc(100dvh-2rem)]">
         <div className="border-b border-outline px-4 py-4 sm:px-6 sm:py-5">
           <h2 className="font-display text-xl font-bold text-ink">New Announcement</h2>
