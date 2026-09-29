@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/permissions";
 import { cn, formatDatePK } from "@/lib/utils";
 import type { AppUser, AnnouncementWithRead, AnnouncementPriority } from "@/types/database";
 import type { WorkflowNotification } from "@/lib/services/notifications";
+import { isParentAnnouncementAudience } from "@/lib/announcement-audience";
 
 const PRIORITY_STYLES: Record<AnnouncementPriority, string> = {
   low: "bg-surface-low text-muted",
@@ -23,11 +24,6 @@ const PRIORITY_DOT: Record<AnnouncementPriority, string> = {
   high: "bg-warning",
   critical: "bg-danger"
 };
-
-function isParentAnnouncement(announcement: AnnouncementWithRead) {
-  return announcement.audience_type === "parents"
-    || (announcement.audience_type === "roles" && announcement.audience_value?.trim() === "parents");
-}
 
 export function AnnouncementBell({
   user,
@@ -56,7 +52,7 @@ export function AnnouncementBell({
 
   const unreadAnnouncementCount = announcements.filter((a) => !a.is_read && !a.is_archived && a.publish_date <= today).length;
   const unreadCount = unreadAnnouncementCount + workflowNotifications.length;
-  const displayedAnnouncements = announcements.filter((announcement) => channel === "parents" ? isParentAnnouncement(announcement) : !isParentAnnouncement(announcement));
+  const displayedAnnouncements = announcements.filter((announcement) => channel === "parents" ? isParentAnnouncementAudience(announcement) : !isParentAnnouncementAudience(announcement));
   const displayedWorkflowNotifications = channel === "staff" ? workflowNotifications : [];
 
   const fetchAnnouncements = useCallback(async () => {

@@ -21,6 +21,8 @@ export async function GET(req: Request) {
       description: item.description,
       priority: item.priority,
       type: item.type,
+      audience_type: item.audience_type,
+      audience_value: item.audience_value,
       publish_date: item.publish_date,
       expiry_date: item.expiry_date,
       attachment_url: item.attachment_url,

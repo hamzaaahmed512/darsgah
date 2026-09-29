@@ -1,6 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
 import { getTeacherDashboardData } from "@/lib/services/dashboard";
-import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,18 +24,14 @@ export default async function TeacherDashboardPage() {
       <DashboardHeader
         userName={user.fullName}
         role={user.role}
-        roleLabel="Teacher"
+        eyebrow={user.schoolName}
         avatarUrl={user.avatarUrl}
         statusText="ACCOUNT ACTIVE"
+        decorative
         stats={[
           { label: "My Classes", value: headClasses.length },
           { label: "My Students", value: dashboard.totalStudents }
         ]}
-      />
-      <PageHeader
-        eyebrow={user.schoolName}
-        title="Teacher Dashboard"
-        description="View your head class, its students, and attendance."
       />
 
       {/* Quick Actions */}
@@ -69,10 +64,6 @@ export default async function TeacherDashboardPage() {
           </Link>
         </div>
       </section>
-
-      <div className="mb-6 rounded-lg bg-danger-soft p-4 text-danger">
-        <p className="text-sm font-semibold">Attendance is locked to the assigned class head teacher and can be submitted once per class per day.</p>
-      </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="My students" value={dashboard.totalStudents.toLocaleString()} hint="Students in your head class" icon={GraduationCap} tone="blue" />

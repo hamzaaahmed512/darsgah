@@ -21,7 +21,9 @@ export async function GET() {
       ...summary,
       announcements: announcements.map((item) => ({
         id: item.id, title: item.title, description: item.description,
-        priority: item.priority, type: item.type, publish_date: item.publish_date,
+        priority: item.priority, type: item.type,
+        audience_type: item.audience_type, audience_value: item.audience_value,
+        publish_date: item.publish_date,
         expiry_date: item.expiry_date, attachment_url: item.attachment_url,
         is_archived: item.is_archived, created_by_name: item.created_by_name,
         is_read: item.is_read

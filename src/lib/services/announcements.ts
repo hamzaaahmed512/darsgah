@@ -2,20 +2,23 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppUser, Announcement, AnnouncementWithRead } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { formatDisplayName } from "@/lib/student-name";
+import { isParentAnnouncementAudience } from "@/lib/announcement-audience";
 
 // ─── Read Announcements ────────────────────────────────────────────────────────
 
-function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
+export function announcementVisibleToUser(announcement: Announcement, user: AppUser) {
   const audienceValue = announcement.audience_value?.trim();
+  const canManage = hasPermission(user.role, "announcements:manage", user.permissions);
 
+  // Leadership needs both channels for creation, review, and archival. The
+  // notification UI separates those rows into Staff and Parents tabs.
+  if (canManage) return true;
   if (audienceValue === `user:${user.id}`) return true;
   if (announcement.audience_type === "all") return true;
-  if (announcement.audience_type === "parents" || (announcement.audience_type === "roles" && audienceValue === "parents")) {
-    return hasPermission(user.role, "announcements:manage", user.permissions);
-  }
-  if (announcement.audience_type === "teachers") return user.role === "teacher" || user.role === "head_teacher" || user.role === "principal";
+  if (isParentAnnouncementAudience(announcement)) return false;
+  if (announcement.audience_type === "teachers") return user.role === "teacher" || user.role === "head_teacher";
   if (announcement.audience_type === "registrar") return user.role === "student_staff";
-  if (announcement.audience_type === "admin") return user.role === "administrator" || user.role === "principal";
+  if (announcement.audience_type === "admin") return user.role === "administrator";
   if (announcement.audience_type === "roles") {
     return Boolean(audienceValue?.split(",").map((item) => item.trim()).includes(user.role));
   }
