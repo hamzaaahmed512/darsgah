@@ -9,12 +9,12 @@ import type { AnnouncementPriority, AnnouncementType, AnnouncementAudienceType }
 export function CreateAnnouncementDialog({
   triggerLabel = "New Announcement",
   triggerClassName,
-  defaultAudience = "all",
+  audienceScope = "staff",
   onSuccess
 }: {
   triggerLabel?: string;
   triggerClassName?: string;
-  defaultAudience?: "all" | "parents";
+  audienceScope?: "staff" | "parents";
   onSuccess?: () => void | Promise<void>;
 }) {
   const router = useRouter();
@@ -23,6 +23,15 @@ export function CreateAnnouncementDialog({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const today = new Date().toISOString().split("T")[0];
+  const defaultAudience: AnnouncementAudienceType = audienceScope === "parents" ? "parents" : "all";
+  const audienceOptions: Array<{ value: AnnouncementAudienceType; label: string }> = audienceScope === "parents"
+    ? [{ value: "parents", label: "All Parents" }]
+    : [
+        { value: "all", label: "All Staff" },
+        { value: "teachers", label: "Teachers Only" },
+        { value: "registrar", label: "Registrar Only" },
+        { value: "admin", label: "Admin Only" }
+      ];
 
   const [form, setForm] = useState({
     title: "",
@@ -47,13 +56,15 @@ export function CreateAnnouncementDialog({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.title.trim() || !form.description.trim()) {
-      setError("Title and description are required.");
+    if (!form.title.trim()) {
+      setError("Title is required.");
       return;
     }
     startTransition(async () => {
       const res = await createAnnouncementAction({
         ...form,
+        title: form.title.trim(),
+        description: form.description.trim(),
         expiry_date: form.expiry_date || null,
         audience_value: form.audience_value || null
       } as any);
@@ -83,8 +94,8 @@ export function CreateAnnouncementDialog({
             <input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Important Staff Meeting" className="w-full rounded-xl border border-outline px-4 py-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-ink">Description<span className="ml-0.5 text-danger" aria-hidden="true">*</span></label>
-            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={3} placeholder="Provide full details of the announcement..." className="w-full resize-none rounded-xl border border-outline px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
+            <label className="mb-1 block text-sm font-semibold text-ink">Description <span className="text-xs text-muted">(optional)</span></label>
+            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={3} placeholder="Add announcement details if needed..." className="w-full resize-none rounded-xl border border-outline px-4 py-3 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -112,11 +123,7 @@ export function CreateAnnouncementDialog({
           <div>
             <label className="mb-1 block text-sm font-semibold text-ink">Audience</label>
             <select value={form.audience_type} onChange={(e) => set("audience_type", e.target.value)} className="w-full rounded-xl border border-outline px-4 py-2.5 text-sm font-medium focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
-              <option value="all">All Staff</option>
-              <option value="parents">All Parents</option>
-              <option value="teachers">Teachers Only</option>
-              <option value="registrar">Registrar Only</option>
-              <option value="admin">Admin Only</option>
+              {audienceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

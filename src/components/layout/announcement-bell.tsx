@@ -328,7 +328,7 @@ export function AnnouncementBell({
               key={channel}
               triggerLabel={channel === "parents" ? "Notify Parents" : "Notify Staff"}
               triggerClassName="inline-flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-button hover:bg-primary-ink"
-              defaultAudience={channel === "parents" ? "parents" : "all"}
+              audienceScope={channel}
               onSuccess={fetchAnnouncements}
             />
           ) : null}
