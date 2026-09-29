@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { ArrowRight, GraduationCap, School, CalendarX2, CalendarCheck, BookOpen, ClipboardList, Clock3 } from "lucide-react";
+import { ArrowRight, GraduationCap, School, CalendarX2, CalendarCheck, BookOpen, ClipboardList, Clock3, CalendarRange } from "lucide-react";
 import Link from "next/link";
 import { formatGradeSection } from "@/lib/utils";
 
@@ -102,6 +102,12 @@ export default async function TeacherDashboardPage() {
         <StatCard label="Head classes" value={headClasses.length.toLocaleString()} hint="Classes assigned to you" icon={School} tone="purple" />
         <StatCard label="Absent today" value={dashboard.absentToday.toLocaleString()} hint="In your head class" icon={CalendarX2} tone="red" />
         <StatCard label="Attendance completed" value={`${dashboard.attendanceCompleted}/${headClasses.length}`} hint="Head classes marked today" icon={CalendarCheck} tone="green" />
+      </section>
+
+      <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Teacher leave summary">
+        <Link href="/leave" className="block rounded-[22px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+          <StatCard label="Teacher leaves" value={dashboard.teacherLeaveDays.toLocaleString()} hint="Approved leave days this year" icon={CalendarRange} tone="amber" trend="Open Leave Center" />
+        </Link>
       </section>
 
       {/* Head Teacher Classes */}

@@ -26,7 +26,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "relative inline-flex max-w-full whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed",
+        "relative inline-flex max-w-full shrink-0 whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed",
         variants[variant],
         sizes[size],
         className
@@ -45,7 +45,7 @@ export function ButtonLink({
   return (
     <Link
       className={cn(
-        "relative inline-flex max-w-full whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]",
+        "relative inline-flex max-w-full shrink-0 whitespace-normal text-center [&>svg]:shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]",
         variants[variant],
         sizes[size],
         className

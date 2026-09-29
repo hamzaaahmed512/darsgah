@@ -6,6 +6,7 @@ import { sortClassesNaturally } from "@/lib/class-sort";
 import { hasPermission } from "@/lib/permissions";
 import { formatDisplayName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
+import { getTeacherLeaveStats } from "@/lib/services/leaves";
 
 type ClassDistributionRow = { class_name: string; grade_name: string | null; student_count: number };
 
@@ -26,11 +27,14 @@ function isMissingTable(error: { code?: string; message?: string } | null, table
 export async function getTeacherDashboardData(user: AppUser) {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
-  const headClasses = await getTeacherHeadClasses(user);
+  const [headClasses, leaveStats] = await Promise.all([
+    getTeacherHeadClasses(user),
+    getTeacherLeaveStats(user, user.id)
+  ]);
   const classIds = headClasses.map((item) => item.id);
 
   if (!classIds.length) {
-    return { headClasses, totalStudents: 0, absentToday: 0, attendanceCompleted: 0 };
+    return { headClasses, totalStudents: 0, absentToday: 0, attendanceCompleted: 0, teacherLeaveDays: leaveStats.annualUsed };
   }
 
   const [students, absences] = await Promise.all([
@@ -45,7 +49,8 @@ export async function getTeacherDashboardData(user: AppUser) {
     headClasses,
     totalStudents: students.count ?? 0,
     absentToday: absences.count ?? 0,
-    attendanceCompleted: headClasses.filter((item) => item.attendance_marked_today).length
+    attendanceCompleted: headClasses.filter((item) => item.attendance_marked_today).length,
+    teacherLeaveDays: leaveStats.annualUsed
   };
 }
 

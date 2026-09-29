@@ -8,6 +8,7 @@ import { canSelectStudentCombination, isCustomStudentMajor, isDefaultStudentMajo
 import { formatPakistaniPhoneForStorage } from "@/lib/pakistan-format";
 import { formatDisplayName, splitFullName } from "@/lib/student-name";
 import { postgrestSearchTerm } from "@/lib/postgrest-search";
+import { allocatePaymentsToChallans } from "@/lib/services/finance";
 
 export type StudentFilters = {
   q?: string;
@@ -369,18 +370,33 @@ export async function getStudentRecord(
   const presentCount = attendanceRows.filter((row: any) => ["present", "late"].includes(row.status)).length;
   const marksRows = marks.data ?? [];
   const markPercentages = marksRows
-    .map((row: any) => Number(row.exams?.max_marks) ? (Number(row.marks_obtained) / Number(row.exams.max_marks)) * 100 : null)
+    .map((row: any) => row.marks_obtained !== null && row.marks_obtained !== undefined && Number(row.exams?.max_marks) > 0
+      ? Math.max(0, Math.min(100, (Number(row.marks_obtained) / Number(row.exams.max_marks)) * 100))
+      : null)
     .filter((value): value is number => value !== null);
   const fallbackAccountId = (feeAccounts?.data ?? [])[0]?.id ?? null;
+  const challanAllocations = allocatePaymentsToChallans((challans.data ?? []).map((row: any) => {
+    const account: any = row.student_fee_accounts;
+    return {
+      id: row.id,
+      accountId: row.student_fee_account_id || account?.id || fallbackAccountId,
+      amount: row.amount,
+      recurringPayable: account?.total_payable,
+      amountPaid: account?.amount_paid,
+      feeMonth: row.fee_month
+    };
+  }));
   const challanRows = (challans.data ?? []).map((row: any) => {
     const account: any = row.student_fee_accounts;
     const studentFeeAccountId = row.student_fee_account_id || account?.id || fallbackAccountId;
-    const outstanding = Math.max(0, Number(account?.total_payable ?? row.amount) - Number(account?.amount_paid ?? 0));
+    const allocation = challanAllocations.get(row.id) ?? { billedAmount: Number(row.amount ?? 0), paidAmount: 0, outstanding: Number(row.amount ?? 0) };
     return {
       ...row,
       student_fee_account_id: studentFeeAccountId,
-      outstanding,
-      payment_status: outstanding <= 0 ? "paid" : Number(account?.amount_paid ?? 0) > 0 ? "partially paid" : "unpaid"
+      amount: allocation.billedAmount,
+      amount_paid_for_month: allocation.paidAmount,
+      outstanding: allocation.outstanding,
+      payment_status: allocation.outstanding <= 0 ? "paid" : allocation.paidAmount > 0 ? "partially paid" : "unpaid"
     };
   });
 

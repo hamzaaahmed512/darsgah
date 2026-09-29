@@ -35,7 +35,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   const [q, setQ] = useState("");
   const [classId, setClassId] = useState("all");
   const [status, setStatus] = useState("all");
-  const [session, setSession] = useState("all");
+  const [session, setSession] = useState(() => sessions.find((item) => item.is_active)?.id ?? "all");
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [isCollectOpen, setIsCollectOpen] = useState(false);
@@ -88,7 +88,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
   const selectedLedgerAccount = accounts.find((acc) => acc.id === selectedAccountId) ?? null;
   const totals = filtered.reduce(
     (acc, row) => ({
-      payable: acc.payable + Number(row.total_payable || 0),
+      payable: acc.payable + Number(row.billed_amount ?? row.total_payable ?? 0),
       paid: acc.paid + Number(row.amount_paid || 0),
       outstanding: acc.outstanding + Number(row.remaining_balance || 0)
     }),
@@ -246,7 +246,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                 <tr>
                   <th className="px-6 py-4">Student</th>
                   <th className="px-6 py-4">Class</th>
-                  <th className="px-6 py-4">Payable</th>
+                  <th className="px-6 py-4">Total billed</th>
                   <th className="px-6 py-4">Paid</th>
                   <th className="px-6 py-4">Remaining</th>
                   <th className="px-6 py-4">Status</th>
@@ -271,7 +271,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                       <td data-label="Class" className="px-6 py-5">
                         <span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span>
                       </td>
-                      <td data-label="Payable" className="px-6 py-5 font-semibold">{formatPKR(Number(acc.total_payable))}</td>
+                      <td data-label="Total billed" className="px-6 py-5 font-semibold">{formatPKR(Number(acc.billed_amount ?? acc.total_payable))}</td>
                       <td data-label="Paid" className="px-6 py-5 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</td>
                       <td data-label="Remaining" className="px-6 py-5 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</td>
                       <td data-label="Status" className="px-6 py-5">
@@ -337,7 +337,7 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
                   </div>
                   <div className="mt-3"><span className="inline-flex rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">{formatGradeSection(acc.grade_name, acc.section_name)}</span></div>
                   <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                    <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Payable</dt><dd className="mt-1 font-semibold text-ink">{formatPKR(Number(acc.total_payable))}</dd></div>
+                    <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Total billed</dt><dd className="mt-1 font-semibold text-ink">{formatPKR(Number(acc.billed_amount ?? acc.total_payable))}</dd></div>
                     <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Paid</dt><dd className="mt-1 font-semibold text-success">{formatPKR(Number(acc.amount_paid))}</dd></div>
                     <div><dt className="text-xs font-bold uppercase tracking-wide text-muted">Remaining</dt><dd className="mt-1 font-bold text-danger">{formatPKR(Number(acc.remaining_balance))}</dd></div>
                   </dl>
@@ -369,11 +369,11 @@ export function FeeManagementClient({ user, accounts, classes, sessions, payment
               Showing {filtered.length} account{filtered.length === 1 ? "" : "s"} • Outstanding {formatPKR(totals.outstanding)}
             </p>
             <ReportGenerator title="Student Fee Accounts" filters={{ Search: q, Status: status, Class: classes.find((item) => item.id === classId)?.name, Session: sessions.find((item) => item.id === session)?.name, Discounted: onlyDiscounted ? "Yes" : undefined }}
-              headers={["Student / Admission", "Class", "Payable", "Paid", "Outstanding", "Status"]}
+              headers={["Student / Admission", "Class", "Total billed", "Paid", "Outstanding", "Status"]}
               data={filtered.map((account) => [
                 `${account.student_name} / ${account.admission_number}`,
                 formatGradeSection(account.grade_name, account.section_name),
-                formatPKR(Number(account.total_payable)), formatPKR(Number(account.amount_paid)),
+                formatPKR(Number(account.billed_amount ?? account.total_payable)), formatPKR(Number(account.amount_paid)),
                 formatPKR(Number(account.remaining_balance)), account.payment_status
               ])} />
           </div>

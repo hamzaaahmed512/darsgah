@@ -158,10 +158,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Card>
 
           <Card className="order-2 min-w-0 max-w-full overflow-hidden rounded-[22px] border border-blue-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center justify-between gap-4 border-b border-blue-200 px-5 py-4 sm:px-6">
-              <CardTitle className="flex items-center gap-2 text-xl"><CalendarRange className="h-5 w-5 text-primary" aria-hidden="true" />Staff Leave Requests</CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{reviewLeaves.length} requests</span>
+            <div className="flex flex-col items-stretch gap-3 border-b border-blue-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-xl"><CalendarRange className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />Staff Leave Requests</CardTitle>
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:justify-end sm:gap-3">
+                <span className="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-primary">{reviewLeaves.length} requests</span>
                 <CsvExport rows={reviewExportRows} filename={`staff-leave-requests-${exportDate}.csv`} />
               </div>
             </div>
@@ -169,7 +169,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               <div className="p-5"><EmptyState title="No leave requests" description="Staff leave requests will appear here for approval." /></div>
             ) : (
               <>
-                <div className="leave-table-scroll overflow-x-auto">
+                <div className="leave-table-scroll hidden overflow-x-auto lg:block" data-responsive-table="desktop" role="region" aria-label="Staff leave requests" tabIndex={0}>
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-slate-50/90 font-label text-xs uppercase tracking-[0.12em] text-slate-500">
                     <tr>
@@ -215,9 +215,53 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                   </tbody>
                 </table>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-t border-blue-200 px-5 py-4 text-sm text-muted">
+                <div className="grid min-w-0 gap-3 p-3 sm:p-4 lg:hidden">
+                  {reviewLeaves.map((leave) => {
+                    const applicantName = (leave as any).applicant_name ?? "Employee";
+                    return (
+                      <article key={leave.id} className="min-w-0 rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${getAvatarToneClasses(applicantName)}`}>
+                              {getInitials(applicantName)}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="break-words font-semibold leading-5 text-ink">{applicantName}</h3>
+                              <p className="mt-0.5 text-xs text-muted">Leave request</p>
+                            </div>
+                          </div>
+                          <Badge tone={statusTone[leave.status]}>{leave.status}</Badge>
+                        </div>
+                        <dl className="mt-3 grid min-w-0 gap-3 text-sm">
+                          <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-3">
+                            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Type</dt>
+                            <dd className="min-w-0 break-words text-right font-semibold capitalize text-ink">{leave.leave_type.replace("_", " ")}</dd>
+                          </div>
+                          <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-3">
+                            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Dates</dt>
+                            <dd className="min-w-0 break-words text-right text-muted">{leave.start_date} to {leave.end_date}</dd>
+                          </div>
+                          <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-3">
+                            <dt className="text-xs font-bold uppercase tracking-wide text-muted">Reason</dt>
+                            <dd className="min-w-0 break-words text-right text-muted">{leave.reason}</dd>
+                          </div>
+                        </dl>
+                        <div className="mt-4 border-t border-slate-100 pt-3">
+                          {leave.status === "pending" ? (
+                            <LeaveReviewActions leaveId={leave.id} />
+                          ) : (
+                            <p className="text-right text-xs font-semibold leading-5 text-muted">
+                              Reviewed by <span className="text-ink">{(leave as any).reviewed_by_name ?? "reviewer"}</span>
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-col items-start gap-3 border-t border-blue-200 px-4 py-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <p>Showing 1 to {reviewLeaves.length} of {reviewLeaves.length} requests</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline/60 bg-white text-muted" disabled>
                       ‹
                     </button>

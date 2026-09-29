@@ -10,6 +10,7 @@ export function CsvExport({ rows, filename }: { rows: Array<Record<string, strin
     <Button
       type="button"
       variant="secondary"
+      className="whitespace-nowrap"
       disabled={!rows.length}
       onClick={() => {
         requestDownload({ title: filename.replace(/[-_]/g, " ").replace(/\.csv$/i, ""), filename,

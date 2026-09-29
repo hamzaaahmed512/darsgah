@@ -226,7 +226,7 @@ export async function getStudentFees(user: AppUser, filters: {
     query.order("student_name"),
     supabase
       .from("fee_challans")
-      .select("student_id, amount")
+      .select("student_fee_account_id, student_id, amount")
       .eq("school_id", user.schoolId)
       .gt("amount", 0)
   ]);
@@ -234,32 +234,104 @@ export async function getStudentFees(user: AppUser, filters: {
   if (error) throw new Error(error.message);
   if (challansError) throw new Error(challansError.message);
 
-  const accountByStudent = new Map<string, any>();
-  for (const row of data ?? []) accountByStudent.set(String(row.student_id), row);
-
-  const pendingByStudent = new Map<string, number>();
-  for (const challan of challansData ?? []) {
-    const studentId = String(challan.student_id);
-    const account = accountByStudent.get(studentId);
-    const amount = Number(challan.amount ?? 0) > 0
-      ? Number(challan.amount)
-      : Number(account?.total_payable ?? 0);
-    pendingByStudent.set(studentId, (pendingByStudent.get(studentId) ?? 0) + amount);
+  const accountIdsByStudent = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const studentId = String(row.student_id);
+    accountIdsByStudent.set(studentId, [...(accountIdsByStudent.get(studentId) ?? []), String(row.id)]);
   }
 
-  return (data || []).map((row: any) => ({
-    ...row,
-    pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0,
-    remaining_balance: Math.max(
-      Number(row.remaining_balance ?? 0),
-      (pendingByStudent.get(String(row.student_id)) ?? 0) - Number(row.amount_paid ?? 0),
-      Number(row.total_payable ?? 0) - Number(row.amount_paid ?? 0)
-    ),
-    payment_status: normalizeStudentFeeStatus({
+  const billedByAccount = new Map<string, number>();
+  for (const challan of challansData ?? []) {
+    // Older challans may not have an account id. Only attach those when the
+    // student has one unambiguous account; never copy one student's charges to
+    // every historical account they have held.
+    const legacyAccountIds = accountIdsByStudent.get(String(challan.student_id)) ?? [];
+    const accountId = challan.student_fee_account_id
+      ? String(challan.student_fee_account_id)
+      : legacyAccountIds.length === 1 ? legacyAccountIds[0] : null;
+    if (!accountId) continue;
+    const amount = Math.max(0, finiteMoney(challan.amount));
+    billedByAccount.set(accountId, (billedByAccount.get(accountId) ?? 0) + amount);
+  }
+
+  return (data || []).map((row: any) => {
+    const generatedAmount = billedByAccount.get(String(row.id)) ?? 0;
+    const amounts = calculateFeeAccountAmounts({
+      recurringPayable: row.total_payable,
+      generatedAmount,
+      amountPaid: row.amount_paid
+    });
+    return {
       ...row,
-      pending_challan_amount: pendingByStudent.get(String(row.student_id)) ?? 0
-    })
-  }));
+      billed_amount: amounts.billedAmount,
+      pending_challan_amount: generatedAmount,
+      remaining_balance: amounts.remainingBalance,
+      credit_balance: amounts.creditBalance,
+      payment_status: normalizeStudentFeeStatus({
+        ...row,
+        pending_challan_amount: generatedAmount
+      })
+    };
+  });
+}
+
+function finiteMoney(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+export function calculateFeeAccountAmounts(values: {
+  recurringPayable?: number | string | null;
+  generatedAmount?: number | string | null;
+  amountPaid?: number | string | null;
+}) {
+  const recurringPayable = roundMoney(Math.max(0, finiteMoney(values.recurringPayable)));
+  const generatedAmount = roundMoney(Math.max(0, finiteMoney(values.generatedAmount)));
+  const amountPaid = roundMoney(Math.max(0, finiteMoney(values.amountPaid)));
+  const billedAmount = roundMoney(Math.max(recurringPayable, generatedAmount));
+  return {
+    billedAmount,
+    amountPaid,
+    remainingBalance: roundMoney(Math.max(0, billedAmount - amountPaid)),
+    creditBalance: roundMoney(Math.max(0, amountPaid - billedAmount))
+  };
+}
+
+export function allocatePaymentsToChallans(challans: Array<{
+  id: string;
+  accountId?: string | null;
+  amount?: number | string | null;
+  recurringPayable?: number | string | null;
+  amountPaid?: number | string | null;
+  feeMonth: string;
+}>) {
+  const paidByAccount = new Map<string, number>();
+  for (const challan of challans) {
+    const accountKey = challan.accountId ?? `legacy:${challan.id}`;
+    paidByAccount.set(accountKey, roundMoney(Math.max(
+      paidByAccount.get(accountKey) ?? 0,
+      Math.max(0, finiteMoney(challan.amountPaid))
+    )));
+  }
+
+  const allocation = new Map<string, { billedAmount: number; paidAmount: number; outstanding: number }>();
+  for (const challan of [...challans].sort((left, right) => left.feeMonth.localeCompare(right.feeMonth) || left.id.localeCompare(right.id))) {
+    const accountKey = challan.accountId ?? `legacy:${challan.id}`;
+    const billedAmount = roundMoney(Math.max(0, finiteMoney(challan.amount) || finiteMoney(challan.recurringPayable)));
+    const availablePayment = paidByAccount.get(accountKey) ?? 0;
+    const paidAmount = roundMoney(Math.min(billedAmount, availablePayment));
+    allocation.set(challan.id, {
+      billedAmount,
+      paidAmount,
+      outstanding: roundMoney(Math.max(0, billedAmount - paidAmount))
+    });
+    paidByAccount.set(accountKey, roundMoney(Math.max(0, availablePayment - paidAmount)));
+  }
+  return allocation;
 }
 
 export function resolveChallanAmount(row: { amount?: number | string | null; student_fee_accounts?: { total_payable?: number | string | null } | null }) {
@@ -275,16 +347,16 @@ export function normalizeStudentFeeStatus(row: {
   payment_status?: string | null;
   pending_challan_amount?: number | string | null;
 }) {
-  const totalPayable = Number(row.total_payable ?? 0);
-  const amountPaid = Number(row.amount_paid ?? 0);
-  const pendingChallanAmount = Number(row.pending_challan_amount ?? 0);
-  const dueDate = row.due_date ? new Date(row.due_date) : null;
+  const amounts = calculateFeeAccountAmounts({
+    recurringPayable: row.total_payable,
+    generatedAmount: row.pending_challan_amount,
+    amountPaid: row.amount_paid
+  });
+  const dueDate = row.due_date ? new Date(`${row.due_date}T23:59:59`) : null;
 
-  if (pendingChallanAmount > 0 && amountPaid < pendingChallanAmount) return "pending";
-  if (totalPayable <= 0) return "paid";
-  if (amountPaid >= totalPayable) return "paid";
+  if (amounts.billedAmount <= 0 || amounts.remainingBalance <= 0) return "paid";
   if (dueDate && dueDate.getTime() < Date.now()) return "overdue";
-  if (amountPaid > 0) return "partially_paid";
+  if (amounts.amountPaid > 0) return "partially_paid";
   return "pending";
 }
 
@@ -294,24 +366,32 @@ export async function getFeeChallans(user: AppUser, month: string) {
     .from("fee_challans")
     .select("*, students(first_name, last_name, admission_number), classes(name, grades(name), sections(name)), student_fee_accounts(total_payable, amount_paid, fee_payments(amount, payment_date, is_voided))")
     .eq("school_id", user.schoolId)
-    .eq("fee_month", `${month}-01`)
+    .lte("fee_month", `${month}-01`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: any) => {
-    const monthlyPaid = (row.student_fee_accounts?.fee_payments ?? [])
-      .filter((payment: any) => !payment.is_voided && String(payment.payment_date).startsWith(month))
-      .reduce((sum: number, payment: any) => sum + Number(payment.amount ?? 0), 0);
-    const challanAmount = resolveChallanAmount(row);
+  const allocations = allocatePaymentsToChallans((data ?? []).map((row: any) => ({
+    id: row.id,
+    accountId: row.student_fee_account_id,
+    amount: row.amount,
+    recurringPayable: row.student_fee_accounts?.total_payable,
+    amountPaid: (row.student_fee_accounts?.fee_payments ?? [])
+      .filter((payment: any) => !payment.is_voided)
+      .reduce((sum: number, payment: any) => sum + finiteMoney(payment.amount), 0),
+    feeMonth: row.fee_month
+  })));
+  return (data ?? []).filter((row: any) => row.fee_month === `${month}-01`).map((row: any) => {
+    const allocation = allocations.get(row.id) ?? { billedAmount: resolveChallanAmount(row), paidAmount: 0, outstanding: resolveChallanAmount(row) };
     return {
       ...row,
       student_name: formatFullName(row.students?.first_name, row.students?.last_name),
       admission_number: row.students?.admission_number ?? "—",
       class_name: formatClassDisplayName(row.classes?.grades?.name, row.classes?.name, row.classes?.sections?.name) || "—",
-      amount: challanAmount,
-      amount_paid_for_month: monthlyPaid,
-      payment_status: challanAmount > 0 && monthlyPaid >= challanAmount
+      amount: allocation.billedAmount,
+      amount_paid_for_month: allocation.paidAmount,
+      outstanding: allocation.outstanding,
+      payment_status: allocation.outstanding <= 0
         ? "paid"
-        : monthlyPaid > 0
+        : allocation.paidAmount > 0
           ? "partially paid"
           : "pending"
     };
@@ -396,6 +476,8 @@ export async function applyDiscount(user: AppUser, accountId: string, values: an
     newPayable = Math.max(0, baseTotal - parsed.discount_value);
   }
 
+  newPayable = roundMoney(newPayable);
+
   const { data: updated, error } = await supabase
     .from("student_fee_accounts")
     .update({
@@ -440,16 +522,17 @@ export async function recordPayment(user: AppUser, values: any) {
     .from("fee_challans")
     .select("amount")
     .eq("school_id", user.schoolId)
-    .eq("student_id", account.student_id);
+    .eq("student_fee_account_id", account.id);
 
   const generatedTotal = (challans ?? []).reduce(
     (sum, challan) => sum + (Number(challan.amount ?? 0) > 0 ? Number(challan.amount) : Number(account.total_payable)),
     0
   );
-  const remaining = Math.max(
-    Number(account.total_payable) - Number(account.amount_paid),
-    generatedTotal - Number(account.amount_paid)
-  );
+  const { remainingBalance: remaining } = calculateFeeAccountAmounts({
+    recurringPayable: account.total_payable,
+    generatedAmount: generatedTotal,
+    amountPaid: account.amount_paid
+  });
   if (parsed.amount > remaining) {
     throw new Error(`Payment amount (${parsed.amount}) exceeds the remaining balance (${remaining})`);
   }
@@ -918,15 +1001,17 @@ export async function getFinanceDashboard(user: AppUser) {
   let overduePaymentsCount = 0;
 
   accounts.forEach((acc) => {
-    const payable = Number(acc.total_payable || 0);
     const paid = Number(acc.amount_paid || 0);
     const remaining = Number(acc.remaining_balance || 0);
+    // Older deployments do not expose billed_amount yet. Paid + outstanding
+    // reconstructs the cumulative billed basis without reverting to one month's fee.
+    const payable = Math.max(Number(acc.total_payable || 0), paid + remaining);
 
     totalExpected += payable;
     totalCollected += paid;
     totalOutstanding += remaining;
 
-    if (acc.payment_status === "unpaid" || acc.payment_status === "partially_paid") {
+    if (["unpaid", "pending", "partially_paid"].includes(acc.payment_status)) {
       pendingPaymentsCount++;
     } else if (acc.payment_status === "overdue") {
       overduePaymentsCount++;
@@ -939,7 +1024,7 @@ export async function getFinanceDashboard(user: AppUser) {
       } else if (acc.discount_type === "percentage") {
         // base = payable / (1 - val/100) -> discount = base * val/100
         const val = Number(acc.discount_value);
-        const discountAmt = (payable / (1 - val / 100)) * (val / 100);
+        const discountAmt = val > 0 && val < 100 ? (payable / (1 - val / 100)) * (val / 100) : 0;
         totalDiscounts += discountAmt;
       }
     }

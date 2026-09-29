@@ -3,6 +3,7 @@ import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCnic } from "@/lib/pakistan-format";
+import { allocatePaymentsToChallans } from "@/lib/services/finance";
 
 const SESSION_COOKIE = "parent_portal_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -160,7 +161,7 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
     admin.from("student_guardian_details").select("student_id,guardian_id,is_primary,full_name,relationship,email,phone,cnic").eq("school_id", session.schoolId).eq("student_id", studentId).order("is_primary", { ascending: false }),
     admin.from("attendance_records").select("id,attendance_date,status,note,classes(name,grades(name),sections(name))").eq("school_id", session.schoolId).eq("student_id", studentId).order("attendance_date", { ascending: false }),
     admin.from("marks").select("id,marks_obtained,is_absent,grade,status,teacher_comment,exams(title,term,exam_type,exam_date,max_marks,approval_status),subjects(name)").eq("school_id", session.schoolId).eq("student_id", studentId).order("created_at", { ascending: false }),
-    admin.from("fee_challans").select("id,fee_month,amount,due_date,created_at,student_fee_accounts(total_payable,fee_payments(amount,payment_date,is_voided))").eq("school_id", session.schoolId).eq("student_id", studentId).order("fee_month", { ascending: false }),
+    admin.from("fee_challans").select("id,fee_month,amount,due_date,created_at,student_fee_account_id,student_fee_accounts(id,total_payable,fee_payments(amount,payment_date,is_voided))").eq("school_id", session.schoolId).eq("student_id", studentId).order("fee_month", { ascending: false }),
     admin.from("schools").select("name,contact_email").eq("id", session.schoolId).maybeSingle(),
     admin.from("school_settings").select("settings").eq("school_id", session.schoolId).maybeSingle(),
     admin.from("announcements")
@@ -182,14 +183,22 @@ export async function getParentStudent(session: ParentPortalSession, studentId: 
     contactEmail: typeof settings.schoolEmail === "string" ? settings.schoolEmail : school.data.contact_email,
     phone: typeof settings.schoolPhone === "string" ? settings.schoolPhone : null
   } : null;
+  const portalAllocations = allocatePaymentsToChallans((challans.data ?? []).map((row: any) => ({
+    id: row.id,
+    accountId: row.student_fee_account_id ?? row.student_fee_accounts?.id,
+    amount: row.amount,
+    recurringPayable: row.student_fee_accounts?.total_payable,
+    amountPaid: (row.student_fee_accounts?.fee_payments ?? [])
+      .filter((payment: any) => !payment.is_voided)
+      .reduce((total: number, payment: any) => total + Number(payment.amount ?? 0), 0),
+    feeMonth: row.fee_month
+  })));
   const portalChallans = (challans.data ?? []).map((row: any) => {
-    const paidForMonth = (row.student_fee_accounts?.fee_payments ?? [])
-      .filter((payment: any) => !payment.is_voided && String(payment.payment_date ?? "").startsWith(String(row.fee_month).slice(0, 7)))
-      .reduce((total: number, payment: any) => total + Number(payment.amount ?? 0), 0);
-    const amount = Number(row.amount ?? row.student_fee_accounts?.total_payable ?? 0);
-    const outstanding = Math.max(0, amount - paidForMonth);
+    const allocation = portalAllocations.get(row.id) ?? { billedAmount: Number(row.amount ?? 0), paidAmount: 0, outstanding: Number(row.amount ?? 0) };
+    const amount = allocation.billedAmount;
+    const outstanding = allocation.outstanding;
     const overdue = outstanding > 0 && row.due_date && new Date(`${row.due_date}T23:59:59`).getTime() < Date.now();
-    return { ...row, amount, outstanding, payment_status: outstanding <= 0 ? "paid" : paidForMonth > 0 ? "partial" : overdue ? "overdue" : "unpaid" };
+    return { ...row, amount, amount_paid_for_month: allocation.paidAmount, outstanding, payment_status: outstanding <= 0 ? "paid" : overdue ? "overdue" : allocation.paidAmount > 0 ? "partial" : "unpaid" };
   });
   const parentNotifications = (parentAnnouncements.data ?? []).filter((announcement: any) => announcement.audience_type === "parents" || (announcement.audience_type === "roles" && announcement.audience_value?.trim() === "parents"));
   return { student: student.data, school: schoolInfo, notifications: parentNotifications, guardians: guardians.data ?? [], attendance: attendance.data ?? [], marks: marks.data ?? [], challans: portalChallans, summaries: { attendance: { total: attendance.data?.length ?? 0, present: attendance.data?.filter((row: any) => ["present", "late"].includes(row.status)).length ?? 0, rate: attendance.data?.length ? ((attendance.data.filter((row: any) => ["present", "late"].includes(row.status)).length / attendance.data.length) * 100) : null }, exams: { total: marks.data?.length ?? 0, average: null }, fees: { total: portalChallans.reduce((total, row) => total + row.amount, 0), outstanding: portalChallans.reduce((total, row) => total + row.outstanding, 0) } } };

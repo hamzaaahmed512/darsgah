@@ -421,6 +421,22 @@ tbody tr {
   }
 }
 
+@media screen and (max-width: 359px) {
+  .app-workspace .responsive-table-cards tbody td {
+    flex-direction: column;
+    gap: 0.2rem;
+    text-align: left;
+  }
+
+  .app-workspace .responsive-table-cards tbody td::before {
+    flex: none;
+  }
+
+  .app-workspace .responsive-table-cards tbody td > * {
+    max-width: 100%;
+  }
+}
+
 @media screen and (max-width: 639px) {
   .class-grade-header {
     display: grid;

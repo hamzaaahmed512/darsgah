@@ -24,10 +24,10 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
   const lowestMarks = marksList.length > 0 ? Math.min(...marksList) : 0;
   const totalStudents = detail.marks.length;
   const failedStudentsCount = detail.marks.filter((m: any) => m.grade === "F").length;
-  const passedStudentsCount = totalStudents - failedStudentsCount;
+  const passedStudentsCount = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null && m.grade !== "F").length;
   const passedPercentage = totalStudents > 0 ? Math.round((passedStudentsCount / totalStudents) * 100) : 0;
   const maxMarks = Number(exam.max_marks);
-  const above90Count = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null && (Number(m.marks_obtained) / maxMarks) >= 0.9).length;
+  const above90Count = maxMarks > 0 ? detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null && (Number(m.marks_obtained) / maxMarks) >= 0.9).length : 0;
 
   return (
     <>
