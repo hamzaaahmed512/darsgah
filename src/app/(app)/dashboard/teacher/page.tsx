@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { ArrowRight, GraduationCap, School, CalendarX2, CalendarCheck, BookOpen } from "lucide-react";
+import { ArrowRight, GraduationCap, School, CalendarX2, CalendarCheck, BookOpen, ClipboardList, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { formatGradeSection } from "@/lib/utils";
 
@@ -68,6 +68,30 @@ export default async function TeacherDashboardPage() {
             <div>
               <p className="text-sm font-bold">My Classes</p>
               <p className="text-[11px] font-medium text-muted">View teaching assignments</p>
+            </div>
+          </Link>
+          <Link
+            href="/academics/exams-setup"
+            className="group inline-flex min-h-12 items-center gap-3 rounded-xl bg-white px-4 py-2.5 text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <ClipboardList className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Mark Assessment</p>
+              <p className="text-[11px] font-medium text-muted">Enter marks for an assessment</p>
+            </div>
+          </Link>
+          <Link
+            href="/academics/results?status=pending_approval"
+            className="group inline-flex min-h-12 items-center gap-3 rounded-xl bg-white px-4 py-2.5 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <Clock3 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Pending Results</p>
+              <p className="text-[11px] font-medium text-muted">Review results awaiting approval</p>
             </div>
           </Link>
         </div>

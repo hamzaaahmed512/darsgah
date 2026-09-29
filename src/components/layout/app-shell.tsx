@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnnouncementWithRead, AppUser } from "@/types/database";
 import { hasPermission } from "@/lib/permissions";
 import { cn, initials } from "@/lib/utils";
-import { getNavItems, navItemVisible } from "@/components/layout/nav-items";
+import { getActiveNavHref, getNavItems, navItemVisible } from "@/components/layout/nav-items";
 import { createClient } from "@/lib/supabase/browser";
 import { AnnouncementBell } from "@/components/layout/announcement-bell";
 import { BrandingFaviconSync } from "@/components/layout/branding-favicon-sync";
@@ -99,6 +99,12 @@ export function AppShell({
     if (item.href === "/academics" && hasPermission(user.role, "classes:manage", user.permissions)) return false;
     return navItemVisible(user.role, item.permission, user.permissions, item.anyPermissions);
   }), [principalCanAccessAcademicControl, user.permissions, user.role]);
+  const activeNavHref = useMemo(() => getActiveNavHref(pathname, items.flatMap((item) => [
+    item.href,
+    ...(item.subItems ?? [])
+      .filter((sub) => navItemVisible(user.role, sub.permission, user.permissions, sub.anyPermissions))
+      .map((sub) => sub.href)
+  ])), [items, pathname, user.permissions, user.role]);
   const supabase = useMemo(() => createClient(), []);
   const schoolDisplayName = branding.shortName ?? branding.fullName;
 
@@ -356,12 +362,12 @@ export function AppShell({
             <div className="space-y-1">
               {sectionItems.map((item) => {
                 const Icon = item.icon;
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const allowedSubItems = (item.subItems ?? []).filter((sub) =>
+                  navItemVisible(user.role, sub.permission, user.permissions, sub.anyPermissions)
+                );
+                const active = activeNavHref === item.href || allowedSubItems.some((sub) => activeNavHref === sub.href);
 
                 if (item.subItems) {
-                  const allowedSubItems = item.subItems.filter((sub) =>
-                    navItemVisible(user.role, sub.permission, user.permissions, sub.anyPermissions)
-                  );
                   if (allowedSubItems.length === 0) return null;
                   const expanded = expandedModules[item.href] ?? active;
                   return (
@@ -398,7 +404,7 @@ export function AppShell({
                       {expanded && (
                         <div className="ml-[24px] mt-1 space-y-1 border-l border-slate-200 pl-3">
                           {allowedSubItems.map((sub) => {
-                            const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+                            const isSubActive = activeNavHref === sub.href;
                             return (
                               <Link
                                 href={sub.href}

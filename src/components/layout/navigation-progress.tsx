@@ -9,24 +9,35 @@ export function NavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ProgressState>(null);
+  const delayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   const clearTimers = useCallback(() => {
+    if (delayRef.current) clearTimeout(delayRef.current);
     if (finishRef.current) clearTimeout(finishRef.current);
     if (safetyRef.current) clearTimeout(safetyRef.current);
+    delayRef.current = null;
     finishRef.current = null;
     safetyRef.current = null;
   }, []);
 
   const start = useCallback(() => {
     clearTimers();
-    setState("loading");
+    setState(null);
+    // Fast, prefetched routes finish before this delay. Waiting prevents the
+    // progress bar from flashing for a single frame during ordinary navigation.
+    delayRef.current = setTimeout(() => {
+      delayRef.current = null;
+      setState("loading");
+    }, 180);
     safetyRef.current = setTimeout(() => setState(null), 12_000);
   }, [clearTimers]);
 
   const finish = useCallback(() => {
+    if (delayRef.current) clearTimeout(delayRef.current);
+    delayRef.current = null;
     setState((current) => {
       if (current !== "loading") return null;
       finishRef.current = setTimeout(() => setState(null), 180);

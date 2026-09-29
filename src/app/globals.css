@@ -245,6 +245,18 @@ tbody tr {
   box-shadow: none;
 }
 
+/* My Queries uses the same single outer-card boundary as the Students List. */
+.app-workspace .query-table-scroll.overflow-x-auto {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-workspace .query-table-scroll table,
+.app-workspace .query-table-scroll thead {
+  border-radius: 0;
+}
+
 /* Transaction Ledger owns the outer border, just like the Students List. */
 .app-workspace .transaction-table-scroll.overflow-x-auto {
   border: 0;

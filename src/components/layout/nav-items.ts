@@ -195,5 +195,11 @@ export function navItemVisible(
   return (anyPermissions ?? []).some((item) => hasPermission(role, item, userPermissions));
 }
 
+export function getActiveNavHref(pathname: string, hrefs: string[]) {
+  return hrefs
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((left, right) => right.length - left.length)[0] ?? null;
+}
+
 /** @deprecated Use getNavItems(role) for role-aware navigation. */
 export const navItems = coreNavItems;
