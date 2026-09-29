@@ -10,7 +10,7 @@ import { LazyExpenseDistributionChart, LazyIncomeTrendChart } from "@/components
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DailyOperationsCenter } from "@/components/dashboard/daily-operations-center";
 import { formatCompactPKR } from "@/lib/utils";
-import { ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, GraduationCap, Users, Wallet, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { getStudentGenderCounts } from "@/lib/services/students";
 import { aggregateClassDistributionByGrade } from "@/lib/grade-distribution";
@@ -65,6 +65,16 @@ function contributionText(current: number, lifetime: number) {
   return `Yearly share: ${((current / lifetime) * 100).toFixed(1)}%`;
 }
 
+async function optionalDashboardData<T>(label: string, request: Promise<T>): Promise<T | null> {
+  try {
+    return await request;
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "unclassified";
+    console.error(`Principal dashboard ${label} failed (${code}).`);
+    return null;
+  }
+}
+
 export default async function PrincipalDashboardPage() {
   const user = await requireUser("dashboard:view");
   if (user.role !== "principal") {
@@ -72,17 +82,18 @@ export default async function PrincipalDashboardPage() {
   }
 
   const [dashboard, operations, finance, studentRequests, genderCounts] = await Promise.all([
-    getDashboardData(user),
-    getDailyOperationsCenter(user),
-    getFinanceDashboard(user),
-    getApprovalRequests(user, { status: "pending" }),
-    getStudentGenderCounts(user)
+    optionalDashboardData("school summary", getDashboardData(user)),
+    optionalDashboardData("daily operations", getDailyOperationsCenter(user)),
+    optionalDashboardData("finance summary", getFinanceDashboard(user)),
+    optionalDashboardData("student approvals", getApprovalRequests(user, { status: "pending" })),
+    optionalDashboardData("gender summary", getStudentGenderCounts(user))
   ]);
 
-  const pendingAdmissionsCount = studentRequests.filter((request) => request.request_type === "admission").length;
-  const incomeContribution = contributionText(finance.yearlyIncome, finance.lifetimeIncome);
-  const expenseContribution = contributionText(finance.yearlyExpenses, finance.lifetimeExpenses);
-  const profitContribution = contributionText(finance.yearlyProfit, finance.lifetimeProfit);
+  const unavailableSections = [!dashboard && "school summary", !operations && "daily operations", !finance && "finance summary", !studentRequests && "student approvals", !genderCounts && "gender summary"].filter(Boolean) as string[];
+  const pendingAdmissionsCount = (studentRequests ?? []).filter((request) => request.request_type === "admission").length;
+  const incomeContribution = finance ? contributionText(finance.yearlyIncome, finance.lifetimeIncome) : null;
+  const expenseContribution = finance ? contributionText(finance.yearlyExpenses, finance.lifetimeExpenses) : null;
+  const profitContribution = finance ? contributionText(finance.yearlyProfit, finance.lifetimeProfit) : null;
   return (
     <>
       <DashboardHeader
@@ -97,7 +108,9 @@ export default async function PrincipalDashboardPage() {
         ]}
       />
 
-      <DailyOperationsCenter items={operations} compact />
+      {unavailableSections.length ? <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="text-sm font-bold">Some dashboard information is temporarily unavailable.</p><p className="mt-1 text-sm">The page is still usable. Refresh to retry: {unavailableSections.join(", ")}.</p></div></div> : null}
+
+      {operations ? <DailyOperationsCenter items={operations} compact /> : null}
 
       {pendingAdmissionsCount > 0 ? (
         <div className="mb-6 grid gap-4">
@@ -119,14 +132,14 @@ export default async function PrincipalDashboardPage() {
 
       {/* Stats Grid */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        <OverviewFinanceStatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" detail={<GenderCounts male={genderCounts.male} female={genderCounts.female} compact />} />
-        <OverviewFinanceStatCard label="Staff" value={dashboard.totalStaff.toLocaleString()} icon={Users} tone="purple" trend={`${dashboard.totalTeachers.toLocaleString()} teacher${dashboard.totalTeachers === 1 ? "" : "s"}`} />
-        <OverviewFinanceStatCard label="Total income" value={formatFinanceAmount(finance.lifetimeIncome)} icon={ArrowDownCircle} tone="green" trend={incomeContribution} trendTone="positive" />
-        <OverviewFinanceStatCard label="Total expenses" value={formatFinanceAmount(finance.lifetimeExpenses)} icon={ArrowUpCircle} tone="red" trend={expenseContribution} trendTone="positive" />
-        <OverviewFinanceStatCard label="Total profit" value={formatFinanceAmount(finance.lifetimeProfit)} icon={Wallet} tone={finance.lifetimeProfit >= 0 ? "green" : "red"} trend={profitContribution} trendTone="positive" />
+        {dashboard ? <OverviewFinanceStatCard label="Total students" value={dashboard.totalStudents.toLocaleString()} icon={GraduationCap} tone="blue" detail={genderCounts ? <GenderCounts male={genderCounts.male} female={genderCounts.female} compact /> : undefined} /> : null}
+        {dashboard ? <OverviewFinanceStatCard label="Staff" value={dashboard.totalStaff.toLocaleString()} icon={Users} tone="purple" trend={`${dashboard.totalTeachers.toLocaleString()} teacher${dashboard.totalTeachers === 1 ? "" : "s"}`} /> : null}
+        {finance ? <OverviewFinanceStatCard label="Total income" value={formatFinanceAmount(finance.lifetimeIncome)} icon={ArrowDownCircle} tone="green" trend={incomeContribution ?? undefined} trendTone="positive" /> : null}
+        {finance ? <OverviewFinanceStatCard label="Total expenses" value={formatFinanceAmount(finance.lifetimeExpenses)} icon={ArrowUpCircle} tone="red" trend={expenseContribution ?? undefined} trendTone="positive" /> : null}
+        {finance ? <OverviewFinanceStatCard label="Total profit" value={formatFinanceAmount(finance.lifetimeProfit)} icon={Wallet} tone={finance.lifetimeProfit >= 0 ? "green" : "red"} trend={profitContribution ?? undefined} trendTone="positive" /> : null}
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
+      {finance ? <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Income Trend</CardTitle>
@@ -143,10 +156,10 @@ export default async function PrincipalDashboardPage() {
             <LazyExpenseDistributionChart datasets={finance.expenseDistributions} />
           </CardContent>
         </Card>
-      </section>
+      </section> : null}
 
       {/* Charts and Feeds */}
-      <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+      {dashboard ? <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Class Distribution</CardTitle>
@@ -156,7 +169,7 @@ export default async function PrincipalDashboardPage() {
           </CardContent>
         </Card>
         <ActivityFeed items={dashboard.activity} />
-      </section>
+      </section> : null}
 
     </>
   );

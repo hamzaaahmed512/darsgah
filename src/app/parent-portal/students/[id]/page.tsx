@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Bell, BookOpen, Building2, CalendarDays, ChevronDown, GraduationCap, LogOut, Mail, Phone, UserRound, WalletCards } from "lucide-react";
+import { AlertTriangle, Bell, BookOpen, Building2, CalendarDays, ChevronDown, GraduationCap, LogOut, Mail, Phone, UserRound, WalletCards } from "lucide-react";
 import { parentSignOutAction } from "@/app/(auth)/parent-portal/actions";
-import { getParentPortalSession, getParentStudent } from "@/lib/parent-portal";
+import { getParentComplaints, getParentPortalSession, getParentStudent } from "@/lib/parent-portal";
+import { ComplaintPanel } from "@/components/parent-portal/complaint-panel";
 import { StudentProfileTabs } from "@/components/students/student-profile-tabs";
 import { formatDisplayName } from "@/lib/student-name";
 import { formatDatePK, formatGradeSection } from "@/lib/utils";
 
-type PortalTab = "bio" | "attendance" | "marks" | "fees" | "notifications" | "school";
+type PortalTab = "bio" | "attendance" | "marks" | "fees" | "notifications" | "complaints" | "school";
 
 const portalNav: Array<{ id: PortalTab; label: string; icon: typeof UserRound }> = [
   { id: "bio", label: "Bio Data", icon: UserRound },
@@ -15,6 +16,7 @@ const portalNav: Array<{ id: PortalTab; label: string; icon: typeof UserRound }>
   { id: "marks", label: "Marks & Results", icon: GraduationCap },
   { id: "fees", label: "Fees & Dues", icon: WalletCards },
   { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "complaints", label: "Complaints", icon: AlertTriangle },
   { id: "school", label: "School Information", icon: Building2 }
 ];
 
@@ -25,7 +27,8 @@ export default async function ParentStudentProfilePage({ params, searchParams }:
   const record = await getParentStudent(session, id);
   if (!record?.student) notFound();
   const requestedTab = (await searchParams).tab;
-  const activeTab: PortalTab = requestedTab === "attendance" || requestedTab === "marks" || requestedTab === "fees" || requestedTab === "notifications" || requestedTab === "school" ? requestedTab : "bio";
+  const activeTab: PortalTab = requestedTab === "attendance" || requestedTab === "marks" || requestedTab === "fees" || requestedTab === "notifications" || requestedTab === "complaints" || requestedTab === "school" ? requestedTab : "bio";
+  const complaintData = activeTab === "complaints" ? await getParentComplaints(session) : null;
   const name = formatDisplayName(record.student.name_en) || formatDisplayName(`${record.student.first_name} ${record.student.last_name}`);
   const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const className = formatGradeSection(record.student.grade_name, record.student.section_name) || record.student.class_name || "Unassigned";
@@ -58,8 +61,8 @@ export default async function ParentStudentProfilePage({ params, searchParams }:
         </details>
       </header>
       <main className="mx-auto w-full max-w-[1320px] px-5 py-7 sm:px-8">
-        <div className="rounded-[24px] border border-blue-100 bg-gradient-to-r from-blue-50/90 via-white to-white p-5 shadow-[0_12px_32px_rgba(37,99,235,0.05)] sm:p-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{activeTab === "school" ? "School directory" : activeTab === "notifications" ? "Parent notices" : record.student.admission_number}</p><h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-ink">{activeTab === "bio" ? "Student Profile" : activeTab === "attendance" ? "Attendance" : activeTab === "marks" ? "Marks & Results" : activeTab === "fees" ? "Fees & Dues" : activeTab === "notifications" ? "Notifications" : "School Information"}</h1><p className="mt-2 text-sm text-muted">{activeTab === "school" ? "School contact and directory details" : activeTab === "notifications" ? "Updates and notices sent to parents by the school" : activeTab === "fees" ? "Review challans, outstanding balance, and due dates" : `${name} · ${className}`}</p></div>
-        <div className="mt-6">{activeTab === "school" ? <SchoolInformation school={record.school} /> : activeTab === "notifications" ? <ParentNotifications notifications={record.notifications} /> : <StudentProfileTabs student={record.student} guardians={record.guardians} attendance={record.attendance} marks={record.marks} challans={record.challans} limitedView={false} canViewFinance portalMode hideTabs />}</div>
+        <div className="rounded-[24px] border border-blue-100 bg-gradient-to-r from-blue-50/90 via-white to-white p-5 shadow-[0_12px_32px_rgba(37,99,235,0.05)] sm:p-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{activeTab === "school" ? "School directory" : activeTab === "notifications" ? "Parent notices" : activeTab === "complaints" ? "Confidential communication" : record.student.admission_number}</p><h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-ink">{activeTab === "bio" ? "Student Profile" : activeTab === "attendance" ? "Attendance" : activeTab === "marks" ? "Marks & Results" : activeTab === "fees" ? "Fees & Dues" : activeTab === "notifications" ? "Notifications" : activeTab === "complaints" ? "Complaints" : "School Information"}</h1><p className="mt-2 text-sm text-muted">{activeTab === "school" ? "School contact and directory details" : activeTab === "notifications" ? "Updates and notices sent to parents by the school" : activeTab === "complaints" ? "Raise an issue directly with the Principal and Administrator" : activeTab === "fees" ? "Review challans, outstanding balance, and due dates" : `${name} · ${className}`}</p></div>
+        <div className="mt-6">{activeTab === "school" ? <SchoolInformation school={record.school} /> : activeTab === "notifications" ? <ParentNotifications notifications={record.notifications} /> : activeTab === "complaints" && complaintData ? <ComplaintPanel teachers={complaintData.teachers} complaints={complaintData.complaints as any} /> : <StudentProfileTabs student={record.student} guardians={record.guardians} attendance={record.attendance} marks={record.marks} challans={record.challans} limitedView={false} canViewFinance portalMode hideTabs />}</div>
       </main>
     </div>
   </div>;

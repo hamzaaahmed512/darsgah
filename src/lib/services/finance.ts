@@ -655,12 +655,36 @@ async function getLedgerDashboard(user: AppUser) {
   const previousYear = currentYear - 1;
   const previousYearStart = `${previousYear}-01-01`;
   const previousYearEnd = `${previousYear}-12-31`;
-  const [{ data: trendRows, error: trendError }, { data: recent, error: recentError }] = await Promise.all([
+  const [bucketResult, { data: recent, error: recentError }] = await Promise.all([
     supabase.rpc("finance_dashboard_buckets", { p_school_id: user.schoolId }),
     supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
   ]);
-  if (trendError) throw new Error(trendError.message);
   if (recentError) throw new Error(recentError.message);
+  let trendRows = bucketResult.data;
+  if (bucketResult.error) {
+    const missingAggregation = ["PGRST202", "42883"].includes(bucketResult.error.code ?? "")
+      || bucketResult.error.message?.includes("finance_dashboard_buckets");
+    if (!missingAggregation) throw new Error(bucketResult.error.message);
+
+    // Keep dashboards available during rolling deployments where application
+    // code reaches production before the aggregation migration/PostgREST cache.
+    // Fetch in bounded pages so the fallback does not silently truncate schools
+    // with more than Supabase's default row limit.
+    const fallbackRows: Array<{ direction: string; amount: number; transaction_date: string; category: string | null; payment_method: string | null; source: string }> = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from("finance_transactions")
+        .select("direction,amount,transaction_date,category,payment_method,source")
+        .eq("school_id", user.schoolId)
+        .eq("is_voided", false)
+        .order("transaction_date", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      fallbackRows.push(...((data ?? []) as typeof fallbackRows));
+      if ((data?.length ?? 0) < pageSize) break;
+    }
+    trendRows = fallbackRows;
+  }
   const allRows = (trendRows ?? []) as { direction: string; amount: number; transaction_date: string; category: string | null; payment_method: string | null; source: string }[];
   const rows = allRows.filter((row) => row.transaction_date >= previousMonthStartStr);
   const currentRows = rows.filter((row) => (row.transaction_date ?? monthStart) >= monthStart);

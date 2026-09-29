@@ -4,7 +4,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 const SESSION_ROUTES = new Set([
   "academics", "activity", "admin", "announcements", "approvals", "attendance",
   "classes", "dashboard", "exam-approvals", "finance", "help", "leave", "library",
-  "marks", "onboarding", "operations", "profile", "queries", "reports", "results",
+  "marks", "onboarding", "operations", "parent-queries", "profile", "queries", "reports", "results",
   "school-profile", "settings", "special-exams", "staff", "students", "subjects",
   "teachers", "transport", "unauthorized", "platform", "change-password", "reset-password", "api"
 ]);

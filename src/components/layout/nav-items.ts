@@ -148,6 +148,15 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
     items.push(item);
 
     if (item.href === "/help") {
+      if (role === "administrator" || role === "principal") {
+        items.push({
+          href: "/parent-queries",
+          label: "Parent Queries",
+          icon: MessageSquareText,
+          permission: "dashboard:view",
+          section: "SUPPORT"
+        });
+      }
       items.push({
         href: "/queries",
         label: role === "administrator" || role === "principal" ? "Staff Queries" : "My Queries",
