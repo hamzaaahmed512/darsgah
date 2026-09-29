@@ -604,23 +604,20 @@ export async function getFinanceTransactions(user: AppUser, filters: {
     .select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)", { count: "exact" })
     .eq("school_id", user.schoolId)
     .eq("is_voided", false);
-  let totalsQuery = filters.includeTotals === false
-    ? null
-    : supabase.from("finance_transactions").select("direction,amount")
-      .eq("school_id", user.schoolId)
-      .eq("is_voided", false);
   if (dateFrom) query = query.gte("transaction_date", dateFrom);
-  if (dateFrom && totalsQuery) totalsQuery = totalsQuery.gte("transaction_date", dateFrom);
   if (dateTo) query = query.lte("transaction_date", dateTo);
-  if (dateTo && totalsQuery) totalsQuery = totalsQuery.lte("transaction_date", dateTo);
   if (filters.direction && filters.direction !== "all") query = query.eq("direction", filters.direction);
-  if (filters.direction && filters.direction !== "all" && totalsQuery) totalsQuery = totalsQuery.eq("direction", filters.direction);
   const q = filters.q ? postgrestSearchTerm(filters.q) : "";
   if (q) query = query.or(`receipt_number.ilike.%${q}%,party_name.ilike.%${q}%,reference_number.ilike.%${q}%,description.ilike.%${q}%`);
-  if (q && totalsQuery) totalsQuery = totalsQuery.or(`receipt_number.ilike.%${q}%,party_name.ilike.%${q}%,reference_number.ilike.%${q}%,description.ilike.%${q}%`);
   const [{ data, count, error }, totalsResult] = await Promise.all([
     query.order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
-    totalsQuery ?? Promise.resolve({ data: [], error: null })
+    filters.includeTotals === false ? Promise.resolve({ data: [], error: null }) : supabase.rpc("finance_ledger_totals", {
+      p_school_id: user.schoolId,
+      p_from: dateFrom ?? null,
+      p_to: dateTo ?? null,
+      p_direction: filters.direction && filters.direction !== "all" ? filters.direction : null,
+      p_query: filters.q?.trim() || null
+    })
   ]);
   const { data: totalRows, error: totalsError } = totalsResult;
   if (error) throw new Error(error.message);
@@ -636,7 +633,7 @@ export async function getFinanceTransactions(user: AppUser, filters: {
     count: count ?? 0,
     page,
     pageSize,
-    totals: (totalRows ?? []).reduce((sum, row) => ({
+    totals: ((totalRows ?? []) as { direction: string; amount: number }[]).reduce((sum, row) => ({
       income: sum.income + (row.direction === "income" ? Number(row.amount) : 0),
       expenses: sum.expenses + (row.direction === "expense" ? Number(row.amount) : 0)
     }), { income: 0, expenses: 0 }),
@@ -658,44 +655,14 @@ async function getLedgerDashboard(user: AppUser) {
   const previousYear = currentYear - 1;
   const previousYearStart = `${previousYear}-01-01`;
   const previousYearEnd = `${previousYear}-12-31`;
-  const [{ data: monthRows, error: monthError }, { data: trendRows, error: trendError }, { data: recent, error: recentError }] = await Promise.all([
-    supabase.from("finance_transactions").select("direction,amount,transaction_date,category,payment_method,source").eq("school_id", user.schoolId).eq("is_voided", false).gte("transaction_date", previousMonthStartStr),
-    supabase.from("finance_transactions").select("direction,amount,transaction_date,category,payment_method,source").eq("school_id", user.schoolId).eq("is_voided", false).not("transaction_date", "is", null).order("transaction_date", { ascending: true }),
+  const [{ data: trendRows, error: trendError }, { data: recent, error: recentError }] = await Promise.all([
+    supabase.rpc("finance_dashboard_buckets", { p_school_id: user.schoolId }),
     supabase.from("finance_transactions").select("*,students(first_name,last_name,admission_number),profiles!finance_transactions_recorded_by_fkey(full_name)").eq("school_id", user.schoolId).eq("is_voided", false).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).limit(8)
   ]);
-  if (monthError || trendError || recentError) {
-    return {
-      monthlyIncome: 0,
-      monthlyExpenses: 0,
-      netCashFlow: 0,
-      yearlyIncome: 0,
-      yearlyExpenses: 0,
-      yearlyProfit: 0,
-      lifetimeIncome: 0,
-      lifetimeExpenses: 0,
-      lifetimeProfit: 0,
-      totalCash: 0,
-      periodTotals: {
-        month: { income: 0, expenses: 0, profit: 0 },
-        year: { income: 0, expenses: 0, profit: 0 },
-        lifetime: { income: 0, expenses: 0, profit: 0 }
-      },
-      previousMonthlyIncome: 0,
-      previousMonthlyExpenses: 0,
-      previousNetCashFlow: 0,
-      previousYearlyIncome: 0,
-      previousYearlyExpenses: 0,
-      previousYearlyProfit: 0,
-      recentTransactions: [],
-      incomeTrend: [],
-      expenseDistribution: [],
-      incomeTrends: { monthly: [], yearly: [], lifetime: [] },
-      expenseTrends: { monthly: [], yearly: [], lifetime: [] },
-      expenseDistributions: { monthly: [], yearly: [], lifetime: [] }
-    };
-  }
-  const rows = monthRows ?? [];
-  const allRows = trendRows ?? [];
+  if (trendError) throw new Error(trendError.message);
+  if (recentError) throw new Error(recentError.message);
+  const allRows = (trendRows ?? []) as { direction: string; amount: number; transaction_date: string; category: string | null; payment_method: string | null; source: string }[];
+  const rows = allRows.filter((row) => row.transaction_date >= previousMonthStartStr);
   const currentRows = rows.filter((row) => (row.transaction_date ?? monthStart) >= monthStart);
   const previousRows = rows.filter((row) => {
     const transactionDate = row.transaction_date ?? previousMonthStartStr;

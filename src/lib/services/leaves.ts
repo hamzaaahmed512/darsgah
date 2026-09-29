@@ -88,8 +88,8 @@ export async function getTeacherLeaveStats(user: AppUser, teacherId: string) {
     .eq("school_id", user.schoolId)
     .eq("user_id", teacherId)
     .eq("status", "approved")
-    .gte("start_date", yearStart)
-    .lte("end_date", yearEnd);
+    .lte("start_date", yearEnd)
+    .gte("end_date", yearStart);
 
   if (isMissingStaffLeavesTable(error)) return { annualUsed: 0, monthlyUsed: 0, weeklyUsed: 0, migrationRequired: true };
   if (error) throw new Error(error.message);
@@ -98,13 +98,8 @@ export async function getTeacherLeaveStats(user: AppUser, teacherId: string) {
   let monthlyUsed = 0;
   let weeklyUsed = 0;
   for (const row of data ?? []) {
-    const start = new Date(row.start_date);
-    const end = new Date(row.end_date);
-    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
-    annualUsed += days;
-    if (row.start_date >= monthStart && row.start_date <= monthEnd) {
-      monthlyUsed += days;
-    }
+    annualUsed += getDaysInRangeWithin(row.start_date, row.end_date, yearStart, yearEnd);
+    monthlyUsed += getDaysInRangeWithin(row.start_date, row.end_date, monthStart, monthEnd);
     weeklyUsed += getDaysInRangeWithin(row.start_date, row.end_date, weekStart, weekEnd);
   }
   return { annualUsed, monthlyUsed, weeklyUsed, migrationRequired: false };
@@ -128,7 +123,8 @@ export async function getAllTeachersLeaveSummary(user: AppUser) {
       .select("user_id,start_date,end_date")
       .eq("school_id", user.schoolId)
       .eq("status", "approved")
-      .gte("start_date", `${new Date().getFullYear()}-01-01`)
+      .lte("start_date", `${new Date().getFullYear()}-12-31`)
+      .gte("end_date", `${new Date().getFullYear()}-01-01`)
   ]);
 
   if (staffRes.error) throw new Error(staffRes.error.message);
@@ -155,12 +151,8 @@ export async function getAllTeachersLeaveSummary(user: AppUser) {
 
   const leavesByUser = (leavesRes.data ?? []).reduce((acc: any, row: any) => {
     if (!acc[row.user_id]) acc[row.user_id] = { annualUsed: 0, monthlyUsed: 0, weeklyUsed: 0 };
-    const start = new Date(row.start_date);
-    const end = new Date(row.end_date);
-    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
-    
-    acc[row.user_id].annualUsed += days;
-    if (row.start_date >= monthStart && row.start_date <= monthEnd) acc[row.user_id].monthlyUsed += days;
+    acc[row.user_id].annualUsed += getDaysInRangeWithin(row.start_date, row.end_date, `${now.getFullYear()}-01-01`, `${now.getFullYear()}-12-31`);
+    acc[row.user_id].monthlyUsed += getDaysInRangeWithin(row.start_date, row.end_date, monthStart, monthEnd);
     acc[row.user_id].weeklyUsed += getDaysInRangeWithin(row.start_date, row.end_date, weekStart, weekEnd);
     
     return acc;
@@ -280,10 +272,6 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
     const stats = await getTeacherLeaveStats(user, user.id);
     
     if (!stats.migrationRequired) {
-      const start = new Date(parsed.start_date);
-      const end = new Date(parsed.end_date);
-      const daysRequested = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
-      
       const now = new Date();
       const currentDay = now.getDay();
       const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
@@ -299,11 +287,11 @@ export async function submitLeaveRequest(user: AppUser, values: LeaveRequestValu
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const monthEnd = `${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
-      const addedAnnual = daysRequested;
+      const addedAnnual = getDaysInRangeWithin(parsed.start_date, parsed.end_date, `${now.getFullYear()}-01-01`, `${now.getFullYear()}-12-31`);
       let addedMonthly = 0;
       let addedWeekly = 0;
 
-      if (parsed.start_date >= monthStart && parsed.start_date <= monthEnd) addedMonthly = daysRequested;
+      addedMonthly = getDaysInRangeWithin(parsed.start_date, parsed.end_date, monthStart, monthEnd);
       addedWeekly = getDaysInRangeWithin(parsed.start_date, parsed.end_date, weekStart, weekEnd);
 
       if (policy.annualLimit !== null && (stats.annualUsed >= policy.annualLimit || stats.annualUsed + addedAnnual > policy.annualLimit)) {

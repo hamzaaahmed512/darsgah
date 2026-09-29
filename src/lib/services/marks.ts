@@ -995,26 +995,45 @@ export async function getPrintableResultCards(user: AppUser, filters: { sessionI
     marksByStudent.set(item.student_id, list);
   }
 
+  const enrollmentsByStudent = new Map<string, any[]>();
+  const historyByStudent = new Map<string, any[]>();
+  for (const item of subjectEnrollments.data ?? []) {
+    const list = enrollmentsByStudent.get(item.student_id) ?? [];
+    list.push(item);
+    enrollmentsByStudent.set(item.student_id, list);
+  }
+  for (const item of subjectHistory.data ?? []) {
+    const list = historyByStudent.get(item.student_id) ?? [];
+    list.push(item);
+    historyByStudent.set(item.student_id, list);
+  }
+  const approvedExamRows = approvedExams.data ?? [];
+  const approvedExamsById = new Map(approvedExamRows.map((exam: any) => [exam.id, exam]));
+  const approvedSubjectIds = new Set(approvedExamRows.map((exam: any) => exam.subject_id as string));
+  const cutoffDate = approvedExamRows.reduce((latest: string, exam: any) => exam.exam_date > latest ? exam.exam_date : latest, "");
+
   const cards = (students.data ?? []).map((row: any) => {
     const student = row.students;
     const marksForStudent = marksByStudent.get(student?.id) ?? [];
-    const enrolledSubjects = (subjectEnrollments.data ?? []).filter((item: any) => item.student_id === student?.id);
-    const historicalSubjects = (subjectHistory.data ?? []).filter((item: any) => item.student_id === student?.id);
+    const enrolledSubjects = enrollmentsByStudent.get(student?.id) ?? [];
+    const historicalSubjects = historyByStudent.get(student?.id) ?? [];
+    const marksByExam = new Map(marksForStudent.map((mark: any) => [mark.exams?.id, mark]));
+    const enrollmentBySubject = new Map([...enrolledSubjects, ...historicalSubjects].map((item: any) => [item.subject_id, item]));
     const subjectEvidence = [
       ...enrolledSubjects.map((item: any) => ({ subject_id: item.subject_id as string, valid_from: item.enrolled_at as string, valid_to: null as string | null })),
       ...historicalSubjects.map((item: any) => ({ subject_id: item.subject_id as string, valid_from: item.valid_from as string, valid_to: item.valid_to as string | null }))
     ];
-    const rows = (approvedExams.data ?? []).filter((exam: any) => {
+    const rows = approvedExamRows.filter((exam: any) => {
       return isResultCardSubjectEligible({
         subjectId: exam.subject_id,
         examDate: exam.exam_date,
         subjectEvidence,
-        hasMark: marksForStudent.some((item: any) => item.exams?.id === exam.id)
+        hasMark: marksByExam.has(exam.id)
       });
     }).map((exam: any) => {
-      const enrollment = [...enrolledSubjects, ...historicalSubjects].find((item: any) => item.subject_id === exam.subject_id);
+      const enrollment = enrollmentBySubject.get(exam.subject_id);
       const enrollmentSubjectSource = (enrollment as any)?.subjects;
-      const mark = marksForStudent.find((item: any) => item.exams?.id === exam.id);
+      const mark = marksByExam.get(exam.id);
       const examSubjectName = Array.isArray(exam.subjects) ? exam.subjects[0]?.name ?? "Subject" : exam.subjects?.name ?? "Subject";
       const enrolledSubjectName = Array.isArray(enrollmentSubjectSource) ? enrollmentSubjectSource[0]?.name ?? null : enrollmentSubjectSource?.name ?? null;
       return {
@@ -1028,15 +1047,12 @@ export async function getPrintableResultCards(user: AppUser, filters: { sessionI
         teacher_comment: mark?.teacher_comment ?? null
       };
     });
-    const approvedSubjectIds = new Set((approvedExams.data ?? []).map((exam: any) => exam.subject_id as string));
-    const cutoffDate = (approvedExams.data ?? []).reduce((latest: string, exam: any) =>
-      exam.exam_date > latest ? exam.exam_date : latest, "");
     const expectedSubjectIds = new Set(subjectEvidence
       .filter((item) => cutoffDate && item.valid_from.slice(0, 10) <= cutoffDate
         && (!item.valid_to || item.valid_to.slice(0, 10) >= cutoffDate))
       .map((item) => item.subject_id));
     for (const mark of marksForStudent) {
-      const markedExam = (approvedExams.data ?? []).find((exam: any) => exam.id === mark.exams?.id);
+      const markedExam = approvedExamsById.get(mark.exams?.id);
       if (markedExam) expectedSubjectIds.add(markedExam.subject_id);
     }
     const missingSubjectIds = [...expectedSubjectIds].filter((id) => !approvedSubjectIds.has(id));
