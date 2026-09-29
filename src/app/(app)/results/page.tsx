@@ -125,47 +125,45 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       {!showCards ? (
         <>
           <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Results" value={results.length} hint="In this view" icon={ClipboardList} tone="blue" trend="Result register" />
+            <Card className="kpi-card h-full rounded-[24px] !border-t-4 !border-t-blue-500 p-5 shadow-sm sm:p-6">
+              <div className="flex h-full items-start gap-5">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 sm:h-16 sm:w-16"><ClipboardList className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Total Results</p>
+                  <p className="mt-2 whitespace-nowrap font-display text-[clamp(1.55rem,2vw,1.875rem)] font-bold leading-none tracking-tight text-ink">{results.length}</p>
+                  <div className="mt-3 text-sm font-medium text-muted">In this view</div>
+                </div>
+              </div>
+            </Card>
             <StatCard label="Approved" value={approvedCount} hint="Ready for use" icon={CheckCircle2} tone="green" trend={approvedCount ? "Approved results" : "None approved yet"} trendTone="positive" />
             <StatCard label="Pending" value={pendingCount} hint="Awaiting review" icon={Clock3} tone="amber" trend={pendingCount ? "Action needed" : "Nothing waiting"} trendTone={pendingCount ? "negative" : "positive"} />
             <StatCard label="Returned" value={returnedCount} hint="Needs revision" icon={Undo2} tone="red" trend={returnedCount ? "Teacher follow-up" : "No revisions"} trendTone={returnedCount ? "negative" : "positive"} />
           </section>
-          <section className="mb-5 rounded-[22px] border border-blue-200 bg-white p-4 shadow-[0_10px_28px_rgba(37,99,235,0.04)] sm:p-5">
-            <div className="mb-4 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-primary ring-1 ring-blue-100"><ClipboardList className="h-5 w-5" /></span><div><h2 className="font-display text-xl font-bold text-ink">Filter results</h2><p className="mt-0.5 text-sm text-muted">Narrow the register by term and workflow status.</p></div></div>
-            <form className="grid gap-3 rounded-[18px] border border-blue-100 bg-blue-50/45 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]" action="/results">
+
+          <Card className="mb-5 min-w-0 rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-5">
+            <form className="grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_260px_200px]" action="/results">
               {user.role === "student_staff" ? <input type="hidden" name="view" value="management" /> : null}
-              <Field label="Term">
-                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term" className="h-12 rounded-2xl border-blue-100 bg-blue-50/70 shadow-none focus:bg-white" />
-              </Field>
-              <Field label="Status">
-                <Select name="status" defaultValue={status} className="h-12 rounded-2xl border-outline/70 shadow-none">
+              <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-600">
+                <span>Term</span>
+                <Input name="term" defaultValue={params.term ?? ""} placeholder="Filter by term..." className="min-h-12 min-w-0 rounded-xl border-blue-100 bg-blue-50/70 text-sm shadow-none placeholder:text-slate-400 focus:border-primary/30 focus:bg-white sm:min-h-14 sm:rounded-2xl sm:text-base" />
+              </label>
+              <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-600">
+                <span>Status</span>
+                <Select name="status" defaultValue={status} className="min-h-12 min-w-0 rounded-xl border-slate-200 text-sm shadow-none sm:min-h-14 sm:text-base">
                   {statusFilters.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
                   ))}
                 </Select>
-              </Field>
-              <div className="flex items-end">
-                <button className="min-h-12 rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-button" type="submit">
+              </label>
+              <div className="flex items-end self-end w-full">
+                <button className="min-h-12 min-w-0 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-none sm:min-h-14 sm:rounded-2xl w-full" type="submit">
                   Filter
                 </button>
               </div>
             </form>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {statusFilters.map((item) => (
-                <Link
-                  key={item.value}
-                  href={`/results?status=${item.value}${params.term ? `&term=${encodeURIComponent(params.term)}` : ""}${user.role === "student_staff" ? "&view=management" : ""}`}
-                  className={`inline-flex min-h-10 items-center rounded-2xl px-4 text-sm font-semibold transition ${status === item.value ? "bg-primary text-white shadow-button" : "bg-white text-muted ring-1 ring-outline hover:bg-surface-low"}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-
-          </section>
+          </Card>
           {!results.length ? (
               <EmptyState
                 title={user.role === "teacher" ? "No uploaded results yet" : "No results found"}

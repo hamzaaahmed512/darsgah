@@ -1,27 +1,33 @@
 import Link from "next/link";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Activity, School, Target } from "lucide-react";
 import { ApprovalActions } from "@/app/(app)/results/_components/approval-actions";
 import { ReturnApprovedResult } from "@/app/(app)/results/_components/return-approved-result";
-import { WorkflowStatusBadge } from "@/app/(app)/results/_components/workflow-status-badge";
+import { ResultDetailTable } from "@/app/(app)/results/[examId]/_components/result-detail-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { requireUser } from "@/lib/auth/session";
 import { formatExamType, getExamResultDetail } from "@/lib/services/marks";
-import { formatDisplayName } from "@/lib/student-name";
 import { formatClassDisplayName } from "@/lib/utils";
 
-function formatDateTime(value: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
-}
 
 export default async function ResultDetailPage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
   const user = await requireUser("results:view");
   const detail = await getExamResultDetail(user, examId);
   const exam: any = detail.exam;
+
+  const marksList = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null).map((m: any) => Number(m.marks_obtained));
+  const highestMarks = marksList.length > 0 ? Math.max(...marksList) : 0;
+  const lowestMarks = marksList.length > 0 ? Math.min(...marksList) : 0;
+  const totalStudents = detail.marks.length;
+  const failedStudentsCount = detail.marks.filter((m: any) => m.grade === "F").length;
+  const passedStudentsCount = totalStudents - failedStudentsCount;
+  const passedPercentage = totalStudents > 0 ? Math.round((passedStudentsCount / totalStudents) * 100) : 0;
+  const maxMarks = Number(exam.max_marks);
+  const above90Count = detail.marks.filter((m: any) => !m.is_absent && m.marks_obtained != null && (Number(m.marks_obtained) / maxMarks) >= 0.9).length;
 
   return (
     <>
@@ -36,45 +42,43 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
         }
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Status</CardTitle>
-            <WorkflowStatusBadge status={exam.workflowStatus} />
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Uploaded By</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">{formatDisplayName(exam.uploaded_by_teacher_name) || formatDisplayName(exam.creator?.full_name) || "Teacher"}</p>
-            <p className="text-xs text-muted">{exam.uploaded_by_teacher_id ?? exam.creator?.id ?? "—"}</p>
-            <p className="mt-2 text-sm text-muted">{formatDateTime(exam.uploaded_at)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Class / Section</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">
+      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Class / Section"
+          value={
+            <span className="text-xl">
               {formatClassDisplayName(exam.classes?.grades?.name, exam.classes?.name, exam.classes?.sections?.name) || "Class"}
-            </p>
-            {exam.classes?.room ? <p className="text-sm text-muted">Room: {exam.classes.room}</p> : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Approved By</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-ink">{exam.approved_by_principal_name ?? "—"}</p>
-            <p className="text-xs text-muted">{exam.approved_by_principal_id ?? "—"}</p>
-            <p className="mt-2 text-sm text-muted">{formatDateTime(exam.approved_at)}</p>
-          </CardContent>
-        </Card>
-      </div>
+            </span>
+          }
+          hint={exam.classes?.room ? `Room: ${exam.classes.room}` : "No room assigned"}
+          icon={School}
+          tone="amber"
+        />
+        <StatCard
+          label="Total Marks"
+          value={<span className="text-xl">{exam.max_marks}</span>}
+          hint={
+            <span className="flex flex-col gap-1 mt-1 text-xs">
+              <span className="font-semibold text-emerald-600">Highest {highestMarks}</span>
+              <span className="font-semibold text-red-500">Lowest {lowestMarks}</span>
+            </span>
+          }
+          icon={Activity}
+          tone="purple"
+        />
+        <StatCard
+          label="Student Performance"
+          value={<span className="text-xl">{passedPercentage}% Students Passed</span>}
+          hint={
+            <span className="flex flex-col gap-1 mt-1 text-xs">
+              <span className="font-semibold text-emerald-600">{above90Count} student{above90Count === 1 ? "" : "s"} scored above 90%</span>
+              <span className="font-semibold text-red-500">{failedStudentsCount} student{failedStudentsCount === 1 ? "" : "s"} failed</span>
+            </span>
+          }
+          icon={Target}
+          tone="green"
+        />
+      </section>
 
       {exam.rejection_reason ? (
         <Card className="mb-6 border-danger/30">
@@ -119,43 +123,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ e
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Marks</CardTitle>
-          <Badge tone={exam.requires_approval ? "yellow" : "blue"}>
-            {exam.requires_approval ? "Major assessment" : "Regular assessment"}
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-outline/40 text-xs uppercase tracking-wide text-muted">
-                  <th className="py-3 pr-3">Student</th>
-                  <th className="py-3 pr-3">Admission #</th>
-                  <th className="py-3 pr-3">Marks</th>
-                  <th className="py-3 pr-3">Grade</th>
-                  <th className="py-3 pr-3">Comment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.marks.map((row, index) => (
-                  <tr key={`${row.admission_number}-${index}`} className="border-b border-outline/25">
-                    <td className="py-3 pr-3 font-semibold">{row.student_name}</td>
-                    <td className="py-3 pr-3 text-muted">{row.admission_number}</td>
-                    <td className="py-3 pr-3">
-                      {row.is_absent ? "Absent" : row.marks_obtained} / {Number(exam.max_marks)}
-                    </td>
-                    <td className="py-3 pr-3 font-bold">{row.grade}</td>
-                    <td className="py-3 pr-3 text-muted">{row.teacher_comment || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!detail.marks.length ? <p className="text-sm text-muted">No marks recorded yet.</p> : null}
-        </CardContent>
-      </Card>
+      <ResultDetailTable marks={detail.marks as any} maxMarks={Number(exam.max_marks)} requiresApproval={exam.requires_approval} />
 
       {user.role === "teacher" && exam.workflowStatus === "rejected" ? (
         <p className="mt-4 text-sm text-muted">
