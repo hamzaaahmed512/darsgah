@@ -5,6 +5,7 @@ import { InternalQueryForm } from "@/components/help/internal-query-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
+import { TeacherQueriesTable } from "@/components/help/teacher-queries-table";
 
 const faqs = [
   ["How do I add a student?", "Open Students, choose Add Student, then select the class and complete the required details."],
@@ -23,6 +24,11 @@ export default async function HelpPage() {
       <Card className="overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card"><div className="border-b border-outline/50 bg-slate-50/70 p-5 sm:p-6"><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{canContactDarsgah ? "Contact us" : "School query"}</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">{canContactDarsgah ? "Send the Darsgah team a message" : "Send a query to school leadership"}</h2><p className="mt-2 text-sm leading-6 text-muted">{canContactDarsgah ? "Use this form for product questions, support, or help with your school setup." : "Choose the Principal or Administrator who should receive your query. They can hand it off when needed."}</p>{canContactDarsgah ? <div className="mt-5 grid gap-3 sm:grid-cols-3"><ContactLine icon={Mail} title="Email" text="darsgah.help@gmail.com" /><ContactLine icon={MessageSquareText} title="Support" text="Product and setup help" /><ContactLine icon={Clock3} title="Response" text="Within two business days" /></div> : null}</div><CardContent className="p-5 sm:p-6">{canContactDarsgah ? <Suspense fallback={<div className="min-h-[420px]" />}><ContactForm /></Suspense> : <InternalQueryForm />}</CardContent></Card>
       <Card className="h-fit overflow-hidden rounded-[28px] border border-outline/70 bg-white shadow-card"><div className="border-b border-outline/50 bg-slate-50/70 p-5 sm:p-6"><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Frequently asked questions</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">Questions, answered clearly.</h2></div><CardContent className="p-5 sm:p-6"><div className="divide-y divide-outline/60 border-y border-outline/60">{faqs.map(([question, answer], index) => <details key={question} name="help-faqs" className="group py-1" open={index === 0}><summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-5 text-left text-sm font-bold text-ink"><span>{question}</span><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-muted transition-transform group-open:rotate-180"><ChevronDown className="h-4 w-4" /></span></summary><p className="pb-5 pr-10 text-sm leading-6 text-muted">{answer}</p></details>)}</div></CardContent></Card>
     </div>
+    {!canContactDarsgah && (
+      <Suspense fallback={<div className="mt-8 min-h-[400px]" />}>
+        <TeacherQueriesTable userId={user.id} schoolId={user.schoolId} />
+      </Suspense>
+    )}
   </>;
 }
 

@@ -157,13 +157,23 @@ export function getNavItems(role: UserRole, options: { principalCanAccessAcademi
           section: "SUPPORT"
         });
       }
-      items.push({
-        href: "/queries",
-        label: role === "administrator" || role === "principal" ? "Staff Queries" : "My Queries",
-        icon: MessageSquareText,
-        permission: "dashboard:view",
-        section: "SUPPORT"
-      });
+      if (role === "administrator" || role === "principal") {
+        items.push({
+          href: "/queries",
+          label: "Staff Queries",
+          icon: MessageSquareText,
+          permission: "dashboard:view",
+          section: "SUPPORT"
+        });
+      } else if (role !== "teacher" && role !== "head_teacher") {
+        items.push({
+          href: "/queries",
+          label: "My Queries",
+          icon: MessageSquareText,
+          permission: "dashboard:view",
+          section: "SUPPORT"
+        });
+      }
     }
 
     if (item.href === "/classes") {
